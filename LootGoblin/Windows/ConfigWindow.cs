@@ -13,7 +13,7 @@ public class ConfigWindow : Window, IDisposable
     {
         Flags = ImGuiWindowFlags.NoCollapse;
 
-        Size = new Vector2(350, 220);
+        Size = new Vector2(350, 320);
         SizeCondition = ImGuiCond.FirstUseEver;
 
         configuration = plugin.Configuration;
@@ -70,6 +70,33 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.Checkbox("Debug Mode", ref debug))
         {
             configuration.DebugMode = debug;
+            configuration.Save();
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.Text("Navigation");
+        ImGui.Spacing();
+
+        var autoTeleport = configuration.AutoTeleport;
+        if (ImGui.Checkbox("Auto Teleport", ref autoTeleport))
+        {
+            configuration.AutoTeleport = autoTeleport;
+            configuration.Save();
+        }
+
+        var requireVNav = configuration.RequireVNav;
+        if (ImGui.Checkbox("Require vnavmesh", ref requireVNav))
+        {
+            configuration.RequireVNav = requireVNav;
+            configuration.Save();
+        }
+
+        var navTimeout = configuration.NavigationTimeout;
+        if (ImGui.SliderFloat("Nav Timeout (s)", ref navTimeout, 30f, 600f, "%.0f"))
+        {
+            configuration.NavigationTimeout = navTimeout;
             configuration.Save();
         }
     }

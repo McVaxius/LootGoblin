@@ -5,6 +5,7 @@ using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 using LootGoblin.Models;
+using LootGoblin.Services;
 
 namespace LootGoblin.Windows;
 
@@ -56,6 +57,11 @@ public class MainWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
+        DrawNavigationSection();
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
         DrawDependencySection();
         ImGui.Spacing();
         ImGui.Separator();
@@ -85,7 +91,10 @@ public class MainWindow : Window, IDisposable
         ImGui.SameLine();
         ImGui.Text("  |  Bot State: ");
         ImGui.SameLine();
-        ImGui.TextColored(ColorYellow, "Idle");
+        var navState = plugin.NavigationService.State;
+        var navColor = navState == NavigationState.Error ? ColorRed :
+                       navState == NavigationState.Idle ? ColorYellow : ColorCyan;
+        ImGui.TextColored(navColor, navState.ToString());
 
         var loggedIn = Plugin.ClientState.IsLoggedIn;
         ImGui.Text("Logged In: ");
@@ -169,27 +178,17 @@ public class MainWindow : Window, IDisposable
                         if (string.IsNullOrEmpty(itemName))
                             itemName = $"Unknown Map (ID: {itemId})";
                         
-                        // Try to match known maps for metadata
-                        var tierColor = ColorYellow; // Default to solo
-                        string? metadata = null;
-                        
-                        if (TreasureMapData.KnownMaps.TryGetValue(itemId, out var info))
-                        {
-                            tierColor = info.Tier == MapTier.Party ? ColorCyan : ColorYellow;
-                            metadata = $"[{info.Expansion}] {info.Tier}";
-                            if (info.HasDungeon)
-                                metadata += " (Dungeon)";
-                        }
+                        // Determine tier from item description
+                        var desc = item?.Description.ToString() ?? "";
+                        var isParty = desc.Contains("8 player", StringComparison.OrdinalIgnoreCase);
+                        var tierColor = isParty ? ColorCyan : ColorYellow;
+                        var tierTag = isParty ? "[Party]" : "[Solo]";
                         
                         ImGui.TextColored(tierColor, $"  {itemName}");
                         ImGui.SameLine();
                         ImGui.Text($" x{quantity}");
-                        
-                        if (metadata != null)
-                        {
-                            ImGui.SameLine();
-                            ImGui.TextColored(ColorGrey, $"  {metadata}");
-                        }
+                        ImGui.SameLine();
+                        ImGui.TextColored(ColorGrey, $"  {tierTag}");
                     }
                 }
 
@@ -204,6 +203,69 @@ public class MainWindow : Window, IDisposable
             else
             {
                 ImGui.TextColored(ColorGrey, "  Log in to scan inventory.");
+            }
+        }
+    }
+
+    private void DrawNavigationSection()
+    {
+        if (ImGui.CollapsingHeader("Navigation", ImGuiTreeNodeFlags.DefaultOpen))
+        {
+            if (!Plugin.ClientState.IsLoggedIn)
+            {
+                ImGui.TextColored(ColorGrey, "  Log in to use navigation.");
+                return;
+            }
+
+            var nav = plugin.NavigationService;
+            var vnav = plugin.VNavIPC;
+
+            // State display
+            ImGui.Text("  State: ");
+            ImGui.SameLine();
+            var stateColor = nav.State == NavigationState.Error ? ColorRed :
+                             nav.State == NavigationState.Idle ? ColorGrey : ColorCyan;
+            ImGui.TextColored(stateColor, nav.State.ToString());
+            if (!string.IsNullOrEmpty(nav.StateDetail))
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(ColorGrey, $"  {nav.StateDetail}");
+            }
+
+            // Condition indicators
+            ImGui.Text("  ");
+            ImGui.SameLine();
+            ImGui.TextColored(nav.IsMounted() ? ColorGreen : ColorGrey, nav.IsMounted() ? "[Mounted]" : "[On Foot]");
+            ImGui.SameLine();
+            ImGui.TextColored(nav.IsFlying() ? ColorCyan : ColorGrey, nav.IsFlying() ? "[Flying]" : "[Grounded]");
+            ImGui.SameLine();
+            ImGui.TextColored(nav.IsInCombat() ? ColorRed : ColorGrey, nav.IsInCombat() ? "[In Combat]" : "[No Combat]");
+
+            ImGui.Spacing();
+
+            // Navigation buttons
+            if (!vnav.IsAvailable)
+            {
+                ImGui.TextColored(ColorRed, "  vnavmesh required for navigation.");
+            }
+            else
+            {
+                if (ImGui.Button("Fly to Flag", new Vector2(120, 0)))
+                {
+                    nav.FlyToFlag();
+                }
+
+                ImGui.SameLine();
+                if (ImGui.Button("Mount Up", new Vector2(120, 0)))
+                {
+                    nav.MountUp();
+                }
+
+                ImGui.SameLine();
+                if (ImGui.Button("Stop Nav", new Vector2(120, 0)))
+                {
+                    nav.StopNavigation();
+                }
             }
         }
     }

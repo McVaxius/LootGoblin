@@ -2,6 +2,27 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.0] - 2026-03-03
+
+### Added
+- **Phase 3: Navigation & Teleportation**
+- **NavigationService** - Core navigation coordination (teleport, mount, fly, stop)
+- **CommandHelper** - Shared utility for sending slash commands to game (from FrenRider pattern)
+- **VNavIPC expanded** - FlyTo, MoveTo, Stop methods via `/vnav flyto`, `/vnav moveto`, `/vnavmesh stop`
+- **Fly to Flag button** - Sends `/vnav flyflag` to fly to current map flag
+- **Mount Up button** - Mount Roulette via game action
+- **Stop Nav button** - Stops vnavmesh navigation
+- **Navigation UI section** - Shows state, mounted/flying/combat indicators, nav controls
+- **Navigation settings** - Auto Teleport, Require vnavmesh, Nav Timeout slider in config
+- **Map tier display** - Shows [Party] or [Solo] tag from item description (cyan/yellow)
+- **FindNearestAetheryte** - Searches unlocked aetherytes by territory for cheapest teleport
+- **TeleportToAetheryte** - Teleports via `/tp` command with safety checks (combat, between areas)
+- **Condition checks** - IsMounted, IsFlying, IsInCombat, IsTeleporting helpers
+
+### Changed
+- Bot State in status bar now reflects actual NavigationState (color-coded)
+- ConfigWindow expanded with Navigation settings section
+
 ## [0.0.0.9] - 2026-03-03
 
 ### Fixed

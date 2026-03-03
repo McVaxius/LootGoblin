@@ -37,6 +37,7 @@ public sealed class Plugin : IDalamudPlugin
     // Services
     public InventoryService InventoryService { get; init; }
     public MapDetectionService MapDetectionService { get; init; }
+    public NavigationService NavigationService { get; init; }
 
     // IPC
     public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
@@ -58,6 +59,9 @@ public sealed class Plugin : IDalamudPlugin
         GlobeTrotterIPC = new GlobeTrotterIPC(this, PluginInterface, Log);
         VNavIPC = new VNavIPC(this, PluginInterface, Log);
         RotationPluginIPC = new RotationPluginIPC(this, PluginInterface, Log);
+
+        // Initialize navigation (after IPC so VNavIPC is available)
+        NavigationService = new NavigationService(this, Condition, ClientState, DataManager, Log);
 
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this);
@@ -94,6 +98,7 @@ public sealed class Plugin : IDalamudPlugin
         ConfigWindow.Dispose();
         MainWindow.Dispose();
 
+        NavigationService.Dispose();
         RotationPluginIPC.Dispose();
         VNavIPC.Dispose();
         GlobeTrotterIPC.Dispose();
