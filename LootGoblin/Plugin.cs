@@ -44,7 +44,6 @@ public sealed class Plugin : IDalamudPlugin
     public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
     public VNavIPC VNavIPC { get; init; }
     public RotationPluginIPC RotationPluginIPC { get; init; }
-    public FrenRiderIPC FrenRiderIPC { get; init; }
 
     public List<string> DebugLog { get; } = new();
     private const int MaxDebugLogLines = 200;
@@ -67,9 +66,6 @@ public sealed class Plugin : IDalamudPlugin
 
         // Initialize party service
         PartyService = new PartyService(this, PartyList, ObjectTable, ClientState, Condition, Log);
-
-        // Initialize remaining IPC
-        FrenRiderIPC = new FrenRiderIPC(this, PluginInterface, Log);
 
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this);
@@ -108,7 +104,6 @@ public sealed class Plugin : IDalamudPlugin
 
         PartyService.Dispose();
         NavigationService.Dispose();
-        FrenRiderIPC.Dispose();
         RotationPluginIPC.Dispose();
         VNavIPC.Dispose();
         GlobeTrotterIPC.Dispose();

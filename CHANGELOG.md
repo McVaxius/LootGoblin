@@ -2,6 +2,23 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.2] - 2026-03-03
+
+### Added
+- **Version display** - Assembly version shown automatically at top of main window
+- **KrangleService** - Deterministic player name obfuscation for screenshots (from FrenRider)
+- **Map tier display** - Shows actual map tier number (1-16) and item level instead of Solo/Party
+
+### Removed
+- **FrenRiderIPC** - Removed entirely (FrenRider is for other party members, not this character)
+- **Navigation buttons** - Removed Fly to Flag, Mount Up, Stop Nav (will be automated by state machine)
+- **Party buttons** - Removed Check Party, Wait for Mounts, Stop FrenRider (not needed as manual controls)
+- **Solo/Party map tags** - Replaced with actual tier numbers
+
+### Fixed
+- **Debug log spam** - Party status only logs when member count or mount status changes
+- **Player names** - Krangled in status display and party member list
+
 ## [0.0.1.1] - 2026-03-03
 
 ### Added

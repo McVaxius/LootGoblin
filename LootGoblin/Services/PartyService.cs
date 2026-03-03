@@ -45,6 +45,9 @@ public class PartyService : IDisposable
     public bool AllMembersMounted { get; private set; }
     public bool AllMembersReady { get; private set; }
 
+    private int lastLoggedMemberCount;
+    private int lastLoggedMountedCount;
+
     public PartyService(Plugin plugin, IPartyList partyList, IObjectTable objectTable, IClientState clientState, ICondition condition, IPluginLog log)
     {
         _plugin = plugin;
@@ -97,7 +100,13 @@ public class PartyService : IDisposable
         AllMembersMounted = PartyMembers.All(m => m.IsMounted);
         AllMembersReady = PartyMembers.All(m => m.IsReady);
 
-        _plugin.AddDebugLog($"Party status: {PartyMembers.Count} members, {PartyMembers.Count(m => m.IsMounted)} mounted, {PartyMembers.Count(m => m.IsReady)} ready");
+        var currentMounted = PartyMembers.Count(m => m.IsMounted);
+        if (PartyMembers.Count != lastLoggedMemberCount || currentMounted != lastLoggedMountedCount)
+        {
+            lastLoggedMemberCount = PartyMembers.Count;
+            lastLoggedMountedCount = currentMounted;
+            _plugin.AddDebugLog($"Party: {PartyMembers.Count} members, {currentMounted} mounted");
+        }
     }
 
     public bool WaitForAllMounted(int timeoutSeconds = 60)

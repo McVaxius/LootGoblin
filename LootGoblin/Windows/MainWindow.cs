@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 using LootGoblin.Models;
@@ -38,7 +39,8 @@ public class MainWindow : Window, IDisposable
 
     public override void Draw()
     {
-        ImGui.Text("Loot Goblin - Treasure Map Automation");
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
+        ImGui.Text($"Loot Goblin v{version}");
         ImGui.Separator();
         ImGui.Spacing();
 
@@ -111,8 +113,10 @@ public class MainWindow : Window, IDisposable
             var player = Plugin.ObjectTable.LocalPlayer;
             if (player != null)
             {
+                var playerName = KrangleService.KrangleName(player.Name.TextValue);
+                var serverName = KrangleService.KrangleServer(player.HomeWorld.Value.Name.ToString());
                 ImGui.SameLine();
-                ImGui.Text($"  |  {player.Name} @ {player.HomeWorld.Value.Name}");
+                ImGui.Text($"  |  {playerName} @ {serverName}");
             }
         }
 
@@ -183,17 +187,19 @@ public class MainWindow : Window, IDisposable
                         if (string.IsNullOrEmpty(itemName))
                             itemName = $"Unknown Map (ID: {itemId})";
                         
-                        // Determine tier from item description
-                        var desc = item?.Description.ToString() ?? "";
-                        var isParty = desc.Contains("8 player", StringComparison.OrdinalIgnoreCase);
-                        var tierColor = isParty ? ColorCyan : ColorYellow;
-                        var tierTag = isParty ? "[Party]" : "[Solo]";
+                        // Extract map level from item
+                        var itemLevel = item?.LevelItem.RowId ?? 0;
                         
-                        ImGui.TextColored(tierColor, $"  {itemName}");
+                        // Determine map tier from name or item level
+                        var mapTier = GetMapTier(itemName, itemLevel);
+                        
+                        ImGui.Text($"  {itemName}");
                         ImGui.SameLine();
                         ImGui.Text($" x{quantity}");
                         ImGui.SameLine();
-                        ImGui.TextColored(ColorGrey, $"  {tierTag}");
+                        ImGui.TextColored(ColorCyan, $"  Tier {mapTier}");
+                        ImGui.SameLine();
+                        ImGui.TextColored(ColorGrey, $"  (iLvl {itemLevel})");
                     }
                 }
 
@@ -246,142 +252,61 @@ public class MainWindow : Window, IDisposable
             ImGui.SameLine();
             ImGui.TextColored(nav.IsInCombat() ? ColorRed : ColorGrey, nav.IsInCombat() ? "[In Combat]" : "[No Combat]");
 
-            ImGui.Spacing();
-
-            // Navigation buttons
             if (!vnav.IsAvailable)
             {
+                ImGui.Spacing();
                 ImGui.TextColored(ColorRed, "  vnavmesh required for navigation.");
-            }
-            else
-            {
-                if (ImGui.Button("Fly to Flag", new Vector2(120, 0)))
-                {
-                    nav.FlyToFlag();
-                }
-
-                ImGui.SameLine();
-                if (ImGui.Button("Mount Up", new Vector2(120, 0)))
-                {
-                    nav.MountUp();
-                }
-
-                ImGui.SameLine();
-                if (ImGui.Button("Stop Nav", new Vector2(120, 0)))
-                {
-                    nav.StopNavigation();
-                }
             }
         }
     }
 
     private void DrawPartySection()
-{
-    if (ImGui.CollapsingHeader("Party Coordination"))
     {
-        if (!Plugin.ClientState.IsLoggedIn)
+        if (ImGui.CollapsingHeader("Party Coordination"))
         {
-            ImGui.TextColored(ColorGrey, "  Log in to check party status.");
-            return;
-        }
-
-        var party = plugin.PartyService;
-        var frenrider = plugin.FrenRiderIPC;
-
-        // Update party status
-        party.UpdatePartyStatus();
-
-        // State display
-        ImGui.Text("  State: ");
-        ImGui.SameLine();
-        var stateColor = party.State == PartyCoordinationState.Error ? ColorRed :
-                         party.State == PartyCoordinationState.AllReady ? ColorGreen : ColorYellow;
-        ImGui.TextColored(stateColor, party.State.ToString());
-        if (!string.IsNullOrEmpty(party.StateDetail))
-        {
-            ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, $"  {party.StateDetail}");
-        }
-
-        ImGui.Spacing();
-
-        // Party member count
-        var memberCount = party.PartyMembers.Count;
-        ImGui.Text($"  Members: {memberCount}");
-        if (memberCount > 1)
-        {
-            ImGui.SameLine();
-            var mountedCount = party.PartyMembers.Count(m => m.IsMounted);
-            var readyCount = party.PartyMembers.Count(m => m.IsReady);
-            ImGui.TextColored(ColorGreen, $" ({mountedCount}/{memberCount} mounted, {readyCount}/{memberCount} ready)");
-        }
-
-        // Party member details
-        if (party.PartyMembers.Count > 1)
-        {
-            ImGui.Spacing();
-            ImGui.Text("  Party Members:");
-            foreach (var member in party.PartyMembers)
+            if (!Plugin.ClientState.IsLoggedIn)
             {
-                ImGui.Text($"    {member.Name}");
-                ImGui.SameLine();
-                if (member.IsMounted)
-                {
-                    ImGui.TextColored(ColorGreen, "[Mounted]");
-                    if (member.IsFlying)
-                    {
-                        ImGui.SameLine();
-                        ImGui.TextColored(ColorCyan, "[Flying]");
-                    }
-                }
-                else
-                {
-                    ImGui.TextColored(ColorGrey, "[On Foot]");
-                }
+                ImGui.TextColored(ColorGrey, "  Log in to check party status.");
+                return;
+            }
 
-                if (member.IsPillionRider)
+            var party = plugin.PartyService;
+            party.UpdatePartyStatus();
+
+            var memberCount = party.PartyMembers.Count;
+            ImGui.Text($"  Members: {memberCount}");
+            if (memberCount > 1)
+            {
+                ImGui.SameLine();
+                var mountedCount = party.PartyMembers.Count(m => m.IsMounted);
+                ImGui.TextColored(ColorGreen, $" ({mountedCount}/{memberCount} mounted)");
+            }
+
+            if (party.PartyMembers.Count > 1)
+            {
+                ImGui.Spacing();
+                foreach (var member in party.PartyMembers)
                 {
+                    var krangled = KrangleService.KrangleName(member.Name);
+                    ImGui.Text($"    {krangled}");
                     ImGui.SameLine();
-                    ImGui.TextColored(ColorYellow, "[Pillion]");
+                    if (member.IsMounted)
+                    {
+                        ImGui.TextColored(ColorGreen, "[Mounted]");
+                        if (member.IsFlying)
+                        {
+                            ImGui.SameLine();
+                            ImGui.TextColored(ColorCyan, "[Flying]");
+                        }
+                    }
+                    else
+                    {
+                        ImGui.TextColored(ColorGrey, "[On Foot]");
+                    }
                 }
             }
         }
-
-        ImGui.Spacing();
-
-        // Control buttons
-        if (ImGui.Button("Check Party", new Vector2(120, 0)))
-        {
-            party.UpdatePartyStatus();
-            plugin.AddDebugLog("Manual party status check.");
-        }
-
-        ImGui.SameLine();
-        if (ImGui.Button("Wait for Mounts", new Vector2(120, 0)))
-        {
-            party.WaitForAllMounted(plugin.Configuration.PartyWaitTimeout);
-        }
-
-        ImGui.SameLine();
-        if (ImGui.Button("Stop FrenRider", new Vector2(120, 0)))
-        {
-            frenrider.StopFollowing();
-        }
-
-        // FrenRider status
-        ImGui.Spacing();
-        ImGui.Text("  FrenRider: ");
-        ImGui.SameLine();
-        if (frenrider.IsAvailable)
-        {
-            ImGui.TextColored(ColorGreen, "Available");
-        }
-        else
-        {
-            ImGui.TextColored(ColorYellow, "Not found");
-        }
     }
-}
 
 private void DrawDependencySection()
     {
@@ -444,6 +369,56 @@ private void DrawDependencySection()
             ImGui.Text("  off       - Disable bot");
             ImGui.Text("  status    - Print current status");
         }
+    }
+
+    private static int GetMapTier(string mapName, uint itemLevel)
+    {
+        // Map name to tier lookup (ordered by expansion/release)
+        // Tier is based on the map's position in the progression
+        var tierMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            // ARR
+            { "Timeworn Leather Map", 1 },
+            { "Timeworn Goatskin Map", 2 },
+            { "Timeworn Toadskin Map", 3 },
+            { "Timeworn Boarskin Map", 4 },
+            { "Timeworn Peisteskin Map", 5 },
+            // HW
+            { "Timeworn Archaeoskin Map", 6 },
+            { "Timeworn Wyvernskin Map", 7 },
+            { "Timeworn Dragonskin Map", 8 },
+            // SB
+            { "Timeworn Gaganaskin Map", 9 },
+            { "Timeworn Gazelleskin Map", 10 },
+            // ShB
+            { "Timeworn Gliderskin Map", 11 },
+            { "Timeworn Zonureskin Map", 12 },
+            // EW
+            { "Timeworn Saigaskin Map", 13 },
+            { "Timeworn Kumbhiraskin Map", 14 },
+            // DT
+            { "Timeworn Loboskin Map", 15 },
+            { "Timeworn Br'aaxskin Map", 16 },
+            // Special maps
+            { "Timeworn Special Archaeoskin Map", 6 },
+            { "Timeworn Special Dragonskin Map", 8 },
+            { "Timeworn Special Gazelleskin Map", 10 },
+            { "Timeworn Special Zonureskin Map", 12 },
+            { "Timeworn Special Kumbhiraskin Map", 14 },
+            { "Timeworn Special Br'aaxskin Map", 16 },
+        };
+
+        foreach (var kvp in tierMap)
+        {
+            if (mapName.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase))
+                return kvp.Value;
+        }
+
+        // Fallback: estimate tier from item level
+        if (itemLevel > 0)
+            return Math.Max(1, (int)(itemLevel / 50) + 1);
+
+        return 0;
     }
 
     private void DrawDebugLogSection()
