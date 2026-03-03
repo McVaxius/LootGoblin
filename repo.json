@@ -1,0 +1,26 @@
+[
+  {
+    "Author": "DhogGPT",
+    "Name": "Loot Goblin",
+    "InternalName": "LootGoblin",
+    "Punchline": "Automated treasure map hunting bot with party coordination.",
+    "Description": "LootGoblin automates treasure map hunting by opening maps, detecting locations via GlobeTrotter, teleporting to the nearest aetheryte, coordinating with party members, and flying to the treasure location. Use /lootgoblin or /lg to open.",
+    "ApplicableVersion": "any",
+    "Tags": [
+      "treasure",
+      "map",
+      "automation",
+      "bot",
+      "loot"
+    ],
+    "RepoUrl": "https://github.com/McVaxius/LootGoblin",
+    "AssemblyVersion": "0.0.0.1",
+    "DalamudApiLevel": 14,
+    "DownloadLinkInstall": "https://github.com/McVaxius/LootGoblin/releases/latest/download/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/McVaxius/LootGoblin/releases/latest/download/latest.zip",
+    "DownloadLinkTesting": "https://github.com/McVaxius/LootGoblin/releases/latest/download/latest.zip",
+    "IsHide": false,
+    "IsTestingExclusive": false,
+    "LoadPriority": 0
+  }
+]

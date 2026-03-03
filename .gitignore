@@ -1,0 +1,122 @@
+# Dalamud Plugin .gitignore
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio cache/options
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## Build results
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+## NuGet Packages
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+## Backup files (timestamped backups)
+backups/
+*.backup
+*_backup_*
+
+## Learning and development notes (gitignored per user request)
+learning/
+notes/
+research/
+dev-notes/
+*.notes.md
+*.research.md
+
+## Plugin-specific ignores
+LootGoblin/bin/
+LootGoblin/obj/
+*.DotSettings.user
+
+## Rider
+.idea/
+*.sln.iml
+
+## macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+## Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+## Temporary files
+*.swp
+*.swo
+*~
+.tmp/
+temp/
+tmp/
+
+## Test files
+test-results/
+TestResults/
+
+## Coverage
+coverage/
+*.coverage
+*.coveragexml
+
+## Publish profiles
+*.pubxml
+*.publishproj
+
+## Local configuration (user-specific settings)
+*.local.json
+appsettings.local.json
