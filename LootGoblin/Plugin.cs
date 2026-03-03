@@ -5,6 +5,8 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
+using LootGoblin.IPC;
+using LootGoblin.Services;
 using LootGoblin.Windows;
 
 namespace LootGoblin;
@@ -31,12 +33,30 @@ public sealed class Plugin : IDalamudPlugin
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
 
+    // Services
+    public InventoryService InventoryService { get; init; }
+    public MapDetectionService MapDetectionService { get; init; }
+
+    // IPC
+    public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
+    public VNavIPC VNavIPC { get; init; }
+    public RotationPluginIPC RotationPluginIPC { get; init; }
+
     public List<string> DebugLog { get; } = new();
     private const int MaxDebugLogLines = 200;
 
     public Plugin()
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
+        // Initialize services
+        InventoryService = new InventoryService(this, Log);
+        MapDetectionService = new MapDetectionService(this, GameGui, Log);
+
+        // Initialize IPC
+        GlobeTrotterIPC = new GlobeTrotterIPC(this, PluginInterface, Log);
+        VNavIPC = new VNavIPC(this, PluginInterface, Log);
+        RotationPluginIPC = new RotationPluginIPC(this, PluginInterface, Log);
 
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this);
@@ -72,6 +92,12 @@ public sealed class Plugin : IDalamudPlugin
 
         ConfigWindow.Dispose();
         MainWindow.Dispose();
+
+        RotationPluginIPC.Dispose();
+        VNavIPC.Dispose();
+        GlobeTrotterIPC.Dispose();
+        MapDetectionService.Dispose();
+        InventoryService.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
         CommandManager.RemoveHandler(CommandAlias);

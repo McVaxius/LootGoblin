@@ -2,6 +2,29 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.0.6] - 2026-03-03
+
+### Added
+- **Treasure Map Inventory Scanner** - Detects all known treasure maps in player inventory
+- **Map data model** - 16 known map types across ARR, HW, SB, ShB, EW, DT expansions
+- **Map display** - Color-coded by tier (Solo/Party), shows expansion, dungeon indicator
+- **Refresh Maps button** - Manual inventory rescan with 2-second cooldown
+- **InventoryService** - Uses InventoryManager to scan for treasure maps (unsafe, pattern from ChocoboColourized)
+- **MapDetectionService** - Detects when AreaMap addon is open
+- **GlobeTrotterIPC** - Checks if GlobeTrotter plugin is installed and loaded
+- **VNavIPC** - Checks if vnavmesh plugin is installed and loaded
+- **RotationPluginIPC** - Checks RSR, BMR, VBM, Wrath availability
+- **BMR marked with [Map AI]** tag - Has treasure map dungeon modules
+- **Live dependency status** - Green/Red/Yellow status for all plugins
+- **Refresh Dependencies button** - Manual recheck of all plugin dependencies
+- **MapLocation model** - Territory, coordinates, nearest aetheryte
+- **BotState enum** - Full state machine: Idle through Completed/Error
+- **DrawPluginStatus helper** - Reusable status display for required vs optional plugins
+
+### Changed
+- MainWindow now has collapsible Treasure Maps, Dependencies, Commands sections
+- Dependencies section shows real plugin availability instead of placeholders
+
 ## [0.0.0.4] - 2026-03-03
 
 ### Added

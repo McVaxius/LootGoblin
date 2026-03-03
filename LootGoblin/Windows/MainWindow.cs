@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
+using LootGoblin.Models;
 
 namespace LootGoblin.Windows;
 
@@ -12,8 +14,12 @@ public class MainWindow : Window, IDisposable
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
+    private static readonly Vector4 ColorCyan = new(0.3f, 1f, 1f, 1f);
 
     private readonly Plugin plugin;
+    private Dictionary<uint, int> cachedMaps = new();
+    private DateTime lastScanTime = DateTime.MinValue;
+    private const double ScanCooldownSeconds = 2.0;
 
     public MainWindow(Plugin plugin)
         : base("Loot Goblin##MainWindow")
@@ -41,6 +47,11 @@ public class MainWindow : Window, IDisposable
         ImGui.Spacing();
 
         DrawControlsSection();
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        DrawMapInventorySection();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -127,21 +138,111 @@ public class MainWindow : Window, IDisposable
         }
     }
 
+    private void DrawMapInventorySection()
+    {
+        if (ImGui.CollapsingHeader("Treasure Maps in Inventory", ImGuiTreeNodeFlags.DefaultOpen))
+        {
+            if (Plugin.ClientState.IsLoggedIn)
+            {
+                var now = DateTime.Now;
+                if ((now - lastScanTime).TotalSeconds >= ScanCooldownSeconds)
+                {
+                    cachedMaps = plugin.InventoryService.ScanForMaps();
+                    lastScanTime = now;
+                }
+
+                if (cachedMaps.Count == 0)
+                {
+                    ImGui.TextColored(ColorGrey, "  No treasure maps found in inventory.");
+                }
+                else
+                {
+                    foreach (var kvp in cachedMaps)
+                    {
+                        if (TreasureMapData.KnownMaps.TryGetValue(kvp.Key, out var info))
+                        {
+                            var tierColor = info.Tier == MapTier.Party ? ColorCyan : ColorYellow;
+                            ImGui.TextColored(tierColor, $"  {info.Name}");
+                            ImGui.SameLine();
+                            ImGui.Text($" x{kvp.Value}");
+                            ImGui.SameLine();
+                            ImGui.TextColored(ColorGrey, $"  [{info.Expansion}] {info.Tier}");
+                            if (info.HasDungeon)
+                            {
+                                ImGui.SameLine();
+                                ImGui.TextColored(ColorGreen, " (Dungeon)");
+                            }
+                        }
+                        else
+                        {
+                            ImGui.Text($"  Unknown Map (ID: {kvp.Key}) x{kvp.Value}");
+                        }
+                    }
+                }
+
+                ImGui.Spacing();
+                if (ImGui.Button("Refresh Maps"))
+                {
+                    cachedMaps = plugin.InventoryService.ScanForMaps();
+                    lastScanTime = DateTime.Now;
+                    plugin.AddDebugLog("Manual map inventory refresh.");
+                }
+            }
+            else
+            {
+                ImGui.TextColored(ColorGrey, "  Log in to scan inventory.");
+            }
+        }
+    }
+
     private void DrawDependencySection()
     {
-        ImGui.Text("Dependencies:");
-        ImGui.Spacing();
+        if (ImGui.CollapsingHeader("Dependencies"))
+        {
+            // Required
+            ImGui.Text("Required:");
+            ImGui.Spacing();
 
-        ImGui.Text("  vnavmesh: ");
+            DrawPluginStatus("  vnavmesh", plugin.VNavIPC.IsAvailable, true);
+            DrawPluginStatus("  GlobeTrotter", plugin.GlobeTrotterIPC.IsAvailable, false);
+
+            ImGui.Spacing();
+            ImGui.Text("Optional (Combat/Rotation):");
+            ImGui.Spacing();
+
+            foreach (var rp in plugin.RotationPluginIPC.RotationPlugins)
+            {
+                DrawPluginStatus($"  {rp.DisplayName}", rp.IsAvailable, false);
+                if (rp.IsAvailable && rp.HasTreasureMapSupport)
+                {
+                    ImGui.SameLine();
+                    ImGui.TextColored(ColorGreen, " [Map AI]");
+                }
+            }
+
+            ImGui.Spacing();
+            if (ImGui.Button("Refresh Dependencies"))
+            {
+                plugin.VNavIPC.CheckAvailability();
+                plugin.GlobeTrotterIPC.CheckAvailability();
+                plugin.RotationPluginIPC.CheckAvailability();
+                plugin.AddDebugLog("Dependency check refreshed.");
+            }
+        }
+    }
+
+    private void DrawPluginStatus(string label, bool available, bool required)
+    {
+        ImGui.Text($"{label}: ");
         ImGui.SameLine();
-        ImGui.TextColored(ColorGrey, "(not checked yet)");
-
-        ImGui.Text("  GlobeTrotter: ");
-        ImGui.SameLine();
-        ImGui.TextColored(ColorGrey, "(not checked yet)");
-
-        ImGui.Spacing();
-        ImGui.TextColored(ColorGrey, "Dependency checks will be implemented in Phase 2.");
+        if (available)
+        {
+            ImGui.TextColored(ColorGreen, "Available");
+        }
+        else
+        {
+            ImGui.TextColored(required ? ColorRed : ColorYellow, required ? "MISSING" : "Not found");
+        }
     }
 
     private void DrawCommandsSection()
