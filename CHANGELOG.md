@@ -2,6 +2,22 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.1] - 2026-03-03
+
+### Added
+- **Phase 4: Party Coordination**
+- **PartyService** - Detects party members, checks mount status via Character* cast (FrenRider pattern)
+- **FrenRiderIPC** - Detects FrenRider plugin, stop/pause/resume commands
+- **Party Coordination UI** - Shows member count, mounted/ready status, per-member details
+- **Check Party button** - Manual party status refresh
+- **Wait for Mounts button** - Waits for all party members to mount (with timeout)
+- **Stop FrenRider button** - Sends FrenRider stop command
+- **Party config settings** - Wait for Party, Require All Mounted, Allow Pillion Riders, Party Wait Timeout
+
+### Changed
+- Dependencies section now also shows FrenRider detection status
+- ConfigWindow expanded with Party Coordination settings section
+
 ## [0.0.1.0] - 2026-03-03
 
 ### Added

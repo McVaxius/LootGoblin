@@ -13,7 +13,7 @@ public class ConfigWindow : Window, IDisposable
     {
         Flags = ImGuiWindowFlags.NoCollapse;
 
-        Size = new Vector2(350, 320);
+        Size = new Vector2(350, 420);
         SizeCondition = ImGuiCond.FirstUseEver;
 
         configuration = plugin.Configuration;
@@ -97,6 +97,40 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.SliderFloat("Nav Timeout (s)", ref navTimeout, 30f, 600f, "%.0f"))
         {
             configuration.NavigationTimeout = navTimeout;
+            configuration.Save();
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.Text("Party Coordination");
+        ImGui.Spacing();
+
+        var waitForParty = configuration.WaitForParty;
+        if (ImGui.Checkbox("Wait for Party", ref waitForParty))
+        {
+            configuration.WaitForParty = waitForParty;
+            configuration.Save();
+        }
+
+        var requireAllMounted = configuration.RequireAllMounted;
+        if (ImGui.Checkbox("Require All Mounted", ref requireAllMounted))
+        {
+            configuration.RequireAllMounted = requireAllMounted;
+            configuration.Save();
+        }
+
+        var allowPillion = configuration.AllowPillionRiders;
+        if (ImGui.Checkbox("Allow Pillion Riders", ref allowPillion))
+        {
+            configuration.AllowPillionRiders = allowPillion;
+            configuration.Save();
+        }
+
+        var partyTimeout = configuration.PartyWaitTimeout;
+        if (ImGui.SliderInt("Party Wait Timeout (s)", ref partyTimeout, 30, 300))
+        {
+            configuration.PartyWaitTimeout = partyTimeout;
             configuration.Save();
         }
     }

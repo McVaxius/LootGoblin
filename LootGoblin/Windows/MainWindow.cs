@@ -62,6 +62,11 @@ public class MainWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
+        DrawPartySection();
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
         DrawDependencySection();
         ImGui.Spacing();
         ImGui.Separator();
@@ -270,7 +275,115 @@ public class MainWindow : Window, IDisposable
         }
     }
 
-    private void DrawDependencySection()
+    private void DrawPartySection()
+{
+    if (ImGui.CollapsingHeader("Party Coordination"))
+    {
+        if (!Plugin.ClientState.IsLoggedIn)
+        {
+            ImGui.TextColored(ColorGrey, "  Log in to check party status.");
+            return;
+        }
+
+        var party = plugin.PartyService;
+        var frenrider = plugin.FrenRiderIPC;
+
+        // Update party status
+        party.UpdatePartyStatus();
+
+        // State display
+        ImGui.Text("  State: ");
+        ImGui.SameLine();
+        var stateColor = party.State == PartyCoordinationState.Error ? ColorRed :
+                         party.State == PartyCoordinationState.AllReady ? ColorGreen : ColorYellow;
+        ImGui.TextColored(stateColor, party.State.ToString());
+        if (!string.IsNullOrEmpty(party.StateDetail))
+        {
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, $"  {party.StateDetail}");
+        }
+
+        ImGui.Spacing();
+
+        // Party member count
+        var memberCount = party.PartyMembers.Count;
+        ImGui.Text($"  Members: {memberCount}");
+        if (memberCount > 1)
+        {
+            ImGui.SameLine();
+            var mountedCount = party.PartyMembers.Count(m => m.IsMounted);
+            var readyCount = party.PartyMembers.Count(m => m.IsReady);
+            ImGui.TextColored(ColorGreen, $" ({mountedCount}/{memberCount} mounted, {readyCount}/{memberCount} ready)");
+        }
+
+        // Party member details
+        if (party.PartyMembers.Count > 1)
+        {
+            ImGui.Spacing();
+            ImGui.Text("  Party Members:");
+            foreach (var member in party.PartyMembers)
+            {
+                ImGui.Text($"    {member.Name}");
+                ImGui.SameLine();
+                if (member.IsMounted)
+                {
+                    ImGui.TextColored(ColorGreen, "[Mounted]");
+                    if (member.IsFlying)
+                    {
+                        ImGui.SameLine();
+                        ImGui.TextColored(ColorCyan, "[Flying]");
+                    }
+                }
+                else
+                {
+                    ImGui.TextColored(ColorGrey, "[On Foot]");
+                }
+
+                if (member.IsPillionRider)
+                {
+                    ImGui.SameLine();
+                    ImGui.TextColored(ColorYellow, "[Pillion]");
+                }
+            }
+        }
+
+        ImGui.Spacing();
+
+        // Control buttons
+        if (ImGui.Button("Check Party", new Vector2(120, 0)))
+        {
+            party.UpdatePartyStatus();
+            plugin.AddDebugLog("Manual party status check.");
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Wait for Mounts", new Vector2(120, 0)))
+        {
+            party.WaitForAllMounted(plugin.Configuration.PartyWaitTimeout);
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Stop FrenRider", new Vector2(120, 0)))
+        {
+            frenrider.StopFollowing();
+        }
+
+        // FrenRider status
+        ImGui.Spacing();
+        ImGui.Text("  FrenRider: ");
+        ImGui.SameLine();
+        if (frenrider.IsAvailable)
+        {
+            ImGui.TextColored(ColorGreen, "Available");
+        }
+        else
+        {
+            ImGui.TextColored(ColorYellow, "Not found");
+        }
+    }
+}
+
+private void DrawDependencySection()
     {
         if (ImGui.CollapsingHeader("Dependencies"))
         {

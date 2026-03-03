@@ -38,11 +38,13 @@ public sealed class Plugin : IDalamudPlugin
     public InventoryService InventoryService { get; init; }
     public MapDetectionService MapDetectionService { get; init; }
     public NavigationService NavigationService { get; init; }
+    public PartyService PartyService { get; init; }
 
     // IPC
     public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
     public VNavIPC VNavIPC { get; init; }
     public RotationPluginIPC RotationPluginIPC { get; init; }
+    public FrenRiderIPC FrenRiderIPC { get; init; }
 
     public List<string> DebugLog { get; } = new();
     private const int MaxDebugLogLines = 200;
@@ -62,6 +64,12 @@ public sealed class Plugin : IDalamudPlugin
 
         // Initialize navigation (after IPC so VNavIPC is available)
         NavigationService = new NavigationService(this, Condition, ClientState, DataManager, Log);
+
+        // Initialize party service
+        PartyService = new PartyService(this, PartyList, ObjectTable, ClientState, Condition, Log);
+
+        // Initialize remaining IPC
+        FrenRiderIPC = new FrenRiderIPC(this, PluginInterface, Log);
 
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this);
@@ -98,7 +106,9 @@ public sealed class Plugin : IDalamudPlugin
         ConfigWindow.Dispose();
         MainWindow.Dispose();
 
+        PartyService.Dispose();
         NavigationService.Dispose();
+        FrenRiderIPC.Dispose();
         RotationPluginIPC.Dispose();
         VNavIPC.Dispose();
         GlobeTrotterIPC.Dispose();
