@@ -1,5 +1,6 @@
 using Dalamud.Configuration;
 using System;
+using System.Collections.Generic;
 
 namespace LootGoblin;
 
@@ -30,6 +31,12 @@ public class Configuration : IPluginConfiguration
     public int MaxRetries { get; set; } = 3;
     public bool StopOnError { get; set; } = true;
     public bool EnableStateLogging { get; set; } = true;
+
+    // Phase 6: Map Selection + Chest Interaction
+    public List<uint> EnabledMapTypes { get; set; } = new();
+    public float ChestInteractionRange { get; set; } = 5f;
+    public bool AutoLootChest { get; set; } = true;
+    public int ChestOpenTimeout { get; set; } = 10;
 
     public void Save()
     {

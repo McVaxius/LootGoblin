@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using Dalamud.Plugin.Services;
 using LootGoblin.Models;
@@ -147,47 +148,89 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Pick the highest item ID present (roughly highest tier)
-        uint bestId = 0;
-        foreach (var kvp in maps)
+        var enabled = _plugin.Configuration.EnabledMapTypes;
+
+        // Filter to only enabled map types; if none configured, allow all
+        var candidates = enabled.Count > 0
+            ? maps.Where(kvp => enabled.Contains(kvp.Key) && kvp.Value > 0).Select(kvp => kvp.Key).ToList()
+            : maps.Where(kvp => kvp.Value > 0).Select(kvp => kvp.Key).ToList();
+
+        if (candidates.Count == 0)
         {
-            if (kvp.Key > bestId) bestId = kvp.Key;
+            HandleError("No enabled maps in inventory. Check map selection in UI.");
+            return;
         }
 
-        SelectedMapItemId = bestId;
-        _plugin.AddDebugLog($"Selected map item ID {bestId}.");
-        TransitionTo(BotState.OpeningMap, $"Opening map ID {bestId}...");
+        // Sort by TreasureMapData MinLevel ascending (lowest tier first)
+        candidates.Sort((a, b) =>
+        {
+            var aLevel = TreasureMapData.KnownMaps.TryGetValue(a, out var ai) ? ai.MinLevel : 999;
+            var bLevel = TreasureMapData.KnownMaps.TryGetValue(b, out var bi) ? bi.MinLevel : 999;
+            return aLevel.CompareTo(bLevel);
+        });
+
+        SelectedMapItemId = candidates[0];
+        var mapName = TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var info) ? info.Name : $"ID {SelectedMapItemId}";
+        _plugin.AddDebugLog($"Selected: {mapName} (ID {SelectedMapItemId}).");
+        TransitionTo(BotState.OpeningMap, $"Opening {mapName}...");
     }
 
     private void TickOpeningMap()
     {
         if (!stateActionIssued)
         {
-            // TODO Phase 6: Use item via game interaction
-            // For now: send /item use command placeholder
-            _plugin.AddDebugLog($"[Stub] Opening map {SelectedMapItemId} - Phase 6 will implement actual map use.");
-            stateActionIssued = true;
+            if (!GameHelpers.IsPlayerAvailable())
+            {
+                StateDetail = "Waiting for player to be available...";
+                return;
+            }
+
+            var result = GameHelpers.UseItem(SelectedMapItemId);
+            if (result)
+            {
+                _plugin.AddDebugLog($"Map decipher triggered for ID {SelectedMapItemId}.");
+                stateActionIssued = true;
+            }
+            else
+            {
+                _plugin.AddDebugLog($"UseItem({SelectedMapItemId}) not ready yet, retrying...");
+            }
+            return;
         }
 
-        // Transition after a short delay (stub until Phase 6)
-        if ((DateTime.Now - stateStartTime).TotalSeconds > 3)
-            TransitionTo(BotState.DetectingLocation, "Waiting for map location...");
+        // After use, wait for a dialog or flag to appear (the map decipher dialog)
+        // Transition to detection after a short delay to allow the game to process
+        if ((DateTime.Now - stateStartTime).TotalSeconds > 4)
+            TransitionTo(BotState.DetectingLocation, "Map opened, reading location...");
     }
 
     private void TickDetectingLocation()
     {
-        if (!_plugin.GlobeTrotterIPC.IsAvailable)
+        // Try to read the map flag from AgentMap (set when map is deciphered)
+        var location = _plugin.GlobeTrotterIPC.TryGetMapLocation();
+        if (location != null)
         {
-            HandleError("GlobeTrotter not available. Install GlobeTrotter to detect map locations.");
+            // Find nearest aetheryte to navigate from
+            var aetheryteId = _plugin.NavigationService.FindNearestAetheryte(location.TerritoryId);
+            location.NearestAetheryteId = aetheryteId;
+
+            SetLocation(location);
+
+            if (Plugin.ClientState.TerritoryType == location.TerritoryId)
+            {
+                // Already in the right zone - skip teleport
+                TransitionTo(BotState.Mounting, "Already in zone! Mounting up...");
+            }
+            else
+            {
+                TransitionTo(BotState.Teleporting, $"Teleporting to {location.ZoneName}...");
+            }
             return;
         }
 
-        // TODO Phase 6: Poll GlobeTrotter IPC for map coordinates
-        // Stub: will be replaced when GlobeTrotter IPC methods are wired up
-        if ((DateTime.Now - stateStartTime).TotalSeconds > 5)
-        {
-            HandleError("Location detection is a Phase 6 stub - GlobeTrotter IPC not yet wired.");
-        }
+        // Not found yet - keep polling (timeout handled by StateTimeouts)
+        var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+        StateDetail = $"Waiting for map flag... ({elapsed:F0}s / {StateTimeouts[BotState.DetectingLocation]}s)";
     }
 
     private void TickTeleporting()
@@ -296,10 +339,42 @@ public class StateManager : IDisposable
 
     private void TickOpeningChest()
     {
-        // TODO Phase 6: Detect and interact with treasure coffer
-        if ((DateTime.Now - stateStartTime).TotalSeconds > 5)
+        var chest = _plugin.ChestDetectionService.FindNearestCoffer();
+
+        if (chest == null)
         {
-            HandleError("Chest interaction is a Phase 6 stub - not yet implemented.");
+            // No coffer visible yet - keep waiting (may still be spawning after arrival)
+            var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+            StateDetail = $"Searching for treasure coffer... ({elapsed:F0}s)";
+            return;
+        }
+
+        var dist = _plugin.ChestDetectionService.NearestCofferDistance;
+        var range = _plugin.Configuration.ChestInteractionRange;
+
+        if (dist > range)
+        {
+            // Navigate closer if needed
+            if (!stateActionIssued)
+            {
+                _plugin.NavigationService.MoveToPosition(chest.Position);
+                stateActionIssued = true;
+                StateDetail = $"Moving to coffer '{chest.Name.TextValue}' ({dist:F1}y)...";
+            }
+            return;
+        }
+
+        // In range - interact
+        _plugin.NavigationService.StopNavigation();
+        var interacted = GameHelpers.InteractWithObject(chest);
+        if (interacted)
+        {
+            _plugin.AddDebugLog($"Interacted with coffer '{chest.Name.TextValue}'.");
+            TransitionTo(BotState.InCombat, "Coffer opened - waiting for combat or completion...");
+        }
+        else
+        {
+            _plugin.AddDebugLog("InteractWithObject returned false, will retry next tick.");
         }
     }
 

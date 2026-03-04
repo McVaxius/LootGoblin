@@ -167,5 +167,32 @@ public class ConfigWindow : Window, IDisposable
             configuration.MaxRetries = maxRetries;
             configuration.Save();
         }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.Text("Chest Interaction");
+        ImGui.Spacing();
+
+        var autoLoot = configuration.AutoLootChest;
+        if (ImGui.Checkbox("Auto Loot Chest", ref autoLoot))
+        {
+            configuration.AutoLootChest = autoLoot;
+            configuration.Save();
+        }
+
+        var chestRange = configuration.ChestInteractionRange;
+        if (ImGui.SliderFloat("Interaction Range (y)", ref chestRange, 1f, 15f))
+        {
+            configuration.ChestInteractionRange = chestRange;
+            configuration.Save();
+        }
+
+        var chestTimeout = configuration.ChestOpenTimeout;
+        if (ImGui.SliderInt("Chest Open Timeout (s)", ref chestTimeout, 5, 30))
+        {
+            configuration.ChestOpenTimeout = chestTimeout;
+            configuration.Save();
+        }
     }
 }

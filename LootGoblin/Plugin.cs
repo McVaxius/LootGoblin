@@ -24,6 +24,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
 
     private const string CommandName = "/lootgoblin";
     private const string CommandAlias = "/lg";
@@ -40,6 +41,7 @@ public sealed class Plugin : IDalamudPlugin
     public NavigationService NavigationService { get; init; }
     public PartyService PartyService { get; init; }
     public StateManager StateManager { get; init; }
+    public ChestDetectionService ChestDetectionService { get; init; }
 
     // IPC
     public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
@@ -67,6 +69,9 @@ public sealed class Plugin : IDalamudPlugin
 
         // Initialize party service
         PartyService = new PartyService(this, PartyList, ObjectTable, ClientState, Condition, Log);
+
+        // Initialize chest detection
+        ChestDetectionService = new ChestDetectionService(this, Log);
 
         // Initialize state machine
         StateManager = new StateManager(this, Framework, Log);
@@ -107,6 +112,7 @@ public sealed class Plugin : IDalamudPlugin
         MainWindow.Dispose();
 
         StateManager.Dispose();
+        ChestDetectionService.Dispose();
         PartyService.Dispose();
         NavigationService.Dispose();
         RotationPluginIPC.Dispose();

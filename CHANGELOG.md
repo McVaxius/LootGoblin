@@ -2,6 +2,30 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.6] - 2026-03-03
+
+### Added - Phase 6: Map Selection, Location Detection, Chest Interaction
+- **Map checkboxes** - Each map in inventory now has a checkbox; only checked maps run (unchecked = all)
+- **Lowest tier first** - Bot processes checked maps sorted lowest MinLevel → highest (preserves best maps)
+- **GameHelpers.cs** - `UseItem(itemId)` via `ActionManager.UseAction(ActionType.Item, extraParam:65535)` (FrenRider pattern); `InteractWithObject()` via `TargetSystem.InteractWithObject`
+- **MapFlagReader.cs** - Reads `AgentMap.FlagMapMarkers[0]` after decipher; uses `XFloat`/`YFloat` world coords + `TerritoryId`; `FlagMarkerCount > 0` check
+- **ChestDetectionService.cs** - Scans ObjectTable for `EventObj` objects named "Treasure"/"Coffer"; tracks nearest coffer and distance
+- **GlobeTrotterIPC.TryGetMapLocation()** - Delegates to MapFlagReader; reads live AgentMap flag
+- **StateManager - OpeningMap** - Calls `GameHelpers.UseItem()` to decipher map; waits 4s for flag to set
+- **StateManager - DetectingLocation** - Polls `TryGetMapLocation()` each tick; auto-detects if already in zone (skips teleport); finds nearest aetheryte
+- **StateManager - OpeningChest** - Finds nearest coffer; navigates within range; calls `InteractWithObject`; transitions to InCombat
+- **ITargetManager** - Added as Dalamud `[PluginService]` in Plugin.cs
+- **Config: EnabledMapTypes** (`List<uint>`), **ChestInteractionRange** (float, 5y), **AutoLootChest** (bool), **ChestOpenTimeout** (int, 10s)
+- **ConfigWindow** - New "Chest Interaction" section: Auto Loot, Interaction Range slider, Timeout slider
+
+### Fixed
+- **Krangle Names / Un-Krangle button** - Removed square brackets from both states
+
+### Notes
+- Map decipher triggers a dialog in-game; bot uses `UseItem` then waits 4s for the flag to propagate
+- `FlagMapMarker.XFloat` = world X, `FlagMapMarker.YFloat` = world Z (FFXIV convention)
+- InDungeon remains a stub (Phase 8)
+
 ## [0.0.1.5] - 2026-03-03
 
 ### Added - Phase 5: State Machine & Bot Logic

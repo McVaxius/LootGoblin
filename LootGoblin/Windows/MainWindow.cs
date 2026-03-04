@@ -162,7 +162,7 @@ public class MainWindow : Window, IDisposable
 
         ImGui.SameLine();
         var krangleEnabled = plugin.Configuration.KrangleNames;
-        var krangleText = krangleEnabled ? "[Un-Krangle]" : "[Krangle Names]";
+        var krangleText = krangleEnabled ? "Un-Krangle" : "Krangle Names";
         if (ImGui.Button(krangleText, new Vector2(120, 0)))
         {
             plugin.Configuration.KrangleNames = !krangleEnabled;
@@ -190,8 +190,17 @@ public class MainWindow : Window, IDisposable
                 else
                 {
                     var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
-                    
-                    foreach (var kvp in cachedMaps)
+                    var enabledTypes = plugin.Configuration.EnabledMapTypes;
+
+                    // Sort entries lowest MinLevel first (matches StateManager selection order)
+                    var sortedMaps = cachedMaps
+                        .OrderBy(kvp => LootGoblin.Models.TreasureMapData.KnownMaps.TryGetValue(kvp.Key, out var i) ? i.MinLevel : 999)
+                        .ToList();
+
+                    ImGui.TextColored(ColorGrey, "  [x] = include in bot run (lowest tier runs first)");
+                    ImGui.Spacing();
+
+                    foreach (var kvp in sortedMaps)
                     {
                         var itemId = kvp.Key;
                         var quantity = kvp.Value;
@@ -201,13 +210,19 @@ public class MainWindow : Window, IDisposable
                         if (string.IsNullOrEmpty(itemName))
                             itemName = $"Unknown Map (ID: {itemId})";
                         
-                        // Parse map tier and level from item description
                         var desc = item?.Description.ToString() ?? "";
                         var (mapTier, mapLevel) = ParseMapTierAndLevel(desc);
-                        
-                        ImGui.Text($"  {itemName}");
+
+                        // Checkbox per map type
+                        var isEnabled = enabledTypes.Contains(itemId);
+                        if (ImGui.Checkbox($"##map_{itemId}", ref isEnabled))
+                        {
+                            if (isEnabled) enabledTypes.Add(itemId);
+                            else enabledTypes.Remove(itemId);
+                            plugin.Configuration.Save();
+                        }
                         ImGui.SameLine();
-                        ImGui.Text($" x{quantity}");
+                        ImGui.Text($"{itemName} x{quantity}");
                         if (mapTier > 0)
                         {
                             ImGui.SameLine();
