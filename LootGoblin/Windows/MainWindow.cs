@@ -146,6 +146,12 @@ public class MainWindow : Window, IDisposable
             plugin.Configuration.KrangleNames = !krangleEnabled;
             plugin.Configuration.Save();
         }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Reset", new Vector2(120, 0)))
+        {
+            plugin.StateManager.ResetAll();
+        }
     }
 
     private void DrawMapInventorySection()

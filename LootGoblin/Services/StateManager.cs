@@ -28,6 +28,9 @@ public class StateManager : IDisposable
     private bool stateActionIssued;
     private bool chestInteracted; // Separate flag: true after we've called InteractWithObject on chest
     private DateTime combatEndTime; // Track when combat actually ended
+    private Vector3 lastStuckCheckPos; // Position at last stuck check
+    private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
+    private DateTime portalRetryStart = DateTime.MinValue; // Portal interaction retry timer
     private const double TickIntervalSeconds = 0.5;
     private readonly MountService _mountService;
 
@@ -129,7 +132,22 @@ public class StateManager : IDisposable
     {
         _plugin.NavigationService.StopNavigation();
         IsPaused = false;
+        RetryCount = 0;
+        portalRetryStart = DateTime.MinValue;
         TransitionTo(BotState.Idle, "Stopped by user.");
+    }
+
+    public void ResetAll()
+    {
+        _plugin.NavigationService.StopNavigation();
+        IsPaused = false;
+        RetryCount = 0;
+        CurrentLocation = null;
+        SelectedMapItemId = 0;
+        portalRetryStart = DateTime.MinValue;
+        KrangleService.ClearCache();
+        TransitionTo(BotState.Idle, "Full reset by user.");
+        _plugin.AddDebugLog("All plugin states reset.");
     }
 
     public void Pause()
@@ -336,6 +354,8 @@ public class StateManager : IDisposable
             var target = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
             nav.FlyToPosition(target);
             stateActionIssued = true;
+            lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+            lastStuckCheckTime = DateTime.Now;
             return;
         }
 
@@ -345,17 +365,23 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Re-navigate every 30 seconds in case we get stuck, but only if we're far from target
-        var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
         var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         var targetPos = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
         var distanceFromTarget = Vector3.Distance(currentPos, targetPos);
         
-        // Only re-navigate if we're more than 5 yalms from target AND at least 10 seconds have passed
-        if ((int)elapsed % 30 == 0 && (int)elapsed > 0 && distanceFromTarget > 5.0f)
+        // Stuck detection: only re-pathfind if stuck (10+ seconds without moving 5+ yalms)
+        var sinceStuckCheck = (DateTime.Now - lastStuckCheckTime).TotalSeconds;
+        if (sinceStuckCheck >= 10.0 && distanceFromTarget > 5.0f)
         {
-            nav.FlyToPosition(targetPos);
-            _plugin.AddDebugLog($"Re-navigating to target (elapsed: {elapsed:F0}s, distance: {distanceFromTarget:F1}y)");
+            var movedDistance = Vector3.Distance(currentPos, lastStuckCheckPos);
+            if (movedDistance < 5.0f)
+            {
+                // Stuck! Re-pathfind
+                nav.FlyToPosition(targetPos);
+                _plugin.AddDebugLog($"[Flying] Stuck detected (moved {movedDistance:F1}y in 10s) - re-pathfinding (distance: {distanceFromTarget:F1}y)");
+            }
+            lastStuckCheckPos = currentPos;
+            lastStuckCheckTime = DateTime.Now;
         }
 
         // Check if we're close enough to X,Z coordinates (within 5 yalms)
@@ -380,7 +406,9 @@ public class StateManager : IDisposable
                     {
                         _plugin.AddDebugLog("Successfully landed - proceeding with map content");
                         
-                        // Use /gaction dig to trigger the map content
+                        CommandHelper.SendCommand("/bmrai on");
+                        _plugin.AddDebugLog("Enabled BMR AI after landing");
+                        
                         CommandHelper.SendCommand("/gaction dig");
                         _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
                         
@@ -389,9 +417,11 @@ public class StateManager : IDisposable
                     else
                     {
                         _plugin.AddDebugLog("Failed to land - forcing dismount");
-                        // Force dismount if landing failed
                         _mountService.Dismount();
                         await System.Threading.Tasks.Task.Delay(1500);
+                        
+                        CommandHelper.SendCommand("/bmrai on");
+                        _plugin.AddDebugLog("Enabled BMR AI after dismount");
                         
                         CommandHelper.SendCommand("/gaction dig");
                         _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
@@ -402,7 +432,10 @@ public class StateManager : IDisposable
                 return;
             }
             
-            // Use /gaction dig to trigger the map content
+            // Already on ground
+            CommandHelper.SendCommand("/bmrai on");
+            _plugin.AddDebugLog("Enabled BMR AI (already grounded)");
+            
             CommandHelper.SendCommand("/gaction dig");
             _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
             
@@ -467,7 +500,8 @@ public class StateManager : IDisposable
             if (interacted)
             {
                 chestInteracted = true;
-                _plugin.AddDebugLog($"[OpeningChest] Successfully interacted with '{chestName}' - waiting for combat...");
+                CommandHelper.SendCommand("/bmrai on");
+                _plugin.AddDebugLog($"[OpeningChest] Successfully interacted with '{chestName}' - enabled BMR AI, waiting for combat...");
                 StateDetail = $"Interacted with '{chestName}' - waiting for combat...";
             }
             else
@@ -494,61 +528,29 @@ public class StateManager : IDisposable
 
     private void CheckForPortalAfterChest()
     {
-        // Look for portal (EventObj with "Teleportation Portal" in name)
-        var portal = FindNearestPortal();
-        if (portal != null)
-        {
-            _plugin.AddDebugLog($"Found portal '{portal.Name.TextValue}' - interacting to enter dungeon...");
-            
-            // First interact with the portal to get the popup
-            var interacted = GameHelpers.InteractWithObject(portal);
-            if (interacted)
-            {
-                _plugin.AddDebugLog("Interacted with portal - waiting for 'Journey through the portal?' popup");
-                
-                // Wait for popup then click yes
-                System.Threading.Tasks.Task.Delay(1500).ContinueWith(_ => {
-                    CommandHelper.SendCommand("/click yes");
-                    _plugin.AddDebugLog("Clicked yes to 'Journey through the portal?'");
-                });
-            }
-            else
-            {
-                _plugin.AddDebugLog("Failed to interact with portal");
-            }
-            
-            TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
-        }
-        else
-        {
-            _plugin.AddDebugLog("No portal found - map complete!");
-            TransitionTo(BotState.Completed, "Map completed - no portal");
-        }
+        // Transition to a portal-searching state that retries every 2s for 10s
+        portalRetryStart = DateTime.Now;
+        TransitionTo(BotState.Completed, "Searching for portal...");
     }
     
     private IGameObject? FindNearestPortal()
     {
-        var player = Plugin.ObjectTable.LocalPlayer;
-        if (player == null) return null;
+        // FrenRider-style: simple exact name match
+        var portalObj = Plugin.ObjectTable.FirstOrDefault(obj => 
+            obj != null && obj.Name.ToString() == "Teleportation Portal");
         
-        IGameObject? nearest = null;
-        var nearestDist = float.MaxValue;
-        
-        foreach (var obj in Plugin.ObjectTable)
+        if (portalObj != null)
         {
-            if (obj.ObjectKind != Dalamud.Game.ClientState.Objects.Enums.ObjectKind.EventObj) continue;
-            if (obj.Name.TextValue.Contains("Teleportation Portal", StringComparison.OrdinalIgnoreCase))
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player != null)
             {
-                var dist = Vector3.Distance(player.Position, obj.Position);
-                if (dist < nearestDist && dist < 10f) // Within 10y
-                {
-                    nearest = obj;
-                    nearestDist = dist;
-                }
+                var dist = Vector3.Distance(player.Position, portalObj.Position);
+                if (dist <= 30f)
+                    return portalObj;
             }
         }
         
-        return nearest;
+        return null;
     }
 
     private void TickInCombat()
@@ -634,6 +636,52 @@ public class StateManager : IDisposable
 
     private void TickCompleted()
     {
+        // If portalRetryStart is set, we're searching for a portal before finishing
+        if (portalRetryStart != DateTime.MinValue)
+        {
+            var sinceStart = (DateTime.Now - portalRetryStart).TotalSeconds;
+            
+            // Try to find and interact with portal every 2 seconds for 10 seconds
+            if (sinceStart <= 10.0)
+            {
+                var portal = FindNearestPortal();
+                if (portal != null)
+                {
+                    _plugin.AddDebugLog($"[Portal] Found '{portal.Name.TextValue}' - interacting...");
+                    var interacted = GameHelpers.InteractWithObject(portal);
+                    _plugin.AddDebugLog($"[Portal] InteractWithObject returned: {interacted}");
+                    
+                    if (interacted)
+                    {
+                        // Wait for popup then click yes
+                        System.Threading.Tasks.Task.Delay(1500).ContinueWith(_ => {
+                            CommandHelper.SendCommand("/click yes");
+                            _plugin.AddDebugLog("[Portal] Clicked yes to enter dungeon");
+                        });
+                        portalRetryStart = DateTime.MinValue;
+                        TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
+                        return;
+                    }
+                }
+                else
+                {
+                    // Also try /target as fallback
+                    if ((int)sinceStart % 4 == 0 && (int)sinceStart > 0)
+                    {
+                        CommandHelper.SendCommand("/target \"Teleportation Portal\"");
+                        _plugin.AddDebugLog("[Portal] Trying /target fallback...");
+                    }
+                }
+                
+                StateDetail = $"Searching for portal... ({sinceStart:F0}/10s)";
+                return;
+            }
+            
+            // 10s elapsed, no portal found - map is complete (no dungeon)
+            _plugin.AddDebugLog("[Portal] No portal found after 10s - map complete (no dungeon)");
+            portalRetryStart = DateTime.MinValue;
+        }
+        
         _plugin.AddDebugLog("Map run complete.");
         KrangleService.ClearCache();
 
@@ -651,6 +699,7 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("No more maps in inventory.");
         }
 
+        RetryCount = 0;
         TransitionTo(BotState.Idle, "Run complete.");
     }
 

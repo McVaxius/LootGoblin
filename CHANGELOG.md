@@ -2,6 +2,16 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.48] - 2026-03-04
+
+### Fixed - Multiple issues from testing feedback
+- **Fixed re-pathfinding** - Was re-navigating every 30s unnecessarily; now only re-pathfinds if stuck (10+ seconds without moving 5+ yalms)
+- **Send /bmrai on** - Now sent after landing, after dismount, and after chest targeting to enable combat AI
+- **Portal interaction** - Now retries every 2s for 10s using FrenRider-style targeting, with /target fallback
+- **Fixed FindNearestPortal** - Was using complex ObjectKind filter; now uses simple exact name match like chest
+- **Reset retries on Stop** - RetryCount resets to 0 when Stop is clicked or bot completes
+- **Added RESET button** - Next to Settings and Krangle; resets all plugin states (not saved configs)
+
 ## [0.0.1.47] - 2026-03-04
 
 ### Fixed - Chest detection using FrenRider pattern
