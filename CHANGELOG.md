@@ -2,6 +2,14 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.32] - 2026-03-03
+
+### Fixed - Sort maps by item ID to match game menu order
+- **Item ID sorting** - Menu sorts maps by item ID ascending, not inventory order
+- **Correct index** - Find target map position in sorted list
+- **Log all maps** - Show sorted map IDs for debugging
+- **Fixes wrong selection** - Previous versions used wrong sort order
+
 ## [0.0.1.31] - 2026-03-03
 
 ### Fixed - Simplified to always select index 0 (first map in sorted menu)

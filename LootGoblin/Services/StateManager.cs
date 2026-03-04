@@ -196,7 +196,7 @@ public class StateManager : IDisposable
             }
 
             // Use GameHelpers.UseItem - now properly uses InventoryManager.UseItem API
-            var result = GameHelpers.UseItem(SelectedMapItemId);
+            var result = GameHelpers.UseItem(SelectedMapItemId, _plugin.InventoryService);
             if (result)
             {
                 _plugin.AddDebugLog($"Map decipher triggered for ID {SelectedMapItemId}.");

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects;
@@ -27,7 +28,7 @@ public static class GameHelpers
     /// For treasure maps: uses /gaction decipher then selects the map from the menu.
     /// Returns false if player is busy, item not found, or action fails.
     /// </summary>
-    public static unsafe bool UseItem(uint itemId)
+    public static unsafe bool UseItem(uint itemId, InventoryService inventoryService)
     {
         try
         {
@@ -41,7 +42,6 @@ public static class GameHelpers
                 Plugin.Condition[ConditionFlag.Occupied39])
                 return false;
 
-            // Check if we have the map in inventory
             var im = InventoryManager.Instance();
             if (im == null)
             {
@@ -60,11 +60,20 @@ public static class GameHelpers
             CommandHelper.SendCommand("/gaction decipher");
             Plugin.Log.Information($"UseItem({itemId}): Opened decipher menu for {count} maps");
             
-            // The menu is sorted by the game, and based on testing, the target map
-            // appears to always be at index 0 (first in the list, already checked)
-            // Just select index 0 directly instead of trying to find it
-            var mapIndex = 0;
-            Plugin.Log.Information($"UseItem({itemId}): Selecting index {mapIndex} (first map in sorted menu)");
+            // Find the map's index in the menu by getting all maps and sorting by item ID
+            // The menu sorts maps by item ID ascending
+            var allMaps = inventoryService.ScanForMaps();
+            var sortedMapIds = allMaps.Keys.OrderBy(id => id).ToList();
+            var mapIndex = sortedMapIds.IndexOf(itemId);
+            
+            Plugin.Log.Information($"UseItem({itemId}): All maps in inventory: {string.Join(", ", sortedMapIds)}");
+            Plugin.Log.Information($"UseItem({itemId}): Target map {itemId} is at menu index {mapIndex}");
+            
+            if (mapIndex < 0)
+            {
+                Plugin.Log.Error($"UseItem({itemId}): Could not find map in sorted list");
+                return false;
+            }
             
             // Trigger the callback after a delay to ensure menu is ready
             System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
