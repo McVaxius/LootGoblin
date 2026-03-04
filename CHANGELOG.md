@@ -2,6 +2,12 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.14] - 2026-03-03
+
+### Fixed - Version bump for testing
+- Bumped version to ensure new release with auto map decipher functionality
+- Previous v0.0.1.13 had same functionality but wasn't properly released
+
 ## [0.0.1.13] - 2026-03-03
 
 ### Fixed - Auto map selection and confirmation
