@@ -185,20 +185,15 @@ public class StateManager : IDisposable
                 return;
             }
 
-            var result = GameHelpers.UseItem(SelectedMapItemId);
-            if (result)
-            {
-                _plugin.AddDebugLog($"Map decipher triggered for ID {SelectedMapItemId}.");
-                stateActionIssued = true;
-            }
-            else
-            {
-                _plugin.AddDebugLog($"UseItem({SelectedMapItemId}) not ready yet, retrying...");
-            }
+            // Treasure maps require /item command, not ActionManager.UseAction
+            var mapName = TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var info) ? info.Name : $"Map {SelectedMapItemId}";
+            CommandHelper.SendCommand($"/item \"{mapName}\"");
+            _plugin.AddDebugLog($"Sent /item \"{mapName}\" to decipher map.");
+            stateActionIssued = true;
             return;
         }
 
-        // After use, wait for a dialog or flag to appear (the map decipher dialog)
+        // After /item command, wait for the decipher dialog + flag to set
         // Transition to detection after a short delay to allow the game to process
         if ((DateTime.Now - stateStartTime).TotalSeconds > 4)
             TransitionTo(BotState.DetectingLocation, "Map opened, reading location...");

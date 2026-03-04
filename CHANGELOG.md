@@ -2,6 +2,23 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.7] - 2026-03-03
+
+### Fixed - Critical Hotfix
+- **Map decipher** - Replaced `GameHelpers.UseItem` with `/item "Map Name"` command; treasure maps require text command, not `ActionManager.UseAction` API
+- **Map sorting** - Added missing "Special Timeworn" maps to `TreasureMapData.KnownMaps` with correct MinLevel values:
+  - Seemingly Special (ID 24794, Lvl 70, SB)
+  - Ostensibly Special (ID 33328, Lvl 80, ShB)
+  - Potentially Special (ID 39593, Lvl 90, EW)
+  - Conceivably Special (ID 39918, Lvl 90, EW)
+  - Timeworn Br'aaxskin duplicate (ID 43557, Lvl 100, DT)
+  - Timeworn Gargantuaskin (ID 46185, Lvl 100, DT)
+- **Lowest tier first** - Now correctly sorts by `TreasureMapData.MinLevel` ascending (was defaulting unknown maps to 999)
+
+### Notes
+- v0.0.1.6 had critical bug: `UseItem` spam with "not ready" because `ActionManager` doesn't support treasure map items
+- Special Timeworn maps are dungeon portal guarantee variants (e.g., Seemingly Special → Lost Canals of Uznair 100%)
+
 ## [0.0.1.6] - 2026-03-03
 
 ### Added - Phase 6: Map Selection, Location Detection, Chest Interaction
