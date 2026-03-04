@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Dalamud.Game.ClientState.Objects;
+using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 using LootGoblin.Models;
 
@@ -357,7 +359,7 @@ public class StateManager : IDisposable
             CommandHelper.SendCommand("/gaction dig");
             _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
             
-            TransitionTo(BotState.OpeningChest, "Arrived! Looking for treasure coffer...");
+            TransitionTo(BotState.InCombat, "Waiting for combat to start...");
         }
     }
 
@@ -367,7 +369,7 @@ public class StateManager : IDisposable
 
         if (chest == null)
         {
-            // No coffer visible yet - keep waiting (may still be spawning after arrival)
+            // No coffer visible yet - keep waiting
             var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
             StateDetail = $"Searching for treasure coffer... ({elapsed:F0}s)";
             return;
@@ -388,40 +390,38 @@ public class StateManager : IDisposable
             return;
         }
 
-        // In range - wait 8 seconds if not in combat, then interact
+        // In range - interact with chest
         _plugin.NavigationService.StopNavigation();
-        var chestElapsed = (DateTime.Now - stateStartTime).TotalSeconds;
         
-        // Wait 8 seconds after arriving before interacting (if not in combat)
-        if (chestElapsed < 8 && !_plugin.NavigationService.IsInCombat())
-        {
-            StateDetail = $"Waiting before chest interaction... ({chestElapsed:F0}/8s)";
-            return;
-        }
-
-        // Try to interact with chest
+        // Try to interact with chest (post-combat check for portal)
         if (!stateActionIssued)
         {
             var interacted = GameHelpers.InteractWithObject(chest);
             if (interacted)
             {
-                _plugin.AddDebugLog($"Interacted with coffer '{chest.Name.TextValue}'.");
+                _plugin.AddDebugLog($"Interacted with coffer '{chest.Name.TextValue}' - checking for portal...");
                 stateActionIssued = true;
                 
-                // Schedule double-yes confirmation after 1 second
-                System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
-                    // First yes
-                    CommandHelper.SendCommand("/click yes");
-                    _plugin.AddDebugLog("Sent first /click yes for chest confirmation");
-                    
-                    // Second yes after another 1 second
-                    System.Threading.Tasks.Task.Delay(1000).ContinueWith(__ => {
-                        CommandHelper.SendCommand("/click yes");
-                        _plugin.AddDebugLog("Sent second /click yes for chest confirmation");
-                    });
+                // Schedule check for portal after 2 seconds
+                System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
+                    // Look for portal (EventObj with "Portal" in name)
+                    var portal = FindNearestPortal();
+                    if (portal != null)
+                    {
+                        _plugin.AddDebugLog($"Found portal '{portal.Name.TextValue}' - entering dungeon...");
+                        // Click portal and confirm
+                        System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
+                            CommandHelper.SendCommand("/click yes");
+                            _plugin.AddDebugLog("Clicked yes to enter portal");
+                        });
+                        TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
+                    }
+                    else
+                    {
+                        _plugin.AddDebugLog("No portal found - map complete!");
+                        TransitionTo(BotState.Completed, "Map completed - no portal");
+                    }
                 });
-                
-                TransitionTo(BotState.InCombat, "Coffer opened - waiting for combat or completion...");
             }
             else
             {
@@ -429,21 +429,72 @@ public class StateManager : IDisposable
             }
         }
     }
+    
+    private IGameObject? FindNearestPortal()
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return null;
+        
+        IGameObject? nearest = null;
+        var nearestDist = float.MaxValue;
+        
+        foreach (var obj in Plugin.ObjectTable)
+        {
+            if (obj.ObjectKind != Dalamud.Game.ClientState.Objects.Enums.ObjectKind.EventObj) continue;
+            if (obj.Name.TextValue.Contains("Portal", StringComparison.OrdinalIgnoreCase))
+            {
+                var dist = Vector3.Distance(player.Position, obj.Position);
+                if (dist < nearestDist && dist < 10f) // Within 10y
+                {
+                    nearest = obj;
+                    nearestDist = dist;
+                }
+            }
+        }
+        
+        return nearest;
+    }
 
     private void TickInCombat()
     {
-        // TODO Phase 7: Combat handling
-        if (!_plugin.NavigationService.IsInCombat())
+        // Check if combat has started
+        if (_plugin.NavigationService.IsInCombat())
         {
-            TransitionTo(BotState.OpeningChest, "Combat ended. Returning to chest...");
+            // Combat is active - enable BMR AI
+            if (!stateActionIssued)
+            {
+                CommandHelper.SendCommand("/bmrai on");
+                _plugin.AddDebugLog("Combat started - enabled BMR AI");
+                stateActionIssued = true;
+            }
+            StateDetail = "In combat - BMR AI active...";
+            return;
         }
+        
+        // Combat ended - wait 5-8 seconds then check chest again
+        var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+        if (elapsed < 6)
+        {
+            StateDetail = $"Combat ended - waiting before chest check... ({elapsed:F0}/6s)";
+            return;
+        }
+        
+        // Time to check chest for portal
+        TransitionTo(BotState.OpeningChest, "Combat ended - checking chest for portal...");
     }
 
     private void TickInDungeon()
     {
-        // TODO Phase 8: Dungeon handling
-        _plugin.AddDebugLog("[Stub] In dungeon - Phase 8 will handle this.");
-        TransitionTo(BotState.Completed, "Dungeon handling not yet implemented.");
+        // In dungeon - wait until we leave the instance
+        // Bot will resume when we're back in the overworld
+        StateDetail = "In dungeon instance - waiting to exit...";
+        
+        // Check if we're no longer in a dungeon (territory changed)
+        if (CurrentLocation != null && Plugin.ClientState.TerritoryType != CurrentLocation.TerritoryId)
+        {
+            _plugin.AddDebugLog("Left dungeon instance - resuming normal operation");
+            TransitionTo(BotState.Completed, "Dungeon completed - back in overworld");
+        }
     }
 
     private void TickCompleted()

@@ -2,6 +2,16 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.36] - 2026-03-04
+
+### Fixed - Correct map content flow order
+- **Fixed flow** - Dismount → /gaction dig → combat → /bmrai on → wait → check chest → portal detection
+- **Combat handling** - Enables BMR AI when combat starts
+- **Post-combat wait** - Waits 6 seconds after combat ends
+- **Portal detection** - Checks for portal after chest interaction
+- **Dungeon state** - Waits in dungeon until territory changes
+- **Proper sequencing** - Now follows correct treasure map flow
+
 ## [0.0.1.35] - 2026-03-04
 
 ### Added - Full map content automation
