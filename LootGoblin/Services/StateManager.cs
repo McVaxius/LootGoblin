@@ -29,6 +29,10 @@ public class StateManager : IDisposable
     private Vector3 lastStuckCheckPos; // Position at last stuck check
     private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
     private DateTime portalRetryStart = DateTime.MinValue; // Portal interaction retry timer
+    private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
+    private bool descentInProgress; // Prevents overlapping async Ctrl+Space descent calls
+    private DateTime lastInteractionTime = DateTime.MinValue; // Throttle chest/portal interaction attempts
+    private bool autoMoveActive; // Track if automove is currently on
     private const double TickIntervalSeconds = 0.5;
     private readonly MountService _mountService;
 
@@ -117,6 +121,7 @@ public class StateManager : IDisposable
         RetryCount = 0;
         CurrentLocation = null;
         SelectedMapItemId = 0;
+        _plugin.YesAlreadyIPC.Pause();
         TransitionTo(BotState.SelectingMap, "Starting map run...");
     }
 
@@ -384,52 +389,66 @@ public class StateManager : IDisposable
         
         if (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle || xzDist < 5.0f)
         {
-            // Force landing if we're flying
+            // We've arrived at the flag X,Z — now we need to dismount
             if (_plugin.NavigationService.IsMounted())
             {
-                _plugin.AddDebugLog("Close to target - attempting to land...");
-                
-                System.Threading.Tasks.Task.Run(async () => {
-                    // Use MountService to force land
-                    _mountService.ForceLand();
-                    
-                    // Wait a bit more to ensure landing is complete
-                    await System.Threading.Tasks.Task.Delay(2000);
-                    
-                    // If we're no longer mounted, proceed with map content
-                    if (!_plugin.NavigationService.IsMounted())
+                // Record when we first started trying to dismount at this location
+                if (dismountAttemptStart == DateTime.MinValue)
+                {
+                    dismountAttemptStart = DateTime.Now;
+                    _plugin.AddDebugLog("Close to target - attempting to land/dismount...");
+                }
+
+                var dismountElapsed = (DateTime.Now - dismountAttemptStart).TotalSeconds;
+
+                // Normal dismount: try /mount toggle (ForceLand) for up to 60 seconds
+                if (dismountElapsed < 60.0)
+                {
+                    // Attempt dismount every 2 seconds (ForceLand spams /mount internally)
+                    if (!descentInProgress && (int)dismountElapsed % 2 == 0)
                     {
-                        _plugin.AddDebugLog("Successfully landed - proceeding with map content");
-                        
-                        CommandHelper.SendCommand("/bmrai on");
-                        _plugin.AddDebugLog("Enabled BMR AI after landing");
-                        
-                        CommandHelper.SendCommand("/gaction dig");
-                        _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
-                        
-                        TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
-                    }
-                    else
-                    {
-                        _plugin.AddDebugLog("Failed to land - forcing dismount");
                         _mountService.Dismount();
-                        await System.Threading.Tasks.Task.Delay(1500);
-                        
-                        CommandHelper.SendCommand("/bmrai on");
-                        _plugin.AddDebugLog("Enabled BMR AI after dismount");
-                        
-                        CommandHelper.SendCommand("/gaction dig");
-                        _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
-                        
-                        TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
                     }
-                });
+                    StateDetail = $"Landing/dismounting... ({dismountElapsed:F0}s)";
+                    return;
+                }
+
+                // 60+ seconds and still mounted = likely underwater, need Ctrl+Space descent
+                if (!descentInProgress)
+                {
+                    descentInProgress = true;
+                    _plugin.AddDebugLog($"[Flying] Dismount failed after {dismountElapsed:F0}s - attempting Ctrl+Space descent (underwater?)");
+                    
+                    System.Threading.Tasks.Task.Run(async () => {
+                        // Ctrl+Space hold for 1 second, release, wait - SND pattern
+                        await GameHelpers.PerformDescentAsync();
+                        
+                        // Wait a moment after releasing
+                        await System.Threading.Tasks.Task.Delay(1000);
+                        
+                        // Check if we dismounted
+                        if (!_plugin.NavigationService.IsMounted())
+                        {
+                            _plugin.AddDebugLog("[Flying] Ctrl+Space descent succeeded - dismounted!");
+                        }
+                        else
+                        {
+                            _plugin.AddDebugLog("[Flying] Still mounted after descent attempt - will retry next tick");
+                        }
+                        
+                        descentInProgress = false;
+                    });
+                }
+                
+                StateDetail = $"Underwater descent in progress... ({dismountElapsed:F0}s)";
                 return;
             }
             
-            // Already on ground
+            // Successfully dismounted — proceed with map content
+            _plugin.AddDebugLog("Successfully dismounted - proceeding with map content");
+            
             CommandHelper.SendCommand("/bmrai on");
-            _plugin.AddDebugLog("Enabled BMR AI (already grounded)");
+            _plugin.AddDebugLog("Enabled BMR AI after dismount");
             
             CommandHelper.SendCommand("/gaction dig");
             _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
@@ -440,17 +459,22 @@ public class StateManager : IDisposable
 
     private void TickOpeningChest()
     {
-        // Simple solution: keep trying to path-to-and-open chest until portal is targetable
-        // No combat tracking, no interaction counting - just loop until portal appears
-        
         // First check if portal is targetable - if so, we're done with chests
         var portal = FindNearestPortal();
         if (portal != null)
         {
             _plugin.AddDebugLog("[OpeningChest] Portal detected - transitioning to portal interaction...");
+            if (autoMoveActive)
+            {
+                GameHelpers.StopAutoMove();
+                autoMoveActive = false;
+            }
             CheckForPortalAfterChest();
             return;
         }
+        
+        // Click Yes on any dialog (Open the treasure coffer? etc)
+        GameHelpers.ClickYesIfVisible();
         
         // No portal yet - keep working on chest
         var chest = _plugin.ChestDetectionService.FindNearestCoffer();
@@ -474,32 +498,52 @@ public class StateManager : IDisposable
         var dist = _plugin.ChestDetectionService.NearestCofferDistance;
         var range = _plugin.Configuration.ChestInteractionRange;
         var chestName = chest.Name.TextValue;
+        var now = DateTime.Now;
 
-        // Navigate to chest if too far
-        if (dist > range)
+        // Not in combat: use lockon+automove to approach, then interact
+        if (!Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat])
         {
-            if (!stateActionIssued)
+            if (dist > range)
             {
-                _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' found at {dist:F1}y - moving closer (range: {range})");
-                _plugin.NavigationService.MoveToPosition(chest.Position);
-                stateActionIssued = true;
+                // Target the chest, lockon, and automove towards it
+                Plugin.TargetManager.Target = chest;
+                if (!autoMoveActive)
+                {
+                    _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {dist:F1}y - lockon+automove approach");
+                    GameHelpers.LockOnAndAutoMove();
+                    autoMoveActive = true;
+                }
+                StateDetail = $"Approaching '{chestName}' ({dist:F1}y away)...";
             }
-            StateDetail = $"Moving to '{chestName}' ({dist:F1}y away)...";
-            return;
-        }
+            else
+            {
+                // In range - stop automove
+                if (autoMoveActive)
+                {
+                    GameHelpers.StopAutoMove();
+                    autoMoveActive = false;
+                }
+            }
 
-        // In range - stop nav, click Yes on any dialog, and interact
-        _plugin.NavigationService.StopNavigation();
-        GameHelpers.ClickYesIfVisible();
-        
-        // Always try to interact - game will handle if already opened
-        var interacted = GameHelpers.InteractWithObject(chest);
-        if (interacted)
-        {
-            _plugin.AddDebugLog($"[OpeningChest] Interacted with '{chestName}' - will keep trying until portal appears");
+            // Continually try to interact every ~1 second
+            if ((now - lastInteractionTime).TotalSeconds >= 1.0)
+            {
+                lastInteractionTime = now;
+                Plugin.TargetManager.Target = chest;
+                GameHelpers.InteractWithObject(chest);
+                StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
+            }
         }
-        
-        StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
+        else
+        {
+            // In combat - stop automove, wait for combat to end
+            if (autoMoveActive)
+            {
+                GameHelpers.StopAutoMove();
+                autoMoveActive = false;
+            }
+            StateDetail = "In combat - waiting...";
+        }
     }
 
     private void CheckForPortalAfterChest()
@@ -557,28 +601,67 @@ public class StateManager : IDisposable
         if (portalRetryStart != DateTime.MinValue)
         {
             var sinceStart = (DateTime.Now - portalRetryStart).TotalSeconds;
+            var now = DateTime.Now;
             
-            // Try to find and interact with portal every 2 seconds for 10 seconds
-            if (sinceStart <= 10.0)
+            // Try to find and interact with portal for up to 15 seconds
+            if (sinceStart <= 15.0)
             {
-                var portal = FindNearestPortal();
-                // Also click Yes on any visible dialog (portal confirmation from previous tick)
+                // Click Yes on any visible dialog (portal confirmation from previous tick)
                 if (GameHelpers.ClickYesIfVisible())
                 {
                     _plugin.AddDebugLog("[Portal] Clicked Yes on portal dialog");
+                    if (autoMoveActive)
+                    {
+                        GameHelpers.StopAutoMove();
+                        autoMoveActive = false;
+                    }
                     portalRetryStart = DateTime.MinValue;
                     TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
                     return;
                 }
 
+                var portal = FindNearestPortal();
+
                 if (portal != null)
                 {
-                    _plugin.AddDebugLog($"[Portal] Found '{portal.Name.TextValue}' - interacting...");
-                    GameHelpers.InteractWithObject(portal);
+                    // Target the portal
+                    Plugin.TargetManager.Target = portal;
+                    
+                    // Use lockon+automove to approach portal
+                    var player = Plugin.ObjectTable.LocalPlayer;
+                    if (player != null)
+                    {
+                        var portalDist = Vector3.Distance(player.Position, portal.Position);
+                        if (portalDist > 3f && !autoMoveActive)
+                        {
+                            _plugin.AddDebugLog($"[Portal] Lockon+automove to portal at {portalDist:F1}y");
+                            GameHelpers.LockOnAndAutoMove();
+                            autoMoveActive = true;
+                        }
+                        else if (portalDist <= 3f && autoMoveActive)
+                        {
+                            GameHelpers.StopAutoMove();
+                            autoMoveActive = false;
+                        }
+                    }
+
+                    // /gaction jump for 0.5s bursts to get Y-axis range for underwater portals
+                    if ((int)(sinceStart * 2) % 2 == 0 && (int)sinceStart > 0)
+                    {
+                        CommandHelper.SendCommand("/gaction jump");
+                    }
+
+                    // Continually interact every ~1 second
+                    if ((now - lastInteractionTime).TotalSeconds >= 1.0)
+                    {
+                        lastInteractionTime = now;
+                        _plugin.AddDebugLog($"[Portal] Interacting with '{portal.Name.TextValue}'...");
+                        GameHelpers.InteractWithObject(portal);
+                    }
                 }
                 else
                 {
-                    // Also try /target as fallback
+                    // No portal object found - try /target as fallback
                     if ((int)sinceStart % 4 == 0 && (int)sinceStart > 0)
                     {
                         CommandHelper.SendCommand("/target \"Teleportation Portal\"");
@@ -586,12 +669,17 @@ public class StateManager : IDisposable
                     }
                 }
                 
-                StateDetail = $"Searching for portal... ({sinceStart:F0}/10s)";
+                StateDetail = $"Searching for portal... ({sinceStart:F0}/15s)";
                 return;
             }
             
-            // 10s elapsed, no portal found - map is complete (no dungeon)
-            _plugin.AddDebugLog("[Portal] No portal found after 10s - map complete (no dungeon)");
+            // Time elapsed, no portal found - map is complete (no dungeon)
+            _plugin.AddDebugLog("[Portal] No portal found after 15s - map complete (no dungeon)");
+            if (autoMoveActive)
+            {
+                GameHelpers.StopAutoMove();
+                autoMoveActive = false;
+            }
             portalRetryStart = DateTime.MinValue;
         }
         
@@ -646,6 +734,21 @@ public class StateManager : IDisposable
         StateDetail = detail;
         stateStartTime = DateTime.Now;
         stateActionIssued = false;
+        dismountAttemptStart = DateTime.MinValue;
+        descentInProgress = false;
+
+        // Stop automove if it was active
+        if (autoMoveActive)
+        {
+            GameHelpers.StopAutoMove();
+            autoMoveActive = false;
+        }
+
+        // Unpause YesAlready when bot reaches terminal states
+        if (newState == BotState.Idle || newState == BotState.Error)
+        {
+            _plugin.YesAlreadyIPC.Unpause();
+        }
 
         if (_plugin.Configuration.EnableStateLogging)
             _plugin.AddDebugLog($"[State] {prev} → {newState} | {detail}");

@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
@@ -403,5 +405,74 @@ public static class GameHelpers
         if (Plugin.Condition[ConditionFlag.OccupiedInQuestEvent]) return false;
         if (Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent]) return false;
         return true;
+    }
+
+    // ─── Keyboard Input (SND WindowsKeypress pattern) ─────────────────────────
+
+    /// <summary>
+    /// Hold a key down. Uses ECommons.Automation.WindowsKeypress.SendKeyHold.
+    /// Same pattern as SND's /hold command.
+    /// </summary>
+    public static void KeyHold(VirtualKey key)
+    {
+        try
+        {
+            WindowsKeypress.SendKeyHold(key, null);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[KEY] KeyHold({key}) failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Release a held key. Uses ECommons.Automation.WindowsKeypress.SendKeyRelease.
+    /// Same pattern as SND's /release command.
+    /// </summary>
+    public static void KeyRelease(VirtualKey key)
+    {
+        try
+        {
+            WindowsKeypress.SendKeyRelease(key, null);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[KEY] KeyRelease({key}) failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Perform underwater descent by holding Ctrl+Space for 1 second then releasing.
+    /// Equivalent to SND: /hold CONTROL, /hold SPACE, /wait 1, /release CONTROL, /release SPACE
+    /// </summary>
+    public static async Task PerformDescentAsync()
+    {
+        Plugin.Log.Information("[KEY] Performing Ctrl+Space descent...");
+        KeyHold(VirtualKey.CONTROL);
+        KeyHold(VirtualKey.SPACE);
+        await Task.Delay(1000);
+        KeyRelease(VirtualKey.CONTROL);
+        KeyRelease(VirtualKey.SPACE);
+        Plugin.Log.Information("[KEY] Descent key sequence complete.");
+    }
+
+    // ─── Lockon + Automove (short-range approach) ─────────────────────────────
+
+    /// <summary>
+    /// Lock on to current target and start automove towards it.
+    /// For short-range chest/portal approach where navigation is overkill.
+    /// </summary>
+    public static void LockOnAndAutoMove()
+    {
+        CommandHelper.SendCommand("/lockon");
+        CommandHelper.SendCommand("/automove");
+    }
+
+    /// <summary>
+    /// Stop automove.
+    /// </summary>
+    public static void StopAutoMove()
+    {
+        CommandHelper.SendCommand("/automove");
     }
 }

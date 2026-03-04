@@ -48,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
     // IPC
     public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
     public VNavIPC VNavIPC { get; init; }
+    public YesAlreadyIPC YesAlreadyIPC { get; init; }
 
     // Mount data
     public string[] MountNames { get; private set; } = Array.Empty<string>();
@@ -68,6 +69,7 @@ public sealed class Plugin : IDalamudPlugin
         GlobeTrotterIPC = new GlobeTrotterIPC(this, PluginInterface, Log);
         VNavIPC = new VNavIPC(this, PluginInterface, Log);
         RotationPluginIPC = new RotationPluginIPC(this, PluginInterface, Log);
+        YesAlreadyIPC = new YesAlreadyIPC(this, Log);
 
         // Initialize navigation (after IPC so VNavIPC is available)
         NavigationService = new NavigationService(this, Condition, ClientState, DataManager, Log);
@@ -130,6 +132,7 @@ public sealed class Plugin : IDalamudPlugin
         ConfigWindow.Dispose();
         MainWindow.Dispose();
 
+        YesAlreadyIPC.Dispose();
         StateManager.Dispose();
         ChestDetectionService.Dispose();
         PartyService.Dispose();
