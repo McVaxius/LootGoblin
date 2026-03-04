@@ -203,35 +203,53 @@ public static class GameHelpers
 
         Plugin.Log.Information($"[CALLBACK] Addon is visible, creating AddonMaster...");
 
-        // Use AddonMaster to select the item by index
-        var addonMaster = new AddonMaster.SelectIconString(&addon->AtkUnitBase);
-        Plugin.Log.Information($"[CALLBACK] AddonMaster created, EntryCount={addonMaster.EntryCount}");
+        // Try direct addon interaction instead of AddonMaster
+        Plugin.Log.Information($"[CALLBACK] Trying direct addon interaction for index {mapIndex}");
         
-        if (mapIndex < addonMaster.EntryCount)
+        try
         {
-            Plugin.Log.Information($"[CALLBACK] Selecting entry {mapIndex}...");
+            // Use ECommons Callback.Fire directly with the addon
+            // This is how SND actually does it - direct callback fire
+            Plugin.Log.Information($"[CALLBACK] Using Callback.Fire with index {mapIndex}");
+            Callback.Fire(&addon->AtkUnitBase, true, (uint)mapIndex);
+            Plugin.Log.Information($"[CALLBACK] Callback.Fire completed for index {mapIndex}");
+
+            // Wait for the confirmation dialog, then click OK
+            Plugin.Log.Information($"[CALLBACK] Waiting 500ms for confirmation dialog...");
+            System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                Plugin.Log.Information($"[CALLBACK] Triggering confirmation dialog callback");
+                TriggerConfirmDialog();
+            });
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[CALLBACK] Direct callback failed: {ex.Message}");
             
-            // Try to select the entry - Entry is a struct so can't be null
+            // Fallback: try AddonMaster if direct callback fails
+            Plugin.Log.Information($"[CALLBACK] Trying AddonMaster fallback...");
             try
             {
-                addonMaster.Entries[mapIndex].Select();
-                Plugin.Log.Information($"[CALLBACK] Successfully selected map at index {mapIndex}");
-
-                // Wait for the confirmation dialog, then click OK
-                Plugin.Log.Information($"[CALLBACK] Waiting 500ms for confirmation dialog...");
-                System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                    Plugin.Log.Information($"[CALLBACK] Triggering confirmation dialog callback");
-                    TriggerConfirmDialog();
-                });
+                var addonMaster = new AddonMaster.SelectIconString(&addon->AtkUnitBase);
+                Plugin.Log.Information($"[CALLBACK] AddonMaster created, EntryCount={addonMaster.EntryCount}");
+                
+                if (mapIndex < addonMaster.EntryCount)
+                {
+                    addonMaster.Entries[mapIndex].Select();
+                    Plugin.Log.Information($"[CALLBACK] AddonMaster selection successful");
+                    
+                    System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                        TriggerConfirmDialog();
+                    });
+                }
+                else
+                {
+                    Plugin.Log.Error($"[CALLBACK] Index {mapIndex} out of range for AddonMaster");
+                }
             }
-            catch (Exception ex)
+            catch (Exception ex2)
             {
-                Plugin.Log.Error($"[CALLBACK] Failed to select entry {mapIndex}: {ex.Message}");
+                Plugin.Log.Error($"[CALLBACK] AddonMaster fallback also failed: {ex2.Message}");
             }
-        }
-        else
-        {
-            Plugin.Log.Error($"[CALLBACK] Map index {mapIndex} is out of range (entries: {addonMaster.EntryCount})");
         }
     }
 

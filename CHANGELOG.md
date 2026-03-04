@@ -2,6 +2,15 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.23] - 2026-03-03
+
+### Fixed - Use direct Callback.Fire for addon interaction
+- **Direct callback** - Try `Callback.Fire(&addon->AtkUnitBase, true, (uint)mapIndex)` first
+- **SND pattern** - This is how Something Need Doing actually does callbacks
+- **Fallback method** - AddonMaster as backup if direct callback fails
+- **Better error handling** - Separate error messages for each approach
+- **Proper casting** - Convert mapIndex to uint for Callback.Fire
+
 ## [0.0.1.22] - 2026-03-03
 
 ### Fixed - Stop button now fully disables bot and null check for callbacks
