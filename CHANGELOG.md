@@ -2,6 +2,13 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.46] - 2026-03-04
+
+### Fixed - Combat detection was blocking chest search
+- **Fixed combat detection order** - Was checking combat at TOP of TickOpeningChest, preventing chest search entirely
+- **Now searches chest first** - Only checks for combat if no chest found OR after chest interaction
+- **Added debug logs** - Shows when combat detected without chest vs after chest interaction
+
 ## [0.0.1.45] - 2026-03-04
 
 ### Fixed - 4 critical bugs found via FrenRider code review

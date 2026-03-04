@@ -412,14 +412,6 @@ public class StateManager : IDisposable
 
     private void TickOpeningChest()
     {
-        // Check if combat started (could happen at any point after chest interaction)
-        if (_plugin.NavigationService.IsInCombat())
-        {
-            _plugin.AddDebugLog("[OpeningChest] Combat detected! Transitioning to InCombat...");
-            TransitionTo(BotState.InCombat, "Combat started from chest interaction!");
-            return;
-        }
-
         var chest = _plugin.ChestDetectionService.FindNearestCoffer();
 
         if (chest == null)
@@ -428,6 +420,14 @@ public class StateManager : IDisposable
             StateDetail = $"Searching for treasure coffer... ({elapsed:F0}s)";
             if ((int)elapsed % 5 == 0 && (int)elapsed > 0)
                 _plugin.AddDebugLog($"[OpeningChest] No coffer found yet ({elapsed:F0}s)");
+            
+            // Check if combat started without chest (e.g., from /gaction dig)
+            if (_plugin.NavigationService.IsInCombat())
+            {
+                _plugin.AddDebugLog("[OpeningChest] Combat detected without chest - transitioning to InCombat...");
+                TransitionTo(BotState.InCombat, "Combat started without chest!");
+                return;
+            }
             return;
         }
 
@@ -474,6 +474,14 @@ public class StateManager : IDisposable
             // Already interacted, waiting for combat to start
             var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
             StateDetail = $"Waiting for combat after chest interaction... ({elapsed:F0}s)";
+            
+            // Check if combat started after chest interaction
+            if (_plugin.NavigationService.IsInCombat())
+            {
+                _plugin.AddDebugLog("[OpeningChest] Combat detected after chest interaction - transitioning to InCombat...");
+                TransitionTo(BotState.InCombat, "Combat started from chest interaction!");
+                return;
+            }
         }
     }
 
