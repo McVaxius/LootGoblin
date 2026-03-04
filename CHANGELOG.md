@@ -2,6 +2,14 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.38] - 2026-03-04
+
+### Fixed - Landing at treasure location
+- **X,Z proximity check** - Lands when within 5 yalms of target coordinates
+- **Force landing** - Uses /vnav land command when close enough
+- **Landing sequence** - Land → wait 2s → dismount → /gaction dig
+- **Fixes flying too high** - No more infinite climbing at location
+
 ## [0.0.1.37] - 2026-03-04
 
 ### Fixed - Proper portal interaction

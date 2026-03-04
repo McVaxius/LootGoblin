@@ -346,13 +346,32 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"Re-navigating to target (elapsed: {elapsed:F0}s)...");
         }
 
-        if (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle)
+        // Check if we're close enough to X,Z coordinates (within 5 yalms)
+        var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        var targetPos = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+        var xzDist = Math.Sqrt(Math.Pow(currentPos.X - targetPos.X, 2) + Math.Pow(currentPos.Z - targetPos.Z, 2));
+        
+        if (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle || xzDist < 5.0f)
         {
-            // Dismount when we arrive at location
+            // Force landing if we're flying
             if (_plugin.NavigationService.IsMounted())
             {
-                CommandHelper.SendCommand("/gaction dismount");
-                _plugin.AddDebugLog("Dismounting at treasure location...");
+                CommandHelper.SendCommand("/vnav land");
+                _plugin.AddDebugLog("Landing at treasure location...");
+                
+                // Wait a moment for landing to complete
+                System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
+                    // Dismount after landing
+                    CommandHelper.SendCommand("/gaction dismount");
+                    _plugin.AddDebugLog("Dismounted at treasure location...");
+                    
+                    // Use /gaction dig to trigger the map content
+                    CommandHelper.SendCommand("/gaction dig");
+                    _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
+                    
+                    TransitionTo(BotState.InCombat, "Waiting for combat to start...");
+                });
+                return;
             }
             
             // Use /gaction dig to trigger the map content
