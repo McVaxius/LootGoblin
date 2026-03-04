@@ -2,6 +2,16 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.51] - 2026-03-04
+
+### Changed - Simplified chest interaction to loop until portal appears
+- **Removed combat state tracking** - No more InCombat state, chestInteractionCount, combatEndTime tracking
+- **Simple loop solution** - TickOpeningChest now loops: check for portal → if no portal, navigate to chest → interact → repeat
+- **Portal detection first** - Every tick checks if portal is targetable before trying chest interaction
+- **No combat transitions** - Bot stays in OpeningChest state until portal appears, then transitions to Completed
+- **Cleaner code** - Removed 100+ lines of complex combat/interaction tracking logic
+- **YesAlready confirmation** - Confirmed we do NOT touch YesAlready state anywhere in codebase
+
 ## [0.0.1.50] - 2026-03-04
 
 ### Fixed - 2nd chest interaction after combat

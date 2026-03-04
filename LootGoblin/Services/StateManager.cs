@@ -26,9 +26,6 @@ public class StateManager : IDisposable
     private DateTime lastTickTime = DateTime.MinValue;
     private DateTime lastMapScanTime = DateTime.MinValue;
     private bool stateActionIssued;
-    private bool chestInteracted; // Separate flag: true after we've called InteractWithObject on chest
-    private int chestInteractionCount; // Track how many times we've interacted with chest (1st = pre-combat, 2nd = post-combat)
-    private DateTime combatEndTime; // Track when combat actually ended
     private Vector3 lastStuckCheckPos; // Position at last stuck check
     private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
     private DateTime portalRetryStart = DateTime.MinValue; // Portal interaction retry timer
@@ -120,7 +117,6 @@ public class StateManager : IDisposable
         RetryCount = 0;
         CurrentLocation = null;
         SelectedMapItemId = 0;
-        chestInteractionCount = 0;
         TransitionTo(BotState.SelectingMap, "Starting map run...");
     }
 
@@ -140,7 +136,6 @@ public class StateManager : IDisposable
         RetryCount = 0;
         CurrentLocation = null;
         SelectedMapItemId = 0;
-        chestInteractionCount = 0;
         portalRetryStart = DateTime.MinValue;
         KrangleService.ClearCache();
         TransitionTo(BotState.Idle, "Full reset by user.");
@@ -445,6 +440,19 @@ public class StateManager : IDisposable
 
     private void TickOpeningChest()
     {
+        // Simple solution: keep trying to path-to-and-open chest until portal is targetable
+        // No combat tracking, no interaction counting - just loop until portal appears
+        
+        // First check if portal is targetable - if so, we're done with chests
+        var portal = FindNearestPortal();
+        if (portal != null)
+        {
+            _plugin.AddDebugLog("[OpeningChest] Portal detected - transitioning to portal interaction...");
+            CheckForPortalAfterChest();
+            return;
+        }
+        
+        // No portal yet - keep working on chest
         var chest = _plugin.ChestDetectionService.FindNearestCoffer();
 
         if (chest == null)
@@ -460,14 +468,6 @@ public class StateManager : IDisposable
                 _plugin.AddDebugLog("[OpeningChest] Trying /target \"Treasure Coffer\" as fallback...");
                 CommandHelper.SendCommand("/target \"Treasure Coffer\"");
             }
-            
-            // Check if combat started without chest (e.g., from /gaction dig)
-            if (_plugin.NavigationService.IsInCombat())
-            {
-                _plugin.AddDebugLog("[OpeningChest] Combat detected without chest - transitioning to InCombat...");
-                TransitionTo(BotState.InCombat, "Combat started without chest!");
-                return;
-            }
             return;
         }
 
@@ -475,7 +475,7 @@ public class StateManager : IDisposable
         var range = _plugin.Configuration.ChestInteractionRange;
         var chestName = chest.Name.TextValue;
 
-        // Step 1: Navigate to chest if too far
+        // Navigate to chest if too far
         if (dist > range)
         {
             if (!stateActionIssued)
@@ -488,59 +488,18 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Step 2: In range - stop nav and interact
+        // In range - stop nav, click Yes on any dialog, and interact
         _plugin.NavigationService.StopNavigation();
-
-        if (!chestInteracted)
+        GameHelpers.ClickYesIfVisible();
+        
+        // Always try to interact - game will handle if already opened
+        var interacted = GameHelpers.InteractWithObject(chest);
+        if (interacted)
         {
-            _plugin.AddDebugLog($"[OpeningChest] In range of '{chestName}' ({dist:F1}y) - attempting interaction...");
-            var interacted = GameHelpers.InteractWithObject(chest);
-            _plugin.AddDebugLog($"[OpeningChest] InteractWithObject returned: {interacted}");
-            
-            if (interacted)
-            {
-                chestInteracted = true;
-                chestInteractionCount++;
-                CommandHelper.SendCommand("/bmrai on");
-                _plugin.AddDebugLog($"[OpeningChest] Successfully interacted with '{chestName}' (interaction #{chestInteractionCount}) - enabled BMR AI, waiting for dialog/combat...");
-                StateDetail = $"Interacted with '{chestName}' - clicking Yes...";
-            }
-            else
-            {
-                _plugin.AddDebugLog($"[OpeningChest] InteractWithObject failed for '{chestName}' - will retry next tick");
-                StateDetail = $"Interaction failed - retrying...";
-            }
+            _plugin.AddDebugLog($"[OpeningChest] Interacted with '{chestName}' - will keep trying until portal appears");
         }
-        else
-        {
-            // After interaction, handle "Open the treasure coffer?" Yes/No dialog
-            GameHelpers.ClickYesIfVisible();
-            
-            // If this is the 2nd interaction (post-combat), check for portal instead of waiting for combat
-            if (chestInteractionCount >= 2)
-            {
-                var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-                if (elapsed >= 3)
-                {
-                    _plugin.AddDebugLog("[OpeningChest] 2nd chest interaction complete - checking for portal...");
-                    CheckForPortalAfterChest();
-                    return;
-                }
-                StateDetail = $"2nd chest opened - waiting before portal search... ({elapsed:F0}/3s)";
-                return;
-            }
-            
-            // First interaction - check if combat started
-            if (_plugin.NavigationService.IsInCombat())
-            {
-                _plugin.AddDebugLog("[OpeningChest] Combat detected after chest interaction - transitioning to InCombat...");
-                TransitionTo(BotState.InCombat, "Combat started from chest interaction!");
-                return;
-            }
-            
-            var elapsed2 = (DateTime.Now - stateStartTime).TotalSeconds;
-            StateDetail = $"Waiting for combat after chest interaction... ({elapsed2:F0}s)";
-        }
+        
+        StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
     }
 
     private void CheckForPortalAfterChest()
@@ -572,39 +531,10 @@ public class StateManager : IDisposable
 
     private void TickInCombat()
     {
-        // Check if combat is active
-        if (_plugin.NavigationService.IsInCombat())
-        {
-            // Combat is active - enable BMR AI
-            if (!stateActionIssued)
-            {
-                CommandHelper.SendCommand("/bmrai on");
-                _plugin.AddDebugLog("[InCombat] Combat active - enabled BMR AI");
-                stateActionIssued = true;
-                combatEndTime = DateTime.MinValue; // Reset end tracker
-            }
-            StateDetail = "In combat - BMR AI active...";
-            return;
-        }
-        
-        // Combat not active - track when it ended
-        if (combatEndTime == DateTime.MinValue)
-        {
-            combatEndTime = DateTime.Now;
-            _plugin.AddDebugLog("[InCombat] Combat ended - starting 6s cooldown...");
-        }
-        
-        var sinceEnd = (DateTime.Now - combatEndTime).TotalSeconds;
-        if (sinceEnd < 6)
-        {
-            StateDetail = $"Combat ended - waiting before 2nd chest interaction... ({sinceEnd:F0}/6s)";
-            return;
-        }
-        
-        // 6s cooldown done - transition back to OpeningChest for 2nd interaction
-        // This reuses the existing chest navigation + interaction logic
-        _plugin.AddDebugLog("[InCombat] 6s cooldown done - transitioning to OpeningChest for 2nd interaction...");
-        TransitionTo(BotState.OpeningChest, "Looking for 2nd chest interaction...");
+        // InCombat state removed - OpeningChest now loops until portal appears
+        // This should never be reached, but just in case, transition back to OpeningChest
+        _plugin.AddDebugLog("[InCombat] Unexpected InCombat state - transitioning to OpeningChest...");
+        TransitionTo(BotState.OpeningChest, "Resuming chest interaction loop...");
     }
 
     private void TickInDungeon()
@@ -716,8 +646,6 @@ public class StateManager : IDisposable
         StateDetail = detail;
         stateStartTime = DateTime.Now;
         stateActionIssued = false;
-        chestInteracted = false;
-        combatEndTime = DateTime.MinValue;
 
         if (_plugin.Configuration.EnableStateLogging)
             _plugin.AddDebugLog($"[State] {prev} → {newState} | {detail}");
