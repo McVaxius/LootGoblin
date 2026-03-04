@@ -2,6 +2,14 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.25] - 2026-03-03
+
+### Fixed - Use 1-based indexing for SelectIconString callback
+- **Index fix** - Changed from `mapIndex` to `mapIndex + 1` for callback
+- **1-based UI** - Game UI uses 1-based indexing, not 0-based
+- **Correct map** - Now selects the correct map from the decipher menu
+- **Better logging** - Shows both 0-based and 1-based index values
+
 ## [0.0.1.24] - 2026-03-03
 
 ### Fixed - Use raw AtkUnitBase.FireCallback with manual AtkValue construction

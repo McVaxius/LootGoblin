@@ -210,17 +210,18 @@ public static class GameHelpers
         
         try
         {
-            // Try the most basic callback approach - 2 parameters like the /callback command showed
-            // /callback SelectIconString true 4
+            // The callback expects 0-based index for the first parameter (bool=true means confirm)
+            // and the second parameter is the 0-based index of the item to select
+            // BUT the game UI might be 1-indexed, so we need to add 1
             var atkValues = stackalloc AtkValue[2];
             atkValues[0].Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Bool;
-            atkValues[0].Byte = 1; // true
+            atkValues[0].Byte = 1; // true = confirm selection
             atkValues[1].Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int;
-            atkValues[1].Int = mapIndex;
+            atkValues[1].Int = mapIndex + 1; // Add 1 for 1-based indexing
             
-            Plugin.Log.Information($"[CALLBACK] Calling FireCallback with 2 AtkValues");
+            Plugin.Log.Information($"[CALLBACK] Calling FireCallback with Bool=true, Int={mapIndex + 1} (0-based index {mapIndex} + 1)");
             addon->AtkUnitBase.FireCallback(2, atkValues);
-            Plugin.Log.Information($"[CALLBACK] FireCallback completed successfully");
+            Plugin.Log.Information($"[CALLBACK] FireCallback completed - selected 1-based index {mapIndex + 1}");
 
             // Wait for the confirmation dialog, then click OK
             Plugin.Log.Information($"[CALLBACK] Waiting 500ms for confirmation dialog...");
