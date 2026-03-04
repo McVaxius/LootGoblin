@@ -2,6 +2,13 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.26] - 2026-03-03
+
+### Fixed - Revert to 0-based indexing for SelectIconString callback
+- **Index fix** - Removed the `+ 1` offset, callback uses 0-based indexing
+- **Correct selection** - Now properly selects the first map (index 0) instead of second
+- **Menu order** - FindMapIndexInMenu correctly identifies map position in menu
+
 ## [0.0.1.25] - 2026-03-03
 
 ### Fixed - Use 1-based indexing for SelectIconString callback
