@@ -52,9 +52,20 @@ public static class GameHelpers
             CommandHelper.SendCommand("/gaction decipher");
             Plugin.Log.Information($"UseItem({itemId}): Opened decipher menu for {count} maps");
             
-            // TODO: Implement menu callback to auto-select correct map
-            // For now, user must manually select from the menu
-            Plugin.Log.Information($"UseItem({itemId}): User must manually select map from menu");
+            // Find the map's index in the menu and trigger the callback
+            var mapIndex = FindMapIndexInMenu(itemId);
+            if (mapIndex >= 0)
+            {
+                // Wait for menu to load then trigger callback
+                System.Threading.Tasks.Task.Delay(300).ContinueWith(_ => {
+                    TriggerMapDecipherCallback(mapIndex);
+                });
+                Plugin.Log.Information($"UseItem({itemId}): Will trigger callback for map index {mapIndex}");
+            }
+            else
+            {
+                Plugin.Log.Warning($"UseItem({itemId}): Could not find map in menu");
+            }
             
             return true;
         }
@@ -62,6 +73,107 @@ public static class GameHelpers
         {
             Plugin.Log.Error($"UseItem({itemId}) failed: {ex.Message}");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Find the index of a specific map in the decipher menu.
+    /// Maps appear in inventory order (Inventory1-4, slot order).
+    /// </summary>
+    private static unsafe int FindMapIndexInMenu(uint targetItemId)
+    {
+        try
+        {
+            var index = 0;
+            var im = InventoryManager.Instance();
+            if (im == null) return -1;
+
+            // Search inventory in the same order the menu displays
+            var containers = new[] {
+                InventoryType.Inventory1, InventoryType.Inventory2,
+                InventoryType.Inventory3, InventoryType.Inventory4
+            };
+
+            foreach (var container in containers)
+            {
+                var inv = im->GetInventoryContainer(container);
+                if (inv == null) continue;
+
+                for (var i = 0; i < inv->Size; i++)
+                {
+                    var slot = im->GetInventorySlot(container, i);
+                    if (slot == null || slot->ItemId == 0) continue;
+
+                    // Check if this is a treasure map
+                    if (IsTreasureMap(slot->ItemId))
+                    {
+                        if (slot->ItemId == targetItemId)
+                            return index; // Found our map
+                        index++; // Increment for each map in menu
+                    }
+                }
+            }
+
+            return -1; // Not found
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"FindMapIndexInMenu failed: {ex.Message}");
+            return -1;
+        }
+    }
+
+    /// <summary>
+    /// Check if an item ID is a treasure map.
+    /// </summary>
+    private static bool IsTreasureMap(uint itemId)
+    {
+        // Check against known treasure map data
+        return LootGoblin.Models.TreasureMapData.KnownMaps.ContainsKey(itemId);
+    }
+
+    /// <summary>
+    /// Trigger the menu callback to select a map by index.
+    /// Uses /callback SelectIconString true [index] pattern.
+    /// </summary>
+    private static void TriggerMapDecipherCallback(int mapIndex)
+    {
+        try
+        {
+            // Based on your findings:
+            // /callback SelectIconString true 0 = first item
+            // /callback SelectIconString true 1 = second item
+            // etc.
+            CommandHelper.SendCommand($"/callback SelectIconString true {mapIndex}");
+            Plugin.Log.Information($"Sent callback for map index {mapIndex}");
+
+            // Wait for the confirmation dialog, then click OK
+            System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                TriggerConfirmDialog();
+            });
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"TriggerMapDecipherCallback failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Click OK on the "Decipher the [map name]?" confirmation dialog.
+    /// Uses the ecommons click pattern for OK buttons.
+    /// </summary>
+    private static void TriggerConfirmDialog()
+    {
+        try
+        {
+            // Based on ecommons pattern for clicking OK buttons
+            // This should click the OK button on the confirmation dialog
+            CommandHelper.SendCommand("/callback SelectYesno true 0");
+            Plugin.Log.Information("Sent OK callback for decipher confirmation");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"TriggerConfirmDialog failed: {ex.Message}");
         }
     }
 

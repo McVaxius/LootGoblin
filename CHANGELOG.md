@@ -2,6 +2,15 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.13] - 2026-03-03
+
+### Fixed - Auto map selection and confirmation
+- **Map decipher** - Now fully automated using `/callback SelectIconString true [index]`
+- **Map selection** - Finds map index in menu and triggers callback automatically
+- **Confirmation dialog** - Uses `/callback SelectYesno true 0` to click OK on "Decipher the [map name]?" dialog
+- Complete automation: Bot opens menu → selects correct map → confirms → continues to DetectingLocation
+- No more manual interaction required for map deciphering
+
 ## [0.0.1.12] - 2026-03-03
 
 ### Fixed - Map decipher menu opens
