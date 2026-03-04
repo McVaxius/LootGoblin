@@ -96,21 +96,33 @@ public static class GameHelpers
         
         try
         {
-            // Wait a bit for the addon to populate
-            System.Threading.Thread.Sleep(100);
+            // Wait for the addon to populate with entries (may take a few frames)
+            AddonSelectIconString* addon = null;
+            int entryCount = 0;
             
-            // Get the SelectIconString addon
-            nint addonPtr = Plugin.GameGui.GetAddonByName("SelectIconString", 1);
-            if (addonPtr == 0)
+            for (int attempt = 0; attempt < 10; attempt++)
             {
-                Plugin.Log.Error("[FIND] SelectIconString addon not found");
-                return -1;
+                System.Threading.Thread.Sleep(50);
+                
+                nint addonPtr = Plugin.GameGui.GetAddonByName("SelectIconString", 1);
+                if (addonPtr == 0) continue;
+
+                addon = (AddonSelectIconString*)addonPtr;
+                if (!addon->AtkUnitBase.IsVisible) continue;
+
+                var addonMaster = new ECommons.UIHelpers.AddonMasterImplementations.AddonMaster.SelectIconString(&addon->AtkUnitBase);
+                entryCount = addonMaster.EntryCount;
+                
+                if (entryCount > 0)
+                {
+                    Plugin.Log.Information($"[FIND] Addon ready with {entryCount} entries after {(attempt + 1) * 50}ms");
+                    break;
+                }
             }
 
-            var addon = (AddonSelectIconString*)addonPtr;
-            if (!addon->AtkUnitBase.IsVisible)
+            if (addon == null || entryCount == 0)
             {
-                Plugin.Log.Error("[FIND] SelectIconString addon not visible");
+                Plugin.Log.Error($"[FIND] SelectIconString addon not ready after 500ms (entries: {entryCount})");
                 return -1;
             }
 
@@ -118,15 +130,15 @@ public static class GameHelpers
             // We need to use AddonMaster to access the actual entries
             Plugin.Log.Information($"[FIND] Using AddonMaster.SelectIconString to read entries");
             
-            var addonMaster = new ECommons.UIHelpers.AddonMasterImplementations.AddonMaster.SelectIconString(&addon->AtkUnitBase);
-            var entryCount = addonMaster.EntryCount;
+            var addonMaster2 = new ECommons.UIHelpers.AddonMasterImplementations.AddonMaster.SelectIconString(&addon->AtkUnitBase);
+            entryCount = addonMaster2.EntryCount;
             Plugin.Log.Information($"[FIND] AddonMaster reports {entryCount} entries");
 
             // Each entry in AddonMaster has a Text property we can check
             // The text should contain the map name, which we can match against our target
             for (int i = 0; i < entryCount; i++)
             {
-                var entry = addonMaster.Entries[i];
+                var entry = addonMaster2.Entries[i];
                 var text = entry.Text;
                 Plugin.Log.Information($"[FIND] Entry[{i}]: Text='{text}'");
                 

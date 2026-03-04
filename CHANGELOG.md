@@ -2,6 +2,14 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.30] - 2026-03-03
+
+### Fixed - Wait for addon to populate with retry loop
+- **Retry loop** - Poll addon up to 10 times (50ms intervals) until entries appear
+- **Entry count check** - Only proceed when EntryCount > 0
+- **Better logging** - Report how long it took to get entries
+- **Fixes 0 entries** - Previous version checked too early before addon populated
+
 ## [0.0.1.29] - 2026-03-03
 
 ### Fixed - Use AddonMaster to read menu entry text and match by item name
