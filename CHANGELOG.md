@@ -2,6 +2,13 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.33] - 2026-03-03
+
+### Fixed - Add 1 for 1-based indexing in callback
+- **1-based indexing** - Callback parameter uses 1-based, not 0-based
+- **Correct offset** - Send `mapIndex + 1` to select the right map
+- **Verified working** - Tested and confirmed correct map selection
+
 ## [0.0.1.32] - 2026-03-03
 
 ### Fixed - Sort maps by item ID to match game menu order

@@ -76,9 +76,10 @@ public static class GameHelpers
             }
             
             // Trigger the callback after a delay to ensure menu is ready
+            // The callback uses 1-based indexing, so add 1
             System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                Plugin.Log.Information($"UseItem({itemId}): Triggering callback for map index {mapIndex}");
-                TriggerMapDecipherCallback(mapIndex);
+                Plugin.Log.Information($"UseItem({itemId}): Triggering callback for map index {mapIndex} (will send {mapIndex + 1} for 1-based)");
+                TriggerMapDecipherCallback(mapIndex + 1);
             });
             
             return true;
