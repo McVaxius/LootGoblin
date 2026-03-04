@@ -185,11 +185,17 @@ public class StateManager : IDisposable
                 return;
             }
 
-            // Treasure maps require /item command, not ActionManager.UseAction
-            var mapName = TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var info) ? info.Name : $"Map {SelectedMapItemId}";
-            CommandHelper.SendCommand($"/item \"{mapName}\"");
-            _plugin.AddDebugLog($"Sent /item \"{mapName}\" to decipher map.");
-            stateActionIssued = true;
+            // Use GameHelpers.UseItem - now properly uses InventoryManager.UseItem API
+            var result = GameHelpers.UseItem(SelectedMapItemId);
+            if (result)
+            {
+                _plugin.AddDebugLog($"Map decipher triggered for ID {SelectedMapItemId}.");
+                stateActionIssued = true;
+            }
+            else
+            {
+                _plugin.AddDebugLog($"UseItem({SelectedMapItemId}) failed, retrying...");
+            }
             return;
         }
 

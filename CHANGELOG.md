@@ -2,6 +2,20 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.8] - 2026-03-03
+
+### Fixed - Critical Hotfix v2
+- **Map decipher** - Replaced with `AgentInventoryContext.UseItem(itemId)` API; this is the correct way to use items from inventory in FFXIV
+- Previous attempts failed:
+  - v0.0.1.6: `ActionManager.UseAction` doesn't support treasure maps (always returns "not ready")
+  - v0.0.1.7: `/item "Map Name"` command doesn't exist in FFXIV
+- `AgentInventoryContext.UseItem` automatically searches all inventory containers and triggers the item use action
+
+### Notes
+- `AgentInventoryContext.UseItem(itemId, InventoryType.Invalid, 0)` is the proper API for using items
+- Returns `long` result code (>= 0 = success)
+- This is how the game internally handles right-click → Use on inventory items
+
 ## [0.0.1.7] - 2026-03-03
 
 ### Fixed - Critical Hotfix

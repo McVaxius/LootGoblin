@@ -3,6 +3,7 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 
 namespace LootGoblin.Services;
@@ -15,8 +16,8 @@ public static class GameHelpers
 {
     /// <summary>
     /// Use an item from inventory by item ID.
-    /// Uses ActionManager.UseAction with extraParam=65535 (required for item usage).
-    /// Returns false if player is busy, item not ready, or action fails.
+    /// For treasure maps and other special items, finds the item in inventory and uses it via InventoryManager.UseItem.
+    /// Returns false if player is busy, item not found, or action fails.
     /// </summary>
     public static unsafe bool UseItem(uint itemId)
     {
@@ -32,14 +33,18 @@ public static class GameHelpers
                 Plugin.Condition[ConditionFlag.Occupied39])
                 return false;
 
-            var am = ActionManager.Instance();
-            if (am == null) return false;
+            // Use AgentInventoryContext.UseItem - the proper API for using items from inventory
+            var agent = AgentInventoryContext.Instance();
+            if (agent == null)
+            {
+                Plugin.Log.Warning($"UseItem({itemId}): AgentInventoryContext is null");
+                return false;
+            }
 
-            if (am->GetActionStatus(ActionType.Item, itemId) != 0) return false;
-
-            var result = am->UseAction(ActionType.Item, itemId, extraParam: 65535);
+            // UseItem with itemId only (inventoryType=Invalid, slot=0) searches all inventory automatically
+            var result = agent->UseItem(itemId);
             Plugin.Log.Information($"UseItem({itemId}): result={result}");
-            return result;
+            return result >= 0;
         }
         catch (Exception ex)
         {
