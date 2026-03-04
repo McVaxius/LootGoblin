@@ -2,6 +2,17 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.21] - 2026-03-03
+
+### Fixed - Added extensive logging and slower timing for debugging
+- **Map scan throttling** - Only scans inventory every 3 seconds to reduce log spam
+- **Extended delays** - Increased menu wait from 300ms to 500ms for addon readiness
+- **Detailed logging** - Added [CALLBACK] and [FIND] tags throughout the process
+- **Step-by-step tracking** - Logs each phase of addon interaction
+- **Addons found** - Logs addon addresses and visibility status
+- **Entry count** - Logs how many entries are in the SelectIconString menu
+- **Index tracking** - Shows which map index is being selected
+
 ## [0.0.1.20] - 2026-03-03
 
 ### Fixed - Use async/await pattern for addon interactions like SND

@@ -22,6 +22,7 @@ public class StateManager : IDisposable
 
     private DateTime stateStartTime = DateTime.Now;
     private DateTime lastTickTime = DateTime.MinValue;
+    private DateTime lastMapScanTime = DateTime.MinValue;
     private bool stateActionIssued;
     private const double TickIntervalSeconds = 0.5;
 
@@ -141,7 +142,16 @@ public class StateManager : IDisposable
 
     private void TickSelectingMap()
     {
+        // Only scan every 3 seconds to reduce log spam
+        if ((DateTime.Now - lastMapScanTime).TotalSeconds < 3)
+        {
+            return;
+        }
+        lastMapScanTime = DateTime.Now;
+
         var maps = _plugin.InventoryService.ScanForMaps();
+        _plugin.AddDebugLog($"[TICK] Scanning inventory... Found {maps.Count} different map types");
+        
         if (maps.Count == 0)
         {
             HandleError("No maps found in inventory.");

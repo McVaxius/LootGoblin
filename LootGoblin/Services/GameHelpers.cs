@@ -64,11 +64,13 @@ public static class GameHelpers
             var mapIndex = FindMapIndexInMenu(itemId);
             if (mapIndex >= 0)
             {
-                // Trigger the callback after a short delay to ensure menu is ready
-                System.Threading.Tasks.Task.Delay(300).ContinueWith(async _ => {
+                // Trigger the callback after a longer delay to ensure menu is ready
+                Plugin.Log.Information($"UseItem({itemId}): Found map at index {mapIndex}, waiting 500ms for menu...");
+                System.Threading.Tasks.Task.Delay(500).ContinueWith(async _ => {
+                    Plugin.Log.Information($"UseItem({itemId}): Delay complete, triggering callback for map index {mapIndex}");
                     TriggerMapDecipherCallback(mapIndex);
                 });
-                Plugin.Log.Information($"UseItem({itemId}): Will trigger callback for map index {mapIndex}");
+                Plugin.Log.Information($"UseItem({itemId}): Callback scheduled for map index {mapIndex}");
             }
             else
             {
@@ -90,11 +92,17 @@ public static class GameHelpers
     /// </summary>
     private static unsafe int FindMapIndexInMenu(uint targetItemId)
     {
+        Plugin.Log.Information($"[FIND] Looking for map ID {targetItemId} in decipher menu");
+        
         try
         {
             var index = 0;
             var im = InventoryManager.Instance();
-            if (im == null) return -1;
+            if (im == null)
+            {
+                Plugin.Log.Error("[FIND] InventoryManager.Instance() is null");
+                return -1;
+            }
 
             // Search inventory in the same order the menu displays
             var containers = new[] {
@@ -115,18 +123,23 @@ public static class GameHelpers
                     // Check if this is a treasure map
                     if (IsTreasureMap(slot->ItemId))
                     {
+                        Plugin.Log.Information($"[FIND] Found map ID {slot->ItemId} at {container}:{i}, current index={index}");
                         if (slot->ItemId == targetItemId)
+                        {
+                            Plugin.Log.Information($"[FIND] Found target map ID {targetItemId} at index {index}");
                             return index; // Found our map
+                        }
                         index++; // Increment for each map in menu
                     }
                 }
             }
 
+            Plugin.Log.Warning($"[FIND] Target map ID {targetItemId} not found in menu (total maps: {index})");
             return -1; // Not found
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"FindMapIndexInMenu failed: {ex.Message}");
+            Plugin.Log.Error($"[FIND] FindMapIndexInMenu failed: {ex.Message}");
             return -1;
         }
     }
@@ -146,17 +159,21 @@ public static class GameHelpers
     /// </summary>
     private static async void TriggerMapDecipherCallback(int mapIndex)
     {
+        Plugin.Log.Information($"[CALLBACK] Starting map decipher callback for index {mapIndex}");
+        
         try
         {
             // Wait a bit for the addon to be ready
+            Plugin.Log.Information($"[CALLBACK] Waiting 100ms for SelectIconString addon...");
             await System.Threading.Tasks.Task.Delay(100);
+            Plugin.Log.Information($"[CALLBACK] Wait complete, triggering unsafe callback");
 
             // Trigger the actual callback
             TriggerMapDecipherCallbackUnsafe(mapIndex);
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"TriggerMapDecipherCallback failed: {ex.Message}");
+            Plugin.Log.Error($"[CALLBACK] TriggerMapDecipherCallback failed: {ex.Message}");
         }
     }
 
@@ -165,36 +182,47 @@ public static class GameHelpers
     /// </summary>
     private static unsafe void TriggerMapDecipherCallbackUnsafe(int mapIndex)
     {
+        Plugin.Log.Information($"[CALLBACK] Looking for SelectIconString addon...");
+        
         // Find the SelectIconString addon
         nint addonPtr = Plugin.GameGui.GetAddonByName("SelectIconString", 1);
         if (addonPtr == 0)
         {
-            Plugin.Log.Warning("Could not find SelectIconString addon");
+            Plugin.Log.Error("[CALLBACK] Could not find SelectIconString addon");
             return;
         }
+
+        Plugin.Log.Information($"[CALLBACK] Found SelectIconString addon at 0x{addonPtr:X}");
 
         var addon = (AddonSelectIconString*)addonPtr;
         if (!addon->AtkUnitBase.IsVisible)
         {
-            Plugin.Log.Warning("SelectIconString addon is not visible");
+            Plugin.Log.Error("[CALLBACK] SelectIconString addon is not visible");
             return;
         }
 
+        Plugin.Log.Information($"[CALLBACK] Addon is visible, creating AddonMaster...");
+
         // Use AddonMaster to select the item by index
         var addonMaster = new AddonMaster.SelectIconString(&addon->AtkUnitBase);
+        Plugin.Log.Information($"[CALLBACK] AddonMaster created, EntryCount={addonMaster.EntryCount}");
+        
         if (mapIndex < addonMaster.EntryCount)
         {
+            Plugin.Log.Information($"[CALLBACK] Selecting entry {mapIndex}...");
             addonMaster.Entries[mapIndex].Select();
-            Plugin.Log.Information($"Selected map at index {mapIndex} using AddonMaster");
+            Plugin.Log.Information($"[CALLBACK] Successfully selected map at index {mapIndex}");
 
             // Wait for the confirmation dialog, then click OK
+            Plugin.Log.Information($"[CALLBACK] Waiting 500ms for confirmation dialog...");
             System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                Plugin.Log.Information($"[CALLBACK] Triggering confirmation dialog callback");
                 TriggerConfirmDialog();
             });
         }
         else
         {
-            Plugin.Log.Warning($"Map index {mapIndex} is out of range (entries: {addonMaster.EntryCount})");
+            Plugin.Log.Error($"[CALLBACK] Map index {mapIndex} is out of range (entries: {addonMaster.EntryCount})");
         }
     }
 
@@ -204,17 +232,21 @@ public static class GameHelpers
     /// </summary>
     private static async void TriggerConfirmDialog()
     {
+        Plugin.Log.Information($"[CALLBACK] Starting confirmation dialog callback");
+        
         try
         {
             // Wait a bit for the addon to be ready
+            Plugin.Log.Information($"[CALLBACK] Waiting 100ms for SelectYesno addon...");
             await System.Threading.Tasks.Task.Delay(100);
+            Plugin.Log.Information($"[CALLBACK] Wait complete, triggering unsafe confirmation");
 
             // Trigger the actual callback
             TriggerConfirmDialogUnsafe();
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"TriggerConfirmDialog failed: {ex.Message}");
+            Plugin.Log.Error($"[CALLBACK] TriggerConfirmDialog failed: {ex.Message}");
         }
     }
 
@@ -223,24 +255,30 @@ public static class GameHelpers
     /// </summary>
     private static unsafe void TriggerConfirmDialogUnsafe()
     {
+        Plugin.Log.Information($"[CALLBACK] Looking for SelectYesno addon...");
+        
         // Find the SelectYesno addon
         nint addonPtr = Plugin.GameGui.GetAddonByName("SelectYesno", 1);
         if (addonPtr == 0)
         {
-            Plugin.Log.Warning("Could not find SelectYesno addon");
+            Plugin.Log.Error("[CALLBACK] Could not find SelectYesno addon");
             return;
         }
+
+        Plugin.Log.Information($"[CALLBACK] Found SelectYesno addon at 0x{addonPtr:X}");
 
         var addon = (AddonSelectYesno*)addonPtr;
         if (!addon->AtkUnitBase.IsVisible)
         {
-            Plugin.Log.Warning("SelectYesno addon is not visible");
+            Plugin.Log.Error("[CALLBACK] SelectYesno addon is not visible");
             return;
         }
 
+        Plugin.Log.Information($"[CALLBACK] Addon is visible, clicking Yes...");
+
         // Use AddonMaster to click Yes - same pattern as FrenRider
         new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
-        Plugin.Log.Information("Clicked Yes on decipher confirmation using AddonMaster");
+        Plugin.Log.Information("[CALLBACK] Successfully clicked Yes on decipher confirmation");
     }
 
     /// <summary>
