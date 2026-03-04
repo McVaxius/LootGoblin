@@ -2,6 +2,14 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.29] - 2026-03-03
+
+### Fixed - Use AddonMaster to read menu entry text and match by item name
+- **AddonMaster.Entries** - Read actual menu entries instead of raw AtkValues
+- **Text matching** - Match menu entry text against item name from game data
+- **Correct approach** - AtkValues only contain UI data (strings/icons), not item IDs
+- **Item lookup** - Use DataManager to get item name for target map ID
+
 ## [0.0.1.28] - 2026-03-03
 
 ### Debug - Log all AtkValues to understand SelectIconString format

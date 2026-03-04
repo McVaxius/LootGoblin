@@ -114,39 +114,37 @@ public static class GameHelpers
                 return -1;
             }
 
-            Plugin.Log.Information($"[FIND] SelectIconString has {addon->AtkUnitBase.AtkValuesCount} values");
+            // AtkValues don't contain item IDs, only UI display data (strings and icon IDs)
+            // We need to use AddonMaster to access the actual entries
+            Plugin.Log.Information($"[FIND] Using AddonMaster.SelectIconString to read entries");
+            
+            var addonMaster = new ECommons.UIHelpers.AddonMasterImplementations.AddonMaster.SelectIconString(&addon->AtkUnitBase);
+            var entryCount = addonMaster.EntryCount;
+            Plugin.Log.Information($"[FIND] AddonMaster reports {entryCount} entries");
 
-            // Debug: log all AtkValues to understand the format
-            for (int i = 0; i < addon->AtkUnitBase.AtkValuesCount; i++)
+            // Each entry in AddonMaster has a Text property we can check
+            // The text should contain the map name, which we can match against our target
+            for (int i = 0; i < entryCount; i++)
             {
-                var atkValue = addon->AtkUnitBase.AtkValues[i];
-                Plugin.Log.Information($"[FIND] AtkValue[{i}]: Type={atkValue.Type}, Int={atkValue.Int}, UInt={atkValue.UInt}");
-            }
-
-            // Try to find the target item ID in the values
-            // The format might be: [string, icon, itemId] repeating, or some other pattern
-            for (int i = 0; i < addon->AtkUnitBase.AtkValuesCount; i++)
-            {
-                var atkValue = addon->AtkUnitBase.AtkValues[i];
-                if (atkValue.Type == FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int ||
-                    atkValue.Type == FFXIVClientStructs.FFXIV.Component.GUI.ValueType.UInt)
+                var entry = addonMaster.Entries[i];
+                var text = entry.Text;
+                Plugin.Log.Information($"[FIND] Entry[{i}]: Text='{text}'");
+                
+                // Get the item name for our target map
+                var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
+                var item = itemSheet?.GetRow(targetItemId);
+                if (item != null)
                 {
-                    var itemId = atkValue.Type == FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int 
-                        ? (uint)atkValue.Int 
-                        : atkValue.UInt;
-                    
-                    if (itemId == targetItemId)
+                    var targetItemName = item.Value.Name.ToString();
+                    if (text.Contains(targetItemName))
                     {
-                        // Try to determine which menu index this corresponds to
-                        // Assuming pattern repeats every N values
-                        var menuIndex = i / 3; // Guess based on your log showing indices 3, 6, 9
-                        Plugin.Log.Information($"[FIND] Found target map ID {targetItemId} at AtkValue[{i}], guessing menu index {menuIndex}");
-                        return menuIndex;
+                        Plugin.Log.Information($"[FIND] Found target map '{targetItemName}' at entry index {i}");
+                        return i;
                     }
                 }
             }
 
-            Plugin.Log.Warning($"[FIND] Target map ID {targetItemId} not found in menu");
+            Plugin.Log.Warning($"[FIND] Target map ID {targetItemId} not found in {entryCount} entries");
             return -1;
         }
         catch (Exception ex)
