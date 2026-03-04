@@ -2,6 +2,15 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.40] - 2026-03-04
+
+### Added - MountService and improved landing
+- **MountService** - New service for mount management (like FrenRider)
+- **Proper landing** - Uses MountService.ForceLand() instead of manual toggling
+- **Mount cooldowns** - Prevents rapid mount/dismount spam
+- **Mount state tracking** - Better detection of mounted/flying states
+- **Fixed remount issue** - Should no longer remount after landing
+
 ## [0.0.1.39] - 2026-03-04
 
 ### Fixed - Proper landing with /mount command

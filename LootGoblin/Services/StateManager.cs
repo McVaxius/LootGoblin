@@ -27,6 +27,7 @@ public class StateManager : IDisposable
     private DateTime lastMapScanTime = DateTime.MinValue;
     private bool stateActionIssued;
     private const double TickIntervalSeconds = 0.5;
+    private readonly MountService _mountService;
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
     {
@@ -44,6 +45,7 @@ public class StateManager : IDisposable
         _plugin = plugin;
         _framework = framework;
         _log = log;
+        _mountService = new MountService(plugin);
         _framework.Update += OnFrameworkUpdate;
     }
 
@@ -356,20 +358,14 @@ public class StateManager : IDisposable
             // Force landing if we're flying
             if (_plugin.NavigationService.IsMounted())
             {
-                _plugin.AddDebugLog("Close to target - attempting to land by toggling mount...");
-                
-                // Toggle mount once per second to trigger landing
-                var landAttempts = 0;
-                var maxAttempts = 5;
+                _plugin.AddDebugLog("Close to target - attempting to land...");
                 
                 System.Threading.Tasks.Task.Run(async () => {
-                    while (landAttempts < maxAttempts && _plugin.NavigationService.IsMounted())
-                    {
-                        CommandHelper.SendCommand("/mount");
-                        _plugin.AddDebugLog($"Landing attempt {landAttempts + 1}/{maxAttempts}");
-                        landAttempts++;
-                        await System.Threading.Tasks.Task.Delay(1000); // Wait 1 second between attempts
-                    }
+                    // Use MountService to force land
+                    _mountService.ForceLand();
+                    
+                    // Wait a bit more to ensure landing is complete
+                    await System.Threading.Tasks.Task.Delay(2000);
                     
                     // If we're no longer mounted, proceed with map content
                     if (!_plugin.NavigationService.IsMounted())
@@ -384,7 +380,15 @@ public class StateManager : IDisposable
                     }
                     else
                     {
-                        _plugin.AddDebugLog("Failed to land after multiple attempts");
+                        _plugin.AddDebugLog("Failed to land - forcing dismount");
+                        // Force dismount if landing failed
+                        _mountService.Dismount();
+                        await System.Threading.Tasks.Task.Delay(1500);
+                        
+                        CommandHelper.SendCommand("/gaction dig");
+                        _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
+                        
+                        TransitionTo(BotState.InCombat, "Waiting for combat to start...");
                     }
                 });
                 return;
