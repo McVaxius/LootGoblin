@@ -400,7 +400,7 @@ public class StateManager : IDisposable
             CommandHelper.SendCommand("/gaction dig");
             _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
             
-            TransitionTo(BotState.InCombat, "Waiting for combat to start...");
+            TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
         }
     }
 
@@ -434,53 +434,79 @@ public class StateManager : IDisposable
         // In range - interact with chest
         _plugin.NavigationService.StopNavigation();
         
-        // Try to interact with chest (post-combat check for portal)
-        if (!stateActionIssued)
+        // Check if we're in combat - if so, wait for combat to end
+        if (_plugin.NavigationService.IsInCombat())
         {
-            var interacted = GameHelpers.InteractWithObject(chest);
+            TransitionTo(BotState.InCombat, "Combat started - waiting for it to end...");
+            return;
+        }
+        
+        // Check if we're returning from combat (stateActionIssued is true from previous interaction)
+        if (stateActionIssued)
+        {
+            _plugin.AddDebugLog("Post-combat - checking chest for portal...");
+            CheckForPortalAfterChest();
+            return;
+        }
+        
+        // Try to interact with chest (initial interaction to trigger combat)
+        var interacted = GameHelpers.InteractWithObject(chest);
+        if (interacted)
+        {
+            _plugin.AddDebugLog($"Interacted with coffer '{chest.Name.TextValue}' - waiting for combat...");
+            stateActionIssued = true;
+            
+            // Wait a moment to see if combat starts
+            System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
+                if (_plugin.NavigationService.IsInCombat())
+                {
+                    TransitionTo(BotState.InCombat, "Combat started - BMR AI enabled");
+                }
+                else
+                {
+                    // No combat, check for portal immediately
+                    _plugin.AddDebugLog("No combat triggered - checking for portal...");
+                    CheckForPortalAfterChest();
+                }
+            });
+        }
+        else
+        {
+            _plugin.AddDebugLog("InteractWithObject returned false, will retry next tick.");
+        }
+    }
+
+    private void CheckForPortalAfterChest()
+    {
+        // Look for portal (EventObj with "Teleportation Portal" in name)
+        var portal = FindNearestPortal();
+        if (portal != null)
+        {
+            _plugin.AddDebugLog($"Found portal '{portal.Name.TextValue}' - interacting to enter dungeon...");
+            
+            // First interact with the portal to get the popup
+            var interacted = GameHelpers.InteractWithObject(portal);
             if (interacted)
             {
-                _plugin.AddDebugLog($"Interacted with coffer '{chest.Name.TextValue}' - checking for portal...");
-                stateActionIssued = true;
+                _plugin.AddDebugLog("Interacted with portal - waiting for 'Journey through the portal?' popup");
                 
-                // Schedule check for portal after 2 seconds
-                System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
-                    // Look for portal (EventObj with "Teleportation Portal" in name)
-                    var portal = FindNearestPortal();
-                    if (portal != null)
-                    {
-                        _plugin.AddDebugLog($"Found portal '{portal.Name.TextValue}' - interacting to enter dungeon...");
-                        
-                        // First interact with the portal to get the popup
-                        var interacted = GameHelpers.InteractWithObject(portal);
-                        if (interacted)
-                        {
-                            _plugin.AddDebugLog("Interacted with portal - waiting for 'Journey through the portal?' popup");
-                            
-                            // Wait for popup then click yes
-                            System.Threading.Tasks.Task.Delay(1500).ContinueWith(_ => {
-                                CommandHelper.SendCommand("/click yes");
-                                _plugin.AddDebugLog("Clicked yes to 'Journey through the portal?'");
-                            });
-                        }
-                        else
-                        {
-                            _plugin.AddDebugLog("Failed to interact with portal");
-                        }
-                        
-                        TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
-                    }
-                    else
-                    {
-                        _plugin.AddDebugLog("No portal found - map complete!");
-                        TransitionTo(BotState.Completed, "Map completed - no portal");
-                    }
+                // Wait for popup then click yes
+                System.Threading.Tasks.Task.Delay(1500).ContinueWith(_ => {
+                    CommandHelper.SendCommand("/click yes");
+                    _plugin.AddDebugLog("Clicked yes to 'Journey through the portal?'");
                 });
             }
             else
             {
-                _plugin.AddDebugLog("InteractWithObject returned false, will retry next tick.");
+                _plugin.AddDebugLog("Failed to interact with portal");
             }
+            
+            TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
+        }
+        else
+        {
+            _plugin.AddDebugLog("No portal found - map complete!");
+            TransitionTo(BotState.Completed, "Map completed - no portal");
         }
     }
     

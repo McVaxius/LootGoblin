@@ -2,6 +2,15 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.42] - 2026-03-04
+
+### Fixed - Chest interaction and combat flow
+- **Fixed chest targeting** - Now properly finds and interacts with "Treasure Coffer"
+- **Correct flow sequence** - Land → /gaction dig → find chest → interact → combat → post-combat check
+- **No more remounting** - Bot stays dismounted during chest interaction
+- **Combat detection** - Properly waits for combat to start after chest interaction
+- **Post-combat handling** - Rechecks chest for portal after combat ends
+
 ## [0.0.1.41] - 2026-03-04
 
 ### Added - Mount selector and navigation fixes
