@@ -2,6 +2,17 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.53] - 2026-03-04
+
+### Fixed - Chest interaction loop and YesAlready pause
+- **Removed combat-gated interaction** - Chest interaction now happens every 2s regardless of combat state (was blocking 2nd interaction)
+- **YesAlready pause logging** - Added debug logs to track YesAlready pause/unpause state
+- **Interaction throttle** - Increased from 1s to 2s to reduce spam
+- **Combat handling** - Game handles interaction blocking during combat, bot just keeps trying
+
+### Note
+User's v0.0.1.52 edits added YesAlreadyIPC, underwater descent (Ctrl+Space), lockon+automove, and improved dismount logic. These are preserved in this version.
+
 ## [0.0.1.51] - 2026-03-04
 
 ### Changed - Simplified chest interaction to loop until portal appears

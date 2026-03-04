@@ -122,6 +122,7 @@ public class StateManager : IDisposable
         CurrentLocation = null;
         SelectedMapItemId = 0;
         _plugin.YesAlreadyIPC.Pause();
+        _plugin.AddDebugLog($"[Start] YesAlready paused: {_plugin.YesAlreadyIPC.IsPaused}");
         TransitionTo(BotState.SelectingMap, "Starting map run...");
     }
 
@@ -500,49 +501,37 @@ public class StateManager : IDisposable
         var chestName = chest.Name.TextValue;
         var now = DateTime.Now;
 
-        // Not in combat: use lockon+automove to approach, then interact
-        if (!Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat])
+        // Approach chest if too far (regardless of combat state)
+        if (dist > range)
         {
-            if (dist > range)
+            Plugin.TargetManager.Target = chest;
+            if (!autoMoveActive)
             {
-                // Target the chest, lockon, and automove towards it
-                Plugin.TargetManager.Target = chest;
-                if (!autoMoveActive)
-                {
-                    _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {dist:F1}y - lockon+automove approach");
-                    GameHelpers.LockOnAndAutoMove();
-                    autoMoveActive = true;
-                }
-                StateDetail = $"Approaching '{chestName}' ({dist:F1}y away)...";
+                _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {dist:F1}y - lockon+automove approach");
+                GameHelpers.LockOnAndAutoMove();
+                autoMoveActive = true;
             }
-            else
-            {
-                // In range - stop automove
-                if (autoMoveActive)
-                {
-                    GameHelpers.StopAutoMove();
-                    autoMoveActive = false;
-                }
-            }
-
-            // Continually try to interact every ~1 second
-            if ((now - lastInteractionTime).TotalSeconds >= 1.0)
-            {
-                lastInteractionTime = now;
-                Plugin.TargetManager.Target = chest;
-                GameHelpers.InteractWithObject(chest);
-                StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
-            }
+            StateDetail = $"Approaching '{chestName}' ({dist:F1}y away)...";
         }
         else
         {
-            // In combat - stop automove, wait for combat to end
+            // In range - stop automove
             if (autoMoveActive)
             {
                 GameHelpers.StopAutoMove();
                 autoMoveActive = false;
             }
-            StateDetail = "In combat - waiting...";
+        }
+
+        // Continually try to interact every ~2 seconds (regardless of combat state)
+        // Game will handle if chest is already opened or if we're in combat
+        if ((now - lastInteractionTime).TotalSeconds >= 2.0)
+        {
+            lastInteractionTime = now;
+            Plugin.TargetManager.Target = chest;
+            var interacted = GameHelpers.InteractWithObject(chest);
+            _plugin.AddDebugLog($"[OpeningChest] Interaction attempt with '{chestName}' - returned: {interacted}");
+            StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
         }
     }
 
@@ -748,6 +737,7 @@ public class StateManager : IDisposable
         if (newState == BotState.Idle || newState == BotState.Error)
         {
             _plugin.YesAlreadyIPC.Unpause();
+            _plugin.AddDebugLog($"[TransitionTo] YesAlready unpaused: {!_plugin.YesAlreadyIPC.IsPaused}");
         }
 
         if (_plugin.Configuration.EnableStateLogging)
