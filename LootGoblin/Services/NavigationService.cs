@@ -104,6 +104,8 @@ public class NavigationService : IDisposable
     public void StopNavigation()
     {
         _plugin.VNavIPC.Stop();
+        // Clear any active flag to prevent pathing to old flags
+        CommandHelper.SendCommand("/vnav clearflag");
         SetState(NavigationState.Idle, "Navigation stopped.");
     }
 

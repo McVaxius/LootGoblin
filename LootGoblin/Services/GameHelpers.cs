@@ -64,8 +64,8 @@ public static class GameHelpers
             var mapIndex = FindMapIndexInMenu(itemId);
             if (mapIndex >= 0)
             {
-                // Wait for menu to load then trigger callback
-                System.Threading.Tasks.Task.Delay(300).ContinueWith(_ => {
+                // Trigger the callback after a short delay to ensure menu is ready
+                System.Threading.Tasks.Task.Delay(300).ContinueWith(async _ => {
                     TriggerMapDecipherCallback(mapIndex);
                 });
                 Plugin.Log.Information($"UseItem({itemId}): Will trigger callback for map index {mapIndex}");
@@ -142,59 +142,17 @@ public static class GameHelpers
 
     /// <summary>
     /// Trigger the menu callback to select a map by index.
-    /// Uses AddonMaster.SelectIconString with Entries[].Select().
+    /// Uses async/await pattern like SND for reliable addon interactions.
     /// </summary>
-    private static unsafe void TriggerMapDecipherCallback(int mapIndex)
+    private static async void TriggerMapDecipherCallback(int mapIndex)
     {
         try
         {
-            // Find the SelectIconString addon
-            nint addonPtr = Plugin.GameGui.GetAddonByName("SelectIconString", 1);
-            if (addonPtr == 0)
-            {
-                Plugin.Log.Warning("Could not find SelectIconString addon");
-                return;
-            }
+            // Wait a bit for the addon to be ready
+            await System.Threading.Tasks.Task.Delay(100);
 
-            var addon = (AddonSelectIconString*)addonPtr;
-            if (!addon->AtkUnitBase.IsVisible)
-            {
-                Plugin.Log.Warning("SelectIconString addon is not visible");
-                return;
-            }
-
-            // Use AddonMaster to select the item by index
-            try
-            {
-                var addonMaster = new AddonMaster.SelectIconString(&addon->AtkUnitBase);
-                if (addonMaster == null)
-                {
-                    Plugin.Log.Warning("AddonMaster.SelectIconString is null");
-                    return;
-                }
-
-                if (mapIndex < addonMaster.EntryCount)
-                {
-                    addonMaster.Entries[mapIndex].Select();
-                    Plugin.Log.Information($"Selected map at index {mapIndex} using AddonMaster");
-
-                    // Wait for the confirmation dialog, then click OK
-                    System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                        TriggerConfirmDialog();
-                    });
-                }
-                else
-                {
-                    Plugin.Log.Warning($"Map index {mapIndex} is out of range (entries: {addonMaster.EntryCount})");
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.Error($"AddonMaster error: {ex.Message}");
-                // Fallback: try direct callback using ECommons
-                Plugin.Log.Information($"Trying ECommons.Callback.Fire for index {mapIndex}");
-                Callback.Fire(&addon->AtkUnitBase, true, mapIndex);
-            }
+            // Trigger the actual callback
+            TriggerMapDecipherCallbackUnsafe(mapIndex);
         }
         catch (Exception ex)
         {
@@ -203,46 +161,86 @@ public static class GameHelpers
     }
 
     /// <summary>
-    /// Click OK on the "Decipher the [map name]?" confirmation dialog.
-    /// Uses AddonMaster.SelectYesno with Yes().
+    /// Unsafe part of the map decipher callback.
     /// </summary>
-    private static unsafe void TriggerConfirmDialog()
+    private static unsafe void TriggerMapDecipherCallbackUnsafe(int mapIndex)
+    {
+        // Find the SelectIconString addon
+        nint addonPtr = Plugin.GameGui.GetAddonByName("SelectIconString", 1);
+        if (addonPtr == 0)
+        {
+            Plugin.Log.Warning("Could not find SelectIconString addon");
+            return;
+        }
+
+        var addon = (AddonSelectIconString*)addonPtr;
+        if (!addon->AtkUnitBase.IsVisible)
+        {
+            Plugin.Log.Warning("SelectIconString addon is not visible");
+            return;
+        }
+
+        // Use AddonMaster to select the item by index
+        var addonMaster = new AddonMaster.SelectIconString(&addon->AtkUnitBase);
+        if (mapIndex < addonMaster.EntryCount)
+        {
+            addonMaster.Entries[mapIndex].Select();
+            Plugin.Log.Information($"Selected map at index {mapIndex} using AddonMaster");
+
+            // Wait for the confirmation dialog, then click OK
+            System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                TriggerConfirmDialog();
+            });
+        }
+        else
+        {
+            Plugin.Log.Warning($"Map index {mapIndex} is out of range (entries: {addonMaster.EntryCount})");
+        }
+    }
+
+    /// <summary>
+    /// Click OK on the "Decipher the [map name]?" confirmation dialog.
+    /// Uses async/await pattern like SND for reliable addon interactions.
+    /// </summary>
+    private static async void TriggerConfirmDialog()
     {
         try
         {
-            // Find the SelectYesno addon
-            nint addonPtr = Plugin.GameGui.GetAddonByName("SelectYesno", 1);
-            if (addonPtr == 0)
-            {
-                Plugin.Log.Warning("Could not find SelectYesno addon");
-                return;
-            }
+            // Wait a bit for the addon to be ready
+            await System.Threading.Tasks.Task.Delay(100);
 
-            var addon = (AddonSelectYesno*)addonPtr;
-            if (!addon->AtkUnitBase.IsVisible)
-            {
-                Plugin.Log.Warning("SelectYesno addon is not visible");
-                return;
-            }
-
-            // Use AddonMaster to click Yes - same pattern as FrenRider
-            try
-            {
-                new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
-                Plugin.Log.Information("Clicked Yes on decipher confirmation using AddonMaster");
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.Error($"AddonMaster.SelectYesno error: {ex.Message}");
-                // Fallback: try direct callback using ECommons
-                Plugin.Log.Information("Trying ECommons.Callback.Fire for confirmation");
-                Callback.Fire(&addon->AtkUnitBase, true, 0);
-            }
+            // Trigger the actual callback
+            TriggerConfirmDialogUnsafe();
         }
         catch (Exception ex)
         {
             Plugin.Log.Error($"TriggerConfirmDialog failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Unsafe part of the confirmation dialog callback.
+    /// </summary>
+    private static unsafe void TriggerConfirmDialogUnsafe()
+    {
+        // Find the SelectYesno addon
+        nint addonPtr = Plugin.GameGui.GetAddonByName("SelectYesno", 1);
+        if (addonPtr == 0)
+        {
+            Plugin.Log.Warning("Could not find SelectYesno addon");
+            return;
+        }
+
+        var addon = (AddonSelectYesno*)addonPtr;
+        if (!addon->AtkUnitBase.IsVisible)
+        {
+            Plugin.Log.Warning("SelectYesno addon is not visible");
+            return;
+        }
+
+        // Use AddonMaster to click Yes - same pattern as FrenRider
+        new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
+        Plugin.Log.Information("Clicked Yes on decipher confirmation using AddonMaster");
     }
 
     /// <summary>

@@ -2,6 +2,16 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.20] - 2026-03-03
+
+### Fixed - Use async/await pattern for addon interactions like SND
+- **Async callbacks** - Changed to async/await pattern like Something Need Doing
+- **Map selection** - Uses `await Task.Delay()` before addon interactions
+- **Confirmation** - Async delay before clicking Yes button
+- **Navigation stop** - Added `/vnav clearflag` to prevent old flag pathing
+- **SND pattern** - Follows SND's async/await pattern, not yield()
+- **Proper timing** - Waits for addons to be ready before interaction
+
 ## [0.0.1.19] - 2026-03-03
 
 ### Fixed - Install ECommons.Callback hook for addon interactions
