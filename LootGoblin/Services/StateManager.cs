@@ -335,8 +335,28 @@ public class StateManager : IDisposable
             return;
         }
 
+        // Re-navigate every 30 seconds in case we get stuck
+        var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+        if ((int)elapsed % 30 == 0 && (int)elapsed > 0)
+        {
+            var target = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+            nav.FlyToPosition(target);
+            _plugin.AddDebugLog($"Re-navigating to target (elapsed: {elapsed:F0}s)...");
+        }
+
         if (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle)
         {
+            // Dismount when we arrive at location
+            if (_plugin.NavigationService.IsMounted())
+            {
+                CommandHelper.SendCommand("/gaction dismount");
+                _plugin.AddDebugLog("Dismounting at treasure location...");
+            }
+            
+            // Use /gaction dig to trigger the map content
+            CommandHelper.SendCommand("/gaction dig");
+            _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
+            
             TransitionTo(BotState.OpeningChest, "Arrived! Looking for treasure coffer...");
         }
     }
@@ -368,17 +388,45 @@ public class StateManager : IDisposable
             return;
         }
 
-        // In range - interact
+        // In range - wait 8 seconds if not in combat, then interact
         _plugin.NavigationService.StopNavigation();
-        var interacted = GameHelpers.InteractWithObject(chest);
-        if (interacted)
+        var chestElapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+        
+        // Wait 8 seconds after arriving before interacting (if not in combat)
+        if (chestElapsed < 8 && !_plugin.NavigationService.IsInCombat())
         {
-            _plugin.AddDebugLog($"Interacted with coffer '{chest.Name.TextValue}'.");
-            TransitionTo(BotState.InCombat, "Coffer opened - waiting for combat or completion...");
+            StateDetail = $"Waiting before chest interaction... ({chestElapsed:F0}/8s)";
+            return;
         }
-        else
+
+        // Try to interact with chest
+        if (!stateActionIssued)
         {
-            _plugin.AddDebugLog("InteractWithObject returned false, will retry next tick.");
+            var interacted = GameHelpers.InteractWithObject(chest);
+            if (interacted)
+            {
+                _plugin.AddDebugLog($"Interacted with coffer '{chest.Name.TextValue}'.");
+                stateActionIssued = true;
+                
+                // Schedule double-yes confirmation after 1 second
+                System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
+                    // First yes
+                    CommandHelper.SendCommand("/click yes");
+                    _plugin.AddDebugLog("Sent first /click yes for chest confirmation");
+                    
+                    // Second yes after another 1 second
+                    System.Threading.Tasks.Task.Delay(1000).ContinueWith(__ => {
+                        CommandHelper.SendCommand("/click yes");
+                        _plugin.AddDebugLog("Sent second /click yes for chest confirmation");
+                    });
+                });
+                
+                TransitionTo(BotState.InCombat, "Coffer opened - waiting for combat or completion...");
+            }
+            else
+            {
+                _plugin.AddDebugLog("InteractWithObject returned false, will retry next tick.");
+            }
         }
     }
 

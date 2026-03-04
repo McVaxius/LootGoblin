@@ -2,6 +2,16 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.35] - 2026-03-04
+
+### Added - Full map content automation
+- **/gaction dig** - Triggers map content when at flag location
+- **Auto dismount** - Dismounts when arriving at treasure location
+- **Re-navigation** - Re-navigates every 30s if stuck during flight
+- **8-second wait** - Waits 8s before chest interaction (if not in combat)
+- **Double-yes confirmation** - Sends two /click yes commands for chest loot
+- **Chest interaction** - Finds and interacts with treasure coffer
+
 ## [0.0.1.34] - 2026-03-04
 
 ### Fixed - Use inventory order (no sorting) for correct index
