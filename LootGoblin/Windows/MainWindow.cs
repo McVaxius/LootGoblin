@@ -295,7 +295,12 @@ public class MainWindow : Window, IDisposable
                     sm.Pause();
                 ImGui.SameLine();
                 if (ImGui.Button("Stop", new Vector2(120, 0)))
+                {
+                    // Stop button should act like /lg off - fully disable the bot
+                    plugin.Configuration.Enabled = false;
+                    plugin.Configuration.Save();
                     sm.Stop();
+                }
             }
 
             // Current map info

@@ -2,6 +2,15 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.22] - 2026-03-03
+
+### Fixed - Stop button now fully disables bot and null check for callbacks
+- **Stop button fix** - Now acts like `/lg off`, sets Enabled=false and saves config
+- **Null reference fix** - Added null check for AddonMaster.Entries[mapIndex]
+- **Callback safety** - Verifies entry exists before calling Select()
+- **Full disable** - Stop button no longer leaves bot in "enabled" state
+- **Proper cleanup** - Bot fully stops and won't continue running
+
 ## [0.0.1.21] - 2026-03-03
 
 ### Fixed - Added extensive logging and slower timing for debugging

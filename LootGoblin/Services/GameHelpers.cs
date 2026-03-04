@@ -210,15 +210,24 @@ public static class GameHelpers
         if (mapIndex < addonMaster.EntryCount)
         {
             Plugin.Log.Information($"[CALLBACK] Selecting entry {mapIndex}...");
-            addonMaster.Entries[mapIndex].Select();
-            Plugin.Log.Information($"[CALLBACK] Successfully selected map at index {mapIndex}");
+            
+            // Try to select the entry - Entry is a struct so can't be null
+            try
+            {
+                addonMaster.Entries[mapIndex].Select();
+                Plugin.Log.Information($"[CALLBACK] Successfully selected map at index {mapIndex}");
 
-            // Wait for the confirmation dialog, then click OK
-            Plugin.Log.Information($"[CALLBACK] Waiting 500ms for confirmation dialog...");
-            System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                Plugin.Log.Information($"[CALLBACK] Triggering confirmation dialog callback");
-                TriggerConfirmDialog();
-            });
+                // Wait for the confirmation dialog, then click OK
+                Plugin.Log.Information($"[CALLBACK] Waiting 500ms for confirmation dialog...");
+                System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                    Plugin.Log.Information($"[CALLBACK] Triggering confirmation dialog callback");
+                    TriggerConfirmDialog();
+                });
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error($"[CALLBACK] Failed to select entry {mapIndex}: {ex.Message}");
+            }
         }
         else
         {
