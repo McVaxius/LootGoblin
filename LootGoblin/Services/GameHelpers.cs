@@ -324,6 +324,35 @@ public static class GameHelpers
     }
 
     /// <summary>
+    /// Generic SelectYesno handler - clicks Yes on any visible SelectYesno dialog.
+    /// Uses exact same pattern as FrenRider's AcceptInvite.
+    /// Call this from state ticks whenever we expect a Yes/No dialog.
+    /// Returns true if a dialog was found and clicked.
+    /// </summary>
+    public static unsafe bool ClickYesIfVisible()
+    {
+        try
+        {
+            nint addonPtr = Plugin.GameGui.GetAddonByName("SelectYesno", 1);
+            if (addonPtr == 0)
+                return false;
+
+            var addon = (AddonSelectYesno*)addonPtr;
+            if (!addon->AtkUnitBase.IsVisible)
+                return false;
+
+            new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
+            Plugin.Log.Information("[YES/NO] Clicked Yes on SelectYesno dialog");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[YES/NO] ClickYesIfVisible failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Interact with a targeted game object via TargetSystem.
     /// Sets the Dalamud target first, then calls TargetSystem.InteractWithObject.
     /// </summary>

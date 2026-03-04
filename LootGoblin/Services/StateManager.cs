@@ -36,13 +36,13 @@ public class StateManager : IDisposable
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
     {
-        { BotState.OpeningMap,        15  },
+        { BotState.OpeningMap,        30  },
         { BotState.DetectingLocation, 30  },
         { BotState.Teleporting,       90  },
         { BotState.Mounting,          30  },
         { BotState.WaitingForParty,   120 },
         { BotState.Flying,            300 },
-        { BotState.OpeningChest,      60  },
+        { BotState.OpeningChest,      120 },
     };
 
     public StateManager(Plugin plugin, IFramework framework, IPluginLog log)
@@ -229,6 +229,9 @@ public class StateManager : IDisposable
             }
             return;
         }
+
+        // Safety net: click Yes on any decipher confirmation dialog that might be stuck
+        GameHelpers.ClickYesIfVisible();
 
         // After /item command, wait for the decipher dialog + flag to set
         // Transition to detection after a short delay to allow the game to process
@@ -501,8 +504,8 @@ public class StateManager : IDisposable
             {
                 chestInteracted = true;
                 CommandHelper.SendCommand("/bmrai on");
-                _plugin.AddDebugLog($"[OpeningChest] Successfully interacted with '{chestName}' - enabled BMR AI, waiting for combat...");
-                StateDetail = $"Interacted with '{chestName}' - waiting for combat...";
+                _plugin.AddDebugLog($"[OpeningChest] Successfully interacted with '{chestName}' - enabled BMR AI, waiting for dialog/combat...");
+                StateDetail = $"Interacted with '{chestName}' - clicking Yes...";
             }
             else
             {
@@ -512,9 +515,8 @@ public class StateManager : IDisposable
         }
         else
         {
-            // Already interacted, waiting for combat to start
-            var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-            StateDetail = $"Waiting for combat after chest interaction... ({elapsed:F0}s)";
+            // After interaction, handle "Open the treasure coffer?" Yes/No dialog
+            GameHelpers.ClickYesIfVisible();
             
             // Check if combat started after chest interaction
             if (_plugin.NavigationService.IsInCombat())
@@ -523,6 +525,9 @@ public class StateManager : IDisposable
                 TransitionTo(BotState.InCombat, "Combat started from chest interaction!");
                 return;
             }
+            
+            var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+            StateDetail = $"Waiting for combat after chest interaction... ({elapsed:F0}s)";
         }
     }
 
@@ -645,23 +650,19 @@ public class StateManager : IDisposable
             if (sinceStart <= 10.0)
             {
                 var portal = FindNearestPortal();
+                // Also click Yes on any visible dialog (portal confirmation from previous tick)
+                if (GameHelpers.ClickYesIfVisible())
+                {
+                    _plugin.AddDebugLog("[Portal] Clicked Yes on portal dialog");
+                    portalRetryStart = DateTime.MinValue;
+                    TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
+                    return;
+                }
+
                 if (portal != null)
                 {
                     _plugin.AddDebugLog($"[Portal] Found '{portal.Name.TextValue}' - interacting...");
-                    var interacted = GameHelpers.InteractWithObject(portal);
-                    _plugin.AddDebugLog($"[Portal] InteractWithObject returned: {interacted}");
-                    
-                    if (interacted)
-                    {
-                        // Wait for popup then click yes
-                        System.Threading.Tasks.Task.Delay(1500).ContinueWith(_ => {
-                            CommandHelper.SendCommand("/click yes");
-                            _plugin.AddDebugLog("[Portal] Clicked yes to enter dungeon");
-                        });
-                        portalRetryStart = DateTime.MinValue;
-                        TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
-                        return;
-                    }
+                    GameHelpers.InteractWithObject(portal);
                 }
                 else
                 {

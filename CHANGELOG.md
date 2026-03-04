@@ -2,6 +2,17 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.49] - 2026-03-04
+
+### Fixed - Yes/No dialog handling and timeouts
+- **Generic ClickYesIfVisible()** - New method using FrenRider's AddonMaster.SelectYesno pattern, handles ALL Yes/No dialogs
+- **Chest "Open the treasure coffer?" dialog** - Now auto-clicks Yes after chest interaction
+- **Portal "Journey through the portal?" dialog** - Now auto-clicks Yes during portal search
+- **Map decipher confirmation safety net** - TickOpeningMap also polls ClickYesIfVisible() in case async callback fails
+- **OpeningMap timeout** - Increased from 15s to 30s (callback chain needs time)
+- **OpeningChest timeout** - Increased from 60s to 120s (dialog + combat needs time)
+- **YesAlready** - Confirmed NOT in our codebase; separate Dalamud plugin on user's system
+
 ## [0.0.1.48] - 2026-03-04
 
 ### Fixed - Multiple issues from testing feedback
