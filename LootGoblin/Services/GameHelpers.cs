@@ -163,20 +163,36 @@ public static class GameHelpers
             }
 
             // Use AddonMaster to select the item by index
-            var addonMaster = new AddonMaster.SelectIconString(&addon->AtkUnitBase);
-            if (mapIndex < addonMaster.EntryCount)
+            try
             {
-                addonMaster.Entries[mapIndex].Select();
-                Plugin.Log.Information($"Selected map at index {mapIndex} using AddonMaster");
+                var addonMaster = new AddonMaster.SelectIconString(&addon->AtkUnitBase);
+                if (addonMaster == null)
+                {
+                    Plugin.Log.Warning("AddonMaster.SelectIconString is null");
+                    return;
+                }
 
-                // Wait for the confirmation dialog, then click OK
-                System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                    TriggerConfirmDialog();
-                });
+                if (mapIndex < addonMaster.EntryCount)
+                {
+                    addonMaster.Entries[mapIndex].Select();
+                    Plugin.Log.Information($"Selected map at index {mapIndex} using AddonMaster");
+
+                    // Wait for the confirmation dialog, then click OK
+                    System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                        TriggerConfirmDialog();
+                    });
+                }
+                else
+                {
+                    Plugin.Log.Warning($"Map index {mapIndex} is out of range (entries: {addonMaster.EntryCount})");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Plugin.Log.Warning($"Map index {mapIndex} is out of range (entries: {addonMaster.EntryCount})");
+                Plugin.Log.Error($"AddonMaster error: {ex.Message}");
+                // Fallback: try direct callback
+                Plugin.Log.Information($"Trying fallback callback for index {mapIndex}");
+                CommandHelper.SendCommand($"/callback SelectIconString true {mapIndex}");
             }
         }
         catch (Exception ex)
@@ -209,8 +225,18 @@ public static class GameHelpers
             }
 
             // Use AddonMaster to click Yes - same pattern as FrenRider
-            new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
-            Plugin.Log.Information("Clicked Yes on decipher confirmation using AddonMaster");
+            try
+            {
+                new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
+                Plugin.Log.Information("Clicked Yes on decipher confirmation using AddonMaster");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error($"AddonMaster.SelectYesno error: {ex.Message}");
+                // Fallback: try direct callback
+                Plugin.Log.Information("Trying fallback callback for confirmation");
+                CommandHelper.SendCommand("/callback SelectYesno true 0");
+            }
         }
         catch (Exception ex)
         {

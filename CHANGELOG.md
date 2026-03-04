@@ -2,6 +2,15 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.17] - 2026-03-03
+
+### Fixed - AddonMaster null reference with fallback
+- **Map selection** - Added null checks and error handling for AddonMaster
+- **Fallback method** - If AddonMaster fails, uses `/callback SelectIconString true [index]`
+- **Confirmation fallback** - If AddonMaster.SelectYesno fails, uses `/callback SelectYesno true 0`
+- **Robust error handling** - Won't crash if addon not ready, tries both methods
+- **Updated SND repo** - Added memory: New SND is at https://github.com/Jaksuhn/SomethingNeedDoing
+
 ## [0.0.1.16] - 2026-03-03
 
 ### Fixed - Full auto map decipher with AddonMaster
