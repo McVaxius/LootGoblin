@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 using LootGoblin.Models;
@@ -34,6 +36,13 @@ public class StateManager : IDisposable
     private DateTime lastInteractionTime = DateTime.MinValue; // Throttle chest/portal interaction attempts
     private bool autoMoveActive; // Track if automove is currently on
     private const double TickIntervalSeconds = 0.5;
+
+    // Dungeon state tracking (Phase 8)
+    private int dungeonFloor;
+    private bool dungeonEntryProcessed; // True once we've confirmed we're inside the dungeon
+    private uint? excludedDoorEntityId; // Door we gave up on (stuck), try others
+    private DateTime doorStuckStart = DateTime.MinValue; // When we started trying current door
+    private DateTime lastDungeonLogTime = DateTime.MinValue; // Throttle object logging
     private readonly MountService _mountService;
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
@@ -45,6 +54,9 @@ public class StateManager : IDisposable
         { BotState.WaitingForParty,   120 },
         { BotState.Flying,            300 },
         { BotState.OpeningChest,      120 },
+        { BotState.DungeonCombat,      300 },
+        { BotState.DungeonLooting,     120 },
+        { BotState.DungeonProgressing, 120 },
     };
 
     public StateManager(Plugin plugin, IFramework framework, IPluginLog log)
@@ -106,6 +118,9 @@ public class StateManager : IDisposable
             case BotState.OpeningChest:     TickOpeningChest();     break;
             case BotState.InCombat:         TickInCombat();         break;
             case BotState.InDungeon:        TickInDungeon();        break;
+            case BotState.DungeonCombat:    TickDungeonCombat();    break;
+            case BotState.DungeonLooting:   TickDungeonLooting();   break;
+            case BotState.DungeonProgressing: TickDungeonProgressing(); break;
             case BotState.Completed:        TickCompleted();        break;
         }
     }
@@ -129,9 +144,15 @@ public class StateManager : IDisposable
     public void Stop()
     {
         _plugin.NavigationService.StopNavigation();
+        if (IsDungeonState())
+        {
+            CommandHelper.SendCommand("/bmrai off");
+            _plugin.AddDebugLog("[Stop] Disabled BMR AI (was in dungeon)");
+        }
         IsPaused = false;
         RetryCount = 0;
         portalRetryStart = DateTime.MinValue;
+        dungeonEntryProcessed = false;
         TransitionTo(BotState.Idle, "Stopped by user.");
     }
 
@@ -598,15 +619,318 @@ public class StateManager : IDisposable
 
     private void TickInDungeon()
     {
-        // In dungeon - wait until we leave the instance
-        // Bot will resume when we're back in the overworld
-        StateDetail = "In dungeon instance - waiting to exit...";
-        
-        // Check if we're no longer in a dungeon (territory changed)
-        if (CurrentLocation != null && Plugin.ClientState.TerritoryType != CurrentLocation.TerritoryId)
+        GameHelpers.ClickYesIfVisible();
+
+        bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                      Plugin.Condition[ConditionFlag.BoundByDuty56];
+        bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                       Plugin.Condition[ConditionFlag.BetweenAreas51];
+
+        // Wait for loading screens (entering dungeon or transitioning between rooms)
+        if (loading)
         {
-            _plugin.AddDebugLog("Left dungeon instance - resuming normal operation");
-            TransitionTo(BotState.Completed, "Dungeon completed - back in overworld");
+            StateDetail = "Loading dungeon room...";
+            return;
+        }
+
+        // First time in dungeon after loading finishes
+        if (!dungeonEntryProcessed && inDuty)
+        {
+            dungeonEntryProcessed = true;
+            dungeonFloor = 1;
+            excludedDoorEntityId = null;
+            doorStuckStart = DateTime.MinValue;
+            _plugin.AddDebugLog($"[Dungeon] Entered dungeon - floor {dungeonFloor}");
+        }
+
+        // Check if we got ejected (no longer in duty, grace period for loading)
+        if (!inDuty && (DateTime.Now - stateStartTime).TotalSeconds > 5)
+        {
+            _plugin.AddDebugLog($"[Dungeon] No longer bound by duty - ejected after floor {dungeonFloor}");
+            CommandHelper.SendCommand("/bmrai off");
+            dungeonEntryProcessed = false;
+            TransitionTo(BotState.Completed, $"Dungeon complete (reached floor {dungeonFloor})");
+            return;
+        }
+
+        // Check if in combat → DungeonCombat
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            TransitionTo(BotState.DungeonCombat, $"Combat on floor {dungeonFloor}!");
+            return;
+        }
+
+        // Check for card game addon → skip with "Open Chest"
+        if (TrySkipCardGame())
+            return;
+
+        // Scan for loot objects first (coffers, chests, sacks)
+        var lootObjects = FindDungeonObjects(lootOnly: true);
+        if (lootObjects.Count > 0)
+        {
+            TransitionTo(BotState.DungeonLooting, $"Looting on floor {dungeonFloor}...");
+            return;
+        }
+
+        // Scan for progression objects (doors, spheres, any interactable EventObj)
+        var progressionObjects = FindDungeonObjects(lootOnly: false);
+        if (progressionObjects.Count > 0)
+        {
+            TransitionTo(BotState.DungeonProgressing, $"Progressing on floor {dungeonFloor}...");
+            return;
+        }
+
+        // Nothing found - waiting for objects to spawn
+        var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+        StateDetail = $"Floor {dungeonFloor} - scanning for objects... ({elapsed:F0}s)";
+
+        // Periodically log all visible objects for datamining
+        if ((DateTime.Now - lastDungeonLogTime).TotalSeconds >= 15)
+        {
+            lastDungeonLogTime = DateTime.Now;
+            LogDungeonObjects();
+        }
+    }
+
+    private void TickDungeonCombat()
+    {
+        GameHelpers.ClickYesIfVisible();
+
+        bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                       Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (loading)
+        {
+            StateDetail = "Loading...";
+            return;
+        }
+
+        // Check ejection
+        bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                      Plugin.Condition[ConditionFlag.BoundByDuty56];
+        if (!inDuty)
+        {
+            _plugin.AddDebugLog($"[Dungeon] Ejected during combat on floor {dungeonFloor}");
+            CommandHelper.SendCommand("/bmrai off");
+            dungeonEntryProcessed = false;
+            TransitionTo(BotState.Completed, $"Dungeon complete (wiped on floor {dungeonFloor})");
+            return;
+        }
+
+        // Don't interfere with targeting during combat - let BMR handle it
+        bool inCombat = Plugin.Condition[ConditionFlag.InCombat];
+
+        if (inCombat)
+        {
+            StateDetail = $"In combat on floor {dungeonFloor} - BMR handling...";
+            return;
+        }
+
+        // Combat ended - go back to InDungeon to scan for loot/progression
+        _plugin.AddDebugLog($"[Dungeon] Combat ended on floor {dungeonFloor}");
+        TransitionTo(BotState.InDungeon, $"Combat ended - scanning floor {dungeonFloor}...");
+    }
+
+    private void TickDungeonLooting()
+    {
+        GameHelpers.ClickYesIfVisible();
+
+        bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                       Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (loading)
+        {
+            StateDetail = "Loading...";
+            return;
+        }
+
+        // Check ejection
+        bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                      Plugin.Condition[ConditionFlag.BoundByDuty56];
+        if (!inDuty)
+        {
+            _plugin.AddDebugLog($"[Dungeon] Ejected during looting on floor {dungeonFloor}");
+            CommandHelper.SendCommand("/bmrai off");
+            dungeonEntryProcessed = false;
+            TransitionTo(BotState.Completed, $"Dungeon complete (floor {dungeonFloor})");
+            return;
+        }
+
+        // If combat starts during looting, switch to combat
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
+            TransitionTo(BotState.DungeonCombat, $"Combat during looting on floor {dungeonFloor}!");
+            return;
+        }
+
+        // Check card game
+        if (TrySkipCardGame())
+            return;
+
+        // Find loot objects
+        var lootObjects = FindDungeonObjects(lootOnly: true);
+        if (lootObjects.Count == 0)
+        {
+            // No more loot - go back to InDungeon to find progression
+            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
+            _plugin.AddDebugLog($"[Dungeon] All loot collected on floor {dungeonFloor}");
+            TransitionTo(BotState.InDungeon, $"Loot done - looking for progression on floor {dungeonFloor}...");
+            return;
+        }
+
+        var target = lootObjects[0]; // Nearest loot object
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return;
+
+        var dist = Vector3.Distance(player.Position, target.Position);
+        var targetName = target.Name.ToString();
+
+        if (dist > 3f)
+        {
+            // Approach with lockon+automove
+            Plugin.TargetManager.Target = target;
+            if (!autoMoveActive)
+            {
+                _plugin.AddDebugLog($"[Dungeon] Approaching loot '{targetName}' at {dist:F1}y");
+                GameHelpers.LockOnAndAutoMove();
+                autoMoveActive = true;
+            }
+            StateDetail = $"Approaching '{targetName}' ({dist:F1}y)...";
+        }
+        else
+        {
+            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
+
+            // Interact every ~2 seconds
+            if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 2.0)
+            {
+                lastInteractionTime = DateTime.Now;
+                Plugin.TargetManager.Target = target;
+                GameHelpers.InteractWithObject(target);
+                _plugin.AddDebugLog($"[Dungeon] Interacting with loot '{targetName}'");
+                StateDetail = $"Opening '{targetName}'...";
+            }
+        }
+    }
+
+    private void TickDungeonProgressing()
+    {
+        GameHelpers.ClickYesIfVisible();
+
+        bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                       Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (loading)
+        {
+            // Loading screen = we're moving to next room!
+            dungeonFloor++;
+            excludedDoorEntityId = null;
+            doorStuckStart = DateTime.MinValue;
+            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
+            _plugin.AddDebugLog($"[Dungeon] Loading next room - advancing to floor {dungeonFloor}");
+            TransitionTo(BotState.InDungeon, $"Entering floor {dungeonFloor}...");
+            return;
+        }
+
+        // Check ejection
+        bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                      Plugin.Condition[ConditionFlag.BoundByDuty56];
+        if (!inDuty)
+        {
+            _plugin.AddDebugLog($"[Dungeon] Ejected during progression (wrong door?) on floor {dungeonFloor}");
+            CommandHelper.SendCommand("/bmrai off");
+            dungeonEntryProcessed = false;
+            TransitionTo(BotState.Completed, $"Dungeon complete (floor {dungeonFloor})");
+            return;
+        }
+
+        // If combat starts, switch to combat
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
+            TransitionTo(BotState.DungeonCombat, $"Combat during progression on floor {dungeonFloor}!");
+            return;
+        }
+
+        // Check card game
+        if (TrySkipCardGame())
+            return;
+
+        // Check if new loot appeared (bonus spawns)
+        var lootObjects = FindDungeonObjects(lootOnly: true);
+        if (lootObjects.Count > 0)
+        {
+            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
+            TransitionTo(BotState.DungeonLooting, $"More loot found on floor {dungeonFloor}...");
+            return;
+        }
+
+        // Find progression objects (any interactable EventObj that isn't loot)
+        var progressionObjects = FindDungeonObjects(lootOnly: false);
+        if (progressionObjects.Count == 0)
+        {
+            // Nothing to interact with - go back to scanning
+            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
+            var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+            if (elapsed > 30)
+            {
+                _plugin.AddDebugLog($"[Dungeon] No progression objects found for 30s on floor {dungeonFloor} - rescanning");
+                TransitionTo(BotState.InDungeon, $"Rescanning floor {dungeonFloor}...");
+            }
+            else
+            {
+                StateDetail = $"Looking for door/progression on floor {dungeonFloor}... ({elapsed:F0}s)";
+            }
+            return;
+        }
+
+        var target = progressionObjects[0]; // Nearest progression object
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return;
+
+        var dist = Vector3.Distance(player.Position, target.Position);
+        var targetName = target.Name.ToString();
+
+        // Track stuck time on current door
+        if (doorStuckStart == DateTime.MinValue)
+        {
+            doorStuckStart = DateTime.Now;
+            _plugin.AddDebugLog($"[Dungeon] Trying progression object '{targetName}' (EntityId: {target.EntityId})");
+        }
+
+        var stuckSeconds = (DateTime.Now - doorStuckStart).TotalSeconds;
+
+        // If stuck for 60s on same door, exclude it and try another
+        if (stuckSeconds > 60 && progressionObjects.Count > 1)
+        {
+            excludedDoorEntityId = target.EntityId;
+            doorStuckStart = DateTime.MinValue;
+            _plugin.AddDebugLog($"[Dungeon] Stuck at '{targetName}' for 60s - trying other door");
+            return; // Next tick will pick a different object
+        }
+
+        if (dist > 3f)
+        {
+            Plugin.TargetManager.Target = target;
+            if (!autoMoveActive)
+            {
+                _plugin.AddDebugLog($"[Dungeon] Approaching progression '{targetName}' at {dist:F1}y");
+                GameHelpers.LockOnAndAutoMove();
+                autoMoveActive = true;
+            }
+            StateDetail = $"Approaching '{targetName}' ({dist:F1}y)...";
+        }
+        else
+        {
+            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
+
+            // Interact every ~2 seconds
+            if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 2.0)
+            {
+                lastInteractionTime = DateTime.Now;
+                Plugin.TargetManager.Target = target;
+                GameHelpers.InteractWithObject(target);
+                _plugin.AddDebugLog($"[Dungeon] Interacting with '{targetName}' ({stuckSeconds:F0}s)");
+                StateDetail = $"Interacting with '{targetName}' ({stuckSeconds:F0}s)...";
+            }
         }
     }
 
@@ -631,6 +955,10 @@ public class StateManager : IDisposable
                         autoMoveActive = false;
                     }
                     portalRetryStart = DateTime.MinValue;
+                    dungeonEntryProcessed = false;
+                    dungeonFloor = 0;
+                    excludedDoorEntityId = null;
+                    doorStuckStart = DateTime.MinValue;
                     TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
                     return;
                 }
@@ -717,6 +1045,110 @@ public class StateManager : IDisposable
 
         RetryCount = 0;
         TransitionTo(BotState.Idle, "Run complete.");
+    }
+
+    // ─── Dungeon Helpers ─────────────────────────────────────────────────────
+
+    private bool IsDungeonState() =>
+        State == BotState.InDungeon || State == BotState.DungeonCombat ||
+        State == BotState.DungeonLooting || State == BotState.DungeonProgressing;
+
+    private List<IGameObject> FindDungeonObjects(bool lootOnly)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return new List<IGameObject>();
+
+        var lootNames = new[] { "treasure", "coffer", "chest", "sack" };
+
+        return Plugin.ObjectTable
+            .Where(obj =>
+            {
+                if (obj == null) return false;
+                var name = obj.Name.ToString();
+                if (string.IsNullOrEmpty(name)) return false;
+                if (Vector3.Distance(player.Position, obj.Position) > 30f) return false;
+
+                // Only EventObj type (interactive dungeon objects)
+                if (obj.ObjectKind != ObjectKind.EventObj) return false;
+
+                // Skip the teleportation portal (handled separately)
+                if (name == "Teleportation Portal") return false;
+
+                var lower = name.ToLowerInvariant();
+                bool isLoot = lootNames.Any(l => lower.Contains(l));
+
+                if (lootOnly)
+                    return isLoot;
+
+                // For progression: return non-loot EventObj
+                // Exclude any door we gave up on (stuck)
+                if (isLoot) return false;
+                if (excludedDoorEntityId.HasValue && obj.EntityId == excludedDoorEntityId.Value)
+                    return false;
+
+                return true;
+            })
+            .OrderBy(obj => Vector3.Distance(player.Position, obj.Position))
+            .ToList();
+    }
+
+    private void LogDungeonObjects()
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return;
+
+        var objects = Plugin.ObjectTable
+            .Where(obj => obj != null &&
+                   !string.IsNullOrEmpty(obj.Name.ToString()) &&
+                   Vector3.Distance(player.Position, obj.Position) <= 50f &&
+                   obj.ObjectKind != ObjectKind.Player &&
+                   obj.ObjectKind != ObjectKind.Companion)
+            .OrderBy(obj => Vector3.Distance(player.Position, obj.Position))
+            .ToList();
+
+        _plugin.AddDebugLog($"[Dungeon] === Object Scan (floor {dungeonFloor}, {objects.Count} objects) ===");
+        foreach (var obj in objects.Take(15))
+        {
+            var dist = Vector3.Distance(player.Position, obj.Position);
+            _plugin.AddDebugLog($"[Dungeon]   {obj.ObjectKind}: '{obj.Name}' at {dist:F1}y (EntityId: {obj.EntityId})");
+        }
+    }
+
+    private bool TrySkipCardGame()
+    {
+        // Try to detect and skip the card game by clicking "Open Chest"
+        // The addon name is currently unknown - will be discovered via testing
+        // For now, use generic approaches:
+
+        // 1. Try clicking Yes on any standard dialog (catches many popups)
+        // (Already called at top of each tick method)
+
+        // 2. Try Numpad0 as generic controller-mode bypass every 5 seconds
+        //    This simulates "confirm" and can bypass many UI popups
+        if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 5.0)
+        {
+            // Check if we're in a state where a popup might be blocking
+            // If not in combat and no objects found for a while, try bypass
+            var loot = FindDungeonObjects(lootOnly: true);
+            var progression = FindDungeonObjects(lootOnly: false);
+
+            if (loot.Count == 0 && progression.Count == 0)
+            {
+                // Nothing interactable visible - might be a card game popup
+                // Try generic confirm via /sendkey numpad0
+                // Note: Only do this if we've been stuck for a bit
+                var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+                if (elapsed > 5)
+                {
+                    _plugin.AddDebugLog("[Dungeon] No objects visible - trying generic confirm (possible card game)");
+                    CommandHelper.SendCommand("/echo [LootGoblin] Attempting card game skip...");
+                    // TODO: Add proper addon detection once addon name is known
+                    // For now, clicking Yes handles most dialogs
+                }
+            }
+        }
+
+        return false; // Not blocking - continue normal tick
     }
 
     // ─── Error Handling ───────────────────────────────────────────────────────

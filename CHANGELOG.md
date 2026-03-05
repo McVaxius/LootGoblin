@@ -2,6 +2,22 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.58] - 2026-03-04
+
+### Added - Phase 8: Dungeon Handling
+- **Dungeon state machine** - New states: InDungeon, DungeonCombat, DungeonLooting, DungeonProgressing
+- **Dungeon entry** - Detects BoundByDuty flag, initializes floor tracking
+- **Combat handling** - Waits for combat to end without interfering with BMR targeting
+- **Loot scanning** - Finds and interacts with coffers, chests, sacks (case-insensitive name matching)
+- **Progression** - Finds and interacts with doors/spheres/progression EventObj objects
+- **Door stuck detection** - If stuck at a door for 60s, tries the next closest door
+- **Ejection detection** - Detects when BoundByDuty drops (wipe or wrong door) → returns to map loop
+- **Floor tracking** - Increments floor counter on loading screens between rooms
+- **Object logging** - Periodic datamining log of all dungeon objects for research
+- **Card game stub** - TrySkipCardGame placeholder for future addon detection ("Open Chest")
+- **BMR AI cleanup** - Disables /bmrai on dungeon exit or bot stop
+- **Loading screen handling** - Waits for BetweenAreas flags during room transitions
+
 ## [0.0.1.57] - 2026-03-04
 
 ### Fixed - Target cleared during combat to prevent lockon issues

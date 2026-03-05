@@ -13,6 +13,9 @@ public enum BotState
     OpeningChest,
     InCombat,
     InDungeon,
+    DungeonCombat,
+    DungeonLooting,
+    DungeonProgressing,
     Completed,
     Error,
 }

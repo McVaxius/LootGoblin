@@ -1,0 +1,594 @@
+# ==============================================================================
+# DUNGEON OBJECT NAMES DATABASE - TREASURE MAP DUNGEONS
+# ==============================================================================
+# This file contains verified object names and mechanics for treasure map dungeons
+# Edit this file to add verified object names as research progresses
+# All names are case-insensitive when searching in-game
+#
+# Source: Wiki datamining from https://ffxiv.consolegameswiki.com/wiki/Treasure_Hunt
+# Last Updated: Phase 8 Planning
+# ==============================================================================
+
+# ==============================================================================
+# COMMON OBJECTS (Used across ALL treasure map dungeons)
+# ==============================================================================
+
+CommonObjects:
+  
+  # Entry Portal (Overworld → Dungeon)
+  EntryPortal:
+    ObjectName: "Teleportation Portal"
+    Purpose: "Portal that appears in overworld after opening treasure coffer"
+    Verified: true
+    Notes: "Already working in Phase 6. Appears after defeating overworld enemies and opening chest."
+    WikiSource: "All dungeon pages"
+  
+  # Treasure Coffer (Inside Dungeon)
+  TreasureCoffer:
+    ObjectName: "Treasure Coffer"
+    Purpose: "Main loot chest in each dungeon room, triggers trap when opened"
+    Verified: true
+    Notes: "Already working in Phase 6. Armed with traps that release enemies."
+    WikiSource: "All dungeon pages"
+    Mechanics: "Opening triggers trap → enemies spawn → defeat enemies → open chest for rewards + Vault Key"
+  
+  # Vault Key
+  VaultKey:
+    ObjectName: "Vault Key"
+    Purpose: "Key obtained from treasure coffer, used to open one of the locked doors"
+    Verified: false
+    Notes: "Item obtained after opening treasure coffer. Used to unlock progression doors."
+    WikiSource: "Aquapolis, Lost Canals, Lyhe Ghiah, Excitatron"
+  
+  # Locked Doors (Progression)
+  LockedDoors:
+    ObjectName: "RESEARCH_NEEDED"
+    Purpose: "Two locked doors per room, one leads to next floor, one kicks you out"
+    Verified: false
+    Notes: "NOT 'Passage' or 'Cairn of Passage' (Deep Dungeon). Need actual object name from treasure dungeons."
+    WikiSource: "All dungeon pages mention 'two doors' or 'two locked doors'"
+    Mechanics: "50% chance per door (regular dungeons) or 33.33% chance (Hidden Canals with 3 doors)"
+    GoodLuckDoor: "Rainbow arrows or flashing colors indicate correct door (guaranteed success)"
+  
+  # Exit Portal (Dungeon → Overworld)
+  ExitPortal:
+    ObjectName: "RESEARCH_NEEDED"
+    Purpose: "Portal to voluntarily exit dungeon back to overworld"
+    Verified: false
+    Notes: "NOT 'Accursed Hoard' (Deep Dungeon). Need actual object name from treasure dungeons."
+    WikiSource: "Not explicitly mentioned in wiki - may not exist as separate object"
+  
+  # Bonus Enemies (Extra Loot)
+  BonusEnemies:
+    - ObjectName: "Arges"
+      Purpose: "Rare bonus enemy that drops extra rewards"
+      Verified: false
+      Notes: "Can spawn multiple times (up to 2 at once)"
+      WikiSource: "Aquapolis"
+    
+    - ObjectName: "Golden Goblin"
+      Purpose: "Rare bonus enemy that drops extra rewards"
+      Verified: false
+      Notes: "Can spawn multiple times (up to 3 at once)"
+      WikiSource: "Aquapolis"
+    
+    - ObjectName: "Gymnasiou Lampas"
+      Purpose: "Rare bonus enemy in Gymnasion Agonon"
+      Verified: false
+      WikiSource: "Shifting Gymnasion Agonon"
+    
+    - ObjectName: "Gymnasiou Lyssa"
+      Purpose: "Rare bonus enemy in Gymnasion Agonon"
+      Verified: false
+      WikiSource: "Shifting Gymnasion Agonon"
+
+# ==============================================================================
+# DUNGEON-SPECIFIC DETAILS
+# ==============================================================================
+
+Dungeons:
+  
+  # ----------------------------------------------------------------------------
+  # THE AQUAPOLIS (Heavensward - Level 60)
+  # ----------------------------------------------------------------------------
+  Aquapolis:
+    FullName: "The Aquapolis"
+    Expansion: "Heavensward"
+    Level: 60
+    Patch: "3.3"
+    TerritoryId: "VERIFY_IN_GAME"
+    
+    Entry:
+      MapType: "Timeworn Dragonskin Map"
+      PortalChance: "50%"
+      PartySize: "1-8 players (8 recommended)"
+      Requirements: "No level or item level requirement"
+    
+    Progression:
+      TotalFloors: 7
+      DoorCount: 2
+      DoorSuccessChance: "50%"
+      RewardTiers: 3
+      RewardTier1Floors: "1-3"
+      RewardTier2Floors: "4-6"
+      RewardTier3Floors: "7 (final)"
+    
+    Mechanics:
+      - "Treasure chests armed with traps"
+      - "Traps release enemies from cages"
+      - "Defeat enemies → open chest → get Vault Key + rewards"
+      - "Use Vault Key to open one of two doors"
+      - "Correct door (50% chance) → next floor"
+      - "Wrong door → ejected from dungeon"
+      - "Flashing Light bordered door = 100% correct (good luck door)"
+      - "Rainbow can save you if you pick wrong door (rare)"
+    
+    Objects:
+      - ObjectName: "Treasure Coffer"
+        Purpose: "Main chest in each room"
+        Verified: true
+      
+      - ObjectName: "RESEARCH_NEEDED"
+        Purpose: "Locked doors for progression"
+        Verified: false
+    
+    BonusEnemies:
+      - "Arges (up to 2 at once)"
+      - "Golden Goblins (up to 3 at once)"
+      - "Can spawn across multiple floors"
+    
+    EjectionConditions:
+      - "Wrong door chosen"
+      - "No party members on battlefield when door sealed"
+      - "All players defeated in combat (no respawn)"
+    
+    WikiSource: "https://ffxiv.consolegameswiki.com/wiki/The_Aquapolis"
+  
+  # ----------------------------------------------------------------------------
+  # THE LOST CANALS OF UZNAIR (Stormblood - Level 70)
+  # ----------------------------------------------------------------------------
+  LostCanalsOfUznair:
+    FullName: "The Lost Canals of Uznair"
+    Expansion: "Stormblood"
+    Level: 70
+    Patch: "4.0"
+    TerritoryId: "VERIFY_IN_GAME"
+    
+    Entry:
+      MapType: "Timeworn Gazelleskin Map"
+      PortalChance: "Random"
+      GuaranteedPortalMap: "Seemingly Special Timeworn Map"
+      PartySize: "1-8 players (8 recommended)"
+      Requirements: "No level or item level requirement"
+    
+    Progression:
+      TotalFloors: 7
+      DoorCount: 2
+      DoorSuccessChance: "50%"
+      RewardTiers: 3
+    
+    Mechanics:
+      - "Treasure chests armed with traps"
+      - "Traps release wild animals from cages"
+      - "Defeat animals → open chest → get Vault Key + rewards"
+      - "Use Vault Key to open one of two doors"
+      - "Correct door (50% chance) → next floor"
+      - "Wrong door → ejected from dungeon"
+    
+    Objects:
+      - ObjectName: "Treasure Coffer"
+        Purpose: "Main chest in each room"
+        Verified: true
+      
+      - ObjectName: "RESEARCH_NEEDED"
+        Purpose: "Locked doors for progression"
+        Verified: false
+    
+    EnemyVariations:
+      Chamber1: ["Canal Bombfish", "Canal Coralshell", "Canal Hippomaritimus", "Canal Monk"]
+      Chamber2: ["Canal Chelone", "Canal Phoebad", "Canal Soblyn", "Canal Vepar"]
+      Chamber3: ["Canal Dhalmel", "Canal Gagana", "Canal Marid", "Canal Sasquatch"]
+      Chamber4: ["2x Canal Iron Corse", "2x Canal Keeper"]
+      Chamber5: ["Canal Kiyofusa", "2x Canal Hanya"]
+      Chamber6: ["Canal Minotaur", "2x Canal Vanara"]
+      Chamber7: ["Canal Matanga", "Canal Muud Suud", "2x Canal Vanara"]
+    
+    EjectionConditions:
+      - "Wrong door chosen"
+      - "No party members on battlefield when door sealed"
+      - "All players defeated in combat (no respawn)"
+    
+    WikiSource: "https://ffxiv.consolegameswiki.com/wiki/The_Lost_Canals_of_Uznair"
+  
+  # ----------------------------------------------------------------------------
+  # THE HIDDEN CANALS OF UZNAIR (Stormblood - Level 70, Thief Maps)
+  # ----------------------------------------------------------------------------
+  HiddenCanalsOfUznair:
+    FullName: "The Hidden Canals of Uznair"
+    Expansion: "Stormblood"
+    Level: 70
+    Patch: "4.0"
+    TerritoryId: "VERIFY_IN_GAME"
+    
+    Entry:
+      MapType: "Timeworn Thief's Map"
+      PortalChance: "Random"
+      PartySize: "1-8 players (8 recommended)"
+      Requirements: "No level or item level requirement"
+    
+    Progression:
+      TotalFloors: 7
+      DoorCount: 3
+      DoorSuccessChance: "33.33%"
+      RewardTiers: 3
+      Notes: "THIEF MAPS HAVE 3 DOORS instead of 2"
+    
+    Mechanics:
+      - "Similar to Lost Canals but with 3 doors instead of 2"
+      - "Lower success chance per door (33.33% vs 50%)"
+      - "Treasure chests armed with traps"
+      - "Defeat enemies → open chest → get Vault Key + rewards"
+      - "Use Vault Key to open one of THREE doors"
+    
+    Objects:
+      - ObjectName: "Treasure Coffer"
+        Purpose: "Main chest in each room"
+        Verified: true
+      
+      - ObjectName: "RESEARCH_NEEDED"
+        Purpose: "Locked doors for progression (3 doors)"
+        Verified: false
+    
+    WikiSource: "https://ffxiv.consolegameswiki.com/wiki/The_Lost_Canals_of_Uznair (mentions Hidden Canals)"
+  
+  # ----------------------------------------------------------------------------
+  # THE SHIFTING ALTARS OF UZNAIR (Stormblood - Level 70)
+  # ----------------------------------------------------------------------------
+  ShiftingAltarsOfUznair:
+    FullName: "The Shifting Altars of Uznair"
+    Expansion: "Stormblood"
+    Level: 70
+    Patch: "4.2"
+    TerritoryId: "VERIFY_IN_GAME"
+    
+    Entry:
+      MapType: "Timeworn Gazelleskin Map"
+      PortalChance: "Random"
+      GuaranteedPortalMap: "Seemingly Special Timeworn Map"
+      PartySize: "1-8 players (8 recommended)"
+      Requirements: "No level or item level requirement"
+    
+    Progression:
+      TotalFloors: 7
+      DoorCount: 2
+      DoorSuccessChance: "50%"
+      RewardTiers: 3
+    
+    Mechanics:
+      - "Variant of Lost Canals with similar mechanics"
+      - "Treasure chests armed with traps"
+      - "Defeat enemies → open chest → get Vault Key + rewards"
+      - "Use Vault Key to open one of two doors"
+    
+    Objects:
+      - ObjectName: "Treasure Coffer"
+        Purpose: "Main chest in each room"
+        Verified: true
+      
+      - ObjectName: "RESEARCH_NEEDED"
+        Purpose: "Locked doors for progression"
+        Verified: false
+    
+    WikiSource: "https://ffxiv.consolegameswiki.com/wiki/The_Shifting_Altars_of_Uznair"
+  
+  # ----------------------------------------------------------------------------
+  # THE DUNGEONS OF LYHE GHIAH (Shadowbringers - Level 80)
+  # ----------------------------------------------------------------------------
+  DungeonsOfLyheGhiah:
+    FullName: "The Dungeons of Lyhe Ghiah"
+    Expansion: "Shadowbringers"
+    Level: 80
+    Patch: "5.0"
+    TerritoryId: "VERIFY_IN_GAME"
+    
+    Entry:
+      MapType: "Timeworn Zonureskin Map"
+      PortalChance: "Random"
+      GuaranteedPortalMap: "Ostensibly Special Timeworn Map"
+      PartySize: "1-8 players (8 recommended)"
+      Requirements: "No level or item level requirement"
+    
+    Progression:
+      TotalFloors: 5
+      DoorCount: 2
+      DoorSuccessChance: "50%"
+      RewardTiers: 3
+      Notes: "Only 5 rooms total (not 7 like earlier dungeons)"
+    
+    Mechanics:
+      - "Open treasure coffer → triggers trap → spawns enemies"
+      - "Sometimes extra monsters spawn (bonus loot)"
+      - "Defeat enemies → open chest → get Vault Key + rewards"
+      - "Use Vault Key to open one of two locked doors"
+      - "Correct door → next floor"
+      - "Wrong door → ejected"
+      - "Arrows sometimes point to correct door"
+    
+    Objects:
+      - ObjectName: "Treasure Coffer"
+        Purpose: "Main chest in each room"
+        Verified: true
+      
+      - ObjectName: "RESEARCH_NEEDED"
+        Purpose: "Locked doors for progression"
+        Verified: false
+    
+    FinalBosses:
+      - "Goliath"
+      - "Alichino"
+    
+    WikiSource: "https://ffxiv.consolegameswiki.com/wiki/The_Dungeons_of_Lyhe_Ghiah"
+  
+  # ----------------------------------------------------------------------------
+  # THE EXCITATRON 6000 (Endwalker - Level 90)
+  # ----------------------------------------------------------------------------
+  Excitatron6000:
+    FullName: "The Excitatron 6000"
+    Expansion: "Endwalker"
+    Level: 90
+    Patch: "6.0"
+    TerritoryId: "VERIFY_IN_GAME"
+    
+    Entry:
+      MapType: "Timeworn Kumbhiraskin Map"
+      PortalChance: "Random"
+      GuaranteedPortalMap: "Potentially Special Timeworn Map"
+      PartySize: "1-8 players (8 recommended)"
+      Requirements: "No level or item level requirement"
+    
+    Progression:
+      TotalFloors: 5
+      DoorCount: 2
+      DoorSuccessChance: "50%"
+      RewardTiers: 3
+      Notes: "Only 5 rooms total"
+    
+    Mechanics:
+      - "Open treasure coffer → triggers trap → spawns enemies"
+      - "Sometimes extra monsters spawn (bonus loot)"
+      - "Defeat enemies → open chest → get key + rewards"
+      - "Use key to open one of two locked doors"
+      - "Correct door → next floor"
+      - "Wrong door → ejected"
+      - "Rainbow arrows point to correct door (good luck door)"
+      - "Door flashes in different colors"
+      - "Small circular panel for area transitions (can get stuck if not stepped on)"
+    
+    Objects:
+      - ObjectName: "Treasure Coffer"
+        Purpose: "Main chest in each room"
+        Verified: true
+      
+      - ObjectName: "RESEARCH_NEEDED"
+        Purpose: "Locked doors for progression"
+        Verified: false
+      
+      - ObjectName: "RESEARCH_NEEDED"
+        Purpose: "Small circular panel for area transitions"
+        Verified: false
+        Notes: "Hidden object. Must step onto this panel to trigger area transition. Can get stuck if missed."
+    
+    FinalBosses:
+      - "Lucky Face"
+      - "Lucky Sphinx"
+    
+    SpecialRewards:
+      - "Gambler's Lure (special item)"
+    
+    WikiSource: "https://ffxiv.consolegameswiki.com/wiki/The_Excitatron_6000"
+  
+  # ----------------------------------------------------------------------------
+  # THE SHIFTING GYMNASION AGONON (Endwalker - Level 90)
+  # ----------------------------------------------------------------------------
+  ShiftingGymnasionAgonon:
+    FullName: "The Shifting Gymnasion Agonon"
+    Expansion: "Endwalker"
+    Level: 90
+    Patch: "6.3"
+    Location: "Elpis, The World Unsundered"
+    TerritoryId: "VERIFY_IN_GAME"
+    
+    Entry:
+      MapType: "Timeworn Ophiotauroskin Map"
+      PortalChance: "Low chance"
+      GuaranteedPortalMap: "Conceivably Special Timeworn Map"
+      PartySize: "1-8 players (8 recommended)"
+      Requirements: "No level or item level requirement"
+    
+    Progression:
+      TotalFloors: 5
+      DoorCount: "VERIFY"
+      Notes: "Five summons total, different progression system than other dungeons"
+    
+    Mechanics:
+      - "Find arcane sphere → use to perform invocation"
+      - "Invocation triggers roulette wheel → summons creatures"
+      - "Defeat enemies → treasure chest appears"
+      - "Only map opener can access chest"
+      - "After claiming chest contents → use arcane sphere again for next trial"
+      - "Repeat for 5 summons total"
+    
+    Objects:
+      - ObjectName: "arcane sphere"
+        Purpose: "Interact to perform invocation and trigger roulette wheel"
+        Verified: false
+        Notes: "UNIQUE to Gymnasion Agonon. Used to progress to next trial/room."
+        WikiSource: "Progression section explicitly states this object name"
+      
+      - ObjectName: "Treasure Chest"
+        Purpose: "Appears after defeating summoned enemies"
+        Verified: false
+        Notes: "Only map opener can access"
+    
+    ProgressionSystem:
+      Type: "Summon-based (not door-based)"
+      Summons: 5
+      SummonTypes:
+        - "Lesser Summons"
+        - "Greater Summons"
+        - "Elder Summons"
+    
+    BonusEnemies:
+      - "Gymnasiou Lampas"
+      - "Gymnasiou Lyssa"
+      - "Gymnastic Onion, Eggplant, Garlic, Tomato, Queen (kill smallest to largest)"
+    
+    ExitConditions:
+      - "Five summons completed (duty complete)"
+      - "Kalypso summoned (removes party from duty)"
+      - "All party members KO'd (no respawn)"
+    
+    WikiSource: "https://ffxiv.consolegameswiki.com/wiki/The_Shifting_Gymnasion_Agonon"
+    
+    Notes: |
+      UNIQUE PROGRESSION SYSTEM:
+      - Does NOT use doors like other dungeons
+      - Uses "arcane sphere" object to trigger each trial
+      - Roulette wheel summons enemies
+      - 5 summons total instead of floor-based progression
+
+# ==============================================================================
+# DAWNTRAIL DUNGEONS (Level 100) - Future Content
+# ==============================================================================
+
+DawntrailDungeons:
+  
+  CenoteJaJaGural:
+    FullName: "Cenote Ja Ja Gural"
+    Expansion: "Dawntrail"
+    Level: 100
+    MapType: "Timeworn Br'aaxskin Map"
+    Status: "Future content - not in scope for Phase 8"
+    WikiSource: "https://ffxiv.consolegameswiki.com/wiki/Cenote_Ja_Ja_Gural"
+  
+  VaultOneiron:
+    FullName: "Vault Oneiron"
+    Expansion: "Dawntrail"
+    Level: 100
+    MapType: "Timeworn Gargantuaskin Map"
+    Status: "Future content - not in scope for Phase 8"
+    WikiSource: "https://ffxiv.consolegameswiki.com/wiki/Vault_Oneiron"
+
+# ==============================================================================
+# CARD GAME MECHANICS
+# ==============================================================================
+
+CardGame:
+  Name: "Higher/Lower Card Game"
+  Introduced: "Endwalker maps (possibly earlier)"
+  Trigger: "After some floors are completed and main floor chest is clicked"
+  CanAppear: "After combat, in final room"
+  
+  UIElements:
+    AddonName: "RESEARCH_NEEDED"
+    ButtonText: "Open Chest"
+    Verified: false
+    Notes: "User confirmed text is 'Open Chest' not 'Open Lockbox'"
+  
+  Strategy:
+    Approach: "Skip the game entirely"
+    Method: "Click 'Open Chest' option when menu appears"
+    Implementation: "Use generic callbacks or controller mode Numpad0 to bypass"
+    Logging: "Log all callbacks for future refinement"
+  
+  ResearchNeeded:
+    - "Addon name/ID for card game UI"
+    - "Exact callback signature when UI opens"
+    - "Button interaction method"
+    - "Which dungeons have card game (verify each)"
+
+# ==============================================================================
+# GOOD LUCK DOOR MECHANICS
+# ==============================================================================
+
+GoodLuckDoor:
+  Description: "Special door indicator showing guaranteed success"
+  Indicators:
+    - "Rainbow arrows pointing to correct door"
+    - "Door flashing in different colors"
+    - "Flashing Light border on door"
+    - "Golden aura (user mentioned)"
+  
+  Behavior:
+    - "If good luck door present, other doors are locked"
+    - "You won't get kicked out"
+    - "Must try other doors until you find the lucky one"
+    - "If stuck at door for 60s, try the other door"
+  
+  Detection:
+    Method: "Visual indicators (arrows, flashing, colors)"
+    Fallback: "If stuck for 60s, assume other door is correct"
+
+# ==============================================================================
+# RESEARCH METHODOLOGY
+# ==============================================================================
+
+ResearchMethods:
+  
+  WikiScraping:
+    Source: "https://ffxiv.consolegameswiki.com/wiki/Treasure_Hunt"
+    Method: "Extract object names from progression text"
+    CaseSensitivity: "Case-insensitive search in-game"
+    Status: "COMPLETED - All dungeons datamined"
+  
+  BossModReplays:
+    Source: ".txt versions of BossMod replays"
+    Method: "Script to extract object names, entity names"
+    Purpose: "Datamining for hardcoded object names"
+    Organization: "Database fed by script, looks for new things"
+    Status: "Future enhancement"
+  
+  InGameTesting:
+    Method: "ObjectTable logging during dungeon runs"
+    Tools: "Hyperborea for spawning dungeons (can't spawn creatures)"
+    Verification: "Verify all object names, territory IDs, mechanics"
+    Status: "Required before implementation"
+
+# ==============================================================================
+# CRITICAL REMINDERS
+# ==============================================================================
+
+CriticalNotes: |
+  ❌ DO NOT USE DEEP DUNGEON REFERENCES:
+  - "Accursed Hoard" - Deep Dungeon only
+  - "Cairn of Passage" - Deep Dungeon only
+  - "Beacon of Recovery" - Deep Dungeon only
+  - "Passage" - Deep Dungeon only
+  
+  ✅ TREASURE MAP DUNGEONS ARE DIFFERENT:
+  - Completely separate content from Deep Dungeons
+  - Different object names
+  - Different mechanics
+  - Different progression systems
+  
+  ✅ VERIFIED OBJECTS (Working in Phase 6):
+  - "Treasure Coffer" - Main loot chest
+  - "Teleportation Portal" - Entry portal from overworld
+  
+  ⏳ RESEARCH NEEDED:
+  - Locked door object names (progression doors)
+  - Exit portal object names (if they exist)
+  - Card game UI addon name and callbacks
+  - Area transition object names (Excitatron panel)
+  - Territory IDs for all dungeons
+  
+  📝 UNIQUE MECHANICS:
+  - Gymnasion Agonon uses "arcane sphere" not doors
+  - Hidden Canals has 3 doors (33.33% chance)
+  - Good luck doors have visual indicators
+  - No respawn on wipe - immediate ejection
+  - Party members auto-summoned between floors
+
+# ==============================================================================
+# END OF DATABASE
+# ==============================================================================
