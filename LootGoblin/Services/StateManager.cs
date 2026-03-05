@@ -786,10 +786,12 @@ public class StateManager : IDisposable
         var dist = Vector3.Distance(player.Position, target.Position);
         var targetName = target.Name.ToString();
 
+        // Always set target
+        Plugin.TargetManager.Target = target;
+
         if (dist > 3f)
         {
             // Approach with vnavmesh
-            Plugin.TargetManager.Target = target;
             if (!autoMoveActive)
             {
                 _plugin.AddDebugLog($"[Dungeon] Approaching loot '{targetName}' at {dist:F1}y");
@@ -800,13 +802,17 @@ public class StateManager : IDisposable
         }
         else
         {
-            if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
+            // In range - stop navigation and interact
+            if (autoMoveActive)
+            {
+                _plugin.NavigationService.StopNavigation();
+                autoMoveActive = false;
+            }
 
             // Interact every ~2 seconds
             if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 2.0)
             {
                 lastInteractionTime = DateTime.Now;
-                Plugin.TargetManager.Target = target;
                 GameHelpers.InteractWithObject(target);
                 _plugin.AddDebugLog($"[Dungeon] Interacting with loot '{targetName}'");
                 StateDetail = $"Opening '{targetName}'...";
@@ -950,12 +956,24 @@ public class StateManager : IDisposable
                 // Click Yes on any visible dialog (portal confirmation from previous tick)
                 if (GameHelpers.ClickYesIfVisible())
                 {
-                    _plugin.AddDebugLog("[Portal] Clicked Yes on portal dialog");
+                    _plugin.AddDebugLog("[Portal] Clicked Yes on portal dialog - waiting for loading screen...");
                     if (autoMoveActive)
                     {
                         _plugin.NavigationService.StopNavigation();
                         autoMoveActive = false;
                     }
+                    // Don't transition to InDungeon yet - wait for BoundByDuty flag
+                    // Portal interaction will trigger loading screen, then BoundByDuty will be set
+                    StateDetail = "Portal accepted - waiting for dungeon entry...";
+                    return;
+                }
+                
+                // Check if we're now in a duty (portal was accepted and loading finished)
+                bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                              Plugin.Condition[ConditionFlag.BoundByDuty56];
+                if (inDuty)
+                {
+                    _plugin.AddDebugLog("[Portal] BoundByDuty detected - entering dungeon!");
                     portalRetryStart = DateTime.MinValue;
                     dungeonEntryProcessed = false;
                     dungeonFloor = 0;
@@ -1120,36 +1138,10 @@ public class StateManager : IDisposable
     {
         // Try to detect and skip the card game by clicking "Open Chest"
         // The addon name is currently unknown - will be discovered via testing
-        // For now, use generic approaches:
-
-        // 1. Try clicking Yes on any standard dialog (catches many popups)
-        // (Already called at top of each tick method)
-
-        // 2. Try Numpad0 as generic controller-mode bypass every 5 seconds
-        //    This simulates "confirm" and can bypass many UI popups
-        if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 5.0)
-        {
-            // Check if we're in a state where a popup might be blocking
-            // If not in combat and no objects found for a while, try bypass
-            var loot = FindDungeonObjects(lootOnly: true);
-            var progression = FindDungeonObjects(lootOnly: false);
-
-            if (loot.Count == 0 && progression.Count == 0)
-            {
-                // Nothing interactable visible - might be a card game popup
-                // Try generic confirm via /sendkey numpad0
-                // Note: Only do this if we've been stuck for a bit
-                var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-                if (elapsed > 5)
-                {
-                    _plugin.AddDebugLog("[Dungeon] No objects visible - trying generic confirm (possible card game)");
-                    CommandHelper.SendCommand("/echo [LootGoblin] Attempting card game skip...");
-                    // TODO: Add proper addon detection once addon name is known
-                    // For now, clicking Yes handles most dialogs
-                }
-            }
-        }
-
+        // For now, ClickYesIfVisible() at the top of each tick method handles most dialogs
+        // This function is a placeholder for future addon-specific detection
+        
+        // Don't spam - card game detection will be implemented when addon name is known
         return false; // Not blocking - continue normal tick
     }
 

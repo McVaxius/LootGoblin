@@ -2,6 +2,15 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.61] - 2026-03-04
+
+### Fixed
+- **Portal interaction** - Bot now waits for `BoundByDuty` flag before transitioning to `InDungeon` state
+- Portal interaction no longer transitions prematurely while loot is being distributed
+- Removed card game skip spam when waiting for portal outside dungeon
+- **Dungeon looting** - Fixed chest interaction to always set target and start navigation before interacting
+- Dungeon chests now properly path to target instead of just clicking without moving
+
 ## [0.0.1.60] - 2026-03-04
 
 ### Changed
