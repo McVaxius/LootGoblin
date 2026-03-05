@@ -2,6 +2,24 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.62] - 2026-03-04
+
+### Changed
+- **Reverted navigation approach** - All chest, portal, and dungeon object interactions now use `lockon + automove` instead of vnavmesh
+- Short-range movement (chests, portals, dungeon loot/progression) uses simple lockon+automove for better reliability
+- Interaction timing reduced to 1 second intervals for all objects (chest, portal, dungeon loot, dungeon progression)
+
+### Added
+- **Underwater descent** - Implemented Ctrl+Space keyboard hold/release pattern for underwater dismounting
+- Descent triggers after 60 seconds of failed dismount attempts (underwater detection)
+- `/gaction jump` for underwater portal Y-axis range (already present, documented)
+
+### Fixed
+- Chest interaction now properly approaches and interacts using lockon+automove
+- Portal interaction uses lockon+automove for reliable short-range approach
+- Dungeon looting uses lockon+automove instead of failing to path
+- Dungeon progression uses lockon+automove for door/sphere interaction
+
 ## [0.0.1.61] - 2026-03-04
 
 ### Fixed

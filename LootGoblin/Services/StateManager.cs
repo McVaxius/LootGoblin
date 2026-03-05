@@ -548,33 +548,34 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Not in combat - approach and interact with chest
+        // Not in combat - approach and interact with chest using lockon+automove
+        Plugin.TargetManager.Target = chest;
+        
         if (dist > range)
         {
-            Plugin.TargetManager.Target = chest;
+            // Use lockon+automove for short-range chest approach
             if (!autoMoveActive)
             {
-                _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {dist:F1}y - navigating via vnavmesh");
-                _plugin.NavigationService.MoveToPosition(chest.Position);
+                _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {dist:F1}y - lockon+automove");
+                GameHelpers.LockOnAndAutoMove();
                 autoMoveActive = true;
             }
             StateDetail = $"Approaching '{chestName}' ({dist:F1}y away)...";
         }
         else
         {
-            // In range - stop navigation
+            // In range - stop automove
             if (autoMoveActive)
             {
-                _plugin.NavigationService.StopNavigation();
+                GameHelpers.StopAutoMove();
                 autoMoveActive = false;
             }
         }
 
-        // Continually try to interact every ~2 seconds (only when NOT in combat)
-        if ((now - lastInteractionTime).TotalSeconds >= 2.0)
+        // Continually try to interact every ~1 second (only when NOT in combat)
+        if ((now - lastInteractionTime).TotalSeconds >= 1.0)
         {
             lastInteractionTime = now;
-            Plugin.TargetManager.Target = chest;
             var interacted = GameHelpers.InteractWithObject(chest);
             _plugin.AddDebugLog($"[OpeningChest] Interaction attempt with '{chestName}' - returned: {interacted}");
             StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
@@ -791,26 +792,26 @@ public class StateManager : IDisposable
 
         if (dist > 3f)
         {
-            // Approach with vnavmesh
+            // Approach with lockon+automove
             if (!autoMoveActive)
             {
-                _plugin.AddDebugLog($"[Dungeon] Approaching loot '{targetName}' at {dist:F1}y");
-                _plugin.NavigationService.MoveToPosition(target.Position);
+                _plugin.AddDebugLog($"[Dungeon] Approaching loot '{targetName}' at {dist:F1}y - lockon+automove");
+                GameHelpers.LockOnAndAutoMove();
                 autoMoveActive = true;
             }
             StateDetail = $"Approaching '{targetName}' ({dist:F1}y)...";
         }
         else
         {
-            // In range - stop navigation and interact
+            // In range - stop automove and interact
             if (autoMoveActive)
             {
-                _plugin.NavigationService.StopNavigation();
+                GameHelpers.StopAutoMove();
                 autoMoveActive = false;
             }
 
-            // Interact every ~2 seconds
-            if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 2.0)
+            // Interact every ~1 second
+            if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 1.0)
             {
                 lastInteractionTime = DateTime.Now;
                 GameHelpers.InteractWithObject(target);
@@ -915,26 +916,26 @@ public class StateManager : IDisposable
             return; // Next tick will pick a different object
         }
 
+        Plugin.TargetManager.Target = target;
+        
         if (dist > 3f)
         {
-            Plugin.TargetManager.Target = target;
             if (!autoMoveActive)
             {
-                _plugin.AddDebugLog($"[Dungeon] Approaching progression '{targetName}' at {dist:F1}y");
-                _plugin.NavigationService.MoveToPosition(target.Position);
+                _plugin.AddDebugLog($"[Dungeon] Approaching progression '{targetName}' at {dist:F1}y - lockon+automove");
+                GameHelpers.LockOnAndAutoMove();
                 autoMoveActive = true;
             }
             StateDetail = $"Approaching '{targetName}' ({dist:F1}y)...";
         }
         else
         {
-            if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
+            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
 
-            // Interact every ~2 seconds
-            if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 2.0)
+            // Interact every ~1 second
+            if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 1.0)
             {
                 lastInteractionTime = DateTime.Now;
-                Plugin.TargetManager.Target = target;
                 GameHelpers.InteractWithObject(target);
                 _plugin.AddDebugLog($"[Dungeon] Interacting with '{targetName}' ({stuckSeconds:F0}s)");
                 StateDetail = $"Interacting with '{targetName}' ({stuckSeconds:F0}s)...";
@@ -997,13 +998,13 @@ public class StateManager : IDisposable
                         var portalDist = Vector3.Distance(player.Position, portal.Position);
                         if (portalDist > 3f && !autoMoveActive)
                         {
-                            _plugin.AddDebugLog($"[Portal] Navigating to portal at {portalDist:F1}y");
-                            _plugin.NavigationService.MoveToPosition(portal.Position);
+                            _plugin.AddDebugLog($"[Portal] Portal at {portalDist:F1}y - lockon+automove");
+                            GameHelpers.LockOnAndAutoMove();
                             autoMoveActive = true;
                         }
                         else if (portalDist <= 3f && autoMoveActive)
                         {
-                            _plugin.NavigationService.StopNavigation();
+                            GameHelpers.StopAutoMove();
                             autoMoveActive = false;
                         }
                     }
