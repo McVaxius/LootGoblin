@@ -43,6 +43,8 @@ public class StateManager : IDisposable
     private uint? excludedDoorEntityId; // Door we gave up on (stuck), try others
     private DateTime doorStuckStart = DateTime.MinValue; // When we started trying current door
     private DateTime lastDungeonLogTime = DateTime.MinValue; // Throttle object logging
+    private uint lastTerritoryId; // Track territory changes for floor transitions
+    private DateTime forwardMovementStart = DateTime.MinValue; // When we started moving forward after territory change
     private readonly MountService _mountService;
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
@@ -646,6 +648,19 @@ public class StateManager : IDisposable
             return;
         }
 
+        // Track territory changes for floor transitions
+        var currentTerritory = Plugin.ClientState.TerritoryType;
+        bool territoryChanged = lastTerritoryId != 0 && lastTerritoryId != currentTerritory;
+        if (territoryChanged)
+        {
+            _plugin.AddDebugLog($"[Dungeon] Territory changed: {lastTerritoryId} -> {currentTerritory}");
+            dungeonFloor++;
+            excludedDoorEntityId = null;
+            doorStuckStart = DateTime.MinValue;
+            forwardMovementStart = DateTime.MinValue; // Reset forward movement timer
+        }
+        lastTerritoryId = currentTerritory;
+
         // First time in dungeon after loading finishes
         if (!dungeonEntryProcessed && inDuty)
         {
@@ -653,6 +668,7 @@ public class StateManager : IDisposable
             dungeonFloor = 1;
             excludedDoorEntityId = null;
             doorStuckStart = DateTime.MinValue;
+            lastTerritoryId = currentTerritory;
             _plugin.AddDebugLog($"[Dungeon] Entered dungeon - floor {dungeonFloor}");
         }
 
@@ -677,7 +693,48 @@ public class StateManager : IDisposable
         if (TrySkipCardGame())
             return;
 
-        // Scan for loot objects first (coffers, chests, sacks)
+        // After territory change: check for Arcane Sphere or start forward movement
+        if (territoryChanged)
+        {
+            var sphere = FindArcaneSphere();
+            if (sphere != null)
+            {
+                _plugin.AddDebugLog($"[Dungeon] Arcane Sphere detected after territory change - targeting");
+                TransitionTo(BotState.DungeonLooting, $"Arcane Sphere on floor {dungeonFloor}...");
+                return;
+            }
+            else
+            {
+                // No sphere - start moving forward for 10 seconds to trigger area shift
+                _plugin.AddDebugLog($"[Dungeon] No Arcane Sphere after territory change - moving forward for 10s");
+                forwardMovementStart = DateTime.Now;
+            }
+        }
+
+        // Handle forward movement after territory change (no sphere)
+        if (forwardMovementStart != DateTime.MinValue)
+        {
+            var forwardElapsed = (DateTime.Now - forwardMovementStart).TotalSeconds;
+            if (forwardElapsed < 10.0)
+            {
+                // Move forward using keyboard
+                if ((int)forwardElapsed % 1 == 0) // Every second
+                {
+                    CommandHelper.SendCommand("/automove on");
+                }
+                StateDetail = $"Moving forward to trigger area shift... ({forwardElapsed:F0}/10s)";
+                return;
+            }
+            else
+            {
+                // Stop forward movement after 10 seconds
+                CommandHelper.SendCommand("/automove off");
+                forwardMovementStart = DateTime.MinValue;
+                _plugin.AddDebugLog($"[Dungeon] Forward movement complete");
+            }
+        }
+
+        // Scan for loot objects first (coffers, chests, sacks, Arcane Sphere)
         var lootObjects = FindDungeonObjects(lootOnly: true);
         if (lootObjects.Count > 0)
         {
@@ -685,7 +742,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Scan for progression objects (doors, spheres, any interactable EventObj)
+        // Scan for progression objects (doors, any interactable EventObj)
         var progressionObjects = FindDungeonObjects(lootOnly: false);
         if (progressionObjects.Count > 0)
         {
@@ -790,7 +847,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        var target = lootObjects[0]; // Nearest loot object
+        var target = lootObjects[0]; // Nearest loot object (prioritized: Arcane Sphere, then loot)
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return;
 
@@ -802,21 +859,38 @@ public class StateManager : IDisposable
 
         if (dist > 3f)
         {
-            // Approach with lockon+automove
-            if (!autoMoveActive)
+            // Distance-based navigation: <10y lockon+automove, >10y vnavmesh
+            if (dist < 10f)
             {
-                _plugin.AddDebugLog($"[Dungeon] Approaching loot '{targetName}' at {dist:F1}y - lockon+automove");
-                GameHelpers.LockOnAndAutoMove();
-                autoMoveActive = true;
+                // Close range - use lockon+automove
+                if (!autoMoveActive)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Approaching loot '{targetName}' at {dist:F1}y - lockon+automove");
+                    GameHelpers.LockOnAndAutoMove();
+                    autoMoveActive = true;
+                }
+            }
+            else
+            {
+                // Long range - use vnavmesh
+                if (!autoMoveActive)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Approaching loot '{targetName}' at {dist:F1}y - vnavmesh");
+                    _plugin.NavigationService.MoveToPosition(target.Position);
+                    autoMoveActive = true;
+                }
             }
             StateDetail = $"Approaching '{targetName}' ({dist:F1}y)...";
         }
         else
         {
-            // In range - stop automove and interact
+            // In range - stop movement and interact
             if (autoMoveActive)
             {
-                GameHelpers.StopAutoMove();
+                if (dist < 10f)
+                    GameHelpers.StopAutoMove();
+                else
+                    _plugin.NavigationService.StopNavigation();
                 autoMoveActive = false;
             }
 
@@ -930,17 +1004,40 @@ public class StateManager : IDisposable
         
         if (dist > 3f)
         {
-            if (!autoMoveActive)
+            // Distance-based navigation: <10y lockon+automove, >10y vnavmesh
+            if (dist < 10f)
             {
-                _plugin.AddDebugLog($"[Dungeon] Approaching progression '{targetName}' at {dist:F1}y - lockon+automove");
-                GameHelpers.LockOnAndAutoMove();
-                autoMoveActive = true;
+                // Close range - use lockon+automove
+                if (!autoMoveActive)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Approaching progression '{targetName}' at {dist:F1}y - lockon+automove");
+                    GameHelpers.LockOnAndAutoMove();
+                    autoMoveActive = true;
+                }
+            }
+            else
+            {
+                // Long range - use vnavmesh
+                if (!autoMoveActive)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Approaching progression '{targetName}' at {dist:F1}y - vnavmesh");
+                    _plugin.NavigationService.MoveToPosition(target.Position);
+                    autoMoveActive = true;
+                }
             }
             StateDetail = $"Approaching '{targetName}' ({dist:F1}y)...";
         }
         else
         {
-            if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
+            // In range - stop movement and interact
+            if (autoMoveActive)
+            {
+                if (dist < 10f)
+                    GameHelpers.StopAutoMove();
+                else
+                    _plugin.NavigationService.StopNavigation();
+                autoMoveActive = false;
+            }
 
             // Interact every ~1 second
             if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 1.0)
@@ -1084,12 +1181,27 @@ public class StateManager : IDisposable
         State == BotState.InDungeon || State == BotState.DungeonCombat ||
         State == BotState.DungeonLooting || State == BotState.DungeonProgressing;
 
+    private IGameObject? FindArcaneSphere()
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return null;
+
+        return Plugin.ObjectTable
+            .FirstOrDefault(obj =>
+                obj != null &&
+                obj.ObjectKind == ObjectKind.EventObj &&
+                obj.Name.ToString().Contains("Arcane Sphere", StringComparison.OrdinalIgnoreCase) &&
+                Vector3.Distance(player.Position, obj.Position) <= 30f);
+    }
+
     private List<IGameObject> FindDungeonObjects(bool lootOnly)
     {
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return new List<IGameObject>();
 
+        // Priority: Arcane Sphere, then loot (treasure/coffer/chest/sack), then progression (doors)
         var lootNames = new[] { "treasure", "coffer", "chest", "sack" };
+        var sphereName = "arcane sphere";
 
         return Plugin.ObjectTable
             .Where(obj =>
@@ -1106,20 +1218,27 @@ public class StateManager : IDisposable
                 if (name == "Teleportation Portal") return false;
 
                 var lower = name.ToLowerInvariant();
+                bool isSphere = lower.Contains(sphereName);
                 bool isLoot = lootNames.Any(l => lower.Contains(l));
 
                 if (lootOnly)
-                    return isLoot;
+                    return isSphere || isLoot; // Sphere counts as loot priority
 
                 // For progression: return non-loot EventObj
                 // Exclude any door we gave up on (stuck)
-                if (isLoot) return false;
+                if (isSphere || isLoot) return false;
                 if (excludedDoorEntityId.HasValue && obj.EntityId == excludedDoorEntityId.Value)
                     return false;
 
                 return true;
             })
-            .OrderBy(obj => Vector3.Distance(player.Position, obj.Position))
+            .OrderBy(obj =>
+            {
+                // Priority order: Arcane Sphere first, then by distance
+                var name = obj.Name.ToString().ToLowerInvariant();
+                if (name.Contains("arcane sphere")) return 0; // Highest priority
+                return (int)Vector3.Distance(player.Position, obj.Position);
+            })
             .ToList();
     }
 

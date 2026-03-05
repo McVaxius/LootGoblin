@@ -2,6 +2,26 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.64] - 2026-03-04
+
+### Added
+- **Territory change detection** - Tracks territory changes to detect floor transitions in dungeons
+- **Arcane Sphere handling** - After territory change, if Arcane Sphere exists, target and move to it
+- **Forward movement** - After territory change with no Arcane Sphere, move forward for 10 seconds to trigger area shift
+- **Distance-based navigation** - All dungeon interactions now use <10y lockon+automove, >10y vnavmesh
+- **Priority system** - Arcane Sphere prioritized first, then loot (chests/coffers/sacks), then progression (doors)
+
+### Fixed
+- **Dungeon looting** - Now properly uses lockon+automove for close targets (<10y) and vnavmesh for far targets (>10y)
+- **Dungeon progression** - Now properly uses lockon+automove for close doors (<10y) and vnavmesh for far doors (>10y)
+- Bot now actually moves to targets instead of just targeting them
+- Proper stop movement logic for both lockon+automove and vnavmesh based on distance
+
+### Changed
+- `FindDungeonObjects()` now prioritizes Arcane Sphere first in sort order
+- Arcane Sphere counts as loot priority (handled in DungeonLooting state)
+- Floor counter increments on territory change instead of loading screen
+
 ## [0.0.1.63] - 2026-03-04
 
 ### Fixed
