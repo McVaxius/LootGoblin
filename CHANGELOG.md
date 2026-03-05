@@ -2,6 +2,26 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.69] - 2026-03-04
+
+### Fixed
+- **Portal ghost objects** - Applied `IsObjectTargetable()` check to `FindNearestPortal()` to filter out ghost portal objects that exist in ObjectTable but cannot be targeted
+- **Multiple coffer handling** - DungeonLooting now navigates to and verifies each coffer individually before moving to progression objects
+- Coffers are tracked in `attemptedCoffers` HashSet to prevent re-attempting the same coffer
+- Each coffer gets 30-second navigation timeout before being marked as attempted
+
+### Added
+- Coffer navigation tracking with `cofferNavigationStart` timer
+- 30-second timeout per coffer to prevent getting stuck
+- 3-second minimum interaction time before marking coffer as attempted
+- Extensive logging for coffer navigation, interaction attempts, and timeout handling
+
+### Changed
+- DungeonLooting now uses vnavmesh for all coffer navigation to ensure reliable pathfinding
+- Coffers are attempted one at a time with full navigation and interaction before moving to next
+- `attemptedCoffers` set is cleared when transitioning back to InDungeon (new floor)
+- Portal detection now includes targetability verification to prevent ghost object issues
+
 ## [0.0.1.68] - 2026-03-04
 
 ### Fixed

@@ -47,6 +47,8 @@ public class StateManager : IDisposable
     private DateTime forwardMovementStart = DateTime.MinValue; // When we started moving forward after territory change
     private uint lastGlobalTerritoryId; // Track territory changes globally for map refresh
     private DateTime chestDisappearedTime = DateTime.MinValue; // Track when chest first disappeared for grace period
+    private HashSet<uint> attemptedCoffers = new HashSet<uint>(); // Track which coffers we've tried to interact with
+    private DateTime cofferNavigationStart = DateTime.MinValue; // When we started navigating to current coffer
     private readonly MountService _mountService;
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
@@ -633,10 +635,21 @@ public class StateManager : IDisposable
             {
                 var dist = Vector3.Distance(player.Position, portalObj.Position);
                 _plugin.AddDebugLog($"[Portal] Found portal at {dist:F1}y distance");
-                if (dist <= 30f)
-                    return portalObj;
-                else
+                
+                if (dist > 30f)
+                {
                     _plugin.AddDebugLog($"[Portal] Portal too far ({dist:F1}y > 30y)");
+                    return null;
+                }
+                
+                // Verify portal is targetable (not a ghost object)
+                if (!IsObjectTargetable(portalObj))
+                {
+                    _plugin.AddDebugLog($"[Portal] Portal is NOT targetable (ghost object) - ignoring");
+                    return null;
+                }
+                
+                return portalObj;
             }
         }
         
@@ -895,71 +908,98 @@ public class StateManager : IDisposable
         if (TrySkipCardGame())
             return;
 
-        // Find loot objects
-        var lootObjects = FindDungeonObjects(lootOnly: true);
+        // Find loot objects, excluding ones we've already attempted
+        var lootObjects = FindDungeonObjects(lootOnly: true)
+            .Where(obj => !attemptedCoffers.Contains(obj.EntityId))
+            .ToList();
+        
         if (lootObjects.Count == 0)
         {
-            // No more loot - go back to InDungeon to find progression
+            // No more loot to attempt - go back to InDungeon to find progression
             if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
-            _plugin.AddDebugLog($"[Dungeon] All loot collected on floor {dungeonFloor}");
+            _plugin.AddDebugLog($"[DungeonLooting] All loot attempted on floor {dungeonFloor} (attempted {attemptedCoffers.Count} coffer(s))");
+            attemptedCoffers.Clear(); // Reset for next floor
+            cofferNavigationStart = DateTime.MinValue;
             TransitionTo(BotState.InDungeon, $"Loot done - looking for progression on floor {dungeonFloor}...");
             return;
         }
 
-        var target = lootObjects[0]; // Nearest loot object (prioritized: Arcane Sphere, then loot)
+        var target = lootObjects[0]; // Nearest unattempted loot object
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return;
 
         var dist = Vector3.Distance(player.Position, target.Position);
         var targetName = target.Name.ToString();
+        var targetId = target.EntityId;
 
         // Always set target
         Plugin.TargetManager.Target = target;
+        
+        // Start navigation timer if not already started for this coffer
+        if (cofferNavigationStart == DateTime.MinValue)
+        {
+            cofferNavigationStart = DateTime.Now;
+            _plugin.AddDebugLog($"[DungeonLooting] Starting navigation to '{targetName}' (EntityId: {targetId})");
+        }
 
+        // Check if we've been trying to reach this coffer for too long (30s timeout)
+        var navigationTime = (DateTime.Now - cofferNavigationStart).TotalSeconds;
+        if (navigationTime > 30.0)
+        {
+            _plugin.AddDebugLog($"[DungeonLooting] Timeout reaching '{targetName}' after {navigationTime:F0}s - marking as attempted");
+            attemptedCoffers.Add(targetId);
+            cofferNavigationStart = DateTime.MinValue;
+            if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
+            return; // Try next coffer
+        }
+        
         if (dist > 3f)
         {
-            // Distance-based navigation: <10y lockon+automove, >10y vnavmesh
-            if (dist < 10f)
+            // Use vnavmesh for all coffers to ensure we actually reach them
+            if (!autoMoveActive)
             {
-                // Close range - use lockon+automove
-                if (!autoMoveActive)
-                {
-                    _plugin.AddDebugLog($"[Dungeon] Approaching loot '{targetName}' at {dist:F1}y - lockon+automove");
-                    GameHelpers.LockOnAndAutoMove();
-                    autoMoveActive = true;
-                }
+                _plugin.AddDebugLog($"[DungeonLooting] Navigating to '{targetName}' at {dist:F1}y - vnavmesh");
+                _plugin.NavigationService.MoveToPosition(target.Position);
+                autoMoveActive = true;
             }
-            else
+            
+            // After navigating for 2s, check if we're close enough to stop
+            if (navigationTime > 2.0 && dist < 5f)
             {
-                // Long range - use vnavmesh
-                if (!autoMoveActive)
-                {
-                    _plugin.AddDebugLog($"[Dungeon] Approaching loot '{targetName}' at {dist:F1}y - vnavmesh");
-                    _plugin.NavigationService.MoveToPosition(target.Position);
-                    autoMoveActive = true;
-                }
+                _plugin.AddDebugLog($"[DungeonLooting] Close enough to '{targetName}' ({dist:F1}y) - stopping navigation");
+                _plugin.NavigationService.StopNavigation();
+                autoMoveActive = false;
             }
-            StateDetail = $"Approaching '{targetName}' ({dist:F1}y)...";
+            
+            StateDetail = $"Navigating to '{targetName}' ({dist:F1}y, {navigationTime:F0}s)...";
         }
         else
         {
             // In range - stop movement and interact
             if (autoMoveActive)
             {
-                if (dist < 10f)
-                    GameHelpers.StopAutoMove();
-                else
-                    _plugin.NavigationService.StopNavigation();
+                _plugin.NavigationService.StopNavigation();
                 autoMoveActive = false;
+                _plugin.AddDebugLog($"[DungeonLooting] Reached '{targetName}' - attempting interaction");
             }
 
             // Interact every ~1 second
             if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 1.0)
             {
                 lastInteractionTime = DateTime.Now;
-                GameHelpers.InteractWithObject(target);
-                _plugin.AddDebugLog($"[Dungeon] Interacting with loot '{targetName}'");
-                StateDetail = $"Opening '{targetName}'...";
+                var interacted = GameHelpers.InteractWithObject(target);
+                _plugin.AddDebugLog($"[DungeonLooting] Interacting with '{targetName}' - returned: {interacted}");
+                
+                // After interaction attempt, mark as attempted and move to next
+                // The interaction might trigger combat or loot, either way we've tried this one
+                if (navigationTime > 3.0) // Give it at least 3s of interaction attempts
+                {
+                    _plugin.AddDebugLog($"[DungeonLooting] Marking '{targetName}' as attempted after {navigationTime:F0}s");
+                    attemptedCoffers.Add(targetId);
+                    cofferNavigationStart = DateTime.MinValue;
+                }
+                
+                StateDetail = $"Interacting with '{targetName}'...";
             }
         }
     }
