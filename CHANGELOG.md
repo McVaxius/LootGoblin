@@ -2,6 +2,17 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.67] - 2026-03-04
+
+### Fixed
+- **Map inventory refresh on territory change** - Bot now automatically refreshes map inventory when territory ID changes, preventing inventory index issues when gaining/losing maps between runs
+- **Premature run completion** - Added 5-second grace period when chest disappears before declaring run complete, prevents FATE interference from causing false "run complete" state
+- Chest disappearance now waits 5 seconds before checking for portal, ensuring brief empty object lists don't end the run prematurely
+
+### Changed
+- Territory change detection now triggers automatic map refresh via `InventoryService.ScanForMaps()`
+- `TickOpeningChest` now tracks chest disappearance time and waits 5 seconds before transitioning to portal search
+
 ## [0.0.1.66] - 2026-03-04
 
 ### Fixed

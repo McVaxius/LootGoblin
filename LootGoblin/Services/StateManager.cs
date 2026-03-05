@@ -45,6 +45,8 @@ public class StateManager : IDisposable
     private DateTime lastDungeonLogTime = DateTime.MinValue; // Throttle object logging
     private uint lastTerritoryId; // Track territory changes for floor transitions
     private DateTime forwardMovementStart = DateTime.MinValue; // When we started moving forward after territory change
+    private uint lastGlobalTerritoryId; // Track territory changes globally for map refresh
+    private DateTime chestDisappearedTime = DateTime.MinValue; // Track when chest first disappeared for grace period
     private readonly MountService _mountService;
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
@@ -110,6 +112,15 @@ public class StateManager : IDisposable
 
     private void Tick()
     {
+        // Check for territory change and refresh maps to fix inventory index issues
+        var currentTerritory = Plugin.ClientState.TerritoryType;
+        if (lastGlobalTerritoryId != 0 && lastGlobalTerritoryId != currentTerritory)
+        {
+            _plugin.AddDebugLog($"[Territory] Territory changed: {lastGlobalTerritoryId} -> {currentTerritory} - refreshing maps");
+            _plugin.InventoryService.ScanForMaps();
+        }
+        lastGlobalTerritoryId = currentTerritory;
+
         switch (State)
         {
             case BotState.SelectingMap:     TickSelectingMap();     break;
@@ -511,19 +522,37 @@ public class StateManager : IDisposable
 
         if (chest == null)
         {
-            var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-            StateDetail = $"Searching for treasure coffer... ({elapsed:F0}s)";
-            if ((int)elapsed % 5 == 0 && (int)elapsed > 0)
-                _plugin.AddDebugLog($"[OpeningChest] No coffer found yet ({elapsed:F0}s)");
-            
-            // Fallback: try targeting via command if ObjectTable fails
-            if ((int)elapsed % 10 == 0 && (int)elapsed > 0)
+            // Start grace period timer if not already started
+            if (chestDisappearedTime == DateTime.MinValue)
             {
-                _plugin.AddDebugLog("[OpeningChest] Trying /target \"Treasure Coffer\" as fallback...");
-                CommandHelper.SendCommand("/target \"Treasure Coffer\"");
+                chestDisappearedTime = DateTime.Now;
+                _plugin.AddDebugLog("[OpeningChest] Chest disappeared - starting 5s grace period");
             }
+            
+            var gracePeriod = (DateTime.Now - chestDisappearedTime).TotalSeconds;
+            
+            // Wait 5 seconds before declaring run complete (prevents FATE interference)
+            if (gracePeriod < 5.0)
+            {
+                StateDetail = $"Waiting for chest to reappear... ({gracePeriod:F1}/5.0s)";
+                
+                // Fallback: try targeting via command if ObjectTable fails
+                if ((int)gracePeriod % 2 == 0 && (int)gracePeriod > 0)
+                {
+                    CommandHelper.SendCommand("/target \"Treasure Coffer\"");
+                }
+                return;
+            }
+            
+            // Grace period elapsed - chest is truly gone, check for portal
+            _plugin.AddDebugLog("[OpeningChest] No chest found after 5s grace period - checking for portal");
+            chestDisappearedTime = DateTime.MinValue;
+            CheckForPortalAfterChest();
             return;
         }
+        
+        // Chest exists - reset grace period timer
+        chestDisappearedTime = DateTime.MinValue;
 
         var dist = _plugin.ChestDetectionService.NearestCofferDistance;
         var range = _plugin.Configuration.ChestInteractionRange;
