@@ -2,6 +2,27 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.68] - 2026-03-04
+
+### Fixed
+- **Deciphering map while in dungeon** - Added BoundByDuty check in TickCompleted to prevent auto-starting next map while still inside dungeon instance
+- **Ghost objects in ObjectTable** - Added targetability verification to filter out objects that exist in ObjectTable but cannot be targeted
+- Objects that fail targetability check are now logged and excluded from interaction attempts
+
+### Added
+- **Extensive debug logging** - Added comprehensive logging throughout map run states for better visibility:
+  - Territory change detection and map refresh
+  - Object scanning results (loot and progression objects)
+  - Targetability verification for each object
+  - State transition reasons and object counts
+  - Distance and EntityId for all detected objects
+- `IsObjectTargetable()` helper method to verify objects can actually be targeted before attempting interaction
+
+### Changed
+- `FindDungeonObjects()` now filters results through targetability check to eliminate ghost objects
+- All dungeon state transitions now include detailed logging of object counts and reasons
+- InDungeon state logs territory info, BoundByDuty status, and scan results
+
 ## [0.0.1.67] - 2026-03-04
 
 ### Fixed

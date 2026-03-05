@@ -699,18 +699,16 @@ public class StateManager : IDisposable
         }
         lastTerritoryId = currentTerritory;
 
-        // First time in dungeon after loading finishes
-        if (!dungeonEntryProcessed && inDuty)
+        // First time in dungeon
+        if (!dungeonEntryProcessed)
         {
-            dungeonEntryProcessed = true;
             dungeonFloor = 1;
-            excludedDoorEntityId = null;
-            doorStuckStart = DateTime.MinValue;
-            lastTerritoryId = currentTerritory;
-            _plugin.AddDebugLog($"[Dungeon] Entered dungeon - floor {dungeonFloor}");
+            dungeonEntryProcessed = true;
+            _plugin.AddDebugLog($"[InDungeon] First entry confirmed - floor {dungeonFloor}");
+            _plugin.AddDebugLog($"[InDungeon] Territory: {currentTerritory}, BoundByDuty: {inDuty}");
         }
 
-        // Check if we got ejected (no longer in duty, grace period for loading)
+        // Check ejection
         if (!inDuty && (DateTime.Now - stateStartTime).TotalSeconds > 5)
         {
             _plugin.AddDebugLog($"[Dungeon] No longer bound by duty - ejected after floor {dungeonFloor}");
@@ -720,10 +718,12 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Check if in combat → DungeonCombat
-        if (Plugin.Condition[ConditionFlag.InCombat])
+        // Check for combat
+        bool inCombat = Plugin.Condition[ConditionFlag.InCombat];
+        if (inCombat)
         {
-            TransitionTo(BotState.DungeonCombat, $"Combat on floor {dungeonFloor}!");
+            _plugin.AddDebugLog($"[InDungeon] Combat detected on floor {dungeonFloor}");
+            TransitionTo(BotState.DungeonCombat, $"Combat detected on floor {dungeonFloor}...");
             return;
         }
 
@@ -772,20 +772,32 @@ public class StateManager : IDisposable
             }
         }
 
-        // Scan for loot objects first (coffers, chests, sacks, Arcane Sphere)
+        // Scan for loot objects first (priority)
+        _plugin.AddDebugLog($"[InDungeon] Scanning for loot objects on floor {dungeonFloor}...");
         var lootObjects = FindDungeonObjects(lootOnly: true);
         if (lootObjects.Count > 0)
         {
-            TransitionTo(BotState.DungeonLooting, $"Looting on floor {dungeonFloor}...");
+            _plugin.AddDebugLog($"[InDungeon] Found {lootObjects.Count} loot object(s), transitioning to DungeonLooting");
+            TransitionTo(BotState.DungeonLooting, $"Found {lootObjects.Count} loot object(s) on floor {dungeonFloor}...");
             return;
         }
+        else
+        {
+            _plugin.AddDebugLog($"[InDungeon] No loot objects found");
+        }
 
-        // Scan for progression objects (doors, any interactable EventObj)
+        // Scan for progression objects
+        _plugin.AddDebugLog($"[InDungeon] Scanning for progression objects on floor {dungeonFloor}...");
         var progressionObjects = FindDungeonObjects(lootOnly: false);
         if (progressionObjects.Count > 0)
         {
-            TransitionTo(BotState.DungeonProgressing, $"Progressing on floor {dungeonFloor}...");
+            _plugin.AddDebugLog($"[InDungeon] Found {progressionObjects.Count} progression object(s), transitioning to DungeonProgressing");
+            TransitionTo(BotState.DungeonProgressing, $"Found {progressionObjects.Count} progression object(s) on floor {dungeonFloor}...");
             return;
+        }
+        else
+        {
+            _plugin.AddDebugLog($"[InDungeon] No progression objects found");
         }
 
         // Nothing found - waiting for objects to spawn
@@ -1208,12 +1220,26 @@ public class StateManager : IDisposable
             portalRetryStart = DateTime.MinValue;
         }
         
-        _plugin.AddDebugLog("Map run complete.");
+        _plugin.AddDebugLog("[Completed] Map run complete.");
+        
+        // CRITICAL: Do NOT start next map if still in a dungeon
+        bool stillInDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                           Plugin.Condition[ConditionFlag.BoundByDuty56];
+        if (stillInDuty)
+        {
+            _plugin.AddDebugLog("[Completed] ERROR: Still in dungeon (BoundByDuty) - cannot start next map!");
+            TransitionTo(BotState.Error, "Still in dungeon - cannot start next map. Manual intervention required.");
+            return;
+        }
+        
         KrangleService.ClearCache();
 
         if (_plugin.Configuration.AutoStartNextMap)
         {
+            _plugin.AddDebugLog("[Completed] AutoStartNextMap enabled - scanning for maps");
             var maps = _plugin.InventoryService.ScanForMaps();
+            _plugin.AddDebugLog($"[Completed] Found {maps.Count} map(s) in inventory");
+            
             if (maps.Count > 0)
             {
                 RetryCount = 0;
@@ -1222,7 +1248,7 @@ public class StateManager : IDisposable
                 return;
             }
 
-            _plugin.AddDebugLog("No more maps in inventory.");
+            _plugin.AddDebugLog("[Completed] No more maps in inventory.");
         }
 
         RetryCount = 0;
@@ -1234,6 +1260,29 @@ public class StateManager : IDisposable
     private bool IsDungeonState() =>
         State == BotState.InDungeon || State == BotState.DungeonCombat ||
         State == BotState.DungeonLooting || State == BotState.DungeonProgressing;
+
+    private bool IsObjectTargetable(IGameObject obj)
+    {
+        // Verify object can actually be targeted (not a ghost object)
+        try
+        {
+            var previousTarget = Plugin.TargetManager.Target;
+            Plugin.TargetManager.Target = obj;
+            var canTarget = Plugin.TargetManager.Target?.EntityId == obj.EntityId;
+            Plugin.TargetManager.Target = previousTarget; // Restore previous target
+            
+            if (!canTarget)
+            {
+                _plugin.AddDebugLog($"[ObjectCheck] '{obj.Name}' at {obj.Position} is NOT targetable (ghost object)");
+            }
+            
+            return canTarget;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private IGameObject? FindArcaneSphere()
     {
@@ -1274,8 +1323,18 @@ public class StateManager : IDisposable
             .ToList();
 
         bool hasNearbyLoot = allLoot.Count > 0;
+        
+        if (hasNearbyLoot)
+        {
+            _plugin.AddDebugLog($"[Dungeon] Found {allLoot.Count} loot object(s) within 50y - doors will be skipped");
+            foreach (var loot in allLoot)
+            {
+                var lootDist = Vector3.Distance(player.Position, loot.Position);
+                _plugin.AddDebugLog($"[Dungeon]   - '{loot.Name}' at {lootDist:F1}y");
+            }
+        }
 
-        return Plugin.ObjectTable
+        var candidates = Plugin.ObjectTable
             .Where(obj =>
             {
                 if (obj == null) return false;
@@ -1314,6 +1373,7 @@ public class StateManager : IDisposable
 
                 return true;
             })
+            .Where(obj => IsObjectTargetable(obj)) // Filter out ghost objects
             .OrderBy(obj =>
             {
                 // Priority order: Arcane Sphere first, then by distance
@@ -1322,6 +1382,16 @@ public class StateManager : IDisposable
                 return (int)Vector3.Distance(player.Position, obj.Position);
             })
             .ToList();
+        
+        // Log final results
+        _plugin.AddDebugLog($"[Dungeon] FindDungeonObjects(lootOnly={lootOnly}) found {candidates.Count} object(s)");
+        foreach (var obj in candidates)
+        {
+            var objDist = Vector3.Distance(player.Position, obj.Position);
+            _plugin.AddDebugLog($"[Dungeon]   - '{obj.Name}' at {objDist:F1}y (EntityId: {obj.EntityId})");
+        }
+        
+        return candidates;
     }
 
     private void LogDungeonObjects()
