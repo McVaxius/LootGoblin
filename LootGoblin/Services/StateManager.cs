@@ -49,6 +49,9 @@ public class StateManager : IDisposable
     private DateTime chestDisappearedTime = DateTime.MinValue; // Track when chest first disappeared for grace period
     private HashSet<uint> attemptedCoffers = new HashSet<uint>(); // Track which coffers we've tried to interact with
     private DateTime cofferNavigationStart = DateTime.MinValue; // When we started navigating to current coffer
+    private bool dungeonStartNavigating; // True while navigating to dungeon start position
+    private bool doorTransitionNavigating; // True while navigating through a door transition point
+    private bool dungeonStartChecked; // True once we've evaluated dungeon start on first entry
     private readonly MountService _mountService;
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
@@ -717,6 +720,10 @@ public class StateManager : IDisposable
         {
             dungeonFloor = 1;
             dungeonEntryProcessed = true;
+            dungeonStartChecked = false;
+            dungeonStartNavigating = false;
+            doorTransitionNavigating = false;
+            attemptedCoffers.Clear();
             _plugin.AddDebugLog($"[InDungeon] First entry confirmed - floor {dungeonFloor}");
             _plugin.AddDebugLog($"[InDungeon] Territory: {currentTerritory}, BoundByDuty: {inDuty}");
         }
@@ -735,7 +742,12 @@ public class StateManager : IDisposable
         bool inCombat = Plugin.Condition[ConditionFlag.InCombat];
         if (inCombat)
         {
-            _plugin.AddDebugLog($"[InDungeon] Combat detected on floor {dungeonFloor}");
+            _plugin.AddDebugLog($"[InDungeon] Combat detected on floor {dungeonFloor} - resetting attempted coffers ({attemptedCoffers.Count})");
+            attemptedCoffers.Clear();
+            cofferNavigationStart = DateTime.MinValue;
+            dungeonStartNavigating = false;
+            doorTransitionNavigating = false;
+            if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
             TransitionTo(BotState.DungeonCombat, $"Combat detected on floor {dungeonFloor}...");
             return;
         }
@@ -744,32 +756,152 @@ public class StateManager : IDisposable
         if (TrySkipCardGame())
             return;
 
-        // After territory change: check for Arcane Sphere or start forward movement
-        if (territoryChanged)
+        // After territory change or first entry: navigate to known dungeon start/door transition point
+        if (territoryChanged || (dungeonFloor == 1 && !dungeonStartChecked))
         {
             var sphere = FindArcaneSphere();
             if (sphere != null)
             {
                 _plugin.AddDebugLog($"[Dungeon] Arcane Sphere detected after territory change - targeting");
+                dungeonStartNavigating = false;
+                doorTransitionNavigating = false;
                 TransitionTo(BotState.DungeonLooting, $"Arcane Sphere on floor {dungeonFloor}...");
                 return;
             }
-            else
+
+            dungeonStartChecked = true; // Mark as evaluated so we don't re-trigger every tick
+
+            // Check if we have known location data for this territory
+            if (dungeonFloor == 1 && DungeonLocationData.HasDungeonData(currentTerritory))
             {
-                // No sphere - start moving forward for 10 seconds to trigger area shift
-                _plugin.AddDebugLog($"[Dungeon] No Arcane Sphere after territory change - moving forward for 10s");
+                // First floor: navigate to dungeon start position
+                var startPoint = DungeonLocationData.GetDungeonStart(currentTerritory);
+                if (startPoint != null)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Known dungeon start for territory {currentTerritory}: '{startPoint.Label}' - navigating via vnavmesh");
+                    dungeonStartNavigating = true;
+                    doorTransitionNavigating = false;
+                }
+            }
+            else if (territoryChanged && DungeonLocationData.HasDungeonData(currentTerritory))
+            {
+                // Floor transition: check if we're near a known door transition point
+                var player = Plugin.ObjectTable.LocalPlayer;
+                if (player != null)
+                {
+                    var doorPoint = DungeonLocationData.FindNearestDoorTransition(currentTerritory, player.Position, 10f);
+                    if (doorPoint != null)
+                    {
+                        _plugin.AddDebugLog($"[Dungeon] Near door transition '{doorPoint.Label}' - will navigate after ready");
+                        doorTransitionNavigating = true;
+                        dungeonStartNavigating = false;
+                    }
+                    else
+                    {
+                        _plugin.AddDebugLog($"[Dungeon] No door transition within 10y - using forward movement fallback");
+                        forwardMovementStart = DateTime.Now;
+                    }
+                }
+            }
+            else if (territoryChanged)
+            {
+                // No known data - fallback to forward movement
+                _plugin.AddDebugLog($"[Dungeon] No location data for territory {currentTerritory} - moving forward for 10s");
                 forwardMovementStart = DateTime.Now;
             }
         }
 
-        // Handle forward movement after territory change (no sphere)
+        // Handle dungeon start navigation
+        if (dungeonStartNavigating)
+        {
+            if (!IsCharacterReady())
+            {
+                StateDetail = $"Waiting for character ready (dungeon start)...";
+                return;
+            }
+
+            var startPoint = DungeonLocationData.GetDungeonStart(currentTerritory);
+            if (startPoint != null)
+            {
+                var player = Plugin.ObjectTable.LocalPlayer;
+                if (player != null)
+                {
+                    var dist = Vector3.Distance(player.Position, startPoint.Position);
+                    if (dist > 3f)
+                    {
+                        if (!autoMoveActive)
+                        {
+                            _plugin.AddDebugLog($"[Dungeon] Navigating to dungeon start '{startPoint.Label}' at {dist:F1}y");
+                            _plugin.NavigationService.MoveToPosition(startPoint.Position);
+                            autoMoveActive = true;
+                        }
+                        StateDetail = $"Navigating to dungeon start ({dist:F1}y)...";
+                        return;
+                    }
+                    else
+                    {
+                        _plugin.AddDebugLog($"[Dungeon] Reached dungeon start '{startPoint.Label}'");
+                        if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
+                        dungeonStartNavigating = false;
+                    }
+                }
+            }
+            else
+            {
+                dungeonStartNavigating = false;
+            }
+        }
+
+        // Handle door transition navigation
+        if (doorTransitionNavigating)
+        {
+            if (!IsCharacterReady())
+            {
+                StateDetail = $"Waiting for character ready (door transition)...";
+                return;
+            }
+
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player != null)
+            {
+                var doorPoint = DungeonLocationData.FindNearestDoorTransition(currentTerritory, player.Position, 15f);
+                if (doorPoint != null)
+                {
+                    var dist = Vector3.Distance(player.Position, doorPoint.Position);
+                    if (dist > 3f)
+                    {
+                        if (!autoMoveActive)
+                        {
+                            _plugin.AddDebugLog($"[Dungeon] Navigating to door transition '{doorPoint.Label}' at {dist:F1}y");
+                            _plugin.NavigationService.MoveToPosition(doorPoint.Position);
+                            autoMoveActive = true;
+                        }
+                        StateDetail = $"Navigating through door transition ({dist:F1}y)...";
+                        return;
+                    }
+                    else
+                    {
+                        _plugin.AddDebugLog($"[Dungeon] Reached door transition '{doorPoint.Label}'");
+                        if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
+                        doorTransitionNavigating = false;
+                    }
+                }
+                else
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Door transition point no longer in range - done");
+                    if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
+                    doorTransitionNavigating = false;
+                }
+            }
+        }
+
+        // Fallback: forward movement for dungeons without location data
         if (forwardMovementStart != DateTime.MinValue)
         {
             var forwardElapsed = (DateTime.Now - forwardMovementStart).TotalSeconds;
             if (forwardElapsed < 10.0)
             {
-                // Move forward using keyboard
-                if ((int)forwardElapsed % 1 == 0) // Every second
+                if ((int)forwardElapsed % 1 == 0)
                 {
                     CommandHelper.SendCommand("/automove on");
                 }
@@ -778,7 +910,6 @@ public class StateManager : IDisposable
             }
             else
             {
-                // Stop forward movement after 10 seconds
                 CommandHelper.SendCommand("/automove off");
                 forwardMovementStart = DateTime.MinValue;
                 _plugin.AddDebugLog($"[Dungeon] Forward movement complete");
@@ -896,9 +1027,12 @@ public class StateManager : IDisposable
             return;
         }
 
-        // If combat starts during looting, switch to combat
+        // If combat starts during looting, switch to combat and reset attempted coffers
         if (Plugin.Condition[ConditionFlag.InCombat])
         {
+            _plugin.AddDebugLog($"[DungeonLooting] Combat started - resetting attempted coffers ({attemptedCoffers.Count})");
+            attemptedCoffers.Clear();
+            cofferNavigationStart = DateTime.MinValue;
             if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
             TransitionTo(BotState.DungeonCombat, $"Combat during looting on floor {dungeonFloor}!");
             return;
@@ -1034,9 +1168,12 @@ public class StateManager : IDisposable
             return;
         }
 
-        // If combat starts, switch to combat
+        // If combat starts, switch to combat and reset attempted coffers
         if (Plugin.Condition[ConditionFlag.InCombat])
         {
+            _plugin.AddDebugLog($"[DungeonProgressing] Combat started - resetting attempted coffers ({attemptedCoffers.Count})");
+            attemptedCoffers.Clear();
+            cofferNavigationStart = DateTime.MinValue;
             if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
             TransitionTo(BotState.DungeonCombat, $"Combat during progression on floor {dungeonFloor}!");
             return;
@@ -1300,6 +1437,19 @@ public class StateManager : IDisposable
     private bool IsDungeonState() =>
         State == BotState.InDungeon || State == BotState.DungeonCombat ||
         State == BotState.DungeonLooting || State == BotState.DungeonProgressing;
+
+    private bool IsCharacterReady()
+    {
+        // Character is ready when: not in cutscene, not casting, not loading
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return false;
+        if (player.IsCasting) return false;
+        if (Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent]) return false;
+        if (Plugin.Condition[ConditionFlag.Occupied33]) return false;
+        if (Plugin.Condition[ConditionFlag.BetweenAreas]) return false;
+        if (Plugin.Condition[ConditionFlag.BetweenAreas51]) return false;
+        return true;
+    }
 
     private bool IsObjectTargetable(IGameObject obj)
     {

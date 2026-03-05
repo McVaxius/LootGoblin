@@ -2,6 +2,26 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.70] - 2026-03-05
+
+### Fixed
+- **Ignored coffers after combat** - All attempted/ignored coffers are now reset when combat starts, allowing re-interaction after combat ends (objects become targetable again post-combat)
+- **Dungeon navigation** - Replaced blind forward movement with proper vnavmesh pathfinding to known dungeon start and door transition points
+
+### Added
+- **DungeonLocationData model** - New data file with known xyz locations for dungeon starts and door transitions
+  - Territory 712: The Lost Canals of Uznair (6 rooms, left/right doors)
+  - Territory 725: The Hidden Canals of Uznair (6 rooms, left/centre/right doors)
+- **IsCharacterReady() helper** - Checks not in cutscene, not casting, not loading before dungeon navigation
+- **Dungeon start navigation** - On first entry to a known dungeon, navigates to the start position via vnavmesh
+- **Door transition navigation** - After door interaction triggers a floor change, navigates to the nearest known door transition point if within 10y
+- Falls back to forward movement for dungeons without known location data
+
+### Changed
+- `attemptedCoffers` cleared on every combat transition (InDungeon, DungeonLooting, DungeonProgressing → DungeonCombat)
+- Navigation flags reset on combat start to prevent stale navigation state
+- Dungeon entry now resets all navigation tracking (dungeonStartChecked, attemptedCoffers, navigation flags)
+
 ## [0.0.1.69] - 2026-03-04
 
 ### Fixed
