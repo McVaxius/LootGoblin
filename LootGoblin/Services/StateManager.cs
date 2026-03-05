@@ -85,6 +85,8 @@ public class StateManager : IDisposable
 
         if (!Plugin.ClientState.IsLoggedIn)
         {
+            // Lost connection is the only legitimate reason to stop the bot
+            _plugin.NavigationService.StopNavigation();
             TransitionTo(BotState.Error, "Lost connection - not logged in.");
             return;
         }
@@ -1155,21 +1157,13 @@ public class StateManager : IDisposable
 
     private void HandleError(string message)
     {
-        _plugin.AddDebugLog($"[Error] {message}");
-
-        var maxRetries = _plugin.Configuration.MaxRetries;
-        if (maxRetries > 0 && RetryCount < maxRetries)
-        {
-            RetryCount++;
-            _plugin.AddDebugLog($"Retrying ({RetryCount}/{maxRetries})...");
-            _plugin.NavigationService.StopNavigation();
-            TransitionTo(BotState.SelectingMap, $"Retry {RetryCount}/{maxRetries}: {message}");
-        }
-        else
-        {
-            _plugin.NavigationService.StopNavigation();
-            TransitionTo(BotState.Error, message);
-        }
+        RetryCount++;
+        _plugin.AddDebugLog($"[Error #{RetryCount}] {message}");
+        
+        // Always retry from SelectingMap - never stop the bot
+        // Errors are counted for informational purposes only
+        _plugin.NavigationService.StopNavigation();
+        TransitionTo(BotState.SelectingMap, $"Error #{RetryCount}: {message}");
     }
 
     // ─── Transition ───────────────────────────────────────────────────────────

@@ -272,7 +272,7 @@ public class MainWindow : Window, IDisposable
             {
                 ImGui.Text("  ");
                 ImGui.SameLine();
-                ImGui.TextColored(ColorYellow, $"Retries: {sm.RetryCount}/{plugin.Configuration.MaxRetries}");
+                ImGui.TextColored(ColorYellow, $"Errors: {sm.RetryCount}");
             }
 
             ImGui.Spacing();

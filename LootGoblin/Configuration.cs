@@ -28,8 +28,6 @@ public class Configuration : IPluginConfiguration
 
     // Phase 5: State Machine
     public bool AutoStartNextMap { get; set; } = false;
-    public int MaxRetries { get; set; } = 3;
-    public bool StopOnError { get; set; } = true;
     public bool EnableStateLogging { get; set; } = true;
 
     // Phase 6: Map Selection + Chest Interaction

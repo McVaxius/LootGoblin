@@ -2,6 +2,20 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.60] - 2026-03-04
+
+### Changed
+- **Error handling** - Bot now counts errors but never stops operations
+- Removed 3-error limit that caused full bot shutdown
+- `HandleError()` always retries from `SelectingMap` instead of transitioning to `Error` state
+- `BotState.Error` now only used for lost connection (legitimate stop reason)
+- Error count displayed as informational only in UI (changed "Retries" to "Errors")
+- Removed obsolete `MaxRetries` and `StopOnError` config settings
+
+### Fixed
+- Bot no longer stops after encountering errors - continues running and retrying indefinitely
+- More resilient operation in face of transient failures
+
 ## [0.0.1.59] - 2026-03-04
 
 ### Fixed
