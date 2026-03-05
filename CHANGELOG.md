@@ -2,6 +2,14 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [0.0.1.65] - 2026-03-04
+
+### Fixed
+- **Portal state toggling** - Fixed rapid toggling between "found portal" and "in dungeon" states that caused character to run in place
+- Added 3-second grace period in `TickInDungeon` before checking for portal to prevent immediate state flip
+- `TickCompleted` now only transitions to `InDungeon` when portal has disappeared from ObjectTable OR loading screen is active
+- Portal interaction logic now has proper time to target, move to, and interact with portal before state change
+
 ## [0.0.1.64] - 2026-03-04
 
 ### Added

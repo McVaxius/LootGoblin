@@ -626,6 +626,15 @@ public class StateManager : IDisposable
     {
         GameHelpers.ClickYesIfVisible();
 
+        // Grace period: don't check for portal immediately after entering InDungeon state
+        // This prevents rapid toggling between InDungeon and Completed states
+        var timeSinceStateStart = (DateTime.Now - stateStartTime).TotalSeconds;
+        if (timeSinceStateStart < 3.0)
+        {
+            StateDetail = "Confirming dungeon entry...";
+            return;
+        }
+
         // Check if portal exists in ObjectTable - if so, we're still outside, not inside dungeon
         var portal = FindNearestPortal();
         if (portal != null)
@@ -1079,9 +1088,16 @@ public class StateManager : IDisposable
                 // Check if we're now in a duty (portal was accepted and loading finished)
                 bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                               Plugin.Condition[ConditionFlag.BoundByDuty56];
-                if (inDuty)
+                bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                               Plugin.Condition[ConditionFlag.BetweenAreas51];
+                
+                // Only transition to InDungeon if:
+                // 1. We're bound by duty AND
+                // 2. Portal no longer exists in ObjectTable (we've actually entered) OR we're loading
+                var portalCheck = FindNearestPortal();
+                if (inDuty && (portalCheck == null || loading))
                 {
-                    _plugin.AddDebugLog("[Portal] BoundByDuty detected - entering dungeon!");
+                    _plugin.AddDebugLog("[Portal] BoundByDuty detected and portal gone/loading - entering dungeon!");
                     portalRetryStart = DateTime.MinValue;
                     dungeonEntryProcessed = false;
                     dungeonFloor = 0;
