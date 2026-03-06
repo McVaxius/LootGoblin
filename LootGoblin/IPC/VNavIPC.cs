@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -30,30 +31,40 @@ public class VNavIPC : IDisposable
     {
         try
         {
-            var installedPlugins = _pluginInterface.InstalledPlugins;
+            var installedPlugins = _pluginInterface.InstalledPlugins.ToList();
+            _plugin.AddDebugLog($"[VNavIPC] Checking availability - found {installedPlugins.Count} total plugins");
             IsAvailable = false;
             
             foreach (var p in installedPlugins)
             {
-                if (string.Equals(p.InternalName, "vnavmesh", StringComparison.OrdinalIgnoreCase) && p.IsLoaded)
+                _plugin.AddDebugLog($"[VNavIPC] Plugin: '{p.InternalName}' (Loaded: {p.IsLoaded}, Version: {p.Version})");
+                
+                if (string.Equals(p.InternalName, "vnavmesh", StringComparison.OrdinalIgnoreCase))
                 {
-                    IsAvailable = true;
-                    _plugin.AddDebugLog($"vnavmesh: Available (matched '{p.InternalName}')");
-                    break;
+                    _plugin.AddDebugLog($"[VNavIPC] Found vnavmesh plugin - IsLoaded: {p.IsLoaded}");
+                    
+                    if (p.IsLoaded)
+                    {
+                        IsAvailable = true;
+                        _plugin.AddDebugLog($"[VNavIPC] vnavmesh: Available (matched '{p.InternalName}')");
+                        break;
+                    }
+                    else
+                    {
+                        _plugin.AddDebugLog($"[VNavIPC] vnavmesh found but not loaded yet");
+                    }
                 }
             }
 
             if (!IsAvailable)
             {
-                if (_plugin.Configuration.DebugMode)
-                    _plugin.AddDebugLog("vnavmesh: Not found (looking for 'vnavmesh')");
-                else
-                    _plugin.AddDebugLog("vnavmesh: Not found");
+                _plugin.AddDebugLog($"[VNavIPC] vnavmesh: Not available after checking {installedPlugins.Count} plugins");
             }
         }
         catch (Exception ex)
         {
             _log.Error($"Error checking vnavmesh: {ex.Message}");
+            _plugin.AddDebugLog($"[VNavIPC] Exception during availability check: {ex.Message}");
             IsAvailable = false;
         }
     }
