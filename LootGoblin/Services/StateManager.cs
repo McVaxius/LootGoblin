@@ -60,6 +60,8 @@ public class StateManager : IDisposable
     private bool dungeonEntryProcessed; // True once we've confirmed we're inside the dungeon
     private uint? excludedDoorEntityId; // Door we gave up on (stuck), try others
     private DateTime doorStuckStart = DateTime.MinValue; // When we started trying current door
+    private Vector3? lastDoorOpenedPosition = null; // Position of door that just opened (walk through it)
+    private DateTime doorWalkThroughStart = DateTime.MinValue; // When we started walking through opened door
     private DateTime lastDungeonLogTime = DateTime.MinValue; // Throttle object logging
     private uint lastTerritoryId; // Track territory changes for floor transitions
     private DateTime forwardMovementStart = DateTime.MinValue; // When we started moving forward after territory change
@@ -927,6 +929,8 @@ public class StateManager : IDisposable
             dungeonFloor++;
             excludedDoorEntityId = null;
             doorStuckStart = DateTime.MinValue;
+            lastDoorOpenedPosition = null;
+            doorWalkThroughStart = DateTime.MinValue;
             forwardMovementStart = DateTime.MinValue; // Reset forward movement timer
         }
         lastTerritoryId = currentTerritory;
@@ -1625,6 +1629,8 @@ public class StateManager : IDisposable
             dungeonFloor++;
             excludedDoorEntityId = null;
             doorStuckStart = DateTime.MinValue;
+            lastDoorOpenedPosition = null;
+            doorWalkThroughStart = DateTime.MinValue;
             currentObjective = DungeonObjective.ClearingChests;
             dungeonLoadWaitStart = DateTime.MinValue;
             if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
@@ -1865,7 +1871,14 @@ public class StateManager : IDisposable
             dungeonFloor++;
             excludedDoorEntityId = null;
             doorStuckStart = DateTime.MinValue;
-            if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
+            lastDoorOpenedPosition = null;
+            doorWalkThroughStart = DateTime.MinValue;
+            if (autoMoveActive)
+            {
+                CommandHelper.SendCommand("/automove off");
+                _plugin.NavigationService.StopNavigation();
+                autoMoveActive = false;
+            }
             _plugin.AddDebugLog($"[Dungeon] Loading next room - advancing to floor {dungeonFloor}");
             TransitionTo(BotState.InDungeon, $"Entering floor {dungeonFloor}...");
             return;
@@ -1906,11 +1919,86 @@ public class StateManager : IDisposable
             return;
         }
 
+        // Walk-through phase: after a door opens, navigate to its transition point
+        if (lastDoorOpenedPosition.HasValue)
+        {
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player == null) return;
+
+            if (doorWalkThroughStart == DateTime.MinValue)
+                doorWalkThroughStart = DateTime.Now;
+
+            var walkElapsed = (DateTime.Now - doorWalkThroughStart).TotalSeconds;
+
+            // Timeout: if we haven't triggered BetweenAreas in 15s, give up and rescan
+            if (walkElapsed > 15.0)
+            {
+                _plugin.AddDebugLog($"[Dungeon] Door walk-through timeout after {walkElapsed:F0}s - rescanning");
+                if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
+                lastDoorOpenedPosition = null;
+                doorWalkThroughStart = DateTime.MinValue;
+                TransitionTo(BotState.InDungeon, $"Rescanning floor {dungeonFloor}...");
+                return;
+            }
+
+            var distToDoor = Vector3.Distance(player.Position, lastDoorOpenedPosition.Value);
+            if (distToDoor > 2f)
+            {
+                if (!autoMoveActive)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Walking through opened door at {distToDoor:F1}y");
+                    _plugin.NavigationService.MoveToPosition(lastDoorOpenedPosition.Value);
+                    autoMoveActive = true;
+                }
+                StateDetail = $"Walking through opened door ({distToDoor:F1}y)...";
+            }
+            else
+            {
+                // At the door position - use automove forward to push through the transition zone
+                if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
+                if (!autoMoveActive)
+                {
+                    CommandHelper.SendCommand("/automove on");
+                    autoMoveActive = true;
+                }
+                StateDetail = $"Pushing through door transition ({walkElapsed:F0}s)...";
+            }
+            return;
+        }
+
         // Find progression objects (any interactable EventObj that isn't loot)
         var progressionObjects = FindDungeonObjects(lootOnly: false);
         if (progressionObjects.Count == 0)
         {
-            // Nothing to interact with - go back to scanning
+            // No progression objects found - check if a door was recently opened
+            // (attemptedCoffers will have filtered it out of FindDungeonObjects)
+            if (doorStuckStart != DateTime.MinValue)
+            {
+                // We were tracking a door that's now gone → it opened!
+                // Find nearest door transition point from DungeonLocationData
+                var player = Plugin.ObjectTable.LocalPlayer;
+                if (player != null)
+                {
+                    var currentTerritory = Plugin.ClientState.TerritoryType;
+                    var doorTransition = DungeonLocationData.FindNearestDoorTransition(currentTerritory, player.Position, 50f);
+                    if (doorTransition != null)
+                    {
+                        _plugin.AddDebugLog($"[Dungeon] Door opened! Walking to transition '{doorTransition.Label}' at {Vector3.Distance(player.Position, doorTransition.Position):F1}y");
+                        lastDoorOpenedPosition = doorTransition.Position;
+                    }
+                    else
+                    {
+                        _plugin.AddDebugLog($"[Dungeon] Door opened but no known transition point - using automove forward");
+                        // Fallback: move forward from current position for 10s
+                        lastDoorOpenedPosition = player.Position + new Vector3(0, 0, -10f); // Forward approximation
+                    }
+                    doorStuckStart = DateTime.MinValue;
+                    doorWalkThroughStart = DateTime.MinValue; // Will be set next tick
+                    return;
+                }
+            }
+
+            // Nothing found and no recent door - wait then rescan
             if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
             var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
             if (elapsed > 30)
@@ -1925,33 +2013,39 @@ public class StateManager : IDisposable
             return;
         }
 
+        // Reset walk-through state when we have a valid target
+        lastDoorOpenedPosition = null;
+        doorWalkThroughStart = DateTime.MinValue;
+
         var target = progressionObjects[0]; // Nearest progression object
-        var player = Plugin.ObjectTable.LocalPlayer;
-        if (player == null) return;
-
-        var targetName = target.Name.ToString();
-
-        // Track stuck time on current door
-        if (doorStuckStart == DateTime.MinValue)
         {
-            doorStuckStart = DateTime.Now;
-            _plugin.AddDebugLog($"[Dungeon] Trying progression object '{targetName}' (EntityId: {target.EntityId})");
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player == null) return;
+
+            var targetName = target.Name.ToString();
+
+            // Track stuck time on current door
+            if (doorStuckStart == DateTime.MinValue)
+            {
+                doorStuckStart = DateTime.Now;
+                _plugin.AddDebugLog($"[Dungeon] Trying progression object '{targetName}' (EntityId: {target.EntityId})");
+            }
+
+            var stuckSeconds = (DateTime.Now - doorStuckStart).TotalSeconds;
+
+            // If stuck for 60s on same door, exclude it and try another
+            if (stuckSeconds > 60 && progressionObjects.Count > 1)
+            {
+                excludedDoorEntityId = target.EntityId;
+                doorStuckStart = DateTime.MinValue;
+                _plugin.AddDebugLog($"[Dungeon] Stuck at '{targetName}' for 60s - trying other door");
+                return; // Next tick will pick a different object
+            }
+
+            // Use ProcessLootTarget for multi-method interaction cycling
+            // (InteractWithObject + /interact alternating, 3-phase approach, stuck detection)
+            ProcessLootTarget(target);
         }
-
-        var stuckSeconds = (DateTime.Now - doorStuckStart).TotalSeconds;
-
-        // If stuck for 60s on same door, exclude it and try another
-        if (stuckSeconds > 60 && progressionObjects.Count > 1)
-        {
-            excludedDoorEntityId = target.EntityId;
-            doorStuckStart = DateTime.MinValue;
-            _plugin.AddDebugLog($"[Dungeon] Stuck at '{targetName}' for 60s - trying other door");
-            return; // Next tick will pick a different object
-        }
-
-        // Use ProcessLootTarget for multi-method interaction cycling
-        // (InteractWithObject + /interact alternating, 3-phase approach, stuck detection)
-        ProcessLootTarget(target);
     }
 
     private void TickCompleted()
@@ -1998,6 +2092,8 @@ public class StateManager : IDisposable
                     dungeonFloor = 0;
                     excludedDoorEntityId = null;
                     doorStuckStart = DateTime.MinValue;
+                    lastDoorOpenedPosition = null;
+                    doorWalkThroughStart = DateTime.MinValue;
                     
                     // Reset objective tracking for new dungeon
                     currentObjective = DungeonObjective.ClearingChests;
@@ -2450,6 +2546,9 @@ public class StateManager : IDisposable
                     return false;
                 }
 
+                // Filter out objects we've already attempted
+                if (attemptedCoffers.Contains(obj.EntityId)) return false;
+                if (!obj.IsTargetable) return false;
                 return true;
             })
             .Where(obj => IsObjectTargetable(obj))
