@@ -151,6 +151,15 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
+        var autoDiscard = configuration.EnableAutoDiscard;
+        if (ImGui.Checkbox("Auto Discard (/ays discard)", ref autoDiscard))
+        {
+            configuration.EnableAutoDiscard = autoDiscard;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Runs /ays discard every 30s while idle and not in combat.\nRequires AutoRetainer plugin.");
+
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();

@@ -99,6 +99,7 @@ public class StateManager : IDisposable
     private bool doorTransitionNavigating; // True while navigating through a door transition point
     private bool dungeonStartChecked; // True once we've evaluated dungeon start on first entry
     private readonly MountService _mountService;
+    private DateTime lastDiscardTime = DateTime.MinValue; // Auto-discard timer
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
     {
@@ -130,13 +131,29 @@ public class StateManager : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        // Auto-discard runs independently of bot state
+        if (_plugin.Configuration.EnableAutoDiscard && Plugin.ClientState.IsLoggedIn)
+        {
+            var now = DateTime.Now;
+            if ((now - lastDiscardTime).TotalSeconds >= 30.0)
+            {
+                var inCombat = Plugin.Condition[ConditionFlag.InCombat];
+                var betweenAreas = Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51];
+                if (!inCombat && !betweenAreas)
+                {
+                    CommandHelper.SendCommand("/ays discard");
+                    lastDiscardTime = now;
+                }
+            }
+        }
+
         if (!_plugin.Configuration.Enabled) return;
         if (IsPaused) return;
         if (State == BotState.Idle || State == BotState.Error) return;
 
-        var now = DateTime.Now;
-        if ((now - lastTickTime).TotalSeconds < TickIntervalSeconds) return;
-        lastTickTime = now;
+        var now2 = DateTime.Now;
+        if ((now2 - lastTickTime).TotalSeconds < TickIntervalSeconds) return;
+        lastTickTime = now2;
 
         if (!Plugin.ClientState.IsLoggedIn)
         {

@@ -64,6 +64,11 @@ public class MainWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
+        DrawMapCompletionSection();
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
         DrawNavigationSection();
         ImGui.Spacing();
         ImGui.Separator();
@@ -231,6 +236,87 @@ public class MainWindow : Window, IDisposable
             else
             {
                 ImGui.TextColored(ColorGrey, "  Log in to scan inventory.");
+            }
+        }
+    }
+
+    private void DrawMapCompletionSection()
+    {
+        if (ImGui.CollapsingHeader("Map Completion"))
+        {
+            var maps = TreasureMapData.KnownMaps.Values
+                .OrderBy(m => m.MinLevel)
+                .ThenBy(m => m.Name)
+                .ToList();
+
+            // Summary counts
+            var implemented = maps.Count(m => m.Status == ImplementationStatus.Implemented);
+            var wip = maps.Count(m => m.Status == ImplementationStatus.WIP);
+            var notStarted = maps.Count(m => m.Status == ImplementationStatus.NotStarted);
+            ImGui.Text($"  Total: {maps.Count}  ");
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGreen, $"Done: {implemented}");
+            ImGui.SameLine();
+            ImGui.TextColored(ColorYellow, $"  WIP: {wip}");
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, $"  TODO: {notStarted}");
+            ImGui.Spacing();
+
+            // Group by expansion
+            var grouped = maps.GroupBy(m => m.Expansion).ToList();
+            foreach (var group in grouped)
+            {
+                if (ImGui.TreeNode($"{group.Key} ({group.Count(m => m.Status == ImplementationStatus.Implemented)}/{group.Count()})##exp_{group.Key}"))
+                {
+                    foreach (var map in group)
+                    {
+                        // Status icon
+                        var statusColor = map.Status switch
+                        {
+                            ImplementationStatus.Implemented => ColorGreen,
+                            ImplementationStatus.WIP => ColorYellow,
+                            _ => ColorRed,
+                        };
+                        var statusIcon = map.Status switch
+                        {
+                            ImplementationStatus.Implemented => "[OK]",
+                            ImplementationStatus.WIP => "[WIP]",
+                            _ => "[--]",
+                        };
+                        ImGui.TextColored(statusColor, statusIcon);
+                        ImGui.SameLine();
+
+                        // Name
+                        ImGui.Text(map.Name);
+                        ImGui.SameLine();
+
+                        // Category tag
+                        var catColor = map.Category switch
+                        {
+                            MapCategory.Roulette => ColorCyan,
+                            MapCategory.GuaranteedPortal => ColorGreen,
+                            MapCategory.Dungeon => ColorYellow,
+                            _ => ColorGrey,
+                        };
+                        var catLabel = map.Category switch
+                        {
+                            MapCategory.Roulette => "[Roulette]",
+                            MapCategory.GuaranteedPortal => "[Guaranteed]",
+                            MapCategory.Dungeon => "[Dungeon]",
+                            _ => "[Outdoor]",
+                        };
+                        ImGui.TextColored(catColor, catLabel);
+
+                        // Second line: Tier, Level, Territory
+                        ImGui.Text($"      {map.Tier} | Lvl {map.MinLevel}");
+                        if (map.DungeonTerritoryId > 0)
+                        {
+                            ImGui.SameLine();
+                            ImGui.TextColored(ColorGrey, $" | Territory {map.DungeonTerritoryId}");
+                        }
+                    }
+                    ImGui.TreePop();
+                }
             }
         }
     }
