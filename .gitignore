@@ -121,13 +121,7 @@ coverage/
 *.local.json
 appsettings.local.json
 
-## Project planning and documentation (keep local, don't commit)
-PROJECT_GAMEPLAN.md
-HOW_TO_IMPORT_PLUGINS.md
-LootGoblinLearning.md
-LootGoblinLearningRouletteDungeons.md
-PROJECT_GAMEPLAN_UPDATED.md
-
-## Non-README markdown docs (may contain character names, keep private)
+## All .md docs except README and CHANGELOG (may contain character names, keep private)
+*.md
 !README.md
 !CHANGELOG.md
