@@ -1333,38 +1333,33 @@ public class StateManager : IDisposable
         switch (currentObjective)
         {
             case DungeonObjective.ClearingChests:
-                var lootObjects = FindDungeonObjects(lootOnly: true);
-                if (lootObjects.Count > 0)
+                // ROOM SWEEP: Try ALL EventObj objects (coffers, sacks, any interactable)
+                // Excludes progression objects (sluice gate, arcane sphere) and exit objects
+                var sweepObjects = GetRoomSweepObjects();
+                if (sweepObjects.Count > 0)
                 {
-                    // Use original ProcessLootTarget which has proper targeting
-                    ProcessLootTarget(lootObjects[0]);
+                    ProcessLootTarget(sweepObjects[0]);
                 }
                 else
                 {
-                    // No chests found - move to spheres
+                    // All objects swept - move to progression
                     currentObjective = DungeonObjective.ProcessingSpheres;
-                    _plugin.AddDebugLog("[Objective] No chests found - moving to sphere processing");
+                    _plugin.AddDebugLog("[Objective] Room sweep complete - moving to progression");
                 }
                 break;
                 
             case DungeonObjective.ProcessingSpheres:
-                var allObjects = FindDungeonObjects(lootOnly: false);
-                var spheres = allObjects.Where(obj => 
+                // Look for progression: Sluice Gate, Arcane Sphere, doors (High/Low)
+                var progressionObjects = GetProgressionObjects();
+                if (progressionObjects.Count > 0 && canCheckFailedObjects)
                 {
-                    var name = obj.Name.ToString();
-                    return name.Contains("Arcane Sphere") || name.Contains("Door");
-                }).ToList();
-                
-                if (spheres.Count > 0 && canCheckFailedObjects)
-                {
-                    // Use original ProcessLootTarget which has proper targeting
-                    ProcessLootTarget(spheres[0]);
+                    ProcessLootTarget(progressionObjects[0]);
                 }
                 else
                 {
-                    // No spheres or can't check failed objects - move to exit
+                    // No progression objects - head to exit
                     currentObjective = DungeonObjective.HeadingToExit;
-                    _plugin.AddDebugLog("[Objective] No spheres found - moving to exit");
+                    _plugin.AddDebugLog("[Objective] No progression objects found - heading to exit");
                 }
                 break;
                 
@@ -1561,60 +1556,45 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[DungeonLooting] Starting navigation to '{targetName}' (EntityId: {targetId})");
         }
 
-        // Check timeout (safety fallback)
+        // Check timeout (15s per object - marks attempted and moves to next)
         var navigationTime = (DateTime.Now - cofferNavigationStart).TotalSeconds;
-        if (navigationTime > 30.0)
+        if (navigationTime > 15.0)
         {
-            _plugin.AddDebugLog($"[DungeonLooting] Timeout reaching '{targetName}' after {navigationTime:F0}s - resetting");
+            _plugin.AddDebugLog($"[DungeonLooting] Timeout on '{targetName}' after {navigationTime:F0}s - marking attempted, moving to next");
+            attemptedCoffers.Add(targetId);
             cofferNavigationStart = DateTime.MinValue;
+            currentCofferId = 0;
             if (autoMoveActive) { CommandHelper.SendCommand("/automove off"); autoMoveActive = false; }
+            if (_plugin.NavigationService.State == NavigationState.Flying) _plugin.NavigationService.StopNavigation();
             return;
         }
         
-        // NAVIGATION LOGIC: Use vnavmesh for distant objects, lockon+automove for close range
-        if (dist > 2f)
+        // NAVIGATION LOGIC: Use vnavmesh for distant objects, stop at 6y for interaction
+        if (dist > 6f)
         {
-            // Use vnavmesh for distant navigation (>5y)
-            if (dist > 5f)
+            // Stop any existing automove before starting vnavmesh navigation
+            if (autoMoveActive) { CommandHelper.SendCommand("/automove off"); autoMoveActive = false; }
+            
+            // Use vnavmesh to navigate to distant objects
+            if (_plugin.NavigationService.State != NavigationState.Flying)
             {
-                // Stop any existing automove before starting vnavmesh navigation
-                if (autoMoveActive) { CommandHelper.SendCommand("/automove off"); autoMoveActive = false; }
-                
-                // Use vnavmesh to navigate to distant objects
-                if (_plugin.NavigationService.State != NavigationState.Flying)
-                {
-                    _plugin.AddDebugLog($"[DungeonLooting] Navigating to distant '{targetName}' at {dist:F1}y via vnavmesh");
-                    _plugin.NavigationService.MoveToPosition(target.Position);
-                }
-                StateDetail = $"Navigating to '{targetName}' ({dist:F1}y, {navigationTime:F0}s)...";
+                _plugin.AddDebugLog($"[DungeonLooting] Navigating to '{targetName}' at {dist:F1}y via vnavmesh");
+                _plugin.NavigationService.MoveToPosition(target.Position);
             }
-            else
-            {
-                // Use lockon+automove for close range (2-5y)
-                if (!autoMoveActive)
-                {
-                    _plugin.AddDebugLog($"[DungeonLooting] Targeting '{targetName}' at {dist:F1}y - lockon+automove");
-                    GameHelpers.LockOnAndAutoMove();
-                    autoMoveActive = true;
-                }
-                StateDetail = $"Moving to '{targetName}' ({dist:F1}y, {navigationTime:F0}s)...";
-            }
+            StateDetail = $"Navigating to '{targetName}' ({dist:F1}y, {navigationTime:F0}s)...";
         }
         else
         {
-            // Within interaction range - stop navigation and interact
+            // Within 6y - stop ALL navigation and interact
             if (autoMoveActive)
             {
                 CommandHelper.SendCommand("/automove off");
                 autoMoveActive = false;
-                _plugin.AddDebugLog($"[DungeonLooting] Reached '{targetName}' - attempting interaction");
             }
-            
-            // Stop vnavmesh navigation if it was active
             if (_plugin.NavigationService.State == NavigationState.Flying)
             {
                 _plugin.NavigationService.StopNavigation();
-                _plugin.AddDebugLog($"[DungeonLooting] Stopped vnavmesh navigation - reached '{targetName}'");
+                _plugin.AddDebugLog($"[DungeonLooting] Stopped navigation at {dist:F1}y - attempting interaction with '{targetName}'");
             }
 
             // Interact every 2 seconds
@@ -1642,23 +1622,16 @@ public class StateManager : IDisposable
         }
     }
 
-    // ─── Targeting Method 1: Current (Chat + TargetManager + vnavmoveto) ───
+    // ─── Targeting Method 1: Current (Chat + TargetManager + interact) ───
     private void InteractMethod1_Current(IGameObject target, string targetName, uint targetId)
     {
         string targetCommand = GetTargetCommand(targetName);
         
         SendChatCommand(targetCommand);
-        _plugin.AddDebugLog($"[Method1] Sent {targetCommand} via chat");
-        
         Plugin.TargetManager.Target = target;
-        _plugin.AddDebugLog($"[Method1] Set target to '{targetName}' via TargetManager");
-        
-        var pos = target.Position;
-        SendChatCommand($"/vnav moveto {CommandHelper.FormatVector(pos)}");
-        _plugin.AddDebugLog($"[Method1] Sent vnavmoveto to {CommandHelper.FormatVector(pos)}");
+        _plugin.AddDebugLog($"[Method1] Targeted '{targetName}' - firing interact");
         
         TriggerControllerModeInteract();
-        _plugin.AddDebugLog($"[Method1] Fired controller mode interact sequence");
         
         PostInteractionTracking(targetName, targetId);
     }
@@ -1666,28 +1639,21 @@ public class StateManager : IDisposable
     // ─── Targeting Method 2: IsTargetable Filter (AutoDuty pattern) ───
     private void InteractMethod2_IsTargetable(IGameObject target, string targetName, uint targetId)
     {
-        // Core Method 2 logic: check IsTargetable BEFORE every interaction
         if (!target.IsTargetable)
         {
-            _plugin.AddDebugLog($"[Method2] '{targetName}' is NOT targetable (ghost/despawned) - skipping");
+            _plugin.AddDebugLog($"[Method2] '{targetName}' NOT targetable (ghost/despawned) - marking attempted");
+            attemptedCoffers.Add(targetId);
             cofferNavigationStart = DateTime.MinValue;
             currentCofferId = 0;
             return;
         }
         
-        _plugin.AddDebugLog($"[Method2] '{targetName}' IsTargetable=true - proceeding");
-        
         string targetCommand = GetTargetCommand(targetName);
-        
         SendChatCommand(targetCommand);
         Plugin.TargetManager.Target = target;
-        
-        var pos = target.Position;
-        SendChatCommand($"/vnav moveto {CommandHelper.FormatVector(pos)}");
-        _plugin.AddDebugLog($"[Method2] Targeting + vnavmoveto to {CommandHelper.FormatVector(pos)}");
+        _plugin.AddDebugLog($"[Method2] Targeted '{targetName}' (IsTargetable=true) - firing interact");
         
         TriggerControllerModeInteract();
-        _plugin.AddDebugLog($"[Method2] Fired controller mode interact sequence");
         
         PostInteractionTracking(targetName, targetId);
     }
@@ -1695,50 +1661,24 @@ public class StateManager : IDisposable
     // ─── Targeting Method 3: Chat Command Validation ───
     private void InteractMethod3_ChatValidation(IGameObject target, string targetName, uint targetId)
     {
-        string targetCommand = GetTargetCommand(targetName);
-        
-        // Step 1: Clear current target
+        // Clear target, send /target command, check if game acquired it
         Plugin.TargetManager.Target = null;
-        
-        // Step 2: Send chat target command
+        string targetCommand = GetTargetCommand(targetName);
         SendChatCommand(targetCommand);
-        _plugin.AddDebugLog($"[Method3] Sent {targetCommand} via chat");
         
-        // Step 3: Validate target was actually acquired on target bar
         var currentTarget = Plugin.TargetManager.Target;
         if (currentTarget == null)
         {
-            _plugin.AddDebugLog($"[Method3] No target acquired after {targetCommand} - object doesn't exist, skipping");
+            _plugin.AddDebugLog($"[Method3] /target failed for '{targetName}' - marking attempted");
+            attemptedCoffers.Add(targetId);
             cofferNavigationStart = DateTime.MinValue;
             currentCofferId = 0;
             return;
         }
         
-        // Verify the acquired target matches what we expect
-        var acquiredName = currentTarget.Name.ToString().ToLowerInvariant();
-        var expectedPartial = targetName.ToLowerInvariant();
-        bool nameMatches = acquiredName.Contains("coffer") || acquiredName.Contains("chest") || 
-                          acquiredName.Contains("sack") || acquiredName.Contains("arcane") || 
-                          acquiredName.Contains("sluice") || acquiredName.Contains("door");
-        
-        if (!nameMatches)
-        {
-            _plugin.AddDebugLog($"[Method3] Target acquired '{currentTarget.Name}' doesn't match expected type - skipping");
-            Plugin.TargetManager.Target = null;
-            cofferNavigationStart = DateTime.MinValue;
-            currentCofferId = 0;
-            return;
-        }
-        
-        _plugin.AddDebugLog($"[Method3] Target validated: '{currentTarget.Name}' (EntityId: {currentTarget.EntityId})");
-        
-        // Use validated target's position for navigation
-        var pos = currentTarget.Position;
-        SendChatCommand($"/vnav moveto {CommandHelper.FormatVector(pos)}");
-        _plugin.AddDebugLog($"[Method3] Sent vnavmoveto to {CommandHelper.FormatVector(pos)}");
+        _plugin.AddDebugLog($"[Method3] Target validated: '{currentTarget.Name}' - firing interact");
         
         TriggerControllerModeInteract();
-        _plugin.AddDebugLog($"[Method3] Fired controller mode interact sequence");
         
         PostInteractionTracking(targetName, targetId);
     }
@@ -1759,52 +1699,40 @@ public class StateManager : IDisposable
 
     private void PostInteractionTracking(string targetName, uint targetId)
     {
-        cofferNavigationStart = DateTime.MinValue;
-        
-        if (targetName.Contains("Treasure Coffer") || targetName.Contains("Treasure Chest") || targetName.Contains("Treasure Sack"))
+        // Mark object as attempted after 3s delay (gives time for despawn/reaction)
+        // The sweep will move to next object on the next tick
+        Task.Run(async () =>
         {
-            Task.Run(async () =>
+            await Task.Delay(3000);
+            if (!attemptedCoffers.Contains(targetId))
             {
-                await Task.Delay(3000);
-                if (!processedChests.Contains(targetId))
-                {
-                    processedChests.Add(targetId);
-                    _plugin.AddDebugLog($"[Interaction] Chest marked as processed after delay (EntityId: {targetId})");
-                }
-            });
-        }
+                attemptedCoffers.Add(targetId);
+                _plugin.AddDebugLog($"[Interaction] '{targetName}' marked attempted after delay (EntityId: {targetId})");
+            }
+        });
         
-        if (targetName.Contains("Arcane Sphere"))
+        // Reset navigation timer for this object
+        cofferNavigationStart = DateTime.MinValue;
+        currentCofferId = 0;
+        
+        // Specific tracking for progression objects
+        var lower = targetName.ToLowerInvariant();
+        if (lower.Contains("arcane sphere"))
         {
             processedSpheres.Add(targetId);
-            
             if (!sphereInteractionTimes.ContainsKey(targetId))
             {
                 sphereInteractionTimes[targetId] = DateTime.Now;
-                _plugin.AddDebugLog($"[Interaction] First Arcane Sphere interaction recorded (EntityId: {targetId})");
-            }
-            else
-            {
-                var interactionCount = sphereInteractionTimes.Count(t => t.Key == targetId);
-                _plugin.AddDebugLog($"[Interaction] Arcane Sphere interaction #{interactionCount + 1} (EntityId: {targetId})");
-                
-                if (interactionCount >= 2)
-                {
-                    _plugin.AddDebugLog($"[Interaction] Arcane Sphere failed to trigger combat after 3 interactions - marking as failed");
-                    failedObjects.Add(targetId);
-                    cofferNavigationStart = DateTime.MinValue;
-                    currentCofferId = 0;
-                    return;
-                }
+                _plugin.AddDebugLog($"[Interaction] First Arcane Sphere interaction (EntityId: {targetId})");
             }
         }
-        else if (targetName.Contains("Door"))
+        else if (lower.Contains("sluice") || lower.Contains("gate") || lower.Contains("door"))
         {
             processedSpheres.Add(targetId);
-            _plugin.AddDebugLog($"[Interaction] Door marked as processed (EntityId: {targetId})");
+            _plugin.AddDebugLog($"[Interaction] Progression object '{targetName}' interaction sent (EntityId: {targetId})");
         }
         
-        _plugin.AddDebugLog($"[Interaction] Interaction sent - waiting for combat or despawn");
+        _plugin.AddDebugLog($"[Interaction] Interaction sent for '{targetName}' - waiting for despawn or combat");
     }
 
     private void TickDungeonProgressing()
@@ -2103,6 +2031,101 @@ public class StateManager : IDisposable
 
         RetryCount = 0;
         TransitionTo(BotState.Idle, "Run complete.");
+    }
+
+    // ─── Room Sweep Methods (brute-force object interaction) ─────────────────
+
+    /// <summary>
+    /// Returns ALL targetable EventObj objects in the room, excluding progression/exit objects.
+    /// This is the "ritual sweep" - walk to each object and try to interact.
+    /// Objects that can't be interacted with will timeout and be marked attempted.
+    /// </summary>
+    private List<IGameObject> GetRoomSweepObjects()
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return new List<IGameObject>();
+
+        // Names to EXCLUDE from sweep (progression + exit - handled in later phase)
+        var excludePartial = new[] { "sluice", "arcane sphere", "teleportation portal" };
+        var excludeExact = new[] { "exit" };
+
+        var allEventObjs = Plugin.ObjectTable
+            .Where(obj => obj != null && obj.ObjectKind == ObjectKind.EventObj)
+            .ToList();
+
+        _plugin.AddDebugLog($"[Sweep] Scanning {allEventObjs.Count} EventObj objects in room...");
+        foreach (var obj in allEventObjs.Take(10))
+        {
+            var d = Vector3.Distance(player.Position, obj.Position);
+            _plugin.AddDebugLog($"[Sweep]   '{obj.Name}' at {d:F1}y (ID:{obj.EntityId}, Targetable:{obj.IsTargetable})");
+        }
+        if (allEventObjs.Count > 10)
+            _plugin.AddDebugLog($"[Sweep]   ... and {allEventObjs.Count - 10} more");
+
+        var candidates = allEventObjs
+            .Where(obj =>
+            {
+                var name = obj.Name.ToString();
+                if (string.IsNullOrEmpty(name)) return false;
+                var dist = Vector3.Distance(player.Position, obj.Position);
+                if (dist > 50f) return false;
+
+                var lower = name.ToLowerInvariant();
+
+                // Skip progression/exit objects (saved for ProcessingSpheres phase)
+                if (excludePartial.Any(p => lower.Contains(p))) return false;
+                if (excludeExact.Any(e => lower == e)) return false;
+
+                // Skip already attempted objects
+                if (attemptedCoffers.Contains(obj.EntityId)) return false;
+
+                return true;
+            })
+            .Where(obj => obj.IsTargetable) // Only targetable objects (filters ghosts)
+            .OrderBy(obj => Vector3.Distance(player.Position, obj.Position))
+            .ToList();
+
+        _plugin.AddDebugLog($"[Sweep] Found {candidates.Count} sweepable objects (excludes progression/exit/attempted)");
+        foreach (var obj in candidates)
+        {
+            var d = Vector3.Distance(player.Position, obj.Position);
+            _plugin.AddDebugLog($"[Sweep]   → '{obj.Name}' at {d:F1}y (ID:{obj.EntityId})");
+        }
+
+        return candidates;
+    }
+
+    /// <summary>
+    /// Returns progression objects: Sluice Gate, Arcane Sphere, doors (High/Low).
+    /// Called after room sweep is complete.
+    /// </summary>
+    private List<IGameObject> GetProgressionObjects()
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return new List<IGameObject>();
+
+        var progressionPartial = new[] { "sluice", "arcane sphere" };
+
+        return Plugin.ObjectTable
+            .Where(obj =>
+            {
+                if (obj == null || obj.ObjectKind != ObjectKind.EventObj) return false;
+                var name = obj.Name.ToString();
+                if (string.IsNullOrEmpty(name)) return false;
+                var dist = Vector3.Distance(player.Position, obj.Position);
+                if (dist > 50f) return false;
+
+                var lower = name.ToLowerInvariant();
+                if (!progressionPartial.Any(p => lower.Contains(p))) return false;
+
+                // Skip already attempted
+                if (attemptedCoffers.Contains(obj.EntityId)) return false;
+
+                return true;
+            })
+            .Where(obj => obj.IsTargetable)
+            .OrderBy(obj => Vector3.Distance(player.Position, obj.Position))
+            .ToList();
     }
 
     // ─── Dungeon Helpers ─────────────────────────────────────────────────────
