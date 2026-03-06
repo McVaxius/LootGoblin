@@ -87,6 +87,9 @@ public class StateManager : IDisposable
     private DateTime lastDungeonInteractionTime = DateTime.MinValue; // Prevent interaction spam on dungeon objects
     private int dungeonInteractionAttemptCount = 0; // Cycle between interaction methods
     private DateTime _lastSweepLogTime = DateTime.MinValue; // Throttle sweep log spam
+    private Vector3 dungeonNavLastPos = Vector3.Zero; // Stuck detection: last position during dungeon nav
+    private DateTime dungeonNavLastCheckTime = DateTime.MinValue; // Stuck detection: last check time
+    private float dungeonNavLastDist = float.MaxValue; // Stuck detection: last distance to target
     private bool previouslyInCombat = false; // Proper combat edge detection
     private bool dungeonStartNavigating; // True while navigating to dungeon start position
     private bool doorTransitionNavigating; // True while navigating through a door transition point
@@ -1619,6 +1622,9 @@ public class StateManager : IDisposable
             currentCofferId = targetId;
             cofferNavigationStart = DateTime.Now;
             dungeonInteractionAttemptCount = 0;
+            dungeonNavLastPos = player.Position;
+            dungeonNavLastCheckTime = DateTime.Now;
+            dungeonNavLastDist = dist;
             _plugin.AddDebugLog($"[DungeonLooting] Now targeting '{targetName}' Kind={target.ObjectKind} at {dist:F1}y (EntityId: {targetId})");
         }
 
@@ -1634,9 +1640,9 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Check timeout (15s per object - marks attempted and moves to next)
+        // Check timeout (60s per object - marks attempted and moves to next)
         var navigationTime = (DateTime.Now - cofferNavigationStart).TotalSeconds;
-        if (navigationTime > 15.0)
+        if (navigationTime > 60.0)
         {
             _plugin.AddDebugLog($"[DungeonLooting] Timeout on '{targetName}' after {navigationTime:F0}s - marking attempted, moving to next");
             attemptedCoffers.Add(targetId);
@@ -1661,7 +1667,33 @@ public class StateManager : IDisposable
             {
                 _plugin.AddDebugLog($"[DungeonLooting] Navigating to '{targetName}' at {dist:F1}y via vnavmesh");
                 _plugin.NavigationService.MoveToPosition(target.Position);
+                dungeonNavLastPos = player.Position;
+                dungeonNavLastCheckTime = DateTime.Now;
+                dungeonNavLastDist = dist;
             }
+            
+            // Stuck detection: every 10s check if bot moved <3y, if so re-issue nav command
+            // (proven pattern from TickFlying stuck detection)
+            var sinceNavCheck = (DateTime.Now - dungeonNavLastCheckTime).TotalSeconds;
+            if (sinceNavCheck >= 10.0)
+            {
+                var movedDistance = Vector3.Distance(player.Position, dungeonNavLastPos);
+                if (movedDistance < 3.0f)
+                {
+                    // Stuck! Re-issue nav command
+                    _plugin.AddDebugLog($"[DungeonLooting] Stuck detected (moved {movedDistance:F1}y in 10s, dist={dist:F1}y) - re-pathfinding to '{targetName}'");
+                    _plugin.NavigationService.StopNavigation();
+                    _plugin.NavigationService.MoveToPosition(target.Position);
+                }
+                else
+                {
+                    _plugin.AddDebugLog($"[DungeonLooting] Nav progress: moved {movedDistance:F1}y in 10s, dist={dist:F1}y to '{targetName}' ({navigationTime:F0}s elapsed)");
+                }
+                dungeonNavLastPos = player.Position;
+                dungeonNavLastCheckTime = DateTime.Now;
+                dungeonNavLastDist = dist;
+            }
+            
             StateDetail = $"Navigating to '{targetName}' ({dist:F1}y, {navigationTime:F0}s)...";
         }
         else if (dist > 3f)
