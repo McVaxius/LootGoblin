@@ -19,6 +19,44 @@
         "requested": "[2.3.0, )",
         "resolved": "2.3.0",
         "contentHash": "aNM7pAkior3Y0viQQCEh4L9fgkK0Yd+4lypzn4x0+2weivBkgKWy03Jry0Has/PZeYfJNUsMtuq4n45L5KC07w=="
+      },
+      "PInvoke.User32": {
+        "type": "Direct",
+        "requested": "[0.7.0, )",
+        "resolved": "0.7.78",
+        "contentHash": "o8mdj5SwCCj4+oJXNEg+bdaihvCqfqDXdBe8/ggDJSDUs2JpXvWca44WI4PWOEJ//lwQdCLXSn5fV+Vbufi1yA==",
+        "dependencies": {
+          "PInvoke.Kernel32": "0.7.78",
+          "PInvoke.Windows.Core": "0.7.78",
+          "PInvoke.Windows.ShellScalingApi": "0.7.78",
+          "Validation": "2.4.15"
+        }
+      },
+      "PInvoke.Kernel32": {
+        "type": "Transitive",
+        "resolved": "0.7.78",
+        "contentHash": "1CP5uXet9QJT52WPSXEmtqTaV2v0eUOzdW/2yjYLPJWCoNwrAn8hXBf4pEIdca6CZaJCNW6whT9ILCP61Kpshw==",
+        "dependencies": {
+          "PInvoke.Windows.Core": "0.7.78"
+        }
+      },
+      "PInvoke.Windows.Core": {
+        "type": "Transitive",
+        "resolved": "0.7.78",
+        "contentHash": "QJ0JSi3YFWR95rPTcp6FtSqWN4SDFsnsyrp5bmLxt0tyQaWPpsKwBaHZoJnEkKq69ytS5ZRMYIm0pHCnpWlkEQ=="
+      },
+      "PInvoke.Windows.ShellScalingApi": {
+        "type": "Transitive",
+        "resolved": "0.7.78",
+        "contentHash": "/NTLOAjLdBjykWgQZQyLNT6w5/YdqlfSQTPMoIGaF5IBG9t6TPPafMmZkhtCVCEts/1JzzRlPjJg7+Q4z0gbvQ==",
+        "dependencies": {
+          "PInvoke.Windows.Core": "0.7.78"
+        }
+      },
+      "Validation": {
+        "type": "Transitive",
+        "resolved": "2.4.15",
+        "contentHash": "KQFOtJKKhaXzuSiZhkFaFzQEdYsA+EN/XqKZDYwsGDOrS0Nxu6qzCvNTsDF4xtkiZbBA6u7I59QnsuP2O2fZgg=="
       }
     }
   }

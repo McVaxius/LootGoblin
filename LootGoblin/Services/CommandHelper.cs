@@ -35,6 +35,8 @@ public static class CommandHelper
 
     public static string FormatVector(Vector3 value)
     {
-        return string.Format(CultureInfo.InvariantCulture, "{0:F2} {1:F2} {2:F2}", value.X, value.Y, value.Z);
+        var result = string.Format(CultureInfo.InvariantCulture, "{0:F2} {1:F2} {2:F2}", value.X, value.Y, value.Z);
+        Plugin.Log.Debug($"[FormatVector] {value} -> '{result}' (InvariantCulture)");
+        return result;
     }
 }

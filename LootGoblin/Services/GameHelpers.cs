@@ -77,12 +77,25 @@ public static class GameHelpers
                 return false;
             }
             
-            // Trigger the callback after a delay to ensure menu is ready
-            // The callback uses 1-based indexing, so add 1
-            System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                Plugin.Log.Information($"UseItem({itemId}): Triggering callback for map index {mapIndex} (will send {mapIndex + 1} for 1-based)");
-                TriggerMapDecipherCallback(mapIndex + 1);
-            });
+            // Check if there's only one map type in inventory
+            if (allMaps.Count == 1)
+            {
+                // Single map type - use AddonMaster.SelectIconString to click the first entry (index 0)
+                Plugin.Log.Information($"UseItem({itemId}): Only 1 map type detected, using AddonMaster.SelectIconString");
+                System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                    Plugin.Log.Information($"UseItem({itemId}): Looking for SelectIconString addon...");
+                    TriggerSelectIconStringClick();
+                });
+            }
+            else
+            {
+                // Multiple map types - use the existing unsafe callback method
+                Plugin.Log.Information($"UseItem({itemId}): {allMaps.Count} map types detected, using callback method");
+                System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                    Plugin.Log.Information($"UseItem({itemId}): Triggering callback for map index {mapIndex} (will send {mapIndex + 1} for 1-based)");
+                    TriggerMapDecipherCallback(mapIndex + 1);
+                });
+            }
             
             return true;
         }
@@ -180,6 +193,49 @@ public static class GameHelpers
     {
         // Check against known treasure map data
         return LootGoblin.Models.TreasureMapData.KnownMaps.ContainsKey(itemId);
+    }
+
+    /// <summary>
+    /// Use controller mode to activate single map: numpad2 then numpad0 twice.
+    /// Used when there's only 1 map type in inventory for reliable activation.
+    /// </summary>
+    private static async void TriggerSelectIconStringClick()
+    {
+        Plugin.Log.Information($"[SELECTICON] Starting controller mode for single map");
+        
+        try
+        {
+            // Wait a bit for the addon to be ready
+            Plugin.Log.Information($"[SELECTICON] Waiting 100ms for SelectIconString addon...");
+            await System.Threading.Tasks.Task.Delay(100);
+            Plugin.Log.Information($"[SELECTICON] Wait complete, using controller mode");
+
+            // Controller mode sequence: numpad2, then numpad0 twice
+            Plugin.Log.Information($"[SELECTICON] Pressing numpad2 (switch to controller mode)...");
+            KeyPress(VirtualKey.NUMPAD2);
+            
+            await System.Threading.Tasks.Task.Delay(200);
+            
+            Plugin.Log.Information($"[SELECTICON] Pressing numpad0 (first time)...");
+            KeyPress(VirtualKey.NUMPAD0);
+            
+            await System.Threading.Tasks.Task.Delay(200);
+            
+            Plugin.Log.Information($"[SELECTICON] Pressing numpad0 (second time)...");
+            KeyPress(VirtualKey.NUMPAD0);
+            
+            Plugin.Log.Information("[SELECTICON] Controller mode sequence completed");
+            
+            // Wait for the confirmation dialog, then click OK
+            Plugin.Log.Information("[SELECTICON] Waiting 500ms for confirmation dialog...");
+            await System.Threading.Tasks.Task.Delay(500);
+            Plugin.Log.Information("[SELECTICON] Triggering confirmation dialog callback");
+            TriggerConfirmDialog();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[SELECTICON] Controller mode failed: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -438,6 +494,22 @@ public static class GameHelpers
         catch (Exception ex)
         {
             Plugin.Log.Error($"[KEY] KeyRelease({key}) failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Press and release a key (single keypress). Uses ECommons.Automation.WindowsKeypress.
+    /// Same pattern as SND's /keypress command.
+    /// </summary>
+    public static void KeyPress(VirtualKey key)
+    {
+        try
+        {
+            WindowsKeypress.SendKeypress(key, null);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[KEY] KeyPress({key}) failed: {ex.Message}");
         }
     }
 

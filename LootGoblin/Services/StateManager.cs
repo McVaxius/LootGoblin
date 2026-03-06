@@ -2,14 +2,27 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
+using System.Text;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
+using ECommons.Automation;
 using LootGoblin.Models;
+using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.System.String;
 
 namespace LootGoblin.Services;
+
+public enum DungeonObjective
+{
+    ClearingChests,    // Level 1: Always start here
+    ProcessingSpheres, // Level 2: After chests cleared OR if no chests exist
+    HeadingToExit      // Level 3: After all objectives done
+}
 
 public class StateManager : IDisposable
 {
@@ -35,6 +48,11 @@ public class StateManager : IDisposable
     private bool descentInProgress; // Prevents overlapping async Ctrl+Space descent calls
     private DateTime lastInteractionTime = DateTime.MinValue; // Throttle chest/portal interaction attempts
     private bool autoMoveActive; // Track if automove is currently on
+    
+    // Map opening validation variables
+    private int initialMapCount;
+    private bool mapCountChecked = false;
+    private bool mapOpeningRetried = false;
     private const double TickIntervalSeconds = 0.5;
 
     // Dungeon state tracking (Phase 8)
@@ -49,6 +67,23 @@ public class StateManager : IDisposable
     private DateTime chestDisappearedTime = DateTime.MinValue; // Track when chest first disappeared for grace period
     private HashSet<uint> attemptedCoffers = new HashSet<uint>(); // Track which coffers we've tried to interact with
     private DateTime cofferNavigationStart = DateTime.MinValue; // When we started navigating to current coffer
+    private uint currentCofferId = 0; // Track which chest we're currently working on (preserved during combat)
+    private uint lastBMRTerritoryId = 0; // Track territory for BMR activation
+    private Dictionary<uint, DateTime> sphereInteractionTimes = new Dictionary<uint, DateTime>(); // Track sphere interactions to prevent spam
+    private HashSet<uint> failedSpheres = new HashSet<uint>(); // Track spheres that didn't trigger combat/despawn
+
+    // Dungeon objective tracking
+    private DungeonObjective currentObjective = DungeonObjective.ClearingChests;
+    private HashSet<uint> processedChests = new HashSet<uint>();
+    private HashSet<uint> processedSpheres = new HashSet<uint>();
+    private HashSet<uint> failedObjects = new HashSet<uint>(); // Unified failed object tracking
+    private DateTime lastCombatEndTime = DateTime.MinValue;
+    private const float OBJECTIVE_SEARCH_RADIUS = 80f;
+    private const int COMBAT_FREE_WAIT_SECONDS = 5;
+
+    private DateTime mountAttemptStart = DateTime.MinValue; // Track mount retry timing
+    private int mountAttempts = 0; // Track mount retry count
+    private DateTime lastDungeonInteractionTime = DateTime.MinValue; // Prevent interaction spam on dungeon objects
     private bool dungeonStartNavigating; // True while navigating to dungeon start position
     private bool doorTransitionNavigating; // True while navigating through a door transition point
     private bool dungeonStartChecked; // True once we've evaluated dungeon start on first entry
@@ -126,6 +161,36 @@ public class StateManager : IDisposable
         }
         lastGlobalTerritoryId = currentTerritory;
 
+        // Enable BMR on territory changes (never turn off)
+        if (lastBMRTerritoryId != 0 && lastBMRTerritoryId != currentTerritory)
+        {
+            CommandHelper.SendCommand("/bmrai on");
+            _plugin.AddDebugLog($"[BMR] Enabled on territory change: {lastBMRTerritoryId} -> {currentTerritory}");
+        }
+        lastBMRTerritoryId = currentTerritory;
+
+        // Universal combat pathfinding stop - only stop when actually in combat
+        if (Plugin.Condition[ConditionFlag.InCombat] && autoMoveActive)
+        {
+            _plugin.NavigationService.StopNavigation();
+            autoMoveActive = false;
+        }
+        
+        // Combat start/end tracking for objective system
+        bool currentlyInCombat = Plugin.Condition[ConditionFlag.InCombat];
+        bool wasInCombat = lastCombatEndTime != DateTime.MinValue;
+        
+        if (currentlyInCombat && !wasInCombat)
+        {
+            // Combat just started
+            OnCombatStart();
+        }
+        else if (!currentlyInCombat && wasInCombat)
+        {
+            // Combat just ended
+            OnCombatEnd();
+        }
+
         switch (State)
         {
             case BotState.SelectingMap:     TickSelectingMap();     break;
@@ -150,6 +215,37 @@ public class StateManager : IDisposable
         if (State != BotState.Idle && State != BotState.Error)
         {
             _plugin.AddDebugLog("Bot already running.");
+            return;
+        }
+
+        // Check if already in dungeon and start objective system
+        bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                      Plugin.Condition[ConditionFlag.BoundByDuty56];
+        
+        if (inDuty)
+        {
+            _plugin.AddDebugLog("[Start] Already in dungeon - starting objective system");
+            RetryCount = 0;
+            CurrentLocation = null;
+            SelectedMapItemId = 0;
+            _plugin.YesAlreadyIPC.Pause();
+            _plugin.AddDebugLog($"[Start] YesAlready paused: {_plugin.YesAlreadyIPC.IsPaused}");
+            
+            // Initialize dungeon state
+            dungeonEntryProcessed = false;
+            dungeonFloor = 1; // Assume floor 1 if starting mid-dungeon
+            
+            // Reset objective tracking
+            currentObjective = DungeonObjective.ClearingChests;
+            processedChests.Clear();
+            processedSpheres.Clear();
+            failedObjects.Clear();
+            sphereInteractionTimes.Clear();
+            _plugin.AddDebugLog("[Start] Dungeon objectives reset for mid-dungeon start");
+            
+            // Skip entry logic - go directly to looting
+            dungeonEntryProcessed = true; // Skip initial entry logic
+            TransitionTo(BotState.DungeonLooting, "Starting in dungeon - looking for chests within 80y...");
             return;
         }
 
@@ -242,6 +338,13 @@ public class StateManager : IDisposable
         SelectedMapItemId = candidates[0];
         var mapName = TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var info) ? info.Name : $"ID {SelectedMapItemId}";
         _plugin.AddDebugLog($"Selected: {mapName} (ID {SelectedMapItemId}).");
+        
+        // Initialize map count validation variables
+        initialMapCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
+        mapCountChecked = false;
+        mapOpeningRetried = false;
+        _plugin.AddDebugLog($"[SelectingMap] Initial map count: {initialMapCount}");
+        
         TransitionTo(BotState.OpeningMap, $"Opening {mapName}...");
     }
 
@@ -280,6 +383,38 @@ public class StateManager : IDisposable
 
     private void TickDetectingLocation()
     {
+        // Check if map opening failed by validating map count decreased
+        if (!mapCountChecked)
+        {
+            var currentCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
+            _plugin.AddDebugLog($"[DetectingLocation] Map count check: {currentCount} (was {initialMapCount})");
+            
+            if (currentCount >= initialMapCount)
+            {
+                // Map count didn't decrease - opening failed, retry once
+                if (!mapOpeningRetried)
+                {
+                    _plugin.AddDebugLog($"[DetectingLocation] Map count didn't decrease - opening failed, retrying...");
+                    mapOpeningRetried = true;
+                    mapCountChecked = true; // Don't check again on retry
+                    TransitionTo(BotState.OpeningMap, "Retrying map opening...");
+                    return;
+                }
+                else
+                {
+                    // Already retried once - handle as error
+                    _plugin.AddDebugLog($"[DetectingLocation] Map opening failed after retry - treating as error");
+                    HandleError("Map opening failed - map count didn't decrease");
+                    return;
+                }
+            }
+            else
+            {
+                _plugin.AddDebugLog($"[DetectingLocation] Map count decreased - opening successful");
+                mapCountChecked = true;
+            }
+        }
+
         // Try to read the map flag from AgentMap (set when map is deciphered)
         var location = _plugin.GlobeTrotterIPC.TryGetMapLocation();
         if (location != null)
@@ -344,6 +479,10 @@ public class StateManager : IDisposable
 
         if (nav.IsMounted())
         {
+            // Successfully mounted - reset counters and proceed
+            mountAttemptStart = DateTime.MinValue;
+            mountAttempts = 0;
+            
             var partySize = Plugin.PartyList.Length;
             if (partySize > 0 && _plugin.Configuration.WaitForParty)
                 TransitionTo(BotState.WaitingForParty, "Waiting for party to mount...");
@@ -352,10 +491,33 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (!stateActionIssued)
+        // Try mounting up to 3 times with 2s delays
+        if (mountAttemptStart == DateTime.MinValue)
         {
-            nav.MountUp();
-            stateActionIssued = true;
+            mountAttemptStart = DateTime.Now;
+            mountAttempts = 0;
+        }
+
+        var mountElapsed = (DateTime.Now - mountAttemptStart).TotalSeconds;
+
+        if (mountAttempts < 3)
+        {
+            if (mountElapsed >= mountAttempts * 2.0) // 0s, 2s, 4s
+            {
+                mountAttempts++;
+                _plugin.AddDebugLog($"[Mounting] Attempt {mountAttempts}/3 to mount");
+                nav.MountUp();
+            }
+            StateDetail = $"Mounting (attempt {mountAttempts}/3)...";
+            return;
+        }
+        else
+        {
+            _plugin.AddDebugLog($"[Mounting] Failed to mount after 3 attempts - resetting bot");
+            mountAttemptStart = DateTime.MinValue;
+            mountAttempts = 0;
+            TransitionTo(BotState.Idle, "Mount failed - please restart");
+            return;
         }
     }
 
@@ -440,7 +602,10 @@ public class StateManager : IDisposable
             CommandHelper.SendCommand("/gaction dig");
             _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
             
-            TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+            // Wait 2 seconds for chest to spawn before looking for it
+            System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
+                TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+            });
             return;
         }
         
@@ -541,12 +706,7 @@ public class StateManager : IDisposable
             {
                 StateDetail = $"Waiting for chest to reappear... ({gracePeriod:F1}/5.0s)";
                 
-                // Fallback: try targeting via command if ObjectTable fails
-                if ((int)gracePeriod % 2 == 0 && (int)gracePeriod > 0)
-                {
-                    CommandHelper.SendCommand("/target \"Treasure Coffer\"");
-                }
-                return;
+                                return;
             }
             
             // Grace period elapsed - chest is truly gone, check for portal
@@ -659,6 +819,30 @@ public class StateManager : IDisposable
         return null;
     }
 
+    private void OnCombatStart()
+    {
+        lastCombatEndTime = DateTime.MinValue; // Reset combat end time
+        
+        // Clear all failed objects when combat starts
+        if (failedObjects.Count > 0)
+        {
+            _plugin.AddDebugLog($"[Combat] Clearing {failedObjects.Count} failed object(s) - combat started");
+            failedObjects.Clear();
+        }
+        
+        _plugin.AddDebugLog("[Combat] Combat started - objective system reset");
+    }
+    
+    private void OnCombatEnd()
+    {
+        lastCombatEndTime = DateTime.Now;
+        
+        // ALWAYS reset to chest priority after combat
+        currentObjective = DungeonObjective.ClearingChests;
+        
+        _plugin.AddDebugLog("[Combat] Combat ended - will clear processed objects in 5s");
+    }
+
     private void TickInCombat()
     {
         // InCombat state removed - OpeningChest now loops until portal appears
@@ -724,6 +908,8 @@ public class StateManager : IDisposable
             dungeonStartNavigating = false;
             doorTransitionNavigating = false;
             attemptedCoffers.Clear();
+            failedSpheres.Clear(); // Clear failed spheres on new dungeon entry
+            sphereInteractionTimes.Clear(); // Reset sphere interaction tracking
             _plugin.AddDebugLog($"[InDungeon] First entry confirmed - floor {dungeonFloor}");
             _plugin.AddDebugLog($"[InDungeon] Territory: {currentTerritory}, BoundByDuty: {inDuty}");
         }
@@ -732,7 +918,6 @@ public class StateManager : IDisposable
         if (!inDuty && (DateTime.Now - stateStartTime).TotalSeconds > 5)
         {
             _plugin.AddDebugLog($"[Dungeon] No longer bound by duty - ejected after floor {dungeonFloor}");
-            CommandHelper.SendCommand("/bmrai off");
             dungeonEntryProcessed = false;
             TransitionTo(BotState.Completed, $"Dungeon complete (reached floor {dungeonFloor})");
             return;
@@ -744,6 +929,7 @@ public class StateManager : IDisposable
         {
             _plugin.AddDebugLog($"[InDungeon] Combat detected on floor {dungeonFloor} - resetting attempted coffers ({attemptedCoffers.Count})");
             attemptedCoffers.Clear();
+            // Don't clear failed spheres - they should remain failed until chests are cleared
             cofferNavigationStart = DateTime.MinValue;
             dungeonStartNavigating = false;
             doorTransitionNavigating = false;
@@ -762,11 +948,19 @@ public class StateManager : IDisposable
             var sphere = FindArcaneSphere();
             if (sphere != null)
             {
-                _plugin.AddDebugLog($"[Dungeon] Arcane Sphere detected after territory change - targeting");
-                dungeonStartNavigating = false;
-                doorTransitionNavigating = false;
-                TransitionTo(BotState.DungeonLooting, $"Arcane Sphere on floor {dungeonFloor}...");
-                return;
+                // Skip spheres that have failed to trigger combat/despawn
+                if (failedSpheres.Contains(sphere.EntityId))
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Skipping failed Arcane Sphere after territory change (EntityId: {sphere.EntityId})");
+                }
+                else
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Arcane Sphere detected - processing as progression object");
+                    dungeonStartNavigating = false;
+                    doorTransitionNavigating = false;
+                    ProcessLootTarget(sphere); // Process sphere directly
+                    return;
+                }
             }
 
             dungeonStartChecked = true; // Mark as evaluated so we don't re-trigger every tick
@@ -916,18 +1110,79 @@ public class StateManager : IDisposable
             }
         }
 
-        // Scan for loot objects first (priority)
-        _plugin.AddDebugLog($"[InDungeon] Scanning for loot objects on floor {dungeonFloor}...");
-        var lootObjects = FindDungeonObjects(lootOnly: true);
-        if (lootObjects.Count > 0)
+        // Check for Arcane Spheres first (progression objects)
+        var progressionSphere = FindArcaneSphere();
+        if (progressionSphere != null)
         {
-            _plugin.AddDebugLog($"[InDungeon] Found {lootObjects.Count} loot object(s), transitioning to DungeonLooting");
-            TransitionTo(BotState.DungeonLooting, $"Found {lootObjects.Count} loot object(s) on floor {dungeonFloor}...");
+            // Skip spheres that have failed to trigger combat/despawn
+            if (failedSpheres.Contains(progressionSphere.EntityId))
+            {
+                _plugin.AddDebugLog($"[Dungeon] Skipping failed Arcane Sphere (EntityId: {progressionSphere.EntityId})");
+            }
+            else
+            {
+                _plugin.AddDebugLog($"[Dungeon] Arcane Sphere found - processing as progression object");
+                ProcessLootTarget(progressionSphere);
+                return;
+            }
+        }
+
+        // Scan for chest/coffer/sack objects (loot)
+        _plugin.AddDebugLog($"[InDungeon] Scanning for chest objects on floor {dungeonFloor}...");
+        var chestObjects = Plugin.ObjectTable
+            .Where(obj =>
+            {
+                if (obj == null || obj.ObjectKind != ObjectKind.EventObj) return false;
+                var name = obj.Name.ToString();
+                if (string.IsNullOrEmpty(name)) return false;
+                var lower = name.ToLowerInvariant();
+                bool isChest = new[] { "treasure", "coffer", "chest", "sack" }.Any(l => lower.Contains(l));
+                bool isSphere = lower.Contains("arcane sphere");
+                return isChest && !isSphere && !attemptedCoffers.Contains(obj.EntityId);
+            })
+            .ToList();
+            
+        if (chestObjects.Count > 0)
+        {
+            _plugin.AddDebugLog($"[InDungeon] Found {chestObjects.Count} chest object(s), transitioning to DungeonLooting");
+            TransitionTo(BotState.DungeonLooting, $"Found {chestObjects.Count} chest object(s) on floor {dungeonFloor}...");
             return;
         }
         else
         {
-            _plugin.AddDebugLog($"[InDungeon] No loot objects found");
+            _plugin.AddDebugLog($"[InDungeon] No chest objects found");
+            
+            // Edge case: if we're at the flag location but no chests exist, retry digging
+            // This handles interrupted /gaction dig from combat aggro
+            if (CurrentLocation != null && CurrentLocation.TerritoryId == currentTerritory)
+            {
+                var player = Plugin.ObjectTable.LocalPlayer;
+                if (player != null)
+                {
+                    var flagPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+                    var distToFlag = Vector3.Distance(player.Position, flagPosition);
+                    if (distToFlag < 30f) // Within reasonable range of flag location
+                    {
+                        _plugin.AddDebugLog($"[InDungeon] At flag location ({distToFlag:F1}y) but no chests - digging was likely interrupted");
+                        
+                        bool currentlyInCombat = Plugin.Condition[ConditionFlag.InCombat];
+                        if (currentlyInCombat)
+                        {
+                            _plugin.AddDebugLog($"[InDungeon] In combat at flag location - will finish combat then retry digging");
+                            // Stay in combat state, combat end logic will handle retry
+                            return;
+                        }
+                        else
+                        {
+                            _plugin.AddDebugLog($"[InDungeon] Not in combat at flag location - retrying dig now");
+                            // Retry digging immediately
+                            CommandHelper.SendCommand("/gaction dig");
+                            _plugin.AddDebugLog($"[InDungeon] Dig command sent, waiting for chests to spawn...");
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         // Scan for progression objects
@@ -974,13 +1229,12 @@ public class StateManager : IDisposable
         if (!inDuty)
         {
             _plugin.AddDebugLog($"[Dungeon] Ejected during combat on floor {dungeonFloor}");
-            CommandHelper.SendCommand("/bmrai off");
             dungeonEntryProcessed = false;
             TransitionTo(BotState.Completed, $"Dungeon complete (wiped on floor {dungeonFloor})");
             return;
         }
 
-        // Don't interfere with targeting during combat - let BMR handle it
+        // During combat - let BMR handle targeting
         bool inCombat = Plugin.Condition[ConditionFlag.InCombat];
 
         if (inCombat)
@@ -989,18 +1243,233 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Combat ended - check for loot first before going back to InDungeon
-        _plugin.AddDebugLog($"[Dungeon] Combat ended on floor {dungeonFloor}");
+        // Combat ended - post-combat cleanup and return to preserved chest
+        _plugin.AddDebugLog($"[DungeonCombat] Combat ended on floor {dungeonFloor}");
         
+        // Clear failed spheres - combat success means spheres should now be targetable
+        if (failedSpheres.Count > 0)
+        {
+            _plugin.AddDebugLog($"[DungeonCombat] Clearing {failedSpheres.Count} failed Arcane Sphere(s) - combat ended successfully");
+            failedSpheres.Clear();
+            sphereInteractionTimes.Clear();
+        }
+
+        // Wait for enemies to despawn (2s grace period)
+        var combatEndElapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+        if (combatEndElapsed < 2.0)
+        {
+            StateDetail = $"Combat ended - waiting for despawn... ({combatEndElapsed:F1}/2.0s)";
+            return;
+        }
+
+        // Check if we were working on a specific chest before combat
+        if (currentCofferId != 0)
+        {
+            var preservedChest = Plugin.ObjectTable.FirstOrDefault(obj => obj != null && obj.EntityId == currentCofferId);
+            if (preservedChest != null && IsObjectTargetable(preservedChest))
+            {
+                _plugin.AddDebugLog($"[DungeonCombat] Returning to preserved chest '{preservedChest.Name}' (EntityId: {currentCofferId})");
+                TransitionTo(BotState.DungeonLooting, $"Returning to chest after combat on floor {dungeonFloor}...");
+                return;
+            }
+            else
+            {
+                _plugin.AddDebugLog($"[DungeonCombat] Preserved chest {currentCofferId} no longer available - clearing");
+                currentCofferId = 0;
+            }
+        }
+        
+        // Check for any loot objects
         var lootObjects = FindDungeonObjects(lootOnly: true);
         if (lootObjects.Count > 0)
         {
-            _plugin.AddDebugLog($"[Dungeon] Combat ended - {lootObjects.Count} loot object(s) found");
+            _plugin.AddDebugLog($"[DungeonCombat] Combat ended - {lootObjects.Count} loot object(s) found");
             TransitionTo(BotState.DungeonLooting, $"Looting after combat on floor {dungeonFloor}...");
             return;
         }
         
+        // No loot found - continue dungeon progression
+        _plugin.AddDebugLog($"[DungeonCombat] No loot after combat - continuing dungeon");
+        TransitionTo(BotState.InDungeon, $"No loot after combat - continuing dungeon on floor {dungeonFloor}...");
+        
+        // Edge case: if we're at flag location but no chests exist after combat, retry digging
+        // This handles interrupted /gaction dig from combat aggro
+        if (CurrentLocation != null && CurrentLocation.TerritoryId == Plugin.ClientState.TerritoryType)
+        {
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player != null)
+            {
+                var flagPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+                    var distToFlag = Vector3.Distance(player.Position, flagPosition);
+                if (distToFlag < 30f) // Within reasonable range of flag location
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Combat ended at flag location ({distToFlag:F1}y) with no chests - retrying dig");
+                    CommandHelper.SendCommand("/gaction dig");
+                    _plugin.AddDebugLog($"[Dungeon] Dig command sent after combat, waiting for chests to spawn...");
+                    return;
+                }
+            }
+        }
+        
         TransitionTo(BotState.InDungeon, $"Combat ended - scanning floor {dungeonFloor}...");
+    }
+
+    private void ProcessDungeonObjectives()
+    {
+        // Wait 5 seconds after combat before checking failed objects
+        var combatFreeTime = (DateTime.Now - lastCombatEndTime).TotalSeconds;
+        bool canCheckFailedObjects = combatFreeTime >= COMBAT_FREE_WAIT_SECONDS;
+        
+        // Clear all processed objects once 5 seconds after combat ends
+        if (combatFreeTime >= COMBAT_FREE_WAIT_SECONDS && (processedChests.Count > 0 || processedSpheres.Count > 0))
+        {
+            processedChests.Clear();
+            processedSpheres.Clear();
+            // Reset combat end time so this doesn't run again
+            lastCombatEndTime = DateTime.MinValue;
+            _plugin.AddDebugLog("[Objective] Cleared all processed objects 5s after combat ended");
+        }
+        
+        switch (currentObjective)
+        {
+            case DungeonObjective.ClearingChests:
+                var lootObjects = FindDungeonObjects(lootOnly: true);
+                if (lootObjects.Count > 0)
+                {
+                    // Use original ProcessLootTarget which has proper targeting
+                    ProcessLootTarget(lootObjects[0]);
+                }
+                else
+                {
+                    // No chests found - move to spheres
+                    currentObjective = DungeonObjective.ProcessingSpheres;
+                    _plugin.AddDebugLog("[Objective] No chests found - moving to sphere processing");
+                }
+                break;
+                
+            case DungeonObjective.ProcessingSpheres:
+                var allObjects = FindDungeonObjects(lootOnly: false);
+                var spheres = allObjects.Where(obj => 
+                {
+                    var name = obj.Name.ToString();
+                    return name.Contains("Arcane Sphere") || name.Contains("Door");
+                }).ToList();
+                
+                if (spheres.Count > 0 && canCheckFailedObjects)
+                {
+                    // Use original ProcessLootTarget which has proper targeting
+                    ProcessLootTarget(spheres[0]);
+                }
+                else
+                {
+                    // No spheres or can't check failed objects - move to exit
+                    currentObjective = DungeonObjective.HeadingToExit;
+                    _plugin.AddDebugLog("[Objective] No spheres found - moving to exit");
+                }
+                break;
+                
+            case DungeonObjective.HeadingToExit:
+                // Use existing exit logic in TickCompleted()
+                TransitionTo(BotState.Completed, "All objectives cleared - heading to exit");
+                break;
+        }
+    }
+    
+    private List<IGameObject> FindChestsInRadius(float radius)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return new List<IGameObject>();
+        
+        var chests = new List<IGameObject>();
+        var playerPos = player.Position;
+        var currentChestIds = new HashSet<uint>();
+        
+        foreach (var obj in Plugin.ObjectTable)
+        {
+            if (obj == null || obj.EntityId == 0) continue;
+            if (obj.ObjectKind != ObjectKind.EventObj) continue;
+            
+            var objName = obj.Name.ToString();
+            if (string.IsNullOrEmpty(objName)) continue;
+            
+            // Check for chest/coffer/sack names (using same logic as original)
+            var lower = objName.ToLowerInvariant();
+            bool isChest = new[] { "treasure", "coffer", "chest", "sack" }.Any(l => lower.Contains(l));
+            bool isSphere = lower.Contains("arcane sphere");
+            
+            if (isChest && !isSphere)
+            {
+                currentChestIds.Add(obj.EntityId);
+                var dist = Vector3.Distance(playerPos, obj.Position);
+                if (dist <= radius && !processedChests.Contains(obj.EntityId))
+                {
+                    chests.Add(obj);
+                }
+            }
+        }
+        
+        // Note: processedChests are only added when chests actually despawn
+        // This prevents re-targeting chests that are already opened/being processed
+        
+        return chests;
+    }
+    
+    private List<IGameObject> FindSpheresInRadius(float radius)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return new List<IGameObject>();
+        
+        var spheres = new List<IGameObject>();
+        var playerPos = player.Position;
+        
+        foreach (var obj in Plugin.ObjectTable)
+        {
+            if (obj == null || obj.EntityId == 0) continue;
+            
+            var objName = obj.Name.TextValue;
+            if (string.IsNullOrEmpty(objName)) continue;
+            
+            // Check for sphere/door names
+            bool isSphere = objName.Contains("Arcane Sphere");
+            bool isDoor = objName.Contains("Door");
+            
+            if ((isSphere || isDoor) && !failedObjects.Contains(obj.EntityId))
+            {
+                var dist = Vector3.Distance(playerPos, obj.Position);
+                if (dist <= radius && !processedSpheres.Contains(obj.EntityId))
+                {
+                    spheres.Add(obj);
+                }
+            }
+        }
+        
+        return spheres;
+    }
+    
+    private void ProcessChests(List<IGameObject> chests)
+    {
+        // Use existing chest processing logic - just pick the nearest one
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return;
+        
+        var nearestChest = chests.OrderBy(c => Vector3.Distance(player.Position, c.Position)).FirstOrDefault();
+        if (nearestChest != null)
+        {
+            ProcessLootTarget(nearestChest);
+        }
+    }
+    
+    private void ProcessSpheres(List<IGameObject> spheres)
+    {
+        // Use existing sphere processing logic
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return;
+        
+        var nearestSphere = spheres.OrderBy(s => Vector3.Distance(player.Position, s.Position)).FirstOrDefault();
+        if (nearestSphere != null)
+        {
+            ProcessLootTarget(nearestSphere);
+        }
     }
 
     private void TickDungeonLooting()
@@ -1021,20 +1490,24 @@ public class StateManager : IDisposable
         if (!inDuty)
         {
             _plugin.AddDebugLog($"[Dungeon] Ejected during looting on floor {dungeonFloor}");
-            CommandHelper.SendCommand("/bmrai off");
             dungeonEntryProcessed = false;
             TransitionTo(BotState.Completed, $"Dungeon complete (floor {dungeonFloor})");
             return;
         }
 
-        // If combat starts during looting, switch to combat and reset attempted coffers
+        // Do not interact during combat - transition to DungeonCombat
         if (Plugin.Condition[ConditionFlag.InCombat])
         {
-            _plugin.AddDebugLog($"[DungeonLooting] Combat started - resetting attempted coffers ({attemptedCoffers.Count})");
-            attemptedCoffers.Clear();
-            cofferNavigationStart = DateTime.MinValue;
-            if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
-            TransitionTo(BotState.DungeonCombat, $"Combat during looting on floor {dungeonFloor}!");
+            if (autoMoveActive) { CommandHelper.SendCommand("/automove off"); autoMoveActive = false; }
+            if (currentCofferId != 0)
+            {
+                _plugin.AddDebugLog($"[DungeonLooting] Combat started - preserving chest {currentCofferId}, transitioning to DungeonCombat");
+            }
+            else
+            {
+                _plugin.AddDebugLog($"[DungeonLooting] Combat started, transitioning to DungeonCombat");
+            }
+            TransitionTo(BotState.DungeonCombat, $"Combat on floor {dungeonFloor}...");
             return;
         }
 
@@ -1042,23 +1515,19 @@ public class StateManager : IDisposable
         if (TrySkipCardGame())
             return;
 
-        // Find loot objects, excluding ones we've already attempted
-        var lootObjects = FindDungeonObjects(lootOnly: true)
-            .Where(obj => !attemptedCoffers.Contains(obj.EntityId))
-            .ToList();
-        
-        if (lootObjects.Count == 0)
-        {
-            // No more loot to attempt - go back to InDungeon to find progression
-            if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
-            _plugin.AddDebugLog($"[DungeonLooting] All loot attempted on floor {dungeonFloor} (attempted {attemptedCoffers.Count} coffer(s))");
-            attemptedCoffers.Clear(); // Reset for next floor
-            cofferNavigationStart = DateTime.MinValue;
-            TransitionTo(BotState.InDungeon, $"Loot done - looking for progression on floor {dungeonFloor}...");
-            return;
-        }
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null) return;
 
-        var target = lootObjects[0]; // Nearest unattempted loot object
+        // NEW OBJECTIVE SYSTEM: Sequential processing with priority hierarchy
+        // Only process objectives every 3 seconds to prevent spam
+        if ((DateTime.Now - lastDungeonInteractionTime).TotalSeconds >= 3.0)
+        {
+            ProcessDungeonObjectives();
+        }
+    }
+
+    private void ProcessLootTarget(IGameObject target)
+    {
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return;
 
@@ -1066,8 +1535,24 @@ public class StateManager : IDisposable
         var targetName = target.Name.ToString();
         var targetId = target.EntityId;
 
+        _plugin.AddDebugLog($"[DungeonLooting] Processing target '{targetName}' at {dist:F1}y (EntityId: {targetId})");
+
+        // Validate targetability (quick check)
+        if (!IsObjectTargetable(target))
+        {
+            _plugin.AddDebugLog($"[DungeonLooting] '{targetName}' not targetable - skipping");
+            return; // Will try next object on next tick
+        }
+
         // Always set target
         Plugin.TargetManager.Target = target;
+        
+        // Track which chest we're working on (preserved during combat)
+        if (currentCofferId != targetId)
+        {
+            currentCofferId = targetId;
+            _plugin.AddDebugLog($"[DungeonLooting] Now working on chest '{targetName}' (EntityId: {targetId})");
+        }
         
         // Start navigation timer if not already started for this coffer
         if (cofferNavigationStart == DateTime.MinValue)
@@ -1076,66 +1561,250 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[DungeonLooting] Starting navigation to '{targetName}' (EntityId: {targetId})");
         }
 
-        // Check if we've been trying to reach this coffer for too long (30s timeout)
+        // Check timeout (safety fallback)
         var navigationTime = (DateTime.Now - cofferNavigationStart).TotalSeconds;
         if (navigationTime > 30.0)
         {
-            _plugin.AddDebugLog($"[DungeonLooting] Timeout reaching '{targetName}' after {navigationTime:F0}s - marking as attempted");
-            attemptedCoffers.Add(targetId);
+            _plugin.AddDebugLog($"[DungeonLooting] Timeout reaching '{targetName}' after {navigationTime:F0}s - resetting");
             cofferNavigationStart = DateTime.MinValue;
-            if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
-            return; // Try next coffer
+            if (autoMoveActive) { CommandHelper.SendCommand("/automove off"); autoMoveActive = false; }
+            return;
         }
         
-        if (dist > 3f)
+        // NAVIGATION LOGIC: Use vnavmesh for distant objects, lockon+automove for close range
+        if (dist > 2f)
         {
-            // Use vnavmesh for all coffers to ensure we actually reach them
-            if (!autoMoveActive)
+            // Use vnavmesh for distant navigation (>5y)
+            if (dist > 5f)
             {
-                _plugin.AddDebugLog($"[DungeonLooting] Navigating to '{targetName}' at {dist:F1}y - vnavmesh");
-                _plugin.NavigationService.MoveToPosition(target.Position);
-                autoMoveActive = true;
+                // Stop any existing automove before starting vnavmesh navigation
+                if (autoMoveActive) { CommandHelper.SendCommand("/automove off"); autoMoveActive = false; }
+                
+                // Use vnavmesh to navigate to distant objects
+                if (_plugin.NavigationService.State != NavigationState.Flying)
+                {
+                    _plugin.AddDebugLog($"[DungeonLooting] Navigating to distant '{targetName}' at {dist:F1}y via vnavmesh");
+                    _plugin.NavigationService.MoveToPosition(target.Position);
+                }
+                StateDetail = $"Navigating to '{targetName}' ({dist:F1}y, {navigationTime:F0}s)...";
             }
-            
-            // After navigating for 2s, check if we're close enough to stop
-            if (navigationTime > 2.0 && dist < 5f)
+            else
             {
-                _plugin.AddDebugLog($"[DungeonLooting] Close enough to '{targetName}' ({dist:F1}y) - stopping navigation");
-                _plugin.NavigationService.StopNavigation();
-                autoMoveActive = false;
+                // Use lockon+automove for close range (2-5y)
+                if (!autoMoveActive)
+                {
+                    _plugin.AddDebugLog($"[DungeonLooting] Targeting '{targetName}' at {dist:F1}y - lockon+automove");
+                    GameHelpers.LockOnAndAutoMove();
+                    autoMoveActive = true;
+                }
+                StateDetail = $"Moving to '{targetName}' ({dist:F1}y, {navigationTime:F0}s)...";
             }
-            
-            StateDetail = $"Navigating to '{targetName}' ({dist:F1}y, {navigationTime:F0}s)...";
         }
         else
         {
-            // In range - stop movement and interact
+            // Within interaction range - stop navigation and interact
             if (autoMoveActive)
             {
-                _plugin.NavigationService.StopNavigation();
+                CommandHelper.SendCommand("/automove off");
                 autoMoveActive = false;
                 _plugin.AddDebugLog($"[DungeonLooting] Reached '{targetName}' - attempting interaction");
             }
-
-            // Interact every ~1 second
-            if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 1.0)
+            
+            // Stop vnavmesh navigation if it was active
+            if (_plugin.NavigationService.State == NavigationState.Flying)
             {
-                lastInteractionTime = DateTime.Now;
-                var interacted = GameHelpers.InteractWithObject(target);
-                _plugin.AddDebugLog($"[DungeonLooting] Interacting with '{targetName}' - returned: {interacted}");
+                _plugin.NavigationService.StopNavigation();
+                _plugin.AddDebugLog($"[DungeonLooting] Stopped vnavmesh navigation - reached '{targetName}'");
+            }
+
+            // Interact every 2 seconds
+            if ((DateTime.Now - lastDungeonInteractionTime).TotalSeconds >= 2.0)
+            {
+                lastDungeonInteractionTime = DateTime.Now;
                 
-                // After interaction attempt, mark as attempted and move to next
-                // The interaction might trigger combat or loot, either way we've tried this one
-                if (navigationTime > 3.0) // Give it at least 3s of interaction attempts
+                // Route to targeting method
+                switch (_plugin.Configuration.SelectedTargetingMethod)
                 {
-                    _plugin.AddDebugLog($"[DungeonLooting] Marking '{targetName}' as attempted after {navigationTime:F0}s");
-                    attemptedCoffers.Add(targetId);
-                    cofferNavigationStart = DateTime.MinValue;
+                    case TargetingMethod.Method2_IsTargetable:
+                        InteractMethod2_IsTargetable(target, targetName, targetId);
+                        break;
+                    case TargetingMethod.Method3_ChatValidation:
+                        InteractMethod3_ChatValidation(target, targetName, targetId);
+                        break;
+                    case TargetingMethod.Method1_Current:
+                    default:
+                        InteractMethod1_Current(target, targetName, targetId);
+                        break;
                 }
+            }
+            
+            StateDetail = $"Interacting with '{targetName}'...";
+        }
+    }
+
+    // ─── Targeting Method 1: Current (Chat + TargetManager + vnavmoveto) ───
+    private void InteractMethod1_Current(IGameObject target, string targetName, uint targetId)
+    {
+        string targetCommand = GetTargetCommand(targetName);
+        
+        SendChatCommand(targetCommand);
+        _plugin.AddDebugLog($"[Method1] Sent {targetCommand} via chat");
+        
+        Plugin.TargetManager.Target = target;
+        _plugin.AddDebugLog($"[Method1] Set target to '{targetName}' via TargetManager");
+        
+        var pos = target.Position;
+        SendChatCommand($"/vnav moveto {CommandHelper.FormatVector(pos)}");
+        _plugin.AddDebugLog($"[Method1] Sent vnavmoveto to {CommandHelper.FormatVector(pos)}");
+        
+        TriggerControllerModeInteract();
+        _plugin.AddDebugLog($"[Method1] Fired controller mode interact sequence");
+        
+        PostInteractionTracking(targetName, targetId);
+    }
+
+    // ─── Targeting Method 2: IsTargetable Filter (AutoDuty pattern) ───
+    private void InteractMethod2_IsTargetable(IGameObject target, string targetName, uint targetId)
+    {
+        // Core Method 2 logic: check IsTargetable BEFORE every interaction
+        if (!target.IsTargetable)
+        {
+            _plugin.AddDebugLog($"[Method2] '{targetName}' is NOT targetable (ghost/despawned) - skipping");
+            cofferNavigationStart = DateTime.MinValue;
+            currentCofferId = 0;
+            return;
+        }
+        
+        _plugin.AddDebugLog($"[Method2] '{targetName}' IsTargetable=true - proceeding");
+        
+        string targetCommand = GetTargetCommand(targetName);
+        
+        SendChatCommand(targetCommand);
+        Plugin.TargetManager.Target = target;
+        
+        var pos = target.Position;
+        SendChatCommand($"/vnav moveto {CommandHelper.FormatVector(pos)}");
+        _plugin.AddDebugLog($"[Method2] Targeting + vnavmoveto to {CommandHelper.FormatVector(pos)}");
+        
+        TriggerControllerModeInteract();
+        _plugin.AddDebugLog($"[Method2] Fired controller mode interact sequence");
+        
+        PostInteractionTracking(targetName, targetId);
+    }
+
+    // ─── Targeting Method 3: Chat Command Validation ───
+    private void InteractMethod3_ChatValidation(IGameObject target, string targetName, uint targetId)
+    {
+        string targetCommand = GetTargetCommand(targetName);
+        
+        // Step 1: Clear current target
+        Plugin.TargetManager.Target = null;
+        
+        // Step 2: Send chat target command
+        SendChatCommand(targetCommand);
+        _plugin.AddDebugLog($"[Method3] Sent {targetCommand} via chat");
+        
+        // Step 3: Validate target was actually acquired on target bar
+        var currentTarget = Plugin.TargetManager.Target;
+        if (currentTarget == null)
+        {
+            _plugin.AddDebugLog($"[Method3] No target acquired after {targetCommand} - object doesn't exist, skipping");
+            cofferNavigationStart = DateTime.MinValue;
+            currentCofferId = 0;
+            return;
+        }
+        
+        // Verify the acquired target matches what we expect
+        var acquiredName = currentTarget.Name.ToString().ToLowerInvariant();
+        var expectedPartial = targetName.ToLowerInvariant();
+        bool nameMatches = acquiredName.Contains("coffer") || acquiredName.Contains("chest") || 
+                          acquiredName.Contains("sack") || acquiredName.Contains("arcane") || 
+                          acquiredName.Contains("sluice") || acquiredName.Contains("door");
+        
+        if (!nameMatches)
+        {
+            _plugin.AddDebugLog($"[Method3] Target acquired '{currentTarget.Name}' doesn't match expected type - skipping");
+            Plugin.TargetManager.Target = null;
+            cofferNavigationStart = DateTime.MinValue;
+            currentCofferId = 0;
+            return;
+        }
+        
+        _plugin.AddDebugLog($"[Method3] Target validated: '{currentTarget.Name}' (EntityId: {currentTarget.EntityId})");
+        
+        // Use validated target's position for navigation
+        var pos = currentTarget.Position;
+        SendChatCommand($"/vnav moveto {CommandHelper.FormatVector(pos)}");
+        _plugin.AddDebugLog($"[Method3] Sent vnavmoveto to {CommandHelper.FormatVector(pos)}");
+        
+        TriggerControllerModeInteract();
+        _plugin.AddDebugLog($"[Method3] Fired controller mode interact sequence");
+        
+        PostInteractionTracking(targetName, targetId);
+    }
+
+    // ─── Shared Helpers for Targeting Methods ───
+    private string GetTargetCommand(string targetName)
+    {
+        return targetName.ToLowerInvariant() switch
+        {
+            var name when name.Contains("coffer") => "/target coffer",
+            var name when name.Contains("sack") => "/target sack",
+            var name when name.Contains("chest") => "/target chest",
+            var name when name.Contains("arcane") => "/target arcane",
+            var name when name.Contains("sluice") => "/target sluice",
+            _ => $"/target {targetName}"
+        };
+    }
+
+    private void PostInteractionTracking(string targetName, uint targetId)
+    {
+        cofferNavigationStart = DateTime.MinValue;
+        
+        if (targetName.Contains("Treasure Coffer") || targetName.Contains("Treasure Chest") || targetName.Contains("Treasure Sack"))
+        {
+            Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                if (!processedChests.Contains(targetId))
+                {
+                    processedChests.Add(targetId);
+                    _plugin.AddDebugLog($"[Interaction] Chest marked as processed after delay (EntityId: {targetId})");
+                }
+            });
+        }
+        
+        if (targetName.Contains("Arcane Sphere"))
+        {
+            processedSpheres.Add(targetId);
+            
+            if (!sphereInteractionTimes.ContainsKey(targetId))
+            {
+                sphereInteractionTimes[targetId] = DateTime.Now;
+                _plugin.AddDebugLog($"[Interaction] First Arcane Sphere interaction recorded (EntityId: {targetId})");
+            }
+            else
+            {
+                var interactionCount = sphereInteractionTimes.Count(t => t.Key == targetId);
+                _plugin.AddDebugLog($"[Interaction] Arcane Sphere interaction #{interactionCount + 1} (EntityId: {targetId})");
                 
-                StateDetail = $"Interacting with '{targetName}'...";
+                if (interactionCount >= 2)
+                {
+                    _plugin.AddDebugLog($"[Interaction] Arcane Sphere failed to trigger combat after 3 interactions - marking as failed");
+                    failedObjects.Add(targetId);
+                    cofferNavigationStart = DateTime.MinValue;
+                    currentCofferId = 0;
+                    return;
+                }
             }
         }
+        else if (targetName.Contains("Door"))
+        {
+            processedSpheres.Add(targetId);
+            _plugin.AddDebugLog($"[Interaction] Door marked as processed (EntityId: {targetId})");
+        }
+        
+        _plugin.AddDebugLog($"[Interaction] Interaction sent - waiting for combat or despawn");
     }
 
     private void TickDungeonProgressing()
@@ -1162,20 +1831,16 @@ public class StateManager : IDisposable
         if (!inDuty)
         {
             _plugin.AddDebugLog($"[Dungeon] Ejected during progression (wrong door?) on floor {dungeonFloor}");
-            CommandHelper.SendCommand("/bmrai off");
             dungeonEntryProcessed = false;
             TransitionTo(BotState.Completed, $"Dungeon complete (floor {dungeonFloor})");
             return;
         }
 
-        // If combat starts, switch to combat and reset attempted coffers
+        // Do not interact during combat - wait for combat to end
         if (Plugin.Condition[ConditionFlag.InCombat])
         {
-            _plugin.AddDebugLog($"[DungeonProgressing] Combat started - resetting attempted coffers ({attemptedCoffers.Count})");
-            attemptedCoffers.Clear();
-            cofferNavigationStart = DateTime.MinValue;
-            if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
-            TransitionTo(BotState.DungeonCombat, $"Combat during progression on floor {dungeonFloor}!");
+            if (autoMoveActive) { CommandHelper.SendCommand("/automove off"); autoMoveActive = false; }
+            StateDetail = $"In combat on floor {dungeonFloor} - waiting...";
             return;
         }
 
@@ -1238,7 +1903,8 @@ public class StateManager : IDisposable
 
         Plugin.TargetManager.Target = target;
         
-        if (dist > 3f)
+        // INTERACTION RANGE: 2y
+        if (dist > 2f)
         {
             // Distance-based navigation: <10y lockon+automove, >10y vnavmesh
             if (dist < 10f)
@@ -1265,11 +1931,11 @@ public class StateManager : IDisposable
         }
         else
         {
-            // In range - stop movement and interact
+            // Within interaction range - stop movement and interact
             if (autoMoveActive)
             {
                 if (dist < 10f)
-                    GameHelpers.StopAutoMove();
+                    CommandHelper.SendCommand("/automove off");
                 else
                     _plugin.NavigationService.StopNavigation();
                 autoMoveActive = false;
@@ -1330,6 +1996,15 @@ public class StateManager : IDisposable
                     dungeonFloor = 0;
                     excludedDoorEntityId = null;
                     doorStuckStart = DateTime.MinValue;
+                    
+                    // Reset objective tracking for new dungeon
+                    currentObjective = DungeonObjective.ClearingChests;
+                    processedChests.Clear();
+                    processedSpheres.Clear();
+                    failedObjects.Clear();
+                    sphereInteractionTimes.Clear();
+                    _plugin.AddDebugLog("[Objective] New dungeon entry - all objectives reset");
+                    
                     TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
                     return;
                 }
@@ -1338,6 +2013,13 @@ public class StateManager : IDisposable
 
                 if (portal != null)
                 {
+                    // Double-check portal is still targetable before attempting to move
+                    if (!IsObjectTargetable(portal))
+                    {
+                        _plugin.AddDebugLog($"[Portal] Portal became untargetable - waiting...");
+                        return;
+                    }
+                    
                     // Target the portal
                     Plugin.TargetManager.Target = portal;
                     
@@ -1373,16 +2055,7 @@ public class StateManager : IDisposable
                         GameHelpers.InteractWithObject(portal);
                     }
                 }
-                else
-                {
-                    // No portal object found - try /target as fallback
-                    if ((int)sinceStart % 4 == 0 && (int)sinceStart > 0)
-                    {
-                        CommandHelper.SendCommand("/target \"Teleportation Portal\"");
-                        _plugin.AddDebugLog("[Portal] Trying /target fallback...");
-                    }
-                }
-                
+                                
                 StateDetail = $"Searching for portal... ({sinceStart:F0}/15s)";
                 return;
             }
@@ -1454,24 +2127,33 @@ public class StateManager : IDisposable
     private bool IsObjectTargetable(IGameObject obj)
     {
         // Verify object can actually be targeted (not a ghost object)
+        // Quick check without blocking delays
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            _plugin.AddDebugLog($"[ObjectCheck] Skipping targeting check for '{obj.Name}' during combat");
+            return true;
+        }
+        
         try
         {
             var previousTarget = Plugin.TargetManager.Target;
             Plugin.TargetManager.Target = obj;
             var canTarget = Plugin.TargetManager.Target?.EntityId == obj.EntityId;
-            Plugin.TargetManager.Target = previousTarget; // Restore previous target
+            Plugin.TargetManager.Target = previousTarget;
             
-            if (!canTarget)
+            if (canTarget)
             {
-                _plugin.AddDebugLog($"[ObjectCheck] '{obj.Name}' at {obj.Position} is NOT targetable (ghost object)");
+                _plugin.AddDebugLog($"[ObjectCheck] '{obj.Name}' targetable");
+                return true;
             }
-            
-            return canTarget;
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            _plugin.AddDebugLog($"[ObjectCheck] Exception: {ex.Message}");
         }
+        
+        _plugin.AddDebugLog($"[ObjectCheck] '{obj.Name}' not targetable - skipping");
+        return false;
     }
 
     private IGameObject? FindArcaneSphere()
@@ -1483,8 +2165,7 @@ public class StateManager : IDisposable
             .FirstOrDefault(obj =>
                 obj != null &&
                 obj.ObjectKind == ObjectKind.EventObj &&
-                obj.Name.ToString().Contains("Arcane Sphere", StringComparison.OrdinalIgnoreCase) &&
-                Vector3.Distance(player.Position, obj.Position) <= 30f);
+                obj.Name.ToString().Contains("Arcane Sphere", StringComparison.OrdinalIgnoreCase));
     }
 
     private List<IGameObject> FindDungeonObjects(bool lootOnly)
@@ -1492,12 +2173,30 @@ public class StateManager : IDisposable
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return new List<IGameObject>();
 
+        _plugin.AddDebugLog($"[Dungeon] FindDungeonObjects(lootOnly={lootOnly}) - scanning all objects...");
+        
         // Priority: Arcane Sphere, then loot (treasure/coffer/chest/sack), then progression (doors/gates)
         var lootNames = new[] { "treasure", "coffer", "chest", "sack" };
         var sphereName = "arcane sphere";
         var doorNames = new[] { "door", "gate", "sphere" }; // Partial matching for doors (Sluice Gate, etc)
 
-        // First pass: find all loot objects within 50y for door priority check
+        // Log all EventObj objects for debugging
+        var allEventObjs = Plugin.ObjectTable
+            .Where(obj => obj != null && obj.ObjectKind == ObjectKind.EventObj)
+            .ToList();
+        
+        _plugin.AddDebugLog($"[Dungeon] Found {allEventObjs.Count} EventObj objects total");
+        foreach (var obj in allEventObjs.Take(10)) // Limit to first 10 to avoid spam
+        {
+            var dist = Vector3.Distance(player.Position, obj.Position);
+            _plugin.AddDebugLog($"[Dungeon]   EventObj: '{obj.Name}' at {dist:F1}y (EntityId: {obj.EntityId})");
+        }
+        if (allEventObjs.Count > 10)
+        {
+            _plugin.AddDebugLog($"[Dungeon]   ... and {allEventObjs.Count - 10} more EventObj objects");
+        }
+
+        // First pass: find all UNOPENED loot objects within 50y for door priority check
         var allLoot = Plugin.ObjectTable
             .Where(obj =>
             {
@@ -1508,7 +2207,11 @@ public class StateManager : IDisposable
                 if (dist > 50f) return false; // Check within 50y for door priority
                 
                 var lower = name.ToLowerInvariant();
-                return lower.Contains(sphereName) || lootNames.Any(l => lower.Contains(l));
+                bool isLoot = lower.Contains(sphereName) || lootNames.Any(l => lower.Contains(l));
+                if (!isLoot) return false;
+                
+                // Skip loot we've already attempted (opened/empty chests)
+                return !attemptedCoffers.Contains(obj.EntityId);
             })
             .ToList();
 
@@ -1531,7 +2234,7 @@ public class StateManager : IDisposable
                 var name = obj.Name.ToString();
                 if (string.IsNullOrEmpty(name)) return false;
                 var dist = Vector3.Distance(player.Position, obj.Position);
-                if (dist > 30f) return false; // 30y for interaction range
+                if (dist > 50f) return false; // 50y interaction range
 
                 // Only EventObj type (interactive dungeon objects)
                 if (obj.ObjectKind != ObjectKind.EventObj) return false;
@@ -1563,7 +2266,14 @@ public class StateManager : IDisposable
 
                 return true;
             })
-            .Where(obj => IsObjectTargetable(obj)) // Filter out ghost objects
+            .Where(obj => 
+            {
+                // Method 2: Use direct IsTargetable property (AutoDuty pattern - lightweight)
+                if (_plugin.Configuration.SelectedTargetingMethod == TargetingMethod.Method2_IsTargetable)
+                    return obj.IsTargetable;
+                // Method 1 & 3: Use TargetManager-based check
+                return IsObjectTargetable(obj);
+            })
             .OrderBy(obj =>
             {
                 // Priority order: Arcane Sphere first, then by distance
@@ -1666,5 +2376,48 @@ public class StateManager : IDisposable
     {
         CurrentLocation = location;
         _plugin.AddDebugLog($"Location set: {location.ZoneName} ({location.X:F1}, {location.Y:F1}, {location.Z:F1})");
+    }
+
+    /// <summary>
+    /// Controller mode interaction sequence - exact copy of TriggerSelectIconStringClick from GameHelpers.cs.
+    /// Uses numpad2 to switch to controller mode, then numpad0 twice to interact.
+    /// </summary>
+    private static async void TriggerControllerModeInteract()
+    {
+        try
+        {
+            // Controller mode sequence: numpad2, then numpad0 twice
+            // Exact copy from GameHelpers.TriggerSelectIconStringClick
+            GameHelpers.KeyPress(VirtualKey.NUMPAD2);
+            
+            await System.Threading.Tasks.Task.Delay(200);
+            
+            GameHelpers.KeyPress(VirtualKey.NUMPAD0);
+            
+            await System.Threading.Tasks.Task.Delay(200);
+            
+            GameHelpers.KeyPress(VirtualKey.NUMPAD0);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[DungeonLooting] Controller mode interact failed: {ex.Message}");
+        }
+    }
+
+    private static unsafe void SendChatCommand(string command)
+    {
+        try
+        {
+            var uiModule = UIModule.Instance();
+            if (uiModule == null) return;
+            
+            var bytes = Encoding.UTF8.GetBytes(command);
+            var utf8String = Utf8String.FromSequence(bytes);
+            uiModule->ProcessChatBoxEntry(utf8String, nint.Zero);
+        }
+        catch (Exception ex)
+        {
+            // Log error if needed, but don't crash
+        }
     }
 }
