@@ -1929,7 +1929,6 @@ public class StateManager : IDisposable
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null) return;
 
-        var dist = Vector3.Distance(player.Position, target.Position);
         var targetName = target.Name.ToString();
 
         // Track stuck time on current door
@@ -1950,55 +1949,9 @@ public class StateManager : IDisposable
             return; // Next tick will pick a different object
         }
 
-        Plugin.TargetManager.Target = target;
-        
-        // INTERACTION RANGE: 2y
-        if (dist > 2f)
-        {
-            // Distance-based navigation: <10y lockon+automove, >10y vnavmesh
-            if (dist < 10f)
-            {
-                // Close range - use lockon+automove
-                if (!autoMoveActive)
-                {
-                    _plugin.AddDebugLog($"[Dungeon] Approaching progression '{targetName}' at {dist:F1}y - lockon+automove");
-                    GameHelpers.LockOnAndAutoMove();
-                    autoMoveActive = true;
-                }
-            }
-            else
-            {
-                // Long range - use vnavmesh
-                if (!autoMoveActive)
-                {
-                    _plugin.AddDebugLog($"[Dungeon] Approaching progression '{targetName}' at {dist:F1}y - vnavmesh");
-                    _plugin.NavigationService.MoveToPosition(target.Position);
-                    autoMoveActive = true;
-                }
-            }
-            StateDetail = $"Approaching '{targetName}' ({dist:F1}y)...";
-        }
-        else
-        {
-            // Within interaction range - stop movement and interact
-            if (autoMoveActive)
-            {
-                if (dist < 10f)
-                    CommandHelper.SendCommand("/automove off");
-                else
-                    _plugin.NavigationService.StopNavigation();
-                autoMoveActive = false;
-            }
-
-            // Interact every ~1 second
-            if ((DateTime.Now - lastInteractionTime).TotalSeconds >= 1.0)
-            {
-                lastInteractionTime = DateTime.Now;
-                GameHelpers.InteractWithObject(target);
-                _plugin.AddDebugLog($"[Dungeon] Interacting with '{targetName}' ({stuckSeconds:F0}s)");
-                StateDetail = $"Interacting with '{targetName}' ({stuckSeconds:F0}s)...";
-            }
-        }
+        // Use ProcessLootTarget for multi-method interaction cycling
+        // (InteractWithObject + /interact alternating, 3-phase approach, stuck detection)
+        ProcessLootTarget(target);
     }
 
     private void TickCompleted()
