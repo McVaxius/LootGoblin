@@ -594,7 +594,16 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Try mounting up to 3 times with 2s delays
+        // Grace period: wait 3s after entering Mounting state before first attempt
+        // This gives time for post-teleport animations and loading to complete
+        var sinceStateStart = (DateTime.Now - stateStartTime).TotalSeconds;
+        if (sinceStateStart < 3.0)
+        {
+            StateDetail = $"Preparing to mount ({3 - (int)sinceStateStart}s)...";
+            return;
+        }
+
+        // Try mounting up to 5 times with 3s delays
         if (mountAttemptStart == DateTime.MinValue)
         {
             mountAttemptStart = DateTime.Now;
@@ -603,20 +612,28 @@ public class StateManager : IDisposable
 
         var mountElapsed = (DateTime.Now - mountAttemptStart).TotalSeconds;
 
-        if (mountAttempts < 3)
+        if (mountAttempts < 5)
         {
-            if (mountElapsed >= mountAttempts * 2.0) // 0s, 2s, 4s
+            if (mountElapsed >= mountAttempts * 3.0) // 0s, 3s, 6s, 9s, 12s
             {
                 mountAttempts++;
-                _plugin.AddDebugLog($"[Mounting] Attempt {mountAttempts}/3 to mount");
+
+                // Log condition flags to diagnose mount failures
+                var condition = Plugin.Condition;
+                var casting = condition[ConditionFlag.Casting];
+                var occupied = condition[ConditionFlag.Occupied];
+                var betweenAreas = condition[ConditionFlag.BetweenAreas] || condition[ConditionFlag.BetweenAreas51];
+                var mounting = condition[ConditionFlag.Mounting71];
+                _plugin.AddDebugLog($"[Mounting] Attempt {mountAttempts}/5 — Casting={casting} Occupied={occupied} BetweenAreas={betweenAreas} Mounting71={mounting}");
+
                 nav.MountUp();
             }
-            StateDetail = $"Mounting (attempt {mountAttempts}/3)...";
+            StateDetail = $"Mounting (attempt {mountAttempts}/5)...";
             return;
         }
         else
         {
-            _plugin.AddDebugLog($"[Mounting] Failed to mount after 3 attempts - resetting bot");
+            _plugin.AddDebugLog($"[Mounting] Failed to mount after 5 attempts - resetting bot");
             mountAttemptStart = DateTime.MinValue;
             mountAttempts = 0;
             TransitionTo(BotState.Idle, "Mount failed - please restart");

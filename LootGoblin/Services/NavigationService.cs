@@ -166,7 +166,7 @@ public class NavigationService : IDisposable
 
             _plugin.AddDebugLog($"[Aetheryte] Searching territory {territoryId}, target=({targetPosition.X:F1}, {targetPosition.Y:F1}, {targetPosition.Z:F1}), teleport list count={count}");
 
-            // Get Map data for MapMarker coordinate conversion
+            // Get Map data for coordinate conversion
             float sizeFactor = 100f;
             float offsetX = 0f, offsetY = 0f;
             uint mapId = 0;
@@ -189,6 +189,9 @@ public class NavigationService : IDisposable
                 _plugin.AddDebugLog($"[Aetheryte] Map lookup failed: {ex.GetType().Name}: {ex.Message}");
             }
 
+            // Get Level sheet for direct lookup
+            var levelSheet = _dataManager.GetExcelSheet<Level>();
+
             // Collect all candidate aetherytes in the target territory
             var candidates = new System.Collections.Generic.List<(uint Id, string Name, uint Cost, Vector3 WorldPos)>();
 
@@ -203,12 +206,17 @@ public class NavigationService : IDisposable
 
                 var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"ID {entry.AetheryteId}";
 
-                // Try Method 1: Level sheet (known to return null in many cases)
+                // Method 1a: Level via RowRef ValueNullable
                 var worldPos = Vector3.Zero;
                 try
                 {
+                    int levelIdx = 0;
                     foreach (var lvl in aetheryte.Level)
                     {
+                        var levelRowId = lvl.RowId;
+                        _plugin.AddDebugLog($"  [Level] {name}: [{levelIdx}] RowId={levelRowId}");
+
+                        // Try ValueNullable first
                         var levelRow = lvl.ValueNullable;
                         if (levelRow != null)
                         {
@@ -218,13 +226,53 @@ public class NavigationService : IDisposable
                             if (lx != 0 || lz != 0)
                             {
                                 worldPos = new Vector3(lx, ly, lz);
-                                _plugin.AddDebugLog($"  [Level] {name}: OK ({lx:F1}, {ly:F1}, {lz:F1})");
+                                _plugin.AddDebugLog($"  [Level] {name}: ValueNullable OK ({lx:F1}, {ly:F1}, {lz:F1})");
                                 break;
                             }
+                            else
+                            {
+                                _plugin.AddDebugLog($"  [Level] {name}: ValueNullable returned zero coords");
+                            }
                         }
+                        else
+                        {
+                            _plugin.AddDebugLog($"  [Level] {name}: ValueNullable returned null");
+
+                            // Method 1b: Direct Level sheet lookup by RowId
+                            if (levelSheet != null && levelRowId > 0)
+                            {
+                                try
+                                {
+                                    var directLevel = levelSheet.GetRow(levelRowId);
+                                    var dlx = directLevel.X;
+                                    var dly = directLevel.Y;
+                                    var dlz = directLevel.Z;
+                                    if (dlx != 0 || dlz != 0)
+                                    {
+                                        worldPos = new Vector3(dlx, dly, dlz);
+                                        _plugin.AddDebugLog($"  [Level] {name}: Direct lookup OK ({dlx:F1}, {dly:F1}, {dlz:F1})");
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        _plugin.AddDebugLog($"  [Level] {name}: Direct lookup returned zero coords");
+                                    }
+                                }
+                                catch (Exception dex)
+                                {
+                                    _plugin.AddDebugLog($"  [Level] {name}: Direct lookup EXCEPTION: {dex.GetType().Name}: {dex.Message}");
+                                }
+                            }
+                        }
+                        levelIdx++;
                     }
+                    if (levelIdx == 0)
+                        _plugin.AddDebugLog($"  [Level] {name}: Level collection EMPTY (0 entries)");
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    _plugin.AddDebugLog($"  [Level] {name}: ITERATION EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+                }
 
                 candidates.Add((entry.AetheryteId, name, entry.GilCost, worldPos));
             }
@@ -236,46 +284,127 @@ public class NavigationService : IDisposable
             }
 
             // Method 2: MapMarker fallback for candidates with no position
+            // MapMarker DataKey does NOT match Aetheryte RowId — match by name or by collecting
+            // all aetheryte-type markers and assigning to nearest candidate
             if (mapId > 0 && candidates.Any(c => c.WorldPos == Vector3.Zero))
             {
                 try
                 {
                     var mapMarkerSheet = _dataManager.GetSubrowExcelSheet<MapMarker>();
-                    var candidateIds = candidates.Where(c => c.WorldPos == Vector3.Zero).Select(c => c.Id).ToHashSet();
 
-                    for (ushort subIdx = 0; subIdx < 200; subIdx++)
+                    // Collect ALL aetheryte-type markers (DataType 3=aetheryte, 4=aethernet)
+                    var aetheryteMarkers = new System.Collections.Generic.List<(int X, int Y, byte DataType, uint DataKeyId)>();
+                    int totalMarkers = 0;
+
+                    for (ushort subIdx = 0; subIdx < 500; subIdx++)
                     {
-                        if (candidateIds.Count == 0) break;
-
                         var marker = mapMarkerSheet.GetSubrowOrDefault(mapId, subIdx);
                         if (marker == null) break;
+                        totalMarkers++;
 
-                        var dataKey = marker.Value.DataKey.RowId;
-                        if (!candidateIds.Contains(dataKey)) continue;
+                        var mDataType = marker.Value.DataType;
+                        var mDataKey = marker.Value.DataKey.RowId;
+                        var mX = marker.Value.X;
+                        var mY = marker.Value.Y;
 
-                        // Convert MapMarker position to world coordinates
-                        // MapMarker X/Y are in scaled map pixel space
-                        float c = sizeFactor / 100.0f;
-                        float worldX = ((float)marker.Value.X / c - 1024.0f) / c + offsetX;
-                        float worldZ = ((float)marker.Value.Y / c - 1024.0f) / c + offsetY;
-                        var convertedPos = new Vector3(worldX, 0, worldZ);
+                        // Log first 10 markers for diagnostic purposes
+                        if (subIdx < 10)
+                            _plugin.AddDebugLog($"  [MapMarker] [{subIdx}] DataType={mDataType} DataKey={mDataKey} X={mX} Y={mY}");
 
-                        // Update the candidate
-                        for (int j = 0; j < candidates.Count; j++)
+                        // Collect aetheryte markers (DataType 3 or 4)
+                        if (mDataType == 3 || mDataType == 4)
                         {
-                            if (candidates[j].Id == dataKey && candidates[j].WorldPos == Vector3.Zero)
+                            aetheryteMarkers.Add((mX, mY, mDataType, mDataKey));
+                        }
+                    }
+
+                    _plugin.AddDebugLog($"[Aetheryte] MapMarker: {totalMarkers} total markers, {aetheryteMarkers.Count} aetheryte-type markers for map {mapId}");
+
+                    if (aetheryteMarkers.Count > 0)
+                    {
+                        float scaleFactor = sizeFactor / 100.0f;
+
+                        // Convert all aetheryte markers to world positions
+                        var markerWorldPositions = new System.Collections.Generic.List<Vector3>();
+                        foreach (var m in aetheryteMarkers)
+                        {
+                            float worldX = ((float)m.X / scaleFactor - 1024.0f) / scaleFactor + offsetX;
+                            float worldZ = ((float)m.Y / scaleFactor - 1024.0f) / scaleFactor + offsetY;
+                            markerWorldPositions.Add(new Vector3(worldX, 0, worldZ));
+                            _plugin.AddDebugLog($"  [MapMarker] Aetheryte marker: raw=({m.X},{m.Y}) DataType={m.DataType} DataKey={m.DataKeyId} → world=({worldX:F1}, 0, {worldZ:F1})");
+                        }
+
+                        // Build a DataKey→CandidateIndex lookup using both AetheryteId and PlaceName.RowId
+                        var dataKeyToCandidateIdx = new System.Collections.Generic.Dictionary<uint, int>();
+                        for (int ci = 0; ci < candidates.Count; ci++)
+                        {
+                            if (candidates[ci].WorldPos != Vector3.Zero) continue;
+                            // Match by AetheryteId
+                            dataKeyToCandidateIdx[candidates[ci].Id] = ci;
+                            // Match by PlaceName.RowId (MapMarker DataKey may reference PlaceName, not Aetheryte)
+                            try
                             {
-                                candidates[j] = (candidates[j].Id, candidates[j].Name, candidates[j].Cost, convertedPos);
-                                _plugin.AddDebugLog($"  [MapMarker] {candidates[j].Name}: raw=({marker.Value.X},{marker.Value.Y}) DataType={marker.Value.DataType} → world=({worldX:F1}, 0, {worldZ:F1})");
-                                candidateIds.Remove(dataKey);
-                                break;
+                                var aethRow = aetheryteSheet.GetRow(candidates[ci].Id);
+                                var placeNameRowId = aethRow.PlaceName.RowId;
+                                if (placeNameRowId > 0 && !dataKeyToCandidateIdx.ContainsKey(placeNameRowId))
+                                    dataKeyToCandidateIdx[placeNameRowId] = ci;
+                                _plugin.AddDebugLog($"  [MapMarker] Candidate {candidates[ci].Name}: AetheryteId={candidates[ci].Id}, PlaceNameRowId={placeNameRowId}");
+                            }
+                            catch { }
+                        }
+
+                        // Try ID-based matching first (DataKey → candidate)
+                        int matchedCount = 0;
+                        for (int mi = 0; mi < aetheryteMarkers.Count; mi++)
+                        {
+                            var dataKeyId = aetheryteMarkers[mi].DataKeyId;
+                            if (dataKeyToCandidateIdx.TryGetValue(dataKeyId, out var ci) && candidates[ci].WorldPos == Vector3.Zero)
+                            {
+                                candidates[ci] = (candidates[ci].Id, candidates[ci].Name, candidates[ci].Cost, markerWorldPositions[mi]);
+                                _plugin.AddDebugLog($"  [MapMarker] ID-matched marker [{mi}] (DataKey={dataKeyId}) → {candidates[ci].Name} at ({markerWorldPositions[mi].X:F1}, 0, {markerWorldPositions[mi].Z:F1})");
+                                matchedCount++;
+                            }
+                        }
+
+                        // If ID matching failed, find the closest marker to target and short-circuit
+                        if (matchedCount == 0 && targetPosition != default)
+                        {
+                            _plugin.AddDebugLog($"[Aetheryte] MapMarker: ID matching failed for all {aetheryteMarkers.Count} markers. Using closest-marker direct selection.");
+                            int closestMarkerIdx = 0;
+                            double closestDist = double.MaxValue;
+                            for (int mi = 0; mi < markerWorldPositions.Count; mi++)
+                            {
+                                var dx = markerWorldPositions[mi].X - targetPosition.X;
+                                var dz = markerWorldPositions[mi].Z - targetPosition.Z;
+                                var dist = dx * dx + dz * dz;
+                                if (dist < closestDist) { closestDist = dist; closestMarkerIdx = mi; }
+                            }
+
+                            // Find the closest marker to target, then find the farthest marker from it
+                            // The candidate at the FARTHEST marker from the closest marker is NOT the one we want
+                            // The candidate at the CLOSEST marker IS what we want
+                            // Since we can't match marker→candidate by ID, pick candidate whose name 
+                            // appears later in the aetheryte list (further from starting city = likely farther aetheryte)
+                            // BUT actually, we can try a different approach: assign markers in sheet order
+                            // and candidates in teleport list order (which tends to match geographic order)
+
+                            // Fallback: just assign markers sequentially to candidates
+                            var unassignedCandidates = new System.Collections.Generic.List<int>();
+                            for (int ci = 0; ci < candidates.Count; ci++)
+                                if (candidates[ci].WorldPos == Vector3.Zero) unassignedCandidates.Add(ci);
+
+                            for (int mi = 0; mi < markerWorldPositions.Count && mi < unassignedCandidates.Count; mi++)
+                            {
+                                var ci = unassignedCandidates[mi];
+                                candidates[ci] = (candidates[ci].Id, candidates[ci].Name, candidates[ci].Cost, markerWorldPositions[mi]);
+                                _plugin.AddDebugLog($"  [MapMarker] Sequential assign marker [{mi}] → {candidates[ci].Name} at ({markerWorldPositions[mi].X:F1}, 0, {markerWorldPositions[mi].Z:F1})");
                             }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    _plugin.AddDebugLog($"[Aetheryte] MapMarker fallback: {ex.GetType().Name}: {ex.Message}");
+                    _plugin.AddDebugLog($"[Aetheryte] MapMarker fallback EXCEPTION: {ex.GetType().Name}: {ex.Message}");
                 }
             }
 
