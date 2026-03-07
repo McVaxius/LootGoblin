@@ -1104,5 +1104,33 @@
     "RecordedAt": "2026-03-07 19:44:17",
     "TerritoryId": 180,
     "ZoneName": "Outer La Noscea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -289.1,
+    "FlagY": 54,
+    "FlagZ": -287.8,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Goatskin Map",
+    "RealX": -286.3,
+    "RealY": 54.1,
+    "RealZ": -288,
+    "RecordedAt": "2026-03-07 19:45:27",
+    "TerritoryId": 180,
+    "ZoneName": "Outer La Noscea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 276.9,
+    "FlagY": 62.7,
+    "FlagZ": -220.1,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Goatskin Map",
+    "RealX": 270.2,
+    "RealY": 63.5,
+    "RealZ": -220.1,
+    "RecordedAt": "2026-03-07 19:45:54",
+    "TerritoryId": 140,
+    "ZoneName": "Western Thanalan"
   }
 ]
