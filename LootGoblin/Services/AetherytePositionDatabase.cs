@@ -154,19 +154,26 @@ public class AetherytePositionDatabase
     {
         try
         {
+            // Seed with community defaults first
+            _positions = DefaultAetheryteData.GetDefaults();
+            var defaultCount = _positions.Count;
+
+            // Overlay user-recorded data (takes priority over defaults)
             if (File.Exists(_filePath))
             {
                 var json = File.ReadAllText(_filePath);
                 var list = JsonSerializer.Deserialize<List<AetherytePosition>>(json, JsonOptions);
                 if (list != null)
                 {
-                    _positions = list.ToDictionary(p => p.AetheryteId, p => p);
-                    _plugin.AddDebugLog($"[AetheryteDB] Loaded {_positions.Count} aetheryte positions");
+                    foreach (var pos in list)
+                        _positions[pos.AetheryteId] = pos;
+                    _plugin.AddDebugLog($"[AetheryteDB] Loaded {list.Count} user positions over {defaultCount} defaults = {_positions.Count} total");
                 }
             }
             else
             {
-                _plugin.AddDebugLog("[AetheryteDB] No file found - starting fresh");
+                _plugin.AddDebugLog($"[AetheryteDB] No user file - using {defaultCount} community defaults");
+                Save(); // Write defaults to disk so user can see/share the file
             }
         }
         catch (Exception ex)
