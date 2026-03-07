@@ -134,6 +134,24 @@ public class MainWindow : Window, IDisposable
         ImGui.Text("Party: ");
         ImGui.SameLine();
         ImGui.Text(partyCount > 0 ? $"{partyCount} members" : "Solo");
+
+        // Summon Chocobo status
+        if (plugin.Configuration.SummonChocobo && loggedIn)
+        {
+            var buddyTime = GameHelpers.GetBuddyTimeRemaining();
+            var greensCount = GameHelpers.GetInventoryItemCount(GameHelpers.GysahlGreensItemId);
+            var mins = (int)(buddyTime / 60);
+            var secs = (int)(buddyTime % 60);
+            var timerText = buddyTime > 0 ? $"{mins}m{secs:D2}s" : "Not summoned";
+            var timerColor = buddyTime > 900 ? ColorGreen : buddyTime > 0 ? ColorYellow : ColorGrey;
+            var greensColor = greensCount > 0 ? ColorGreen : ColorRed;
+
+            ImGui.Text("Chocobo: ");
+            ImGui.SameLine();
+            ImGui.TextColored(timerColor, timerText);
+            ImGui.SameLine();
+            ImGui.TextColored(greensColor, $"  |  Gysahl Greens: {greensCount}");
+        }
     }
 
     private void DrawControlsSection()

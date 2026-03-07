@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
@@ -149,7 +150,7 @@ public class NavigationService : IDisposable
         _plugin.AddDebugLog("Flying to flag via vnavmesh.");
     }
 
-    public unsafe uint FindNearestAetheryte(uint territoryId)
+    public unsafe uint FindNearestAetheryte(uint territoryId, Vector3 targetPosition = default)
     {
         try
         {
@@ -160,39 +161,84 @@ public class NavigationService : IDisposable
             var count = telepo->TeleportList.Count;
             if (count == 0) return 0;
 
-            uint bestId = 0;
-            uint bestCost = uint.MaxValue;
+            var aetheryteSheet = _dataManager.GetExcelSheet<Aetheryte>();
+            if (aetheryteSheet == null) return 0;
+
+            // Collect all candidate aetherytes in the target territory
+            var candidates = new System.Collections.Generic.List<(uint Id, string Name, uint Cost, Vector3 WorldPos)>();
 
             for (int i = 0; i < count; i++)
             {
                 var entry = telepo->TeleportList[i];
                 if (entry.AetheryteId == 0) continue;
 
-                var aetheryteSheet = _dataManager.GetExcelSheet<Aetheryte>();
-                var aetheryte = aetheryteSheet?.GetRow(entry.AetheryteId);
-                if (aetheryte == null) continue;
+                var aetheryte = aetheryteSheet.GetRow(entry.AetheryteId);
 
-                var aetheryteTerritoryId = aetheryte.Value.Territory.RowId;
-                if (aetheryteTerritoryId == territoryId)
+                if (aetheryte.Territory.RowId != territoryId) continue;
+
+                var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"ID {entry.AetheryteId}";
+
+                // Try to get world position from Level sheet
+                var worldPos = Vector3.Zero;
+                try
                 {
-                    if (entry.GilCost < bestCost)
+                    var levelSheet = _dataManager.GetExcelSheet<Level>();
+                    if (levelSheet != null)
                     {
-                        bestCost = entry.GilCost;
-                        bestId = entry.AetheryteId;
+                        var levelRef = aetheryte.Level;
+                        foreach (var lvl in levelRef)
+                        {
+                            var levelRow = lvl.ValueNullable;
+                            if (levelRow != null && levelRow.Value.Territory.RowId == territoryId)
+                            {
+                                worldPos = new Vector3(levelRow.Value.X, levelRow.Value.Y, levelRow.Value.Z);
+                                break;
+                            }
+                        }
                     }
                 }
+                catch { /* Level lookup failed, worldPos stays Zero */ }
+
+                candidates.Add((entry.AetheryteId, name, entry.GilCost, worldPos));
             }
 
-            if (bestId != 0)
+            if (candidates.Count == 0)
             {
-                var aetheryteSheet2 = _dataManager.GetExcelSheet<Aetheryte>();
-                var bestAetheryte = aetheryteSheet2?.GetRow(bestId);
-                var name = bestAetheryte?.PlaceName.ValueNullable?.Name.ToString() ?? $"ID {bestId}";
-                _plugin.AddDebugLog($"Nearest aetheryte in territory {territoryId}: {name} (ID: {bestId}, Cost: {bestCost}g)");
+                _plugin.AddDebugLog($"No unlocked aetheryte found for territory {territoryId}.");
+                return 0;
+            }
+
+            // Log all candidates
+            foreach (var c in candidates)
+                _plugin.AddDebugLog($"  Aetheryte: {c.Name} (ID: {c.Id}, Cost: {c.Cost}g, Pos: {c.WorldPos})");
+
+            uint bestId;
+            string bestName;
+
+            // Pick closest to target if we have positions and a target
+            if (targetPosition != default && candidates.Any(c => c.WorldPos != Vector3.Zero))
+            {
+                var closest = candidates
+                    .Where(c => c.WorldPos != Vector3.Zero)
+                    .OrderBy(c => {
+                        // Compare XZ distance only (Y can vary wildly with altitude)
+                        var dx = c.WorldPos.X - targetPosition.X;
+                        var dz = c.WorldPos.Z - targetPosition.Z;
+                        return dx * dx + dz * dz;
+                    })
+                    .First();
+                bestId = closest.Id;
+                bestName = closest.Name;
+                var xzDist = Math.Sqrt(Math.Pow(closest.WorldPos.X - targetPosition.X, 2) + Math.Pow(closest.WorldPos.Z - targetPosition.Z, 2));
+                _plugin.AddDebugLog($"Selected closest aetheryte: {bestName} (ID: {bestId}, XZ dist: {xzDist:F0}y from flag)");
             }
             else
             {
-                _plugin.AddDebugLog($"No unlocked aetheryte found for territory {territoryId}.");
+                // Fallback: cheapest cost
+                var cheapest = candidates.OrderBy(c => c.Cost).First();
+                bestId = cheapest.Id;
+                bestName = cheapest.Name;
+                _plugin.AddDebugLog($"Selected cheapest aetheryte: {bestName} (ID: {bestId}, Cost: {cheapest.Cost}g) [no position data]");
             }
 
             return bestId;

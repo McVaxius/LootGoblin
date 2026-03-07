@@ -37,6 +37,8 @@ public class Configuration : IPluginConfiguration
 
     // Automation
     public bool EnableAutoDiscard { get; set; } = false;
+    public bool SummonChocobo { get; set; } = false;
+    public string CompanionStance { get; set; } = "Free Stance";
 
     // Mount Settings
     public string SelectedMount { get; set; } = "Company Chocobo";

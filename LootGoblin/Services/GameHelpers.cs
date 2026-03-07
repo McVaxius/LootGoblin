@@ -463,6 +463,103 @@ public static class GameHelpers
         return true;
     }
 
+    // ─── Companion / Gysahl Greens ─────────────────────────────────────────────
+
+    public const uint GysahlGreensItemId = 4868;
+
+    /// <summary>
+    /// Get the count of an item in the player's inventory (NQ + HQ).
+    /// Ported from FrenRider GameHelpers.
+    /// </summary>
+    public static unsafe int GetInventoryItemCount(uint itemId)
+    {
+        try
+        {
+            var im = InventoryManager.Instance();
+            if (im == null) return 0;
+            return im->GetInventoryItemCount(itemId) + im->GetInventoryItemCount(itemId, true);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"GetInventoryItemCount({itemId}) failed: {ex.Message}");
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Get companion (chocobo buddy) time remaining in seconds.
+    /// Returns 0 if no companion is active.
+    /// Ported from FrenRider GameHelpers.
+    /// </summary>
+    public static unsafe float GetBuddyTimeRemaining()
+    {
+        try
+        {
+            var uiState = UIState.Instance();
+            if (uiState == null) return 0f;
+            return uiState->Buddy.CompanionInfo.TimeLeft;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"GetBuddyTimeRemaining() failed: {ex.Message}");
+            return 0f;
+        }
+    }
+
+    /// <summary>
+    /// Check if the player is in a sanctuary (rest area where you can't summon companion).
+    /// Ported from FrenRider GameHelpers.
+    /// </summary>
+    public static unsafe bool IsInSanctuary()
+    {
+        try
+        {
+            var am = ActionManager.Instance();
+            if (am == null) return true;
+            var status = am->GetActionStatus(ActionType.GeneralAction, 9);
+            return status != 0;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Use Gysahl Greens to summon companion chocobo.
+    /// Ported from FrenRider GameHelpers.UseItem pattern.
+    /// </summary>
+    public static unsafe bool UseGysahlGreens()
+    {
+        try
+        {
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player == null) return false;
+            if (player.IsCasting) return false;
+
+            if (Plugin.Condition[ConditionFlag.OccupiedInQuestEvent] ||
+                Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent] ||
+                Plugin.Condition[ConditionFlag.Occupied33] ||
+                Plugin.Condition[ConditionFlag.Occupied39])
+                return false;
+
+            var am = ActionManager.Instance();
+            if (am == null) return false;
+
+            var status = am->GetActionStatus(ActionType.Item, GysahlGreensItemId);
+            if (status != 0) return false;
+
+            var result = am->UseAction(ActionType.Item, GysahlGreensItemId, extraParam: 65535);
+            Plugin.Log.Information($"UseGysahlGreens: result={result}");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"UseGysahlGreens failed: {ex.Message}");
+            return false;
+        }
+    }
+
     // ─── Keyboard Input (SND WindowsKeypress pattern) ─────────────────────────
 
     /// <summary>

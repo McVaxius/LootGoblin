@@ -158,7 +158,29 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Runs /ays discard every 30s while idle and not in combat.\nRequires AutoRetainer plugin.");
+            ImGui.SetTooltip("Runs /ays discard every 30s while not in combat.\nRequires AutoRetainer plugin.");
+
+        var summonChocobo = configuration.SummonChocobo;
+        if (ImGui.Checkbox("Summon Chocobo", ref summonChocobo))
+        {
+            configuration.SummonChocobo = summonChocobo;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Auto-summon chocobo companion using Gysahl Greens when timer is low.\nWill not summon in sanctuaries or duties.");
+
+        if (configuration.SummonChocobo)
+        {
+            var stances = new[] { "Free Stance", "Defender Stance", "Attacker Stance", "Healer Stance", "Follow" };
+            var stanceIdx = Array.IndexOf(stances, configuration.CompanionStance);
+            if (stanceIdx < 0) stanceIdx = 0;
+            ImGui.SetNextItemWidth(200);
+            if (ImGui.Combo("Companion Stance", ref stanceIdx, stances, stances.Length))
+            {
+                configuration.CompanionStance = stances[stanceIdx];
+                configuration.Save();
+            }
+        }
 
         ImGui.Spacing();
         ImGui.Separator();

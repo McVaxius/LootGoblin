@@ -100,6 +100,8 @@ public class StateManager : IDisposable
     private bool dungeonStartChecked; // True once we've evaluated dungeon start on first entry
     private readonly MountService _mountService;
     private DateTime lastDiscardTime = DateTime.MinValue; // Auto-discard timer
+    private DateTime lastCompanionCheckTime = DateTime.MinValue; // Companion summoning timer
+    private DateTime companionStanceDeferred = DateTime.MinValue; // Deferred stance set after summon
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
     {
@@ -131,8 +133,8 @@ public class StateManager : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        // Auto-discard runs independently of bot state
-        if (_plugin.Configuration.EnableAutoDiscard && Plugin.ClientState.IsLoggedIn)
+        // Auto-discard runs when bot is enabled (any state)
+        if (_plugin.Configuration.Enabled && _plugin.Configuration.EnableAutoDiscard && Plugin.ClientState.IsLoggedIn)
         {
             var now = DateTime.Now;
             if ((now - lastDiscardTime).TotalSeconds >= 30.0)
@@ -143,6 +145,54 @@ public class StateManager : IDisposable
                 {
                     CommandHelper.SendCommand("/ays discard");
                     lastDiscardTime = now;
+                }
+            }
+        }
+
+        // Companion chocobo summoning (every 15s when bot is enabled)
+        if (_plugin.Configuration.Enabled && _plugin.Configuration.SummonChocobo && Plugin.ClientState.IsLoggedIn)
+        {
+            var now = DateTime.Now;
+
+            // Deferred stance set after summoning
+            if (companionStanceDeferred != DateTime.MinValue && now >= companionStanceDeferred)
+            {
+                companionStanceDeferred = DateTime.MinValue;
+                var stanceCmd = _plugin.Configuration.CompanionStance switch
+                {
+                    "Defender Stance" => "/cac \"Defender Stance\"",
+                    "Attacker Stance" => "/cac \"Attacker Stance\"",
+                    "Healer Stance" => "/cac \"Healer Stance\"",
+                    "Follow" => "/cac \"Follow\"",
+                    _ => "/cac \"Free Stance\"",
+                };
+                CommandHelper.SendCommand(stanceCmd);
+                _plugin.AddDebugLog($"[Companion] Set stance: {stanceCmd}");
+            }
+
+            if ((now - lastCompanionCheckTime).TotalSeconds >= 15.0)
+            {
+                lastCompanionCheckTime = now;
+                var inCombat = Plugin.Condition[ConditionFlag.InCombat];
+                var mounted = Plugin.Condition[ConditionFlag.Mounted];
+                var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty];
+                if (!inCombat && !mounted && !inDuty && !GameHelpers.IsInSanctuary())
+                {
+                    var buddyTime = GameHelpers.GetBuddyTimeRemaining();
+                    if (buddyTime < 900f)
+                    {
+                        var greensCount = GameHelpers.GetInventoryItemCount(GameHelpers.GysahlGreensItemId);
+                        if (greensCount > 0)
+                        {
+                            var result = GameHelpers.UseGysahlGreens();
+                            if (result)
+                            {
+                                _plugin.AddDebugLog($"[Companion] Summoning chocobo (timer={buddyTime:F0}s, greens={greensCount})");
+                                companionStanceDeferred = now.AddSeconds(3);
+                                lastCompanionCheckTime = now.AddSeconds(20); // Don't recheck for 20s
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -448,8 +498,9 @@ public class StateManager : IDisposable
         var location = _plugin.GlobeTrotterIPC.TryGetMapLocation();
         if (location != null)
         {
-            // Find nearest aetheryte to navigate from
-            var aetheryteId = _plugin.NavigationService.FindNearestAetheryte(location.TerritoryId);
+            // Find nearest aetheryte to navigate from (pass flag position for closest-to-target selection)
+            var flagPos = new Vector3(location.X, location.Y, location.Z);
+            var aetheryteId = _plugin.NavigationService.FindNearestAetheryte(location.TerritoryId, flagPos);
             location.NearestAetheryteId = aetheryteId;
 
             SetLocation(location);
@@ -584,8 +635,10 @@ public class StateManager : IDisposable
 
         if (!stateActionIssued)
         {
-            var target = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
-            nav.FlyToPosition(target);
+            // Fly to target with +15y altitude boost for terrain clearance (especially in hilly SB zones)
+            var flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 15f, CurrentLocation.Z);
+            nav.FlyToPosition(flyTarget);
+            _plugin.AddDebugLog($"[Flying] Target: ground ({CurrentLocation.X:F1}, {CurrentLocation.Y:F1}, {CurrentLocation.Z:F1}) → fly ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
             stateActionIssued = true;
             lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
             lastStuckCheckTime = DateTime.Now;
@@ -599,7 +652,10 @@ public class StateManager : IDisposable
         }
 
         var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        // Ground-level target for XZ arrival check and distance display
         var targetPos = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+        // Elevated target for stuck detection re-pathfind
+        var flyTargetPos = new Vector3(CurrentLocation.X, CurrentLocation.Y + 15f, CurrentLocation.Z);
         var distanceFromTarget = Vector3.Distance(currentPos, targetPos);
         
         // Stuck detection: only re-pathfind if stuck (10+ seconds without moving 5+ yalms)
@@ -609,15 +665,15 @@ public class StateManager : IDisposable
             var movedDistance = Vector3.Distance(currentPos, lastStuckCheckPos);
             if (movedDistance < 5.0f)
             {
-                // Stuck! Re-pathfind
-                nav.FlyToPosition(targetPos);
+                // Stuck! Re-pathfind to elevated target
+                nav.FlyToPosition(flyTargetPos);
                 _plugin.AddDebugLog($"[Flying] Stuck detected (moved {movedDistance:F1}y in 10s) - re-pathfinding (distance: {distanceFromTarget:F1}y)");
             }
             lastStuckCheckPos = currentPos;
             lastStuckCheckTime = DateTime.Now;
         }
 
-        // Check if we're close enough to X,Z coordinates (within 5 yalms)
+        // Check if we're close enough to X,Z coordinates (within 5 yalms) — uses ground target, not elevated
         var xzDist = Math.Sqrt(Math.Pow(currentPos.X - targetPos.X, 2) + Math.Pow(currentPos.Z - targetPos.Z, 2));
         
         // If we're not mounted, we've already dismounted - proceed with dig regardless of nav state
