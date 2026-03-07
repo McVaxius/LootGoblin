@@ -208,7 +208,8 @@ public class StateManager : IDisposable
             }
         }
 
-        if (!_plugin.Configuration.Enabled) return;
+        var allowCycling = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations;
+        if (!_plugin.Configuration.Enabled && !allowCycling) return;
         if (IsPaused) return;
         if (State == BotState.Idle || State == BotState.Error) return;
 
@@ -241,6 +242,14 @@ public class StateManager : IDisposable
 
     private void Tick()
     {
+        // Guard: never access game memory during zone transitions (loading screens)
+        bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (loading)
+        {
+            stateStartTime = DateTime.Now; // Don't timeout while loading
+            return;
+        }
+
         // Check for territory change and refresh maps to fix inventory index issues
         var currentTerritory = Plugin.ClientState.TerritoryType;
         if (lastGlobalTerritoryId != 0 && lastGlobalTerritoryId != currentTerritory)
@@ -2851,7 +2860,9 @@ public class StateManager : IDisposable
             return;
         }
 
-        cycleAetheryteQueue = _plugin.AetherytePositionDatabase.GetMissingAetherytes(Plugin.DataManager);
+        cycleAetheryteQueue = _plugin.AetherytePositionDatabase
+            .GetMissingAetherytes(Plugin.DataManager)
+            .ToList();
         if (cycleAetheryteQueue.Count == 0)
         {
             _plugin.AddDebugLog("[CycleAetherytes] All unlocked aetherytes already have stored positions!");
@@ -2868,6 +2879,13 @@ public class StateManager : IDisposable
 
     private unsafe void TickCyclingAetherytes()
     {
+        // Extra safety: skip tick during zone transitions
+        if (Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51])
+        {
+            stateStartTime = DateTime.Now;
+            return;
+        }
+
         if (cycleAetheryteIndex >= cycleAetheryteQueue.Count)
         {
             _plugin.AddDebugLog($"[CycleAetherytes] Completed! Recorded {cycleAetheryteQueue.Count} aetheryte positions");
@@ -2877,6 +2895,7 @@ public class StateManager : IDisposable
         }
 
         var current = cycleAetheryteQueue[cycleAetheryteIndex];
+
         StateDetail = $"Cycling aetherytes ({cycleAetheryteIndex + 1}/{cycleAetheryteQueue.Count}): {current.Name}";
 
         var nav = _plugin.NavigationService;

@@ -83,6 +83,11 @@ public class AetherytePositionDatabase
 
         try
         {
+            // Don't access Telepo during zone transitions
+            if (Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.BetweenAreas] ||
+                Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.BetweenAreas51])
+                return missing;
+
             var telepo = FFXIVClientStructs.FFXIV.Client.Game.UI.Telepo.Instance();
             if (telepo == null) return missing;
 
@@ -122,6 +127,11 @@ public class AetherytePositionDatabase
     {
         try
         {
+            // Don't access Telepo during zone transitions
+            if (Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.BetweenAreas] ||
+                Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.BetweenAreas51])
+                return 0;
+
             var telepo = FFXIVClientStructs.FFXIV.Client.Game.UI.Telepo.Instance();
             if (telepo == null) return 0;
 
