@@ -3610,5 +3610,47 @@
     "RecordedAt": "2026-03-08 06:56:07",
     "TerritoryId": 135,
     "ZoneName": "Lower La Noscea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 105.7,
+    "FlagY": 51.4,
+    "FlagZ": 880.9,
+    "HasRealXYZ": true,
+    "MapName": "Mysterious Map",
+    "RealX": 105.6,
+    "RealY": 51.4,
+    "RealZ": 880.9,
+    "RecordedAt": "2026-03-08 06:58:33",
+    "TerritoryId": 135,
+    "ZoneName": "Lower La Noscea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 450.4,
+    "FlagY": 13.2,
+    "FlagZ": 310.1,
+    "HasRealXYZ": true,
+    "MapName": "Mysterious Map",
+    "RealX": 450.4,
+    "RealY": 13.2,
+    "RealZ": 310.3,
+    "RecordedAt": "2026-03-08 06:59:05",
+    "TerritoryId": 137,
+    "ZoneName": "Eastern La Noscea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -222.2,
+    "FlagY": 44.9,
+    "FlagZ": 490.2,
+    "HasRealXYZ": true,
+    "MapName": "Mysterious Map",
+    "RealX": -217.1,
+    "RealY": 45.6,
+    "RealZ": 486.6,
+    "RecordedAt": "2026-03-08 07:21:41",
+    "TerritoryId": 137,
+    "ZoneName": "Eastern La Noscea"
   }
 ]
