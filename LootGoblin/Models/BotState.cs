@@ -18,6 +18,7 @@ public enum BotState
     DungeonProgressing,
     CyclingAetherytes,
     CyclingMapLocations,
+    AlexandriteFarming,
     Completed,
     Error,
 }

@@ -345,13 +345,52 @@ public class MainWindow : Window, IDisposable
                 if (sm.State == BotState.CyclingAetherytes || sm.State == BotState.CyclingMapLocations)
                 {
                     ImGui.TextColored(ColorCyan, $"  {sm.StateDetail}");
+
+                    // XYZ diff display during cycling
+                    if (sm.State == BotState.CyclingMapLocations && sm.CurrentLocation != null)
+                    {
+                        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? System.Numerics.Vector3.Zero;
+                        var dx = playerPos.X - sm.CurrentLocation.X;
+                        var dy = playerPos.Y - sm.CurrentLocation.Y;
+                        var dz = playerPos.Z - sm.CurrentLocation.Z;
+                        ImGui.TextColored(ColorGrey, $"  Diff: X={dx:F1} Y={dy:F1} Z={dz:F1}  Dist={Math.Sqrt(dx*dx+dz*dz):F0}y");
+                    }
+
                     if (ImGui.Button("Stop Cycling"))
                     {
                         sm.Stop();
                     }
+
+                    // Manual control buttons during XYZ cycling
+                    if (sm.State == BotState.CyclingMapLocations)
+                    {
+                        ImGui.SameLine();
+                        if (sm.CycleManualControl)
+                        {
+                            if (ImGui.Button("Mark This Spot"))
+                            {
+                                sm.CycleMarkThisSpot();
+                            }
+                        }
+                        else
+                        {
+                            if (ImGui.Button("Take Control"))
+                            {
+                                sm.CycleTakeControl();
+                            }
+                        }
+                    }
                 }
                 else
                 {
+                    // Ground-only mode checkbox
+                    var groundOnly = plugin.Configuration.CycleGroundOnly;
+                    if (ImGui.Checkbox("Ground-only (no flying)", ref groundOnly))
+                    {
+                        plugin.Configuration.CycleGroundOnly = groundOnly;
+                        plugin.Configuration.Save();
+                    }
+
                     if (isBusy)
                         ImGui.BeginDisabled();
 
@@ -367,6 +406,13 @@ public class MainWindow : Window, IDisposable
 
                     if (isBusy)
                         ImGui.EndDisabled();
+                }
+
+                // Alexandrite Maps button (always visible when logged in)
+                ImGui.Spacing();
+                if (ImGui.Button("Alexandrite Maps"))
+                {
+                    plugin.AlexandriteMapWindow.IsOpen = !plugin.AlexandriteMapWindow.IsOpen;
                 }
             }
 
@@ -689,6 +735,7 @@ private void DrawDependencySection()
 
             DrawPluginStatus("  vnavmesh", plugin.VNavIPC.IsAvailable, true);
             DrawPluginStatus("  GlobeTrotter", plugin.GlobeTrotterIPC.IsAvailable, false);
+            DrawPluginStatus("  TextAdvance", plugin.IsTextAdvanceAvailable, false);
 
             ImGui.Spacing();
             ImGui.Text("Optional (Combat/Rotation):");

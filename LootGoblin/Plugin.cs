@@ -36,6 +36,7 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("LootGoblin");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
+    public AlexandriteMapWindow AlexandriteMapWindow { get; init; }
 
     // Services
     public InventoryService InventoryService { get; init; }
@@ -55,6 +56,24 @@ public sealed class Plugin : IDalamudPlugin
     // Mount data
     public string[] MountNames { get; private set; } = Array.Empty<string>();
     public RotationPluginIPC RotationPluginIPC { get; init; }
+
+    // TextAdvance dependency check
+    public bool IsTextAdvanceAvailable
+    {
+        get
+        {
+            try
+            {
+                foreach (var p in PluginInterface.InstalledPlugins)
+                {
+                    if (string.Equals(p.InternalName, "TextAdvance", StringComparison.OrdinalIgnoreCase) && p.IsLoaded)
+                        return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+    }
 
     public List<string> DebugLog { get; } = new();
     private const int MaxDebugLogLines = 200;
@@ -97,9 +116,11 @@ public sealed class Plugin : IDalamudPlugin
 
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this);
+        AlexandriteMapWindow = new AlexandriteMapWindow(this);
 
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(MainWindow);
+        WindowSystem.AddWindow(AlexandriteMapWindow);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -143,6 +164,7 @@ public sealed class Plugin : IDalamudPlugin
 
         ConfigWindow.Dispose();
         MainWindow.Dispose();
+        AlexandriteMapWindow.Dispose();
 
         YesAlreadyIPC.Dispose();
         StateManager.Dispose();

@@ -113,6 +113,17 @@ public class StateManager : IDisposable
     private DateTime cycleLandingTime;
     private List<MapLocationEntry> cycleMapLocationQueue = new();
     private int cycleMapLocationIndex;
+    private bool cycleManualControl;
+    public bool CycleManualControl => cycleManualControl;
+
+    // Alexandrite farming state
+    private int alexandriteRunsRemaining;
+    private int alexandriteRunsCompleted;
+    private int alexandriteStep; // Sub-state machine step
+    private DateTime alexandriteStepTime;
+    private bool alexandriteActionIssued;
+    public int AlexandriteRunsRemaining => alexandriteRunsRemaining;
+    public int AlexandriteRunsCompleted => alexandriteRunsCompleted;
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
     {
@@ -128,6 +139,7 @@ public class StateManager : IDisposable
         { BotState.DungeonProgressing, 120 },
         { BotState.CyclingAetherytes,   60  },
         { BotState.CyclingMapLocations, 300 },
+        { BotState.AlexandriteFarming,  300 },
     };
 
     public StateManager(Plugin plugin, IFramework framework, IPluginLog log)
@@ -210,7 +222,7 @@ public class StateManager : IDisposable
             }
         }
 
-        var allowCycling = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations;
+        var allowCycling = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations or BotState.AlexandriteFarming;
         if (!_plugin.Configuration.Enabled && !allowCycling) return;
         if (IsPaused) return;
         if (State == BotState.Idle || State == BotState.Error) return;
@@ -308,6 +320,7 @@ public class StateManager : IDisposable
             case BotState.DungeonProgressing: TickDungeonProgressing(); break;
             case BotState.CyclingAetherytes: TickCyclingAetherytes(); break;
             case BotState.CyclingMapLocations: TickCyclingMapLocations(); break;
+            case BotState.AlexandriteFarming: TickAlexandriteFarming(); break;
             case BotState.Completed:        TickCompleted();        break;
         }
     }
@@ -767,8 +780,8 @@ public class StateManager : IDisposable
             else
             {
                 // No stored location - use Y+50 altitude boost as temporary fallback
-                //flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
-                flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y - 50f, CurrentLocation.Z);
+                flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
+                //flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y - 350f, CurrentLocation.Z);
                 _plugin.AddDebugLog($"[Flying] No valid RealXYZ - using Y+50 fallback: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
             }
             nav.FlyToPosition(flyTarget);
@@ -3050,11 +3063,63 @@ public class StateManager : IDisposable
         }
 
         SetLocation(location);
+
+        // Always mark destination flag on map
+        GameHelpers.SetMapFlag(entry.TerritoryId, entry.FlagX, entry.FlagZ);
+
         _plugin.AddDebugLog($"[CycleMapLocs] [{cycleMapLocationIndex + 1}/{cycleMapLocationQueue.Count}] {entry.ZoneName} flag=({entry.FlagX:F1},{entry.FlagZ:F1})");
 
         // Use CyclingMapLocations state which runs the normal teleport→mount→fly flow
         // but skips dig/chest and instead records position after landing
         TransitionTo(BotState.CyclingMapLocations, $"Location {cycleMapLocationIndex + 1}/{cycleMapLocationQueue.Count}: {entry.ZoneName}");
+    }
+
+    /// <summary>
+    /// Enter manual control mode during XYZ cycling. Stops navigation and lets the player move freely.
+    /// </summary>
+    public void CycleTakeControl()
+    {
+        if (State != BotState.CyclingMapLocations) return;
+        cycleManualControl = true;
+        _plugin.NavigationService.StopNavigation();
+        _plugin.AddDebugLog("[CycleMapLocs] Manual control activated - navigate to the spot and click 'Mark This Spot'");
+        StateDetail = $"MANUAL CONTROL - Location {cycleMapLocationIndex + 1}/{cycleMapLocationQueue.Count}: {CurrentLocation?.ZoneName ?? "?"}";
+    }
+
+    /// <summary>
+    /// Record the player's current position as the RealXYZ for the current cycling location, then advance.
+    /// </summary>
+    public void CycleMarkThisSpot()
+    {
+        if (State != BotState.CyclingMapLocations) return;
+
+        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        if (playerPos == Vector3.Zero || CurrentLocation == null)
+        {
+            _plugin.AddDebugLog("[CycleMapLocs] Cannot mark - no player position or location");
+            return;
+        }
+
+        var entry = cycleMapLocationQueue[cycleMapLocationIndex];
+        _plugin.MapLocationDatabase.RecordLocation(
+            CurrentLocation.TerritoryId,
+            CurrentLocation.ZoneName,
+            entry.MapName,
+            CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z,
+            playerPos.X, playerPos.Y, playerPos.Z);
+        _plugin.AddDebugLog($"[CycleMapLocs] MANUAL mark XYZ: ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1})");
+        _plugin.PrintChat($"Marked position ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1})");
+
+        // Advance to next location
+        cycleManualControl = false;
+        cycleMapLocationIndex++;
+        stateStartTime = DateTime.Now;
+        stateActionIssued = false;
+        cycleTeleportIssued = false;
+        cycleLandingIssued = false;
+        mountAttemptStart = DateTime.MinValue;
+        mountAttempts = 0;
+        SetupNextCycleMapLocation();
     }
 
     private void TickCyclingMapLocations()
@@ -3064,6 +3129,10 @@ public class StateManager : IDisposable
 
         var nav = _plugin.NavigationService;
         var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+        var groundOnly = _plugin.Configuration.CycleGroundOnly;
+
+        // Manual control mode - don't do anything, wait for user to Mark This Spot
+        if (cycleManualControl) return;
 
         // Step 1: Teleport if needed
         if (!stateActionIssued)
@@ -3179,6 +3248,57 @@ public class StateManager : IDisposable
             return;
         }
 
+        // === Ground-only mode: walk directly without mounting ===
+        if (groundOnly)
+        {
+            if (CurrentLocation == null) return;
+            var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+            var target = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+            var xzDist = Math.Sqrt(Math.Pow(playerPos.X - target.X, 2) + Math.Pow(playerPos.Z - target.Z, 2));
+
+            // Arrived - record position
+            if (xzDist < 3.0)
+            {
+                _plugin.AddDebugLog($"[CycleMapLocs] Ground arrived ({xzDist:F1}y) - recording position");
+                if (playerPos != Vector3.Zero)
+                {
+                    var entry = cycleMapLocationQueue[cycleMapLocationIndex];
+                    _plugin.MapLocationDatabase.RecordLocation(
+                        CurrentLocation.TerritoryId,
+                        CurrentLocation.ZoneName,
+                        entry.MapName,
+                        CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z,
+                        playerPos.X, playerPos.Y, playerPos.Z);
+                    _plugin.AddDebugLog($"[CycleMapLocs] Recorded XYZ: ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1})");
+                }
+
+                cycleMapLocationIndex++;
+                stateStartTime = DateTime.Now;
+                stateActionIssued = false;
+                cycleTeleportIssued = false;
+                cycleLandingIssued = false;
+                mountAttemptStart = DateTime.MinValue;
+                mountAttempts = 0;
+                SetupNextCycleMapLocation();
+                return;
+            }
+
+            // Walk to target (reissue every 5s or on first attempt)
+            if (lastStuckCheckPos.Equals(Vector3.Zero) ||
+                (!lastStuckCheckPos.Equals(playerPos) && (DateTime.Now - lastStuckCheckTime).TotalSeconds > 5.0))
+            {
+                nav.MoveToPosition(target);
+                lastStuckCheckPos = playerPos;
+                lastStuckCheckTime = DateTime.Now;
+                _plugin.AddDebugLog($"[CycleMapLocs] Ground walking to target ({xzDist:F0}y away)");
+            }
+
+            StateDetail = $"[Ground] Location {cycleMapLocationIndex + 1}/{cycleMapLocationQueue.Count}: {CurrentLocation?.ZoneName ?? "?"} ({xzDist:F0}y)";
+            return;
+        }
+
+        // === Normal flying mode ===
+
         // Step 3: Mount if not mounted
         if (!nav.IsMounted() && !nav.IsFlying())
         {
@@ -3254,6 +3374,279 @@ public class StateManager : IDisposable
         }
 
         StateDetail = $"Location {cycleMapLocationIndex + 1}/{cycleMapLocationQueue.Count}: {CurrentLocation?.ZoneName ?? "?"} ({elapsed:F0}s)";
+    }
+
+    // ─── Alexandrite Farming ──────────────────────────────────────────────────
+
+    // Auriana NPC in Revenant's Toll (Mor Dhona)
+    private static readonly Vector3 AurianaPosition = new(62.98f, 31.29f, -737.07f);
+    private const uint MorDhonaTerritoryId = 156;
+    private const uint RevenantsTollAetheryteId = 24; // Revenant's Toll aetheryte
+    private const uint MysteriousMapItemId = 7885; // Timeworn Mysterious Map
+
+    /// <summary>
+    /// Start the Alexandrite farming loop: buy Mysterious Map from Auriana, run it, repeat.
+    /// </summary>
+    public void StartAlexandriteFarming(int runCount)
+    {
+        if (State != BotState.Idle && State != BotState.Error && State != BotState.Completed)
+        {
+            _plugin.AddDebugLog("[Alexandrite] Cannot start - bot is busy");
+            return;
+        }
+
+        alexandriteRunsRemaining = runCount;
+        alexandriteRunsCompleted = 0;
+        alexandriteStep = 0;
+        alexandriteActionIssued = false;
+        alexandriteStepTime = DateTime.Now;
+
+        _plugin.AddDebugLog($"[Alexandrite] Starting {runCount} run(s)");
+        _plugin.PrintChat($"Starting Alexandrite farming: {runCount} run(s)");
+        TransitionTo(BotState.AlexandriteFarming, $"Alexandrite run 1/{runCount}: Starting...");
+    }
+
+    private void TickAlexandriteFarming()
+    {
+        var nav = _plugin.NavigationService;
+        var stepElapsed = (DateTime.Now - alexandriteStepTime).TotalSeconds;
+
+        if (alexandriteRunsRemaining <= 0)
+        {
+            _plugin.AddDebugLog($"[Alexandrite] All runs complete! ({alexandriteRunsCompleted} total)");
+            _plugin.PrintChat($"Alexandrite farming complete! {alexandriteRunsCompleted} runs done.");
+            TransitionTo(BotState.Idle, "Alexandrite farming complete!");
+            return;
+        }
+
+        // Check if we already have a Mysterious Map in inventory
+        var hasMap = GameHelpers.GetInventoryItemCount(MysteriousMapItemId) > 0;
+
+        switch (alexandriteStep)
+        {
+            case 0: // Teleport to Revenant's Toll
+                if (!alexandriteActionIssued)
+                {
+                    if (Plugin.ClientState.TerritoryType == MorDhonaTerritoryId)
+                    {
+                        // Already in Mor Dhona
+                        if (hasMap)
+                        {
+                            // Already have a map - skip buying, go to using it
+                            _plugin.AddDebugLog("[Alexandrite] Already have Mysterious Map - skipping purchase");
+                            alexandriteStep = 5; // Skip to map use
+                            alexandriteStepTime = DateTime.Now;
+                            alexandriteActionIssued = false;
+                            return;
+                        }
+                        alexandriteStep = 1; // Skip teleport
+                        alexandriteStepTime = DateTime.Now;
+                        alexandriteActionIssued = false;
+                        return;
+                    }
+                    else if (hasMap)
+                    {
+                        // Have map but not in Mor Dhona - just use it
+                        _plugin.AddDebugLog("[Alexandrite] Already have Mysterious Map - skipping to use");
+                        alexandriteStep = 5;
+                        alexandriteStepTime = DateTime.Now;
+                        alexandriteActionIssued = false;
+                        return;
+                    }
+
+                    nav.TeleportToAetheryte(RevenantsTollAetheryteId);
+                    alexandriteActionIssued = true;
+                    alexandriteStepTime = DateTime.Now;
+                    StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Teleporting...";
+                    return;
+                }
+
+                if (stepElapsed < 5.0) return;
+                if (nav.IsTeleporting()) return;
+
+                if (Plugin.ClientState.TerritoryType == MorDhonaTerritoryId)
+                {
+                    alexandriteStep = 1;
+                    alexandriteStepTime = DateTime.Now;
+                    alexandriteActionIssued = false;
+                    _plugin.AddDebugLog("[Alexandrite] Arrived in Mor Dhona");
+                }
+                else if (stepElapsed > 30.0)
+                {
+                    HandleError("[Alexandrite] Teleport to Mor Dhona timed out");
+                }
+                return;
+
+            case 1: // Walk to Auriana
+                if (!alexandriteActionIssued)
+                {
+                    nav.MoveToPosition(AurianaPosition);
+                    alexandriteActionIssued = true;
+                    alexandriteStepTime = DateTime.Now;
+                    StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Walking to Auriana...";
+                    _plugin.AddDebugLog("[Alexandrite] Walking to Auriana NPC");
+                    return;
+                }
+
+                var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+                var distToNpc = Vector3.Distance(playerPos, AurianaPosition);
+                if (distToNpc < 5.0f)
+                {
+                    nav.StopNavigation();
+                    alexandriteStep = 2;
+                    alexandriteStepTime = DateTime.Now;
+                    alexandriteActionIssued = false;
+                    _plugin.AddDebugLog($"[Alexandrite] Near Auriana ({distToNpc:F1}y)");
+                }
+                else if (stepElapsed > 60.0)
+                {
+                    HandleError("[Alexandrite] Walk to Auriana timed out");
+                }
+                return;
+
+            case 2: // Interact with Auriana NPC
+                if (!alexandriteActionIssued)
+                {
+                    // Target and interact with the nearest NPC named "Auriana"
+                    var auriana = GameHelpers.FindNpcByName("Auriana");
+                    if (auriana != null)
+                    {
+                        GameHelpers.InteractWithObject(auriana);
+                        alexandriteActionIssued = true;
+                        alexandriteStepTime = DateTime.Now;
+                        StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Talking to Auriana...";
+                        _plugin.AddDebugLog("[Alexandrite] Interacting with Auriana");
+                    }
+                    else if (stepElapsed > 10.0)
+                    {
+                        HandleError("[Alexandrite] Auriana NPC not found");
+                    }
+                    return;
+                }
+
+                // Wait for SelectIconString dialog
+                if (stepElapsed < 1.0) return;
+                if (GameHelpers.IsAddonVisible("SelectIconString"))
+                {
+                    // Click "Allagan Tomestones of Poetics (Other)" - index 5 (1-based for callback)
+                    GameHelpers.FireAddonCallback("SelectIconString", true, 5);
+                    alexandriteStep = 3;
+                    alexandriteStepTime = DateTime.Now;
+                    alexandriteActionIssued = false;
+                    _plugin.AddDebugLog("[Alexandrite] Selected Poetics (Other) from Auriana menu");
+                }
+                else if (stepElapsed > 15.0)
+                {
+                    HandleError("[Alexandrite] SelectIconString dialog not appearing");
+                }
+                return;
+
+            case 3: // Shop Exchange - buy Mysterious Map
+                if (stepElapsed < 1.0) return;
+
+                if (GameHelpers.IsAddonVisible("ShopExchangeCurrency"))
+                {
+                    // Buy the Mysterious Map: FireCallback with (0, 1, 1, Undef)
+                    // Index 0 = first item, Qty 1
+                    GameHelpers.FireAddonCallback("ShopExchangeCurrency", true, 0, (uint)1, (uint)1);
+                    alexandriteStep = 4;
+                    alexandriteStepTime = DateTime.Now;
+                    alexandriteActionIssued = false;
+                    _plugin.AddDebugLog("[Alexandrite] Purchasing Mysterious Map");
+                }
+                else if (stepElapsed > 15.0)
+                {
+                    HandleError("[Alexandrite] ShopExchangeCurrency not appearing");
+                }
+                return;
+
+            case 4: // Confirm purchase (SelectYesNo) and close shop
+                if (stepElapsed < 0.5) return;
+
+                // Click Yes on confirmation
+                GameHelpers.ClickYesIfVisible();
+
+                // Wait for map to appear in inventory
+                if (stepElapsed > 2.0 && GameHelpers.GetInventoryItemCount(MysteriousMapItemId) > 0)
+                {
+                    _plugin.AddDebugLog("[Alexandrite] Mysterious Map purchased successfully");
+                    // Close the shop window
+                    GameHelpers.CloseCurrentAddon();
+                    alexandriteStep = 5;
+                    alexandriteStepTime = DateTime.Now;
+                    alexandriteActionIssued = false;
+                }
+                else if (stepElapsed > 15.0)
+                {
+                    HandleError("[Alexandrite] Map purchase confirmation timed out");
+                }
+                return;
+
+            case 5: // Use the Mysterious Map (decipher)
+                if (stepElapsed < 2.0) return; // Wait for shop to close
+
+                if (!alexandriteActionIssued)
+                {
+                    // Use the map item to decipher it
+                    var used = GameHelpers.UseItem(MysteriousMapItemId);
+                    if (used)
+                    {
+                        alexandriteActionIssued = true;
+                        alexandriteStepTime = DateTime.Now;
+                        StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Deciphering map...";
+                        _plugin.AddDebugLog("[Alexandrite] Using Mysterious Map");
+                    }
+                    else if (stepElapsed > 10.0)
+                    {
+                        HandleError("[Alexandrite] Failed to use Mysterious Map");
+                    }
+                    return;
+                }
+
+                // Wait for decipher dialog then let the normal bot handle the rest
+                if (stepElapsed > 3.0)
+                {
+                    // Hand off to normal bot flow - enable bot and start
+                    _plugin.Configuration.Enabled = true;
+                    _plugin.Configuration.Save();
+
+                    // Set selected map to Mysterious Map
+                    SelectedMapItemId = MysteriousMapItemId;
+
+                    alexandriteStep = 6;
+                    alexandriteStepTime = DateTime.Now;
+                    alexandriteActionIssued = false;
+
+                    // Transition to detecting location (the map is already being deciphered)
+                    TransitionTo(BotState.DetectingLocation, "Reading Mysterious Map location...");
+                    _plugin.AddDebugLog("[Alexandrite] Handed off to main bot for map run");
+                }
+                return;
+
+            case 6: // Wait for map run to complete (bot returns to Idle/Completed/Error)
+                // The normal bot flow handles everything. When it finishes:
+                if (State == BotState.Idle || State == BotState.Completed || State == BotState.Error)
+                {
+                    alexandriteRunsCompleted++;
+                    alexandriteRunsRemaining--;
+                    _plugin.AddDebugLog($"[Alexandrite] Run {alexandriteRunsCompleted} complete. {alexandriteRunsRemaining} remaining.");
+
+                    if (alexandriteRunsRemaining > 0)
+                    {
+                        // Reset for next run
+                        alexandriteStep = 0;
+                        alexandriteStepTime = DateTime.Now;
+                        alexandriteActionIssued = false;
+                        TransitionTo(BotState.AlexandriteFarming, $"Alexandrite run {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Starting...");
+                    }
+                    else
+                    {
+                        _plugin.PrintChat($"Alexandrite farming complete! {alexandriteRunsCompleted} runs done.");
+                        TransitionTo(BotState.Idle, "Alexandrite farming complete!");
+                    }
+                }
+                return;
+        }
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

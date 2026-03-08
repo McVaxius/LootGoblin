@@ -46,6 +46,12 @@ public class Configuration : IPluginConfiguration
     // Map Location Database
     public bool AutoUpdateLocOnLogin { get; set; } = true;
 
+    // XYZ Cycling
+    public bool CycleGroundOnly { get; set; } = false;
+
+    // Alexandrite Farming
+    public int AlexandriteRunCount { get; set; } = 1;
+
     public void Save()
     {
         Plugin.PluginInterface.SavePluginConfig(this);

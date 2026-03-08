@@ -12,6 +12,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using ECommons.Automation;
@@ -625,6 +626,63 @@ public static class GameHelpers
         Plugin.Log.Information("[KEY] Descent key sequence complete.");
     }
 
+    // ─── Map Flag ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Place a flag marker on the map at the given world coordinates.
+    /// Uses AgentMap.SetFlagMapMarker with Vector3 overload (handles coord conversion internally).
+    /// </summary>
+    public static unsafe void SetMapFlag(uint territoryId, float worldX, float worldZ)
+    {
+        try
+        {
+            var agentMap = AgentMap.Instance();
+            if (agentMap == null)
+            {
+                Plugin.Log.Warning("[MapFlag] AgentMap is null");
+                return;
+            }
+
+            var territorySheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>();
+            var territory = territorySheet?.GetRow(territoryId);
+            if (territory == null)
+            {
+                Plugin.Log.Warning($"[MapFlag] Territory {territoryId} not found");
+                return;
+            }
+
+            var mapId = territory.Value.Map.RowId;
+            var worldPos = new Vector3(worldX, 0f, worldZ);
+            agentMap->SetFlagMapMarker(territoryId, mapId, worldPos);
+            Plugin.Log.Information($"[MapFlag] Set flag at territory {territoryId}, world ({worldX:F1}, {worldZ:F1})");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[MapFlag] SetMapFlag failed: {ex.Message}");
+        }
+    }
+
+    // ─── Currency ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Get the player's current Tomestones of Poetics count.
+    /// Poetics currency ID = 28 (Tomestone type).
+    /// </summary>
+    public static unsafe int GetCurrentPoetics()
+    {
+        try
+        {
+            var im = InventoryManager.Instance();
+            if (im == null) return 0;
+            return (int)im->GetTomestoneCount(0); // Index 0 = Poetics (first tomestone type)
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"GetCurrentPoetics failed: {ex.Message}");
+            return 0;
+        }
+    }
+
     // ─── Lockon + Automove (short-range approach) ─────────────────────────────
 
     /// <summary>
@@ -643,5 +701,120 @@ public static class GameHelpers
     public static void StopAutoMove()
     {
         CommandHelper.SendCommand("/automove");
+    }
+
+    // ─── NPC + Addon Helpers (Alexandrite Farming) ────────────────────────────
+
+    /// <summary>
+    /// Find an NPC by name in the object table.
+    /// </summary>
+    public static IGameObject? FindNpcByName(string name)
+    {
+        foreach (var obj in Plugin.ObjectTable)
+        {
+            if (obj.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.EventNpc ||
+                obj.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.BattleNpc)
+            {
+                if (obj.Name.TextValue.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    return obj;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Check if a UI addon is currently visible.
+    /// </summary>
+    public static unsafe bool IsAddonVisible(string addonName)
+    {
+        try
+        {
+            var addon = RaptureAtkUnitManager.Instance()->GetAddonByName(addonName);
+            return addon != null && addon->IsVisible;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Fire a callback on a named addon with variable arguments.
+    /// Uses AtkUnitBase.FireCallback pattern from map decipher solution.
+    /// </summary>
+    public static unsafe void FireAddonCallback(string addonName, bool updateState, params object[] args)
+    {
+        try
+        {
+            var addon = RaptureAtkUnitManager.Instance()->GetAddonByName(addonName);
+            if (addon == null || !addon->IsVisible)
+            {
+                Plugin.Log.Warning($"[FireAddonCallback] Addon '{addonName}' not found or not visible");
+                return;
+            }
+
+            var atkValues = new AtkValue[args.Length];
+            for (int i = 0; i < args.Length; i++)
+            {
+                atkValues[i] = args[i] switch
+                {
+                    int intVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int, Int = intVal },
+                    uint uintVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.UInt, UInt = uintVal },
+                    bool boolVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Bool, Byte = (byte)(boolVal ? 1 : 0) },
+                    _ => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int, Int = Convert.ToInt32(args[i]) },
+                };
+            }
+
+            fixed (AtkValue* ptr = atkValues)
+            {
+                addon->FireCallback((uint)atkValues.Length, ptr, updateState);
+            }
+
+            Plugin.Log.Information($"[FireAddonCallback] Fired callback on '{addonName}' with {args.Length} args");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[FireAddonCallback] Failed for '{addonName}': {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Close the currently focused addon by sending Escape key.
+    /// </summary>
+    public static void CloseCurrentAddon()
+    {
+        KeyPress(VirtualKey.ESCAPE);
+    }
+
+    /// <summary>
+    /// Simple UseItem that uses the item directly via ActionManager (non-map items).
+    /// For items like Mysterious Map that need direct use, not /gaction decipher.
+    /// </summary>
+    public static unsafe bool UseItem(uint itemId)
+    {
+        try
+        {
+            var im = InventoryManager.Instance();
+            if (im == null) return false;
+
+            var count = im->GetInventoryItemCount(itemId);
+            if (count <= 0)
+            {
+                Plugin.Log.Warning($"UseItem({itemId}): Not in inventory");
+                return false;
+            }
+
+            var am = ActionManager.Instance();
+            if (am == null) return false;
+
+            var result = am->UseAction(ActionType.Item, itemId, 0xE0000000, 65535, 0, 0, null);
+            Plugin.Log.Information($"UseItem({itemId}): ActionManager result = {result}");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"UseItem({itemId}) failed: {ex.Message}");
+            return false;
+        }
     }
 }
