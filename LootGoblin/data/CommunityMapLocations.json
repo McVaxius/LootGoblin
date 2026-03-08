@@ -7530,5 +7530,19 @@
     "RecordedAt": "2026-03-08 21:44:12",
     "TerritoryId": 621,
     "ZoneName": "The Lochs"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 651.5,
+    "FlagY": -100.6,
+    "FlagZ": 441.2,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Thief's Map",
+    "RealX": 650.4,
+    "RealY": -106.3,
+    "RealZ": 443,
+    "RecordedAt": "2026-03-08 21:45:40",
+    "TerritoryId": 613,
+    "ZoneName": "The Ruby Sea"
   }
 ]
