@@ -5122,5 +5122,19 @@
     "RecordedAt": "2026-03-08 17:00:44",
     "TerritoryId": 146,
     "ZoneName": "Southern Thanalan"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 16.6,
+    "FlagY": 102.1,
+    "FlagZ": 116,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Archaeoskin Map",
+    "RealX": 17.1,
+    "RealY": 102.1,
+    "RealZ": 116.3,
+    "RecordedAt": "2026-03-08 17:23:50",
+    "TerritoryId": 397,
+    "ZoneName": "Coerthas Western Highlands"
   }
 ]
