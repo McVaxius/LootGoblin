@@ -3216,6 +3216,12 @@ public class StateManager : IDisposable
 
             if (nav.IsMounted())
             {
+                // Check party wait before dismounting
+                if (_plugin.Configuration.PartyWaitBeforeDismount && !ArePartyMembersClose(10.0))
+                {
+                    StateDetail = "[Flying] Waiting for party before dismounting...";
+                    return;
+                }
                 // On ground but still mounted - dismount
                 _mountService.Dismount();
                 return;
@@ -3328,6 +3334,12 @@ public class StateManager : IDisposable
                 // Dismount if mounted
                 if (nav.IsMounted())
                 {
+                    // Check party wait before dismounting
+                    if (_plugin.Configuration.PartyWaitBeforeDismount && !ArePartyMembersClose(10.0))
+                    {
+                        StateDetail = "[Ground] Waiting for party before dismounting...";
+                        return;
+                    }
                     _mountService.Dismount();
                     return; // Wait for next tick to record position
                 }
@@ -3729,6 +3741,31 @@ public class StateManager : IDisposable
     {
         CurrentLocation = location;
         _plugin.AddDebugLog($"Location set: {location.ZoneName} ({location.X:F1}, {location.Y:F1}, {location.Z:F1})");
+    }
+
+    private bool ArePartyMembersClose(double maxDistance)
+    {
+        var party = _plugin.PartyService;
+        party.UpdatePartyStatus();
+        if (party.PartyMembers.Count <= 1) return true; // Solo = always ready
+
+        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        if (playerPos == Vector3.Zero) return false;
+
+        foreach (var member in party.PartyMembers)
+        {
+            if (member.Name == Plugin.ObjectTable.LocalPlayer?.Name.TextValue) continue;
+            var dx = playerPos.X - member.Position.X;
+            var dz = playerPos.Z - member.Position.Z;
+            var xzDist = Math.Sqrt(dx * dx + dz * dz);
+            if (xzDist > maxDistance)
+            {
+                _plugin.AddDebugLog($"[PartyWait] {member.Name} is {xzDist:F1}y away (XZ) - waiting");
+                return false;
+            }
+        }
+        _plugin.AddDebugLog("[PartyWait] All party members within range - dismounting allowed");
+        return true;
     }
 
 }

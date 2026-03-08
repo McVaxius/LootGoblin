@@ -24,6 +24,7 @@ public class Configuration : IPluginConfiguration
     public bool WaitForParty { get; set; } = true;
     public bool RequireAllMounted { get; set; } = true;
     public int PartyWaitTimeout { get; set; } = 60;
+    public bool PartyWaitBeforeDismount { get; set; } = false;
 
     // Phase 5: State Machine
     public bool AutoStartNextMap { get; set; } = false;

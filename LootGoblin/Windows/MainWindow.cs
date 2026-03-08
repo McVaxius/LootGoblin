@@ -408,12 +408,6 @@ public class MainWindow : Window, IDisposable
                         ImGui.EndDisabled();
                 }
 
-                // Alexandrite Maps button (always visible when logged in)
-                ImGui.Spacing();
-                if (ImGui.Button("Alexandrite Maps"))
-                {
-                    plugin.AlexandriteMapWindow.IsOpen = !plugin.AlexandriteMapWindow.IsOpen;
-                }
             }
 
             ImGui.Spacing();
@@ -614,6 +608,12 @@ public class MainWindow : Window, IDisposable
                 }
             }
 
+            ImGui.SameLine();
+            if (ImGui.Button("Alexandrite", new Vector2(100, 0)))
+            {
+                plugin.AlexandriteMapWindow.IsOpen = !plugin.AlexandriteMapWindow.IsOpen;
+            }
+
             // Current map info
             if (sm.SelectedMapItemId > 0)
             {
@@ -721,6 +721,26 @@ public class MainWindow : Window, IDisposable
                         ImGui.TextColored(ColorGrey, "[On Foot]");
                     }
                 }
+            }
+
+            ImGui.Spacing();
+            var partyWait = plugin.Configuration.PartyWaitBeforeDismount;
+            if (ImGui.Checkbox("Wait for party before dismounting", ref partyWait))
+            {
+                plugin.Configuration.PartyWaitBeforeDismount = partyWait;
+                plugin.Configuration.Save();
+            }
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, "(?)");
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.Text("When enabled, the bot will wait at the destination\n" +
+                           "until all party members are within 10 yalms (XZ distance)\n" +
+                           "before dismounting. This prevents the bot from dismounting\n" +
+                           "alone in dangerous zones while party members are still\n" +
+                           "traveling. Works in both flying and ground-only modes.");
+                ImGui.EndTooltip();
             }
         }
     }
