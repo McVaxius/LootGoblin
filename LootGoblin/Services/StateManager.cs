@@ -3248,18 +3248,91 @@ public class StateManager : IDisposable
             return;
         }
 
-        // === Ground-only mode: walk directly without mounting ===
+        // === Ground-only mode: mount and walk (no flying) ===
         if (groundOnly)
         {
             if (CurrentLocation == null) return;
+            
+            // Check if we need to teleport first
+            if (!stateActionIssued)
+            {
+                if (Plugin.ClientState.TerritoryType != CurrentLocation.TerritoryId)
+                {
+                    // Need to teleport to this territory first
+                    if (CurrentLocation.NearestAetheryteId > 0)
+                    {
+                        nav.TeleportToAetheryte(CurrentLocation.NearestAetheryteId);
+                        stateActionIssued = true;
+                        stateStartTime = DateTime.Now;
+                        StateDetail = $"[Ground] Teleporting to {CurrentLocation.ZoneName}...";
+                        return;
+                    }
+                    else
+                    {
+                        _plugin.AddDebugLog($"[Ground] No aetheryte for {CurrentLocation.ZoneName} - skipping");
+                        cycleMapLocationIndex++;
+                        SetupNextCycleMapLocation();
+                        return;
+                    }
+                }
+                else
+                {
+                    // Same territory - start by mounting
+                    stateActionIssued = true;
+                    stateStartTime = DateTime.Now;
+                }
+            }
+
+            // Wait for teleport to complete
+            if (Plugin.ClientState.TerritoryType != CurrentLocation.TerritoryId)
+            {
+                var teleportElapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+                if (teleportElapsed > 5.0 && !nav.IsTeleporting())
+                {
+                    // Teleport done, reset actionIssued to start mounting
+                    stateActionIssued = false;
+                }
+                return;
+            }
+
+            // Mount if not mounted (but not flying)
+            if (!nav.IsMounted() && !nav.IsFlying())
+            {
+                if (mountAttemptStart == DateTime.MinValue)
+                {
+                    mountAttemptStart = DateTime.Now;
+                    mountAttempts = 0;
+                }
+                var mountElapsed = (DateTime.Now - mountAttemptStart).TotalSeconds;
+                if (mountElapsed < 3.0) return; // Grace period
+                if (mountAttempts < 5 && mountElapsed >= mountAttempts * 3.0)
+                {
+                    mountAttempts++;
+                    nav.MountUp();
+                    return;
+                }
+                if (mountAttempts >= 5)
+                {
+                    _plugin.AddDebugLog($"[Ground] Mount failed - proceeding on foot");
+                    // Continue on foot instead of skipping location
+                }
+            }
+
             var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
             var target = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
             var xzDist = Math.Sqrt(Math.Pow(playerPos.X - target.X, 2) + Math.Pow(playerPos.Z - target.Z, 2));
 
-            // Arrived - record position
+            // Arrived - dismount and record position
             if (xzDist < 3.0)
             {
-                _plugin.AddDebugLog($"[CycleMapLocs] Ground arrived ({xzDist:F1}y) - recording position");
+                // Dismount if mounted
+                if (nav.IsMounted())
+                {
+                    _mountService.Dismount();
+                    return; // Wait for next tick to record position
+                }
+
+                _plugin.AddDebugLog($"[Ground] Arrived ({xzDist:F1}y) - recording position");
                 if (playerPos != Vector3.Zero)
                 {
                     var entry = cycleMapLocationQueue[cycleMapLocationIndex];
@@ -3272,6 +3345,7 @@ public class StateManager : IDisposable
                     _plugin.AddDebugLog($"[CycleMapLocs] Recorded XYZ: ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1})");
                 }
 
+                // Reset for next location
                 cycleMapLocationIndex++;
                 stateStartTime = DateTime.Now;
                 stateActionIssued = false;
