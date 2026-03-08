@@ -17,6 +17,7 @@ public class MainWindow : Window, IDisposable
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorCyan = new(0.3f, 1f, 1f, 1f);
+	private static readonly Vector4 ColorOrange = new(1f, 0.6f, 0f, 1f);
 
     private readonly Plugin plugin;
     private Dictionary<uint, int> cachedMaps = new();
@@ -441,6 +442,7 @@ public class MainWindow : Window, IDisposable
                         {
                             MapCategory.Roulette => ColorCyan,
                             MapCategory.GuaranteedPortal => ColorGreen,
+                            MapCategory.AllTypesRandom => ColorOrange,
                             MapCategory.Dungeon => ColorYellow,
                             _ => ColorGrey,
                         };
@@ -449,6 +451,7 @@ public class MainWindow : Window, IDisposable
                             MapCategory.Roulette => "[Roulette]",
                             MapCategory.GuaranteedPortal => "[Guaranteed]",
                             MapCategory.Dungeon => "[Dungeon]",
+                            MapCategory.AllTypesRandom => "[All 3 Types]",
                             _ => "[Outdoor]",
                         };
                         ImGui.TextColored(catColor, catLabel);

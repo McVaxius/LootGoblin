@@ -767,7 +767,8 @@ public class StateManager : IDisposable
             else
             {
                 // No stored location - use Y+50 altitude boost as temporary fallback
-                flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
+                //flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
+                flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y - 50f, CurrentLocation.Z);
                 _plugin.AddDebugLog($"[Flying] No valid RealXYZ - using Y+50 fallback: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
             }
             nav.FlyToPosition(flyTarget);
