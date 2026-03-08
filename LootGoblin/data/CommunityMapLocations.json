@@ -7516,5 +7516,19 @@
     "RecordedAt": "2026-03-08 21:26:51",
     "TerritoryId": 621,
     "ZoneName": "The Lochs"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 103.5,
+    "FlagY": -343.7,
+    "FlagZ": 207.7,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Thief's Map",
+    "RealX": 103.6,
+    "RealY": -349.1,
+    "RealZ": 207.9,
+    "RecordedAt": "2026-03-08 21:44:12",
+    "TerritoryId": 621,
+    "ZoneName": "The Lochs"
   }
 ]
