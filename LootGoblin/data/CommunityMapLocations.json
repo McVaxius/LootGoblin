@@ -1720,5 +1720,19 @@
     "RecordedAt": "2026-03-08 03:10:05",
     "TerritoryId": 139,
     "ZoneName": "Upper La Noscea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -586.1,
+    "FlagY": -1.9,
+    "FlagZ": -12.9,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Toadskin Map",
+    "RealX": -586.5,
+    "RealY": -1.9,
+    "RealZ": -12.9,
+    "RecordedAt": "2026-03-08 03:12:41",
+    "TerritoryId": 139,
+    "ZoneName": "Upper La Noscea"
   }
 ]
