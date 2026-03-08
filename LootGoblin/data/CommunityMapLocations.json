@@ -7572,5 +7572,61 @@
     "RecordedAt": "2026-03-08 21:50:52",
     "TerritoryId": 613,
     "ZoneName": "The Ruby Sea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 189,
+    "FlagY": -112.4,
+    "FlagZ": 69,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Thief's Map",
+    "RealX": 188,
+    "RealY": -125.7,
+    "RealZ": 71,
+    "RecordedAt": "2026-03-08 21:52:55",
+    "TerritoryId": 613,
+    "ZoneName": "The Ruby Sea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -662,
+    "FlagY": -83.7,
+    "FlagZ": -240.7,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Thief's Map",
+    "RealX": -662.2,
+    "RealY": -92.1,
+    "RealZ": -241.1,
+    "RecordedAt": "2026-03-08 21:54:34",
+    "TerritoryId": 614,
+    "ZoneName": "Yanxia"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -614,
+    "FlagY": -88.9,
+    "FlagZ": 577.5,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Thief's Map",
+    "RealX": -612.5,
+    "RealY": -97.2,
+    "RealZ": 577.2,
+    "RecordedAt": "2026-03-08 21:56:59",
+    "TerritoryId": 614,
+    "ZoneName": "Yanxia"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -475.6,
+    "FlagY": -110.1,
+    "FlagZ": -613.9,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Thief's Map",
+    "RealX": -476.1,
+    "RealY": -115.9,
+    "RealZ": -614,
+    "RecordedAt": "2026-03-08 21:58:32",
+    "TerritoryId": 614,
+    "ZoneName": "Yanxia"
   }
 ]
