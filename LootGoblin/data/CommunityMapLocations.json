@@ -3652,5 +3652,19 @@
     "RecordedAt": "2026-03-08 07:21:41",
     "TerritoryId": 137,
     "ZoneName": "Eastern La Noscea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -459.3,
+    "FlagY": -37.9,
+    "FlagZ": 719,
+    "HasRealXYZ": true,
+    "MapName": "Mysterious Map",
+    "RealX": -464.4,
+    "RealY": -37.8,
+    "RealZ": 717.5,
+    "RecordedAt": "2026-03-08 15:47:54",
+    "TerritoryId": 138,
+    "ZoneName": "Western La Noscea"
   }
 ]
