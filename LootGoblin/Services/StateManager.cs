@@ -352,6 +352,12 @@ public class StateManager : IDisposable
             return;
         }
 
+        var location = _plugin.GlobeTrotterIPC.TryGetMapLocation();
+        if (location != null)
+        {
+            TransitionTo(BotState.DetectingLocation, "Map already opened, detecting the flag location...");
+        }
+
         RetryCount = 0;
         CurrentLocation = null;
         SelectedMapItemId = 0;
@@ -480,45 +486,44 @@ public class StateManager : IDisposable
 
         // After /item command, wait for the decipher dialog + flag to set
         // Transition to detection after a short delay to allow the game to process
-        if ((DateTime.Now - stateStartTime).TotalSeconds > 4)
-            TransitionTo(BotState.DetectingLocation, "Map opened, reading location...");
-    }
-
-    private void TickDetectingLocation()
-    {
-        // Check if map opening failed by validating map count decreased
-        if (!mapCountChecked)
-        {
-            var currentCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
-            _plugin.AddDebugLog($"[DetectingLocation] Map count check: {currentCount} (was {initialMapCount})");
-            
-            if (currentCount >= initialMapCount)
+        if ((DateTime.Now - stateStartTime).TotalSeconds > 4) {
+            // Check if map opening failed by validating map count decreased
+            if (!mapCountChecked)
             {
-                // Map count didn't decrease - opening failed, retry once
-                if (!mapOpeningRetried)
+                var currentCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
+                _plugin.AddDebugLog($"[DetectingLocation] Map count check: {currentCount} (was {initialMapCount})");
+
+                if (currentCount >= initialMapCount)
                 {
-                    _plugin.AddDebugLog($"[DetectingLocation] Map count didn't decrease - opening failed, retrying...");
-                    mapOpeningRetried = true;
-                    mapCountChecked = true; // Don't check again on retry
-                    TransitionTo(BotState.OpeningMap, "Retrying map opening...");
-                    return;
+                    // Map count didn't decrease - opening failed, retry once
+                    if (!mapOpeningRetried)
+                    {
+                        _plugin.AddDebugLog($"[DetectingLocation] Map count didn't decrease - opening failed, retrying...");
+                        mapOpeningRetried = true;
+                        mapCountChecked = true; // Don't check again on retry
+                        TransitionTo(BotState.OpeningMap, "Retrying map opening...");
+                        return;
+                    }
+                    else
+                    {
+                        // Already retried once - handle as error
+                        _plugin.AddDebugLog($"[DetectingLocation] Map opening failed after retry - treating as error");
+                        HandleError("Map opening failed - map count didn't decrease");
+                        return;
+                    }
                 }
                 else
                 {
-                    // Already retried once - handle as error
-                    _plugin.AddDebugLog($"[DetectingLocation] Map opening failed after retry - treating as error");
-                    HandleError("Map opening failed - map count didn't decrease");
-                    return;
+                    _plugin.AddDebugLog($"[DetectingLocation] Map count decreased - opening successful");
+                    mapCountChecked = true;
+                    TransitionTo(BotState.DetectingLocation, "Map opened, reading location...");
                 }
             }
-            else
-            {
-                _plugin.AddDebugLog($"[DetectingLocation] Map count decreased - opening successful");
-                mapCountChecked = true;
-            }
         }
+    }
 
-        // Try to read the map flag from AgentMap (set when map is deciphered)
+    private void TickDetectingLocation()
+    {   // Try to read the map flag from AgentMap (set when map is deciphered)
         var location = _plugin.GlobeTrotterIPC.TryGetMapLocation();
         if (location != null)
         {
