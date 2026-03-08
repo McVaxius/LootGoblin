@@ -7544,5 +7544,33 @@
     "RecordedAt": "2026-03-08 21:45:40",
     "TerritoryId": 613,
     "ZoneName": "The Ruby Sea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -209.1,
+    "FlagY": -150.4,
+    "FlagZ": 210.6,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Thief's Map",
+    "RealX": -210.2,
+    "RealY": -196.1,
+    "RealZ": 209.4,
+    "RecordedAt": "2026-03-08 21:47:16",
+    "TerritoryId": 613,
+    "ZoneName": "The Ruby Sea"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 356.7,
+    "FlagY": -74.8,
+    "FlagZ": -337.1,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Thief's Map",
+    "RealX": 356.7,
+    "RealY": -122.2,
+    "RealZ": -331.7,
+    "RecordedAt": "2026-03-08 21:50:52",
+    "TerritoryId": 613,
+    "ZoneName": "The Ruby Sea"
   }
 ]
