@@ -7567,9 +7567,9 @@
     "HasRealXYZ": true,
     "MapName": "Timeworn Thief's Map",
     "RealX": 356.7,
-    "RealY": -122.2,
-    "RealZ": -331.7,
-    "RecordedAt": "2026-03-08 21:50:52",
+    "RealY": -74.8,
+    "RealZ": -337.1,
+    "RecordedAt": "2026-03-09 12:54:12",
     "TerritoryId": 613,
     "ZoneName": "The Ruby Sea"
   },
@@ -7623,9 +7623,9 @@
     "HasRealXYZ": true,
     "MapName": "Timeworn Thief's Map",
     "RealX": -476.1,
-    "RealY": -115.9,
+    "RealY": -111.9,
     "RealZ": -614,
-    "RecordedAt": "2026-03-08 21:58:32",
+    "RecordedAt": "2026-03-09 12:54:12",
     "TerritoryId": 614,
     "ZoneName": "Yanxia"
   }
