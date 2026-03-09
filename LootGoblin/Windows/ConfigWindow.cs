@@ -13,7 +13,7 @@ public class ConfigWindow : Window, IDisposable
 
     public ConfigWindow(Plugin plugin) : base("Loot Goblin Settings###LootGoblinConfig")
     {
-        Flags = ImGuiWindowFlags.NoCollapse;
+        Flags = ImGuiWindowFlags.None;
 
         Size = new Vector2(350, 520);
         SizeCondition = ImGuiCond.FirstUseEver;
