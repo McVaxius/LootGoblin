@@ -49,6 +49,7 @@ public class Configuration : IPluginConfiguration
 
     // XYZ Cycling
     public bool CycleGroundOnly { get; set; } = false;
+    public bool ShowDebugMapCompletion { get; set; } = false;
 
     // Alexandrite Farming
     public int AlexandriteRunCount { get; set; } = 1;

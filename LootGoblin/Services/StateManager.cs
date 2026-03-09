@@ -814,9 +814,10 @@ public class StateManager : IDisposable
             var movedDistance = Vector3.Distance(currentPos, lastStuckCheckPos);
             if (movedDistance < 5.0f)
             {
-                // Stuck! Re-pathfind
+                // Stuck! Stop current navigation before re-pathfinding to prevent erratic movement
+                nav.StopNavigation();
                 nav.FlyToPosition(flyTargetPos);
-                _plugin.AddDebugLog($"[Flying] Stuck detected (moved {movedDistance:F1}y in 10s) - re-pathfinding (distance: {distanceFromTarget:F1}y)");
+                _plugin.AddDebugLog($"[Flying] Stuck detected (moved {movedDistance:F1}y in 10s) - stopped + re-pathfinding (distance: {distanceFromTarget:F1}y)");
             }
             lastStuckCheckPos = currentPos;
             lastStuckCheckTime = DateTime.Now;
@@ -2033,19 +2034,8 @@ public class StateManager : IDisposable
                 dungeonInteractionAttemptCount++;
                 Plugin.TargetManager.Target = target;
                 
-                // Cycle interaction methods for redundancy
-                if (dungeonInteractionAttemptCount % 2 == 1)
-                {
-                    // Odd attempts: TargetSystem.InteractWithObject (PandorasBox pattern)
-                    _plugin.AddDebugLog($"[DungeonLooting] Interact attempt #{dungeonInteractionAttemptCount} (TargetSystem) with '{targetName}' at {dist:F1}y");
-                    GameHelpers.InteractWithObject(target);
-                }
-                else
-                {
-                    // Even attempts: /interact command (game native)
-                    _plugin.AddDebugLog($"[DungeonLooting] Interact attempt #{dungeonInteractionAttemptCount} (/interact) with '{targetName}' at {dist:F1}y");
-                    CommandHelper.SendCommand("/interact");
-                }
+                _plugin.AddDebugLog($"[DungeonLooting] Interact attempt #{dungeonInteractionAttemptCount} (TargetSystem) with '{targetName}' at {dist:F1}y");
+                GameHelpers.InteractWithObject(target);
             }
             StateDetail = $"Approaching+interacting '{targetName}' ({dist:F1}y, attempt #{dungeonInteractionAttemptCount})...";
         }
@@ -2069,19 +2059,8 @@ public class StateManager : IDisposable
                 dungeonInteractionAttemptCount++;
                 Plugin.TargetManager.Target = target;
                 
-                // Cycle interaction methods for redundancy
-                if (dungeonInteractionAttemptCount % 2 == 1)
-                {
-                    // Odd attempts: TargetSystem.InteractWithObject (PandorasBox pattern)
-                    _plugin.AddDebugLog($"[DungeonLooting] Interact attempt #{dungeonInteractionAttemptCount} (TargetSystem) with '{targetName}' Kind={target.ObjectKind} at {dist:F1}y");
-                    GameHelpers.InteractWithObject(target);
-                }
-                else
-                {
-                    // Even attempts: /interact command (game native)
-                    _plugin.AddDebugLog($"[DungeonLooting] Interact attempt #{dungeonInteractionAttemptCount} (/interact) with '{targetName}' at {dist:F1}y");
-                    CommandHelper.SendCommand("/interact");
-                }
+                _plugin.AddDebugLog($"[DungeonLooting] Interact attempt #{dungeonInteractionAttemptCount} (TargetSystem) with '{targetName}' Kind={target.ObjectKind} at {dist:F1}y");
+                GameHelpers.InteractWithObject(target);
                 
                 // Track progression objects for state management (but do NOT mark attempted)
                 var lower = targetName.ToLowerInvariant();
@@ -2283,8 +2262,8 @@ public class StateManager : IDisposable
                 return; // Next tick will pick a different object
             }
 
-            // Use ProcessLootTarget for multi-method interaction cycling
-            // (InteractWithObject + /interact alternating, 3-phase approach, stuck detection)
+            // Use ProcessLootTarget for interaction cycling
+            // (InteractWithObject via TargetSystem, 3-phase approach, stuck detection)
             ProcessLootTarget(target);
         }
     }
@@ -3373,6 +3352,8 @@ public class StateManager : IDisposable
             if (lastStuckCheckPos.Equals(Vector3.Zero) ||
                 (!lastStuckCheckPos.Equals(playerPos) && (DateTime.Now - lastStuckCheckTime).TotalSeconds > 5.0))
             {
+                // Stop current navigation before re-pathfinding to prevent erratic movement
+                nav.StopNavigation();
                 nav.MoveToPosition(target);
                 lastStuckCheckPos = playerPos;
                 lastStuckCheckTime = DateTime.Now;
@@ -3442,6 +3423,8 @@ public class StateManager : IDisposable
             if (!lastStuckCheckPos.Equals(Vector3.Zero) && !lastStuckCheckPos.Equals(playerPos) &&
                 (DateTime.Now - lastStuckCheckTime).TotalSeconds > 5.0)
             {
+                // Stop current navigation before re-pathfinding to prevent erratic movement
+                nav.StopNavigation();
                 var flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
                 nav.FlyToPosition(flyTarget);
                 lastStuckCheckPos = playerPos;

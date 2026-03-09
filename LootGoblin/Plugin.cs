@@ -238,6 +238,14 @@ public sealed class Plugin : IDalamudPlugin
                 PrintChat($"Loot Goblin is {status}.");
                 break;
 
+            case "debug":
+                Configuration.ShowDebugMapCompletion = !Configuration.ShowDebugMapCompletion;
+                Configuration.Save();
+                var debugState = Configuration.ShowDebugMapCompletion ? "ON" : "OFF";
+                PrintChat($"Map Completion debug controls: {debugState}");
+                AddDebugLog($"Debug map completion controls toggled: {debugState}");
+                break;
+
             default:
                 MainWindow.Toggle();
                 break;

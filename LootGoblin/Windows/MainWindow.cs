@@ -383,29 +383,33 @@ public class MainWindow : Window, IDisposable
                 }
                 else
                 {
-                    // Ground-only mode checkbox
-                    var groundOnly = plugin.Configuration.CycleGroundOnly;
-                    if (ImGui.Checkbox("Ground-only (no flying)", ref groundOnly))
+                    // Debug controls - only shown when /lg debug is enabled
+                    if (plugin.Configuration.ShowDebugMapCompletion)
                     {
-                        plugin.Configuration.CycleGroundOnly = groundOnly;
-                        plugin.Configuration.Save();
-                    }
+                        // Ground-only mode checkbox
+                        var groundOnly = plugin.Configuration.CycleGroundOnly;
+                        if (ImGui.Checkbox("Ground-only (no flying)", ref groundOnly))
+                        {
+                            plugin.Configuration.CycleGroundOnly = groundOnly;
+                            plugin.Configuration.Save();
+                        }
 
-                    if (isBusy)
-                        ImGui.BeginDisabled();
+                        if (isBusy)
+                            ImGui.BeginDisabled();
 
-                    if (ImGui.Button("Cycle Missing Aetherytes"))
-                    {
-                        sm.StartCyclingAetherytes();
-                    }
-                    ImGui.SameLine();
-                    if (ImGui.Button("Cycle Missing XYZ"))
-                    {
-                        sm.StartCyclingMapLocations();
-                    }
+                        if (ImGui.Button("Cycle Missing Aetherytes"))
+                        {
+                            sm.StartCyclingAetherytes();
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Cycle Missing XYZ"))
+                        {
+                            sm.StartCyclingMapLocations();
+                        }
 
-                    if (isBusy)
-                        ImGui.EndDisabled();
+                        if (isBusy)
+                            ImGui.EndDisabled();
+                    }
                 }
 
             }
