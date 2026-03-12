@@ -125,9 +125,13 @@ public class NavigationService : IDisposable
         }
 
         var selectedMount = _plugin.Configuration.SelectedMount ?? "Company Chocobo";
-        var mountCommand = string.IsNullOrEmpty(selectedMount) || selectedMount == "Mount Roulette"
-            ? "/mount \"Company Chocobo\""
-            : $"/mount \"{selectedMount}\"";
+        string mountCommand;
+        if (selectedMount == "Mount Roulette")
+            mountCommand = "/generalaction \"Mount Roulette\"";
+        else if (string.IsNullOrEmpty(selectedMount))
+            mountCommand = "/mount \"Company Chocobo\"";
+        else
+            mountCommand = $"/mount \"{selectedMount}\"";
         
         _plugin.AddDebugLog($"Using mount command: {mountCommand}");
         CommandHelper.SendCommand(mountCommand);

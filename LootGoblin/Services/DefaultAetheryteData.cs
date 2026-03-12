@@ -70,7 +70,9 @@ public static class DefaultAetheryteData
             { 105, new AetherytePosition { AetheryteId = 105, Name = "Tamamizu", X = 53.4f, Y = 4.5f, Z = -28.2f } },
             { 106, new AetherytePosition { AetheryteId = 106, Name = "Onokoro", X = 53.4f, Y = 4.5f, Z = -28.2f } },
             { 107, new AetherytePosition { AetheryteId = 107, Name = "Namai", X = 92.4f, Y = 3f, Z = -577.6f } },
-            { 108, new AetherytePosition { AetheryteId = 108, Name = "The House of the Fierce", X = 92.4f, Y = 3f, Z = -577.6f } },
+            // NOTE: House of the Fierce coords were wrong (copied from Namai). Cleared to force Level/MapMarker fallback.
+            // Passive recording will populate correct position when user teleports here.
+            { 108, new AetherytePosition { AetheryteId = 108, Name = "The House of the Fierce", X = 0f, Y = 0f, Z = 0f } },
             { 109, new AetherytePosition { AetheryteId = 109, Name = "Reunion", X = 247.2f, Y = 4.5f, Z = -409.8f } },
             { 110, new AetherytePosition { AetheryteId = 110, Name = "The Dawn Throne", X = 247.2f, Y = 4.5f, Z = -409.8f } },
             { 111, new AetherytePosition { AetheryteId = 111, Name = "Kugane", X = 624.6f, Y = 81f, Z = 660.2f } },

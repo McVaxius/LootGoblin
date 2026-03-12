@@ -738,21 +738,45 @@ public class StateManager : IDisposable
     {
         _plugin.PartyService.UpdatePartyStatus();
 
-        if (_plugin.PartyService.AllMembersMounted)
+        // Check if all party members are within 10y of the bot runner
+        var localPlayer = Plugin.ObjectTable.LocalPlayer;
+        if (localPlayer != null)
         {
-            TransitionTo(BotState.Flying, "All party members mounted! Flying...");
-            return;
-        }
+            var allNearby = true;
+            var nearbyCount = 0;
+            var totalOthers = 0;
+            foreach (var member in _plugin.PartyService.PartyMembers)
+            {
+                if (member.Name == localPlayer.Name.TextValue) continue;
+                totalOthers++;
+                if (!member.IsInSameZone)
+                {
+                    allNearby = false;
+                    continue;
+                }
+                var dist = Vector3.Distance(localPlayer.Position, member.Position);
+                if (dist <= 10.0f)
+                    nearbyCount++;
+                else
+                    allNearby = false;
+            }
 
-        var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-        var timeout = _plugin.Configuration.PartyWaitTimeout;
-        var remaining = timeout - (int)elapsed;
+            if (totalOthers > 0 && allNearby)
+            {
+                _plugin.AddDebugLog($"[WaitingForParty] All {totalOthers} party members within 10y - proceeding to fly");
+                TransitionTo(BotState.Flying, "All party members nearby! Flying...");
+                return;
+            }
 
-        if ((int)elapsed % 10 == 0 && (int)elapsed > 0)
-        {
-            var mounted = _plugin.PartyService.PartyMembers.FindAll(m => m.IsMounted).Count;
-            var total = _plugin.PartyService.PartyMembers.Count;
-            StateDetail = $"Waiting for party ({mounted}/{total} mounted) - {remaining}s left...";
+            var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+            var timeout = _plugin.Configuration.PartyWaitTimeout;
+            var remaining = timeout - (int)elapsed;
+
+            if ((int)elapsed % 5 == 0 && (int)elapsed > 0)
+            {
+                _plugin.AddDebugLog($"[WaitingForParty] {nearbyCount}/{totalOthers} members within 10y - {remaining}s left");
+            }
+            StateDetail = $"Waiting for party ({nearbyCount}/{totalOthers} within 10y) - {remaining}s left...";
         }
     }
 
@@ -768,27 +792,40 @@ public class StateManager : IDisposable
 
         if (!stateActionIssued)
         {
-            // Check MapLocationDatabase for a stored real XYZ for this flag position
-            var dbEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
-            Vector3 flyTarget;
-            if (dbEntry != null && dbEntry.HasRealXYZ)
+            // Check if we're already close enough to skip pathfinding entirely
+            var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+            var targetPos2 = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+            var xzDist2 = Math.Sqrt(Math.Pow(playerPos.X - targetPos2.X, 2) + Math.Pow(playerPos.Z - targetPos2.Z, 2));
+            if (xzDist2 < 10.0f)
             {
-                // Use stored real position from previous successful dig
-                flyTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
-                _plugin.AddDebugLog($"[Flying] Using stored real XYZ from MapLocDB: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
+                _plugin.AddDebugLog($"[Flying] Already within {xzDist2:F1}y of destination - skipping pathfinding, proceeding to dismount");
+                stateActionIssued = true;
+                // Fall through to the arrival/dismount logic below
             }
             else
             {
-                // No stored location - use Y+50 altitude boost as temporary fallback
-                flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
-                //flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y - 350f, CurrentLocation.Z);
-                _plugin.AddDebugLog($"[Flying] No valid RealXYZ - using Y+50 fallback: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
+                // Check MapLocationDatabase for a stored real XYZ for this flag position
+                var dbEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
+                Vector3 flyTarget;
+                if (dbEntry != null && dbEntry.HasRealXYZ)
+                {
+                    // Use stored real position from previous successful dig
+                    flyTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
+                    _plugin.AddDebugLog($"[Flying] Using stored real XYZ from MapLocDB: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
+                }
+                else
+                {
+                    // No stored location - use Y+50 altitude boost as temporary fallback
+                    flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
+                    //flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y - 350f, CurrentLocation.Z);
+                    _plugin.AddDebugLog($"[Flying] No valid RealXYZ - using Y+50 fallback: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
+                }
+                nav.FlyToPosition(flyTarget);
+                stateActionIssued = true;
+                lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+                lastStuckCheckTime = DateTime.Now;
+                return;
             }
-            nav.FlyToPosition(flyTarget);
-            stateActionIssued = true;
-            lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-            lastStuckCheckTime = DateTime.Now;
-            return;
         }
 
         if (nav.State == NavigationState.Error)
