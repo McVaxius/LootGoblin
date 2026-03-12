@@ -598,22 +598,69 @@ public class NavigationService : IDisposable
     }
 
     /// <summary>
-    /// Get the estimated X,Z position of an aetheryte from stored data.
-    /// Uses community defaults first, then user-recorded positions if available.
+    /// Get the estimated X,Z position of an aetheryte from Lumina data.
+    /// Uses the same MapMarker coordinate conversion as FindNearestAetheryte.
     /// Used for distance checking during cycling (Y coordinate is ignored).
     /// </summary>
-    public Vector3 GetEstimatedAetherytePosition(uint aetheryteId)
+    public unsafe Vector3 GetEstimatedAetherytePosition(uint aetheryteId)
     {
-        // Get position from database (defaults + user overrides)
-        var position = _plugin.AetherytePositionDatabase.GetPosition(aetheryteId);
-        
-        if (position != null)
+        try
         {
-            _plugin.AddDebugLog($"[Aetheryte] Using stored position for {position.Name} (ID:{aetheryteId}): ({position.X:F1}, {position.Z:F1})");
-            return new Vector3(position.X, 0f, position.Z);
+            var aetheryteSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.Aetheryte>();
+            if (aetheryteSheet == null) return Vector3.Zero;
+            
+            var aetheryte = aetheryteSheet.GetRow(aetheryteId);
+            if (aetheryte.RowId == 0) return Vector3.Zero;
+            
+            var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"ID {aetheryteId}";
+            
+            // Get Map data for coordinate conversion (same as FindNearestAetheryte)
+            var territoryTypeSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>();
+            if (territoryTypeSheet == null) return Vector3.Zero;
+            
+            var territory = territoryTypeSheet.GetRow(aetheryte.Territory.RowId);
+            if (territory.RowId == 0) return Vector3.Zero;
+            
+            var mapRow = territory.Map.Value;
+            var mapId = territory.Map.RowId;
+            var sizeFactor = mapRow.SizeFactor;
+            var offsetX = mapRow.OffsetX;
+            var offsetY = mapRow.OffsetY;
+            
+            // Get MapMarker data
+            var mapMarkerSheet = _dataManager.GetSubrowExcelSheet<Lumina.Excel.Sheets.MapMarker>();
+            if (mapMarkerSheet == null) return Vector3.Zero;
+            
+            // Look for aetheryte markers that match this aetheryte
+            for (ushort subIdx = 0; subIdx < 500; subIdx++)
+            {
+                var marker = mapMarkerSheet.GetSubrowOrDefault(mapId, subIdx);
+                if (marker == null) break;
+                
+                if (marker.Value.DataType == 3 || marker.Value.DataType == 4) // aetheryte/aethernet
+                {
+                    // Try to match by AetheryteId or PlaceName.RowId
+                    var dataKey = marker.Value.DataKey.RowId;
+                    if (dataKey == aetheryteId || dataKey == aetheryte.PlaceName.RowId)
+                    {
+                        // Convert map coordinates to world coordinates (exact same formula as FindNearestAetheryte)
+                        float scaleFactor = sizeFactor / 100.0f;
+                        float worldX = ((float)marker.Value.X / scaleFactor - 1024.0f) / scaleFactor + offsetX;
+                        float worldZ = ((float)marker.Value.Y / scaleFactor - 1024.0f) / scaleFactor + offsetY;
+                        
+                        _plugin.AddDebugLog($"[Aetheryte] {name}: MapMarker match (DataKey={dataKey}) → ({worldX:F1}, {worldZ:F1})");
+                        return new Vector3(worldX, 0f, worldZ);
+                    }
+                }
+            }
+            
+            _plugin.AddDebugLog($"[Aetheryte] {name}: No matching MapMarker found for DataKey {aetheryteId} or {aetheryte.PlaceName.RowId}");
+        }
+        catch (Exception ex)
+        {
+            _plugin.AddDebugLog($"[Aetheryte] GetEstimatedPosition failed: {ex.GetType().Name}: {ex.Message}");
         }
         
-        _plugin.AddDebugLog($"[Aetheryte] No position found for aetheryte ID {aetheryteId}");
         return Vector3.Zero;
     }
 
