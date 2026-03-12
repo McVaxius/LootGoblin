@@ -67,6 +67,16 @@ public class AetherytePositionDatabase
     /// <summary>Check if we have a stored position for this aetheryte.</summary>
     public bool HasPosition(uint aetheryteId) => _positions.ContainsKey(aetheryteId);
 
+    /// <summary>Remove an aetheryte position from the database (used to force re-recording).</summary>
+    public void RemovePosition(uint aetheryteId)
+    {
+        if (_positions.Remove(aetheryteId))
+        {
+            _plugin.AddDebugLog($"[AetheryteDB] Removed aetheryte ID {aetheryteId} from database - will appear as missing");
+            Save(); // Persist the removal
+        }
+    }
+
     /// <summary>Get all stored positions.</summary>
     public IReadOnlyDictionary<uint, AetherytePosition> AllPositions => _positions;
 

@@ -406,6 +406,13 @@ public class MainWindow : Window, IDisposable
                         {
                             sm.StartCyclingMapLocations();
                         }
+                        
+                        // Debug button to clear House of the Fierce for testing
+                        ImGui.Spacing();
+                        if (ImGui.Button("Clear House of the Fierce (Debug)"))
+                        {
+                            plugin.AetherytePositionDatabase.RemovePosition(108); // House of the Fierce ID
+                        }
 
                         if (isBusy)
                             ImGui.EndDisabled();
