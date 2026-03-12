@@ -738,45 +738,21 @@ public class StateManager : IDisposable
     {
         _plugin.PartyService.UpdatePartyStatus();
 
-        // Check if all party members are within 10y of the bot runner
-        var localPlayer = Plugin.ObjectTable.LocalPlayer;
-        if (localPlayer != null)
+        if (_plugin.PartyService.AllMembersMounted)
         {
-            var allNearby = true;
-            var nearbyCount = 0;
-            var totalOthers = 0;
-            foreach (var member in _plugin.PartyService.PartyMembers)
-            {
-                if (member.Name == localPlayer.Name.TextValue) continue;
-                totalOthers++;
-                if (!member.IsInSameZone)
-                {
-                    allNearby = false;
-                    continue;
-                }
-                var dist = Vector3.Distance(localPlayer.Position, member.Position);
-                if (dist <= 10.0f)
-                    nearbyCount++;
-                else
-                    allNearby = false;
-            }
+            TransitionTo(BotState.Flying, "All party members mounted! Flying...");
+            return;
+        }
 
-            if (totalOthers > 0 && allNearby)
-            {
-                _plugin.AddDebugLog($"[WaitingForParty] All {totalOthers} party members within 10y - proceeding to fly");
-                TransitionTo(BotState.Flying, "All party members nearby! Flying...");
-                return;
-            }
+        var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
+        var timeout = _plugin.Configuration.PartyWaitTimeout;
+        var remaining = timeout - (int)elapsed;
 
-            var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-            var timeout = _plugin.Configuration.PartyWaitTimeout;
-            var remaining = timeout - (int)elapsed;
-
-            if ((int)elapsed % 5 == 0 && (int)elapsed > 0)
-            {
-                _plugin.AddDebugLog($"[WaitingForParty] {nearbyCount}/{totalOthers} members within 10y - {remaining}s left");
-            }
-            StateDetail = $"Waiting for party ({nearbyCount}/{totalOthers} within 10y) - {remaining}s left...";
+        if ((int)elapsed % 10 == 0 && (int)elapsed > 0)
+        {
+            var mounted = _plugin.PartyService.PartyMembers.FindAll(m => m.IsMounted).Count;
+            var total = _plugin.PartyService.PartyMembers.Count;
+            StateDetail = $"Waiting for party ({mounted}/{total} mounted) - {remaining}s left...";
         }
     }
 
@@ -905,6 +881,45 @@ public class StateManager : IDisposable
             // We've arrived at the flag X,Z — now we need to dismount
             if (_plugin.NavigationService.IsMounted())
             {
+                // Check if all party members are within 10y before dismounting (Issue 3)
+                if (_plugin.Configuration.WaitForParty)
+                {
+                    _plugin.PartyService.UpdatePartyStatus();
+                    var localPlayer = Plugin.ObjectTable.LocalPlayer;
+                    if (localPlayer != null)
+                    {
+                        var allNearby = true;
+                        var nearbyCount = 0;
+                        var totalOthers = 0;
+                        foreach (var member in _plugin.PartyService.PartyMembers)
+                        {
+                            if (member.Name == localPlayer.Name.TextValue) continue;
+                            totalOthers++;
+                            if (!member.IsInSameZone)
+                            {
+                                allNearby = false;
+                                continue;
+                            }
+                            var dist = Vector3.Distance(localPlayer.Position, member.Position);
+                            if (dist <= 10.0f)
+                                nearbyCount++;
+                            else
+                                allNearby = false;
+                        }
+
+                        if (totalOthers > 0 && !allNearby)
+                        {
+                            StateDetail = $"Waiting for party ({nearbyCount}/{totalOthers} within 10y) before dismounting...";
+                            return; // Don't attempt dismount yet
+                        }
+                        
+                        if (totalOthers > 0 && allNearby)
+                        {
+                            _plugin.AddDebugLog($"[Flying] All {totalOthers} party members within 10y - proceeding to dismount");
+                        }
+                    }
+                }
+
                 // Record when we first started trying to dismount at this location
                 if (dismountAttemptStart == DateTime.MinValue)
                 {
