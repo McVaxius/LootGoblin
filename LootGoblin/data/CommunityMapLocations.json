@@ -10708,5 +10708,61 @@
     "RecordedAt": "2026-03-12 21:38:25",
     "TerritoryId": 1188,
     "ZoneName": "Kozama'uka"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 723.2,
+    "FlagY": 117.9,
+    "FlagZ": 362.5,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Loboskin Map",
+    "RealX": 723.2,
+    "RealY": 117.9,
+    "RealZ": 362.5,
+    "RecordedAt": "2026-03-12 22:06:55",
+    "TerritoryId": 1188,
+    "ZoneName": "Kozama'uka"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 248.5,
+    "FlagY": 115.1,
+    "FlagZ": 741.3,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Loboskin Map",
+    "RealX": 248,
+    "RealY": 115.2,
+    "RealZ": 741.7,
+    "RecordedAt": "2026-03-12 22:07:39",
+    "TerritoryId": 1188,
+    "ZoneName": "Kozama'uka"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 153,
+    "FlagY": 111.8,
+    "FlagZ": 238.9,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Loboskin Map",
+    "RealX": 152.9,
+    "RealY": 111.8,
+    "RealZ": 238.4,
+    "RecordedAt": "2026-03-12 22:08:18",
+    "TerritoryId": 1188,
+    "ZoneName": "Kozama'uka"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -716,
+    "FlagY": 132.4,
+    "FlagZ": 232.5,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Loboskin Map",
+    "RealX": -713.7,
+    "RealY": 134.3,
+    "RealZ": 232.5,
+    "RecordedAt": "2026-03-12 22:09:22",
+    "TerritoryId": 1188,
+    "ZoneName": "Kozama'uka"
   }
 ]
