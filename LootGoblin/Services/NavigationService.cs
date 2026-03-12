@@ -627,12 +627,9 @@ public class NavigationService : IDisposable
                 }
             }
 
-            // Fallback: use a simple position near where aetherytes typically are
-            // This ensures we always have a position for distance checking
-            var fallbackX = aetheryteId * 100f; // Simple deterministic but reasonable spacing
-            var fallbackZ = aetheryteId * 100f;
-            _plugin.AddDebugLog($"[Aetheryte] {name} Simple fallback: X={fallbackX}, Z={fallbackZ}");
-            return new Vector3(fallbackX, 0f, fallbackZ);
+            // Fallback: use zero position - this will never trigger recording but prevents crashes
+            _plugin.AddDebugLog($"[Aetheryte] {name} - no position data available");
+            return Vector3.Zero;
         }
         catch (Exception ex)
         {

@@ -3028,9 +3028,9 @@ public class StateManager : IDisposable
                 var dz = playerPos.Z - estimatedPos.Z;
                 var xzDist = Math.Sqrt(dx * dx + dz * dz);
                 
-                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - XZ dist: {xzDist:F1}y (need ≤1000y)");
+                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - XZ dist: {xzDist:F1}y (need ≤20y)");
                 
-                if (xzDist <= 1000.0f) // Temporarily increased for testing
+                if (xzDist <= 20.0f)
                 {
                     _plugin.AddDebugLog($"[CycleAetherytes] RECORDING {current.Name} - within 20y!");
                     _plugin.AetherytePositionDatabase.RecordPosition(
