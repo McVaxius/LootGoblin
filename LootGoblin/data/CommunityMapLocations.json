@@ -7628,5 +7628,19 @@
     "RecordedAt": "2026-03-09 12:54:12",
     "TerritoryId": 614,
     "ZoneName": "Yanxia"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 296,
+    "FlagY": 2.4,
+    "FlagZ": 290,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Gliderskin Map",
+    "RealX": 295.6,
+    "RealY": 2.4,
+    "RealZ": 290.3,
+    "RecordedAt": "2026-03-12 16:39:47",
+    "TerritoryId": 813,
+    "ZoneName": "Lakeland"
   }
 ]
