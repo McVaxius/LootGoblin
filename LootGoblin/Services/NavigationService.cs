@@ -220,72 +220,87 @@ public class NavigationService : IDisposable
 
                 var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"ID {entry.AetheryteId}";
 
-                // Method 1a: Level via RowRef ValueNullable
+                // Method 1: AetherytePositionDatabase - use community/user data FIRST (most reliable)
                 var worldPos = Vector3.Zero;
-                try
+                if (_plugin.AetherytePositionDatabase != null)
                 {
-                    int levelIdx = 0;
-                    foreach (var lvl in aetheryte.Level)
+                    var storedPos = _plugin.AetherytePositionDatabase.GetPosition(entry.AetheryteId);
+                    if (storedPos != null)
                     {
-                        var levelRowId = lvl.RowId;
-                        _plugin.AddDebugLog($"  [Level] {name}: [{levelIdx}] RowId={levelRowId}");
+                        worldPos = new Vector3(storedPos.X, storedPos.Y, storedPos.Z);
+                        _plugin.AddDebugLog($"  [AetheryteDB] {name}: using stored pos ({storedPos.X:F1}, {storedPos.Y:F1}, {storedPos.Z:F1})");
+                    }
+                }
 
-                        // Try ValueNullable first
-                        var levelRow = lvl.ValueNullable;
-                        if (levelRow != null)
+                // Method 2: Level sheet lookup - ONLY if no database data (fallback)
+                if (worldPos == Vector3.Zero)
+                {
+                    _plugin.AddDebugLog($"  [Level] {name}: No DB data, trying Level sheet lookup");
+                    try
+                    {
+                        int levelIdx = 0;
+                        foreach (var lvl in aetheryte.Level)
                         {
-                            var lx = levelRow.Value.X;
-                            var ly = levelRow.Value.Y;
-                            var lz = levelRow.Value.Z;
-                            if (lx != 0 || lz != 0)
+                            var levelRowId = lvl.RowId;
+                            _plugin.AddDebugLog($"  [Level] {name}: [{levelIdx}] RowId={levelRowId}");
+
+                            // Try ValueNullable first
+                            var levelRow = lvl.ValueNullable;
+                            if (levelRow != null)
                             {
-                                worldPos = new Vector3(lx, ly, lz);
-                                _plugin.AddDebugLog($"  [Level] {name}: ValueNullable OK ({lx:F1}, {ly:F1}, {lz:F1})");
-                                break;
+                                var lx = levelRow.Value.X;
+                                var ly = levelRow.Value.Y;
+                                var lz = levelRow.Value.Z;
+                                if (lx != 0 || lz != 0)
+                                {
+                                    worldPos = new Vector3(lx, ly, lz);
+                                    _plugin.AddDebugLog($"  [Level] {name}: ValueNullable OK ({lx:F1}, {ly:F1}, {lz:F1})");
+                                    break;
+                                }
+                                else
+                                {
+                                    _plugin.AddDebugLog($"  [Level] {name}: ValueNullable returned zero coords");
+                                }
                             }
                             else
                             {
-                                _plugin.AddDebugLog($"  [Level] {name}: ValueNullable returned zero coords");
-                            }
-                        }
-                        else
-                        {
-                            _plugin.AddDebugLog($"  [Level] {name}: ValueNullable returned null");
+                                _plugin.AddDebugLog($"  [Level] {name}: ValueNullable returned null");
 
-                            // Method 1b: Direct Level sheet lookup by RowId
-                            if (levelSheet != null && levelRowId > 0)
-                            {
-                                try
+                                // Method 1b: Direct Level sheet lookup by RowId
+                                if (levelSheet != null && levelRowId > 0)
                                 {
-                                    var directLevel = levelSheet.GetRow(levelRowId);
-                                    var dlx = directLevel.X;
-                                    var dly = directLevel.Y;
-                                    var dlz = directLevel.Z;
-                                    if (dlx != 0 || dlz != 0)
+                                    try
                                     {
-                                        worldPos = new Vector3(dlx, dly, dlz);
-                                        _plugin.AddDebugLog($"  [Level] {name}: Direct lookup OK ({dlx:F1}, {dly:F1}, {dlz:F1})");
-                                        break;
+                                        var directLevel = levelSheet.GetRow(levelRowId);
+                                        var dlx = directLevel.X;
+                                        var dly = directLevel.Y;
+                                        var dlz = directLevel.Z;
+                                        if (dlx != 0 || dlz != 0)
+                                        {
+                                            worldPos = new Vector3(dlx, dly, dlz);
+                                            _plugin.AddDebugLog($"  [Level] {name}: Direct lookup OK ({dlx:F1}, {dly:F1}, {dlz:F1})");
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            _plugin.AddDebugLog($"  [Level] {name}: Direct lookup returned zero coords");
+                                        }
                                     }
-                                    else
+                                    catch (Exception dex)
                                     {
-                                        _plugin.AddDebugLog($"  [Level] {name}: Direct lookup returned zero coords");
+                                        _plugin.AddDebugLog($"  [Level] {name}: Direct lookup EXCEPTION: {dex.GetType().Name}: {dex.Message}");
                                     }
-                                }
-                                catch (Exception dex)
-                                {
-                                    _plugin.AddDebugLog($"  [Level] {name}: Direct lookup EXCEPTION: {dex.GetType().Name}: {dex.Message}");
                                 }
                             }
+                            levelIdx++;
                         }
-                        levelIdx++;
+                        if (levelIdx == 0)
+                            _plugin.AddDebugLog($"  [Level] {name}: Level collection EMPTY (0 entries)");
                     }
-                    if (levelIdx == 0)
-                        _plugin.AddDebugLog($"  [Level] {name}: Level collection EMPTY (0 entries)");
-                }
-                catch (Exception ex)
-                {
-                    _plugin.AddDebugLog($"  [Level] {name}: ITERATION EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+                    catch (Exception ex)
+                    {
+                        _plugin.AddDebugLog($"  [Level] {name}: ITERATION EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+                    }
                 }
 
                 candidates.Add((entry.AetheryteId, name, entry.GilCost, worldPos));
@@ -297,47 +312,12 @@ public class NavigationService : IDisposable
                 return 0;
             }
 
-            // Method 1c: AetherytePositionDatabase - stored positions from previous teleport arrivals
-            if (_plugin.AetherytePositionDatabase != null && candidates.Any(c => c.WorldPos == Vector3.Zero))
-            {
-                _plugin.AddDebugLog($"[Aetheryte] Checking AetherytePositionDatabase for {candidates.Count(c => c.WorldPos == Vector3.Zero)} candidates with NO_POS");
-                int dbHits = 0;
-                for (int ci = 0; ci < candidates.Count; ci++)
-                {
-                    if (candidates[ci].WorldPos != Vector3.Zero) continue;
-                    
-                    _plugin.AddDebugLog($"  [AetheryteDB] Looking up position for {candidates[ci].Name} (ID: {candidates[ci].Id})");
-                    var storedPos = _plugin.AetherytePositionDatabase.GetPosition(candidates[ci].Id);
-                    if (storedPos != null)
-                    {
-                        candidates[ci] = (candidates[ci].Id, candidates[ci].Name, candidates[ci].Cost,
-                            new Vector3(storedPos.X, storedPos.Y, storedPos.Z));
-                        _plugin.AddDebugLog($"  [AetheryteDB] {candidates[ci].Name}: stored pos ({storedPos.X:F1}, {storedPos.Y:F1}, {storedPos.Z:F1})");
-                        dbHits++;
-                    }
-                    else
-                    {
-                        _plugin.AddDebugLog($"  [AetheryteDB] {candidates[ci].Name}: NO stored position found");
-                    }
-                }
-                if (dbHits > 0)
-                    _plugin.AddDebugLog($"[Aetheryte] AetheryteDB resolved {dbHits}/{candidates.Count(c => c.WorldPos == Vector3.Zero) + dbHits} missing positions");
-                else
-                    _plugin.AddDebugLog($"[Aetheryte] AetheryteDB found NO positions for any candidates");
-            }
-            else
-            {
-                if (_plugin.AetherytePositionDatabase == null)
-                    _plugin.AddDebugLog($"[Aetheryte] AetherytePositionDatabase is NULL - cannot lookup positions");
-                else if (!candidates.Any(c => c.WorldPos == Vector3.Zero))
-                    _plugin.AddDebugLog($"[Aetheryte] All candidates already have positions - no DB lookup needed");
-            }
-
             // Method 2: MapMarker fallback for candidates with no position
             // MapMarker DataKey does NOT match Aetheryte RowId — match by name or by collecting
             // all aetheryte-type markers and assigning to nearest candidate
             if (mapId > 0 && candidates.Any(c => c.WorldPos == Vector3.Zero))
             {
+                _plugin.AddDebugLog($"[Aetheryte] Still have {candidates.Count(c => c.WorldPos == Vector3.Zero)} candidates with NO_POS - trying MapMarker fallback");
                 try
                 {
                     var mapMarkerSheet = _dataManager.GetSubrowExcelSheet<MapMarker>();
