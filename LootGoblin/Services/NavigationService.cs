@@ -481,32 +481,38 @@ public class NavigationService : IDisposable
             // The comparison target: use RealXYZ if available, otherwise use flag XZ
             var compTarget = hasRealDestY ? realDestination : targetPosition;
 
-            // Log all candidates with final positions
+            // Check AetherytePositionDatabase availability
+            bool hasAetheryteDB = _plugin.AetherytePositionDatabase != null;
+            _plugin.AddDebugLog($"[Aetheryte] AetherytePositionDatabase available: {hasAetheryteDB}");
+
+            // Log all candidates with detailed position status
             foreach (var c in candidates)
             {
                 var posStr = c.WorldPos != Vector3.Zero ? $"({c.WorldPos.X:F1}, {c.WorldPos.Y:F1}, {c.WorldPos.Z:F1})" : "NO_POS";
                 // Determine if this aetheryte has a real Y value (from AetheryteDB, not MapMarker which sets Y=0)
-                var hasRealAethY = c.WorldPos != Vector3.Zero && _plugin.AetherytePositionDatabase != null && _plugin.AetherytePositionDatabase.HasPosition(c.Id);
+                var hasRealAethY = c.WorldPos != Vector3.Zero && hasAetheryteDB && _plugin.AetherytePositionDatabase.HasPosition(c.Id);
                 var distMode = (hasRealDestY && hasRealAethY) ? "XYZ" : "XZ";
                 double dist;
-                if (hasRealDestY && hasRealAethY)
+                if (c.WorldPos == Vector3.Zero)
+                {
+                    dist = double.MaxValue;
+                    _plugin.AddDebugLog($"  [Candidate] {c.Name} (ID: {c.Id}, Cost: {c.Cost}g, Pos: {posStr}, {distMode} dist: INVALID - no position data)");
+                }
+                else if (hasRealDestY && hasRealAethY)
                 {
                     var dx = c.WorldPos.X - compTarget.X;
                     var dy = c.WorldPos.Y - compTarget.Y;
                     var dz = c.WorldPos.Z - compTarget.Z;
                     dist = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                    _plugin.AddDebugLog($"  [Candidate] {c.Name} (ID: {c.Id}, Cost: {c.Cost}g, Pos: {posStr}, {distMode} dist: {dist:F0}y)");
                 }
-                else if (c.WorldPos != Vector3.Zero)
+                else
                 {
                     var dx = c.WorldPos.X - compTarget.X;
                     var dz = c.WorldPos.Z - compTarget.Z;
                     dist = Math.Sqrt(dx * dx + dz * dz);
+                    _plugin.AddDebugLog($"  [Candidate] {c.Name} (ID: {c.Id}, Cost: {c.Cost}g, Pos: {posStr}, {distMode} dist: {dist:F0}y)");
                 }
-                else
-                {
-                    dist = double.MaxValue;
-                }
-                _plugin.AddDebugLog($"  [Candidate] {c.Name} (ID: {c.Id}, Cost: {c.Cost}g, Pos: {posStr}, {distMode} dist: {dist:F0}y)");
             }
 
             uint bestId;
@@ -515,11 +521,12 @@ public class NavigationService : IDisposable
             // Pick closest to target if we have positions and a target
             if (targetPosition != default && candidates.Any(c => c.WorldPos != Vector3.Zero))
             {
+                _plugin.AddDebugLog($"[Aetheryte] Selecting closest aetheryte by distance - {candidates.Count(c => c.WorldPos != Vector3.Zero)} candidates with valid positions");
                 var closest = candidates
                     .Where(c => c.WorldPos != Vector3.Zero)
                     .OrderBy(c => {
                         // Use full XYZ if we have real Y for BOTH aetheryte and destination
-                        var hasRealAethY = _plugin.AetherytePositionDatabase != null && _plugin.AetherytePositionDatabase.HasPosition(c.Id);
+                        var hasRealAethY = hasAetheryteDB && _plugin.AetherytePositionDatabase.HasPosition(c.Id);
                         if (hasRealDestY && hasRealAethY)
                         {
                             var dx = c.WorldPos.X - compTarget.X;
@@ -539,7 +546,7 @@ public class NavigationService : IDisposable
                 bestName = closest.Name;
 
                 // Compute distance for the winner using same rules
-                var bestHasRealY = _plugin.AetherytePositionDatabase != null && _plugin.AetherytePositionDatabase.HasPosition(closest.Id);
+                var bestHasRealY = hasAetheryteDB && _plugin.AetherytePositionDatabase.HasPosition(closest.Id);
                 if (hasRealDestY && bestHasRealY)
                 {
                     var dx = closest.WorldPos.X - compTarget.X;
@@ -559,10 +566,11 @@ public class NavigationService : IDisposable
             else
             {
                 // Fallback: cheapest cost
+                _plugin.AddDebugLog($"[Aetheryte] FALLBACK - No candidates with valid positions, using cheapest cost");
                 var cheapest = candidates.OrderBy(c => c.Cost).First();
                 bestId = cheapest.Id;
                 bestName = cheapest.Name;
-                bestAetheryteDistance = double.MaxValue;
+                bestAetheryteDistance = double.MaxValue; // Invalid distance for comparison
                 _plugin.AddDebugLog($"[Aetheryte] FALLBACK cheapest: {bestName} (ID: {bestId}, Cost: {cheapest.Cost}g) [no position data]");
             }
 

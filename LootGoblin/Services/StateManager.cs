@@ -592,16 +592,20 @@ public class StateManager : IDisposable
                 }
 
                 _plugin.AddDebugLog($"[DetectingLocation] Already in zone: player {(usedXyz ? "XYZ" : "XZ")} dist={playerDist:F0}y, best aetheryte dist={bestAethDist:F0}y");
+                _plugin.AddDebugLog($"[DetectingLocation] Player pos: ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1}), Aetheryte ID: {aetheryteId}");
 
                 if (aetheryteId != 0 && bestAethDist < playerDist)
                 {
                     // Aetheryte is closer than player - teleport
-                    _plugin.AddDebugLog($"[DetectingLocation] Aetheryte is closer ({bestAethDist:F0}y < {playerDist:F0}y) - teleporting");
+                    _plugin.AddDebugLog($"[DetectingLocation] Aetheryte is closer ({bestAethDist:F0}y < {playerDist:F0}y) - teleporting to aetheryte {aetheryteId}");
                     TransitionTo(BotState.Teleporting, $"In zone but aetheryte closer ({bestAethDist:F0}y vs {playerDist:F0}y) - teleporting...");
                 }
                 else
                 {
-                    _plugin.AddDebugLog($"[DetectingLocation] Player is closer ({playerDist:F0}y <= {bestAethDist:F0}y) - mounting up, no teleport needed");
+                    if (aetheryteId == 0)
+                        _plugin.AddDebugLog($"[DetectingLocation] No valid aetheryte found ({aetheryteId}) - mounting up");
+                    else
+                        _plugin.AddDebugLog($"[DetectingLocation] Player is closer ({playerDist:F0}y <= {bestAethDist:F0}y) - mounting up, no teleport needed");
                     TransitionTo(BotState.Mounting, "Already in zone & closer than aetheryte! Mounting up...");
                 }
             }
