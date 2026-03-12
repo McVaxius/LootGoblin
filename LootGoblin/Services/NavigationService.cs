@@ -600,9 +600,41 @@ public class NavigationService : IDisposable
     /// <summary>Get estimated aetheryte position from Level sheet or MapMarker (no user data).</summary>
     public unsafe Vector3 GetEstimatedAetherytePosition(uint aetheryteId)
     {
-        // Simple implementation: return a position that will be within 20y when player is at aetheryte
-        // This allows the XZ distance check to work properly for recording
-        return new Vector3(100f, 0f, 100f);
+        try
+        {
+            var aetheryteSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.Aetheryte>();
+            if (aetheryteSheet == null) return Vector3.Zero;
+
+            var aetheryte = aetheryteSheet.GetRow(aetheryteId);
+            var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"Aetheryte {aetheryteId}";
+
+            // Get position from Level sheet (X,Z coordinates)
+            foreach (var lvl in aetheryte.Level)
+            {
+                var levelRow = lvl.ValueNullable;
+                if (levelRow != null)
+                {
+                    var lx = levelRow.Value.X;
+                    var ly = levelRow.Value.Y;
+                    var lz = levelRow.Value.Z;
+                    
+                    // Use Level sheet X,Z with Y=0 for distance check
+                    if (lx != 0 || lz != 0)
+                    {
+                        _plugin.AddDebugLog($"[Aetheryte] {name} Level pos: X={lx}, Z={lz}");
+                        return new Vector3(lx, 0f, lz);
+                    }
+                }
+            }
+
+            _plugin.AddDebugLog($"[Aetheryte] {name} - no Level data found");
+        }
+        catch (Exception ex)
+        {
+            _plugin.AddDebugLog($"[Aetheryte] GetEstimatedPosition failed for ID {aetheryteId}: {ex.Message}");
+        }
+
+        return Vector3.Zero;
     }
 
     private void SetState(NavigationState state, string detail)
