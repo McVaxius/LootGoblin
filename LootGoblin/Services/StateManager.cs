@@ -111,6 +111,9 @@ public class StateManager : IDisposable
     private DateTime cycleTeleportTime;
     private bool cycleLandingIssued;
     private DateTime cycleLandingTime;
+    private Vector3 cycleLastPosition;
+    private bool cyclePositionChanged;
+    private DateTime cyclePositionChangeTime;
     private List<MapLocationEntry> cycleMapLocationQueue = new();
     private int cycleMapLocationIndex;
     private bool cycleManualControl;
@@ -2990,10 +2993,10 @@ public class StateManager : IDisposable
         }
 
         var current = cycleAetheryteQueue[cycleAetheryteIndex];
-
         StateDetail = $"Cycling aetherytes ({cycleAetheryteIndex + 1}/{cycleAetheryteQueue.Count}): {current.Name}";
 
         var nav = _plugin.NavigationService;
+        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
 
         // Step 1: Issue teleport
         if (!cycleTeleportIssued)
@@ -3003,74 +3006,52 @@ public class StateManager : IDisposable
             nav.TeleportToAetheryte(current.Id);
             cycleTeleportIssued = true;
             cycleTeleportTime = DateTime.Now;
+            cycleLastPosition = playerPos;
+            cyclePositionChanged = false;
             return;
         }
 
-        // Step 2: Wait for teleport to start (5s minimum)
-        var elapsed = (DateTime.Now - cycleTeleportTime).TotalSeconds;
-        if (elapsed < 5.0) return;
-
-        // Step 3: Wait for teleport to finish
+        // Step 2: Wait for teleport to finish
         if (nav.IsTeleporting()) return;
 
-        // Step 4: Record position when within 20y of estimated location (XZ only)
-        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-        if (playerPos != Vector3.Zero)
+        // Step 3: Wait for player position to change (teleport arrival)
+        if (!cyclePositionChanged)
         {
-            // Get estimated position from Level sheet or MapMarker
-            var estimatedPos = _plugin.NavigationService.GetEstimatedAetherytePosition(current.Id);
-            _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - Player pos: ({playerPos.X:F1}, {playerPos.Z:F1}), Est pos: ({estimatedPos.X:F1}, {estimatedPos.Z:F1})");
-            
-            if (estimatedPos != Vector3.Zero)
+            // Check if position has changed significantly (teleport completed)
+            var posDiff = Vector3.Distance(playerPos, cycleLastPosition);
+            if (posDiff > 100.0f) // Significant position change = teleport arrived
             {
-                // Check XZ distance only (ignore Y)
-                var dx = playerPos.X - estimatedPos.X;
-                var dz = playerPos.Z - estimatedPos.Z;
-                var xzDist = Math.Sqrt(dx * dx + dz * dz);
-                
-                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - XZ dist: {xzDist:F1}y (need ≤20y)");
-                
-                if (xzDist <= 20.0f)
-                {
-                    _plugin.AddDebugLog($"[CycleAetherytes] RECORDING {current.Name} - within 20y!");
-                    _plugin.AetherytePositionDatabase.RecordPosition(
-                        current.Id, current.Name,
-                        playerPos.X, playerPos.Y, playerPos.Z);
-                    
-                    cycleAetheryteIndex++;
-                    cycleTeleportIssued = false;
-                    
-                    // Reset state timeout for next aetheryte
-                    stateStartTime = DateTime.Now;
-                    return;
-                }
+                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - Position changed by {posDiff:F1}y, waiting 3 seconds");
+                cyclePositionChanged = true;
+                cyclePositionChangeTime = DateTime.Now;
             }
-            else
+            else if ((DateTime.Now - cycleTeleportTime).TotalSeconds > 30.0)
             {
-                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - No estimated position, skipping distance check");
-                
-                // If no estimated position, move to next aetheryte after timeout
-                if ((DateTime.Now - cycleTeleportTime).TotalSeconds > 30.0)
-                {
-                    _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - Timeout waiting for position, moving to next");
-                    cycleAetheryteIndex++;
-                    cycleTeleportIssued = false;
-                    stateStartTime = DateTime.Now;
-                }
-                return; // Don't advance index yet
+                // Timeout - move to next aetheryte
+                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - Timeout waiting for position change, moving to next");
+                cycleAetheryteIndex++;
+                cycleTeleportIssued = false;
+                stateStartTime = DateTime.Now;
             }
+            return;
         }
 
-        // Only advance if we successfully recorded the position (handled above in the if block)
-
-        // Reset state timeout for next aetheryte
-        stateStartTime = DateTime.Now;
-
-        if (cycleAetheryteIndex >= cycleAetheryteQueue.Count)
+        // Step 4: Wait 3 seconds after position change, then record
+        var waitElapsed = (DateTime.Now - cyclePositionChangeTime).TotalSeconds;
+        if (waitElapsed >= 3.0)
         {
-            _plugin.AddDebugLog($"[CycleAetherytes] Completed! All {cycleAetheryteQueue.Count} positions recorded");
-            _plugin.PrintChat($"Aetheryte cycling complete! {_plugin.AetherytePositionDatabase.Count} positions stored.");
-            TransitionTo(BotState.Idle, "Aetheryte cycling complete!");
+            _plugin.AddDebugLog($"[CycleAetherytes] RECORDING {current.Name} at ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1})");
+            _plugin.AetherytePositionDatabase.RecordPosition(
+                current.Id, current.Name,
+                playerPos.X, playerPos.Y, playerPos.Z);
+            
+            // Move to next aetheryte
+            cycleAetheryteIndex++;
+            cycleTeleportIssued = false;
+            cyclePositionChanged = false;
+            stateStartTime = DateTime.Now;
+            
+            _plugin.AddDebugLog($"[CycleAetherytes] Moving to next aetheryte ({cycleAetheryteIndex + 1}/{cycleAetheryteQueue.Count})");
         }
     }
 
