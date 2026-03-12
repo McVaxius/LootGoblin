@@ -597,142 +597,23 @@ public class NavigationService : IDisposable
         return _condition[ConditionFlag.InFlight] || _condition[ConditionFlag.Diving];
     }
 
-    /// <summary>Get estimated aetheryte position from Level sheet or MapMarker (no user data).</summary>
-    public unsafe Vector3 GetEstimatedAetherytePosition(uint aetheryteId)
+    /// <summary>
+    /// Get the estimated X,Z position of an aetheryte from stored data.
+    /// Uses community defaults first, then user-recorded positions if available.
+    /// Used for distance checking during cycling (Y coordinate is ignored).
+    /// </summary>
+    public Vector3 GetEstimatedAetherytePosition(uint aetheryteId)
     {
-        try
+        // Get position from database (defaults + user overrides)
+        var position = _plugin.AetherytePositionDatabase.GetPosition(aetheryteId);
+        
+        if (position != null)
         {
-            var aetheryteSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.Aetheryte>();
-            if (aetheryteSheet == null) return Vector3.Zero;
-
-            var aetheryte = aetheryteSheet.GetRow(aetheryteId);
-            var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"Aetheryte {aetheryteId}";
-
-            // Get position from Level sheet (X,Z coordinates) - using the same pattern as FindNearestAetheryte
-            var levelSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.Level>();
-            int levelIdx = 0;
-            foreach (var lvl in aetheryte.Level)
-            {
-                var levelRowId = lvl.RowId;
-                _plugin.AddDebugLog($"[Aetheryte] {name}: Level[{levelIdx}] RowId={levelRowId}");
-
-                // Method 1a: Try ValueNullable first
-                var levelRow = lvl.ValueNullable;
-                if (levelRow != null)
-                {
-                    var lx = levelRow.Value.X;
-                    var ly = levelRow.Value.Y;
-                    var lz = levelRow.Value.Z;
-                    if (lx != 0 || lz != 0)
-                    {
-                        _plugin.AddDebugLog($"[Aetheryte] {name}: ValueNullable OK ({lx:F1}, {ly:F1}, {lz:F1})");
-                        return new Vector3(lx, 0f, lz);
-                    }
-                    else
-                    {
-                        _plugin.AddDebugLog($"[Aetheryte] {name}: ValueNullable returned zero coords");
-                    }
-                }
-                else
-                {
-                    _plugin.AddDebugLog($"[Aetheryte] {name}: ValueNullable returned null");
-
-                    // Method 1b: Direct Level sheet lookup by RowId
-                    if (levelSheet != null && levelRowId > 0)
-                    {
-                        try
-                        {
-                            var directLevel = levelSheet.GetRow((uint)levelRowId);
-                            var dlx = directLevel.X;
-                            var dly = directLevel.Y;
-                            var dlz = directLevel.Z;
-                            if (dlx != 0 || dlz != 0)
-                            {
-                                _plugin.AddDebugLog($"[Aetheryte] {name}: Direct lookup OK ({dlx:F1}, {dly:F1}, {dlz:F1})");
-                                return new Vector3(dlx, 0f, dlz);
-                            }
-                            else
-                            {
-                                _plugin.AddDebugLog($"[Aetheryte] {name}: Direct lookup returned zero coords");
-                            }
-                        }
-                        catch (Exception dex)
-                        {
-                            _plugin.AddDebugLog($"[Aetheryte] {name}: Direct lookup EXCEPTION: {dex.GetType().Name}: {dex.Message}");
-                        }
-                    }
-                }
-                levelIdx++;
-            }
-
-            // Method 2: MapMarker fallback - same as FindNearestAetheryte
-            _plugin.AddDebugLog($"[Aetheryte] {name}: Trying MapMarker fallback...");
-            try
-            {
-                var territoryTypeSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>();
-                if (territoryTypeSheet != null && aetheryte.Territory.RowId > 0)
-                {
-                    _plugin.AddDebugLog($"[Aetheryte] {name}: Territory {aetheryte.Territory.RowId} found, looking for map...");
-                    var territory = territoryTypeSheet.GetRow(aetheryte.Territory.RowId);
-                    if (territory.Map.RowId > 0)
-                    {
-                        _plugin.AddDebugLog($"[Aetheryte] {name}: Map {territory.Map.RowId} found, scanning markers...");
-                        var mapRow = territory.Map.Value;
-                        var mapId = territory.Map.RowId;
-                        var sizeFactor = mapRow.SizeFactor;
-                        var offsetX = mapRow.OffsetX;
-                        var offsetY = mapRow.OffsetY;
-
-                        var mapMarkerSheet = _dataManager.GetSubrowExcelSheet<Lumina.Excel.Sheets.MapMarker>();
-                        
-                        // Look for aetheryte markers that match this aetheryte
-                        for (ushort subIdx = 0; subIdx < 500; subIdx++)
-                        {
-                            var marker = mapMarkerSheet.GetSubrowOrDefault(mapId, subIdx);
-                            if (marker == null) break;
-
-                            if (marker.Value.DataType == 3 || marker.Value.DataType == 4) // aetheryte/aethernet
-                            {
-                                // Try to match by AetheryteId or PlaceName.RowId
-                                var dataKey = marker.Value.DataKey.RowId;
-                                if (dataKey == aetheryteId || dataKey == aetheryte.PlaceName.RowId)
-                                {
-                                    // Convert map coordinates to world coordinates
-                                    float scaleFactor = sizeFactor / 100.0f;
-                                    float worldX = ((float)marker.Value.X / scaleFactor - 1024.0f) / scaleFactor + offsetX;
-                                    float worldZ = ((float)marker.Value.Y / scaleFactor - 1024.0f) / scaleFactor + offsetY;
-                                    
-                                    _plugin.AddDebugLog($"[Aetheryte] {name}: MapMarker match (DataKey={dataKey}) → ({worldX:F1}, {worldZ:F1})");
-                                    return new Vector3(worldX, 0f, worldZ);
-                                }
-                            }
-                        }
-                        _plugin.AddDebugLog($"[Aetheryte] {name}: No matching MapMarker found for DataKey {aetheryteId} or {aetheryte.PlaceName.RowId}");
-                    }
-                    else
-                    {
-                        _plugin.AddDebugLog($"[Aetheryte] {name}: No map found for territory {aetheryte.Territory.RowId}");
-                    }
-                }
-                else
-                {
-                    _plugin.AddDebugLog($"[Aetheryte] {name}: No territory data (Territory.RowId={aetheryte.Territory.RowId})");
-                }
-            }
-            catch (Exception ex)
-            {
-                _plugin.AddDebugLog($"[Aetheryte] {name}: MapMarker fallback failed: {ex.Message}");
-            }
-
-            // Fallback: use zero position - this will never trigger recording but prevents crashes
-            _plugin.AddDebugLog($"[Aetheryte] {name} - no position data available");
-            return Vector3.Zero;
+            _plugin.AddDebugLog($"[Aetheryte] Using stored position for {position.Name} (ID:{aetheryteId}): ({position.X:F1}, {position.Z:F1})");
+            return new Vector3(position.X, 0f, position.Z);
         }
-        catch (Exception ex)
-        {
-            _plugin.AddDebugLog($"[Aetheryte] GetEstimatedPosition failed for ID {aetheryteId}: {ex.Message}");
-        }
-
+        
+        _plugin.AddDebugLog($"[Aetheryte] No position found for aetheryte ID {aetheryteId}");
         return Vector3.Zero;
     }
 

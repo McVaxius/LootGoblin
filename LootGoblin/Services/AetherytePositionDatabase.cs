@@ -85,9 +85,13 @@ public class AetherytePositionDatabase
     public void ClearAllPositions()
     {
         var count = _positions.Count;
+        
+        // Clear and restore defaults (don't lose the seed data!)
         _positions.Clear();
-        Save(); // Persist the clear
-        _plugin.AddDebugLog($"[AetheryteDB] Cleared all {count} recorded positions - using defaults only");
+        _positions = DefaultAetheryteData.GetDefaults();
+        
+        Save(); // Persist the defaults back to disk
+        _plugin.AddDebugLog($"[AetheryteDB] Cleared all {count} user positions - restored {_positions.Count} community defaults");
     }
 
     /// <summary>Get all stored positions.</summary>
