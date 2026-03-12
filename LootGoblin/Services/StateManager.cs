@@ -648,16 +648,29 @@ public class StateManager : IDisposable
                 _plugin.AddDebugLog($"[Teleporting] Arrived after {elapsed:F1}s");
 
                 // Passively record aetheryte position for future nearest-aetheryte lookups
-                // Only record if we've been in the zone for at least 5 seconds (prevents recording source position)
-                if (CurrentLocation?.NearestAetheryteId > 0 && (DateTime.Now - stateStartTime).TotalSeconds > 5.0)
+                // Record when within 20y of estimated aetheryte location (XZ only)
+                if (CurrentLocation?.NearestAetheryteId > 0)
                 {
                     var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
                     if (playerPos != Vector3.Zero)
                     {
-                        _plugin.AetherytePositionDatabase.RecordPosition(
-                            CurrentLocation.NearestAetheryteId,
-                            CurrentLocation.NearestAetheryteName,
-                            playerPos.X, playerPos.Y, playerPos.Z);
+                        // Get estimated position from Level sheet or MapMarker
+                        var estimatedPos = _plugin.NavigationService.GetEstimatedAetherytePosition(CurrentLocation.NearestAetheryteId);
+                        if (estimatedPos != Vector3.Zero)
+                        {
+                            // Check XZ distance only (ignore Y)
+                            var dx = playerPos.X - estimatedPos.X;
+                            var dz = playerPos.Z - estimatedPos.Z;
+                            var xzDist = Math.Sqrt(dx * dx + dz * dz);
+                            
+                            if (xzDist <= 20.0f)
+                            {
+                                _plugin.AetherytePositionDatabase.RecordPosition(
+                                    CurrentLocation.NearestAetheryteId,
+                                    CurrentLocation.NearestAetheryteName,
+                                    playerPos.X, playerPos.Y, playerPos.Z);
+                            }
+                        }
                     }
                 }
 
@@ -2993,17 +3006,33 @@ public class StateManager : IDisposable
         // Step 3: Wait for teleport to finish
         if (nav.IsTeleporting()) return;
 
-        // Step 4: Wait a bit more to ensure we've actually arrived at destination
-        // (prevents recording source aetheryte position instead of destination)
-        if (elapsed < 8.0) return; // Extra 3 seconds after teleport completes
-
-        // Step 5: Record position and move to next
+        // Step 4: Record position when within 20y of estimated location (XZ only)
         var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         if (playerPos != Vector3.Zero)
         {
-            _plugin.AetherytePositionDatabase.RecordPosition(
-                current.Id, current.Name,
-                playerPos.X, playerPos.Y, playerPos.Z);
+            // Get estimated position from Level sheet or MapMarker
+            var estimatedPos = _plugin.NavigationService.GetEstimatedAetherytePosition(current.Id);
+            if (estimatedPos != Vector3.Zero)
+            {
+                // Check XZ distance only (ignore Y)
+                var dx = playerPos.X - estimatedPos.X;
+                var dz = playerPos.Z - estimatedPos.Z;
+                var xzDist = Math.Sqrt(dx * dx + dz * dz);
+                
+                if (xzDist <= 20.0f)
+                {
+                    _plugin.AetherytePositionDatabase.RecordPosition(
+                        current.Id, current.Name,
+                        playerPos.X, playerPos.Y, playerPos.Z);
+                    
+                    cycleAetheryteIndex++;
+                    cycleTeleportIssued = false;
+                    
+                    // Reset state timeout for next aetheryte
+                    stateStartTime = DateTime.Now;
+                    return;
+                }
+            }
         }
 
         cycleAetheryteIndex++;

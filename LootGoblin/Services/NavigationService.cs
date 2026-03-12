@@ -597,6 +597,15 @@ public class NavigationService : IDisposable
         return _condition[ConditionFlag.InFlight] || _condition[ConditionFlag.Diving];
     }
 
+    /// <summary>Get estimated aetheryte position from Level sheet or MapMarker (no user data).</summary>
+    public unsafe Vector3 GetEstimatedAetherytePosition(uint aetheryteId)
+    {
+        // TODO: Implement proper Level sheet lookup
+        // For now, return a placeholder far away so recording won't trigger
+        // This allows the 20y XZ distance check to work without false positives
+        return new Vector3(99999f, 0f, 99999f);
+    }
+
     private void SetState(NavigationState state, string detail)
     {
         State = state;

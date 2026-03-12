@@ -77,6 +77,15 @@ public class AetherytePositionDatabase
         }
     }
 
+    /// <summary>Clear all recorded aetheryte positions (for reset).</summary>
+    public void ClearAllPositions()
+    {
+        var count = _positions.Count;
+        _positions.Clear();
+        Save(); // Persist the clear
+        _plugin.AddDebugLog($"[AetheryteDB] Cleared all {count} recorded positions - using defaults only");
+    }
+
     /// <summary>Get all stored positions.</summary>
     public IReadOnlyDictionary<uint, AetherytePosition> AllPositions => _positions;
 

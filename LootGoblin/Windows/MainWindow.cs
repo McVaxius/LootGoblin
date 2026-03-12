@@ -407,11 +407,21 @@ public class MainWindow : Window, IDisposable
                             sm.StartCyclingMapLocations();
                         }
                         
-                        // Debug button to clear House of the Fierce for testing
+                        // Aetheryte management buttons
                         ImGui.Spacing();
-                        if (ImGui.Button("Clear House of the Fierce (Debug)"))
+                        if (ImGui.Button("Reset All Aetherytes"))
                         {
-                            plugin.AetherytePositionDatabase.RemovePosition(108); // House of the Fierce ID
+                            if (ImGui.IsItemHovered())
+                                ImGui.SetTooltip("Clear all recorded aetheryte positions - you'll need to re-record them");
+                            // TODO: Add confirmation dialog
+                            plugin.AetherytePositionDatabase.ClearAllPositions();
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Open Config Folder"))
+                        {
+                            if (ImGui.IsItemHovered())
+                                ImGui.SetTooltip("Open the folder containing AetherytePositions.json for sharing");
+                            System.Diagnostics.Process.Start("explorer.exe", plugin.AetherytePositionDatabase.ConfigDirectory);
                         }
 
                         if (isBusy)
