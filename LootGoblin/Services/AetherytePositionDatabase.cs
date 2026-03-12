@@ -248,6 +248,7 @@ public class AetherytePositionDatabase
                     // User file is empty - user wants to start fresh, don't use defaults
                     _positions.Clear();
                     _plugin.AddDebugLog($"[AetheryteDB] Empty user file - starting fresh with no positions");
+                    _plugin.AddDebugLog($"[AetheryteDB] WARNING: This means no community defaults are available!");
                 }
             }
             else
