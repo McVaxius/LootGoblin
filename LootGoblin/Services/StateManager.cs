@@ -593,7 +593,7 @@ public class StateManager : IDisposable
 
                 _plugin.AddDebugLog($"[DetectingLocation] Already in zone: player {(usedXyz ? "XYZ" : "XZ")} dist={playerDist:F0}y, best aetheryte dist={bestAethDist:F0}y");
 
-                if (location.NearestAetheryteId != 0 && bestAethDist < playerDist)
+                if (aetheryteId != 0 && bestAethDist < playerDist)
                 {
                     // Aetheryte is closer than player - teleport
                     _plugin.AddDebugLog($"[DetectingLocation] Aetheryte is closer ({bestAethDist:F0}y < {playerDist:F0}y) - teleporting");
