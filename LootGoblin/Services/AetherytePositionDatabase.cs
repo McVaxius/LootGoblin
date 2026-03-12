@@ -46,7 +46,9 @@ public class AetherytePositionDatabase
     /// <summary>Get stored position for an aetheryte, or null if not recorded.</summary>
     public AetherytePosition? GetPosition(uint aetheryteId)
     {
-        return _positions.TryGetValue(aetheryteId, out var pos) ? pos : null;
+        var found = _positions.TryGetValue(aetheryteId, out var pos);
+        _plugin.AddDebugLog($"[AetheryteDB] GetPosition({aetheryteId}): {(found ? $"FOUND ({pos.Name})" : "NOT FOUND")}");
+        return found ? pos : null;
     }
 
     /// <summary>Record player position as an aetheryte's world position.</summary>
@@ -257,6 +259,16 @@ public class AetherytePositionDatabase
         catch (Exception ex)
         {
             _log.Error($"Failed to load AetherytePositions: {ex.Message}");
+        }
+        
+        _plugin.AddDebugLog($"[AetheryteDB] Initialization complete: {_positions.Count} total positions loaded");
+        
+        // Log a few sample positions for debugging
+        if (_positions.Count > 0)
+        {
+            var samples = _positions.Take(3);
+            foreach (var sample in samples)
+                _plugin.AddDebugLog($"[AetheryteDB] Sample: {sample.Value.Name} (ID: {sample.Key}) = ({sample.Value.X:F1}, {sample.Value.Y:F1}, {sample.Value.Z:F1})");
         }
     }
 

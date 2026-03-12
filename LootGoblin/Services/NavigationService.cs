@@ -300,10 +300,13 @@ public class NavigationService : IDisposable
             // Method 1c: AetherytePositionDatabase - stored positions from previous teleport arrivals
             if (_plugin.AetherytePositionDatabase != null && candidates.Any(c => c.WorldPos == Vector3.Zero))
             {
+                _plugin.AddDebugLog($"[Aetheryte] Checking AetherytePositionDatabase for {candidates.Count(c => c.WorldPos == Vector3.Zero)} candidates with NO_POS");
                 int dbHits = 0;
                 for (int ci = 0; ci < candidates.Count; ci++)
                 {
                     if (candidates[ci].WorldPos != Vector3.Zero) continue;
+                    
+                    _plugin.AddDebugLog($"  [AetheryteDB] Looking up position for {candidates[ci].Name} (ID: {candidates[ci].Id})");
                     var storedPos = _plugin.AetherytePositionDatabase.GetPosition(candidates[ci].Id);
                     if (storedPos != null)
                     {
@@ -312,9 +315,22 @@ public class NavigationService : IDisposable
                         _plugin.AddDebugLog($"  [AetheryteDB] {candidates[ci].Name}: stored pos ({storedPos.X:F1}, {storedPos.Y:F1}, {storedPos.Z:F1})");
                         dbHits++;
                     }
+                    else
+                    {
+                        _plugin.AddDebugLog($"  [AetheryteDB] {candidates[ci].Name}: NO stored position found");
+                    }
                 }
                 if (dbHits > 0)
                     _plugin.AddDebugLog($"[Aetheryte] AetheryteDB resolved {dbHits}/{candidates.Count(c => c.WorldPos == Vector3.Zero) + dbHits} missing positions");
+                else
+                    _plugin.AddDebugLog($"[Aetheryte] AetheryteDB found NO positions for any candidates");
+            }
+            else
+            {
+                if (_plugin.AetherytePositionDatabase == null)
+                    _plugin.AddDebugLog($"[Aetheryte] AetherytePositionDatabase is NULL - cannot lookup positions");
+                else if (!candidates.Any(c => c.WorldPos == Vector3.Zero))
+                    _plugin.AddDebugLog($"[Aetheryte] All candidates already have positions - no DB lookup needed");
             }
 
             // Method 2: MapMarker fallback for candidates with no position
