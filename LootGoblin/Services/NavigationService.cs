@@ -608,44 +608,59 @@ public class NavigationService : IDisposable
             var aetheryte = aetheryteSheet.GetRow(aetheryteId);
             var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"Aetheryte {aetheryteId}";
 
-            // Get position from Level sheet (X,Z coordinates)
+            // Get position from Level sheet (X,Z coordinates) - using the same pattern as FindNearestAetheryte
+            var levelSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.Level>();
             int levelIdx = 0;
             foreach (var lvl in aetheryte.Level)
             {
                 var levelRowId = lvl.RowId;
                 _plugin.AddDebugLog($"[Aetheryte] {name}: Level[{levelIdx}] RowId={levelRowId}");
 
-                // Try direct access instead of ValueNullable
-                try
+                // Method 1a: Try ValueNullable first
+                var levelRow = lvl.ValueNullable;
+                if (levelRow != null)
                 {
-                    var levelRow = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.Level>()?.GetRow(lvl.RowId);
-                    if (levelRow != null)
-                {
-                        var lx = levelRow.Value.X;
-                        var ly = levelRow.Value.Y;
-                        var lz = levelRow.Value.Z;
-                        
-                        _plugin.AddDebugLog($"[Aetheryte] {name}: Level coords X={lx}, Y={ly}, Z={lz}");
-                        
-                        // Use Level sheet X,Z with Y=0 for distance check
-                        if (lx != 0 || lz != 0)
-                        {
-                            _plugin.AddDebugLog($"[Aetheryte] {name} Level pos: X={lx}, Z={lz}");
-                            return new Vector3(lx, 0f, lz);
-                        }
-                        else
-                        {
-                            _plugin.AddDebugLog($"[Aetheryte] {name}: Level returned zero coords");
-                        }
+                    var lx = levelRow.Value.X;
+                    var ly = levelRow.Value.Y;
+                    var lz = levelRow.Value.Z;
+                    if (lx != 0 || lz != 0)
+                    {
+                        _plugin.AddDebugLog($"[Aetheryte] {name}: ValueNullable OK ({lx:F1}, {ly:F1}, {lz:F1})");
+                        return new Vector3(lx, 0f, lz);
                     }
                     else
                     {
-                        _plugin.AddDebugLog($"[Aetheryte] {name}: Direct Level access returned null");
+                        _plugin.AddDebugLog($"[Aetheryte] {name}: ValueNullable returned zero coords");
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    _plugin.AddDebugLog($"[Aetheryte] {name}: Direct Level access failed: {ex.Message}");
+                    _plugin.AddDebugLog($"[Aetheryte] {name}: ValueNullable returned null");
+
+                    // Method 1b: Direct Level sheet lookup by RowId
+                    if (levelSheet != null && levelRowId > 0)
+                    {
+                        try
+                        {
+                            var directLevel = levelSheet.GetRow((uint)levelRowId);
+                            var dlx = directLevel.X;
+                            var dly = directLevel.Y;
+                            var dlz = directLevel.Z;
+                            if (dlx != 0 || dlz != 0)
+                            {
+                                _plugin.AddDebugLog($"[Aetheryte] {name}: Direct lookup OK ({dlx:F1}, {dly:F1}, {dlz:F1})");
+                                return new Vector3(dlx, 0f, dlz);
+                            }
+                            else
+                            {
+                                _plugin.AddDebugLog($"[Aetheryte] {name}: Direct lookup returned zero coords");
+                            }
+                        }
+                        catch (Exception dex)
+                        {
+                            _plugin.AddDebugLog($"[Aetheryte] {name}: Direct lookup EXCEPTION: {dex.GetType().Name}: {dex.Message}");
+                        }
+                    }
                 }
                 levelIdx++;
             }
