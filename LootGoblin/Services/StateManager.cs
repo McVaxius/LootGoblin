@@ -3014,21 +3014,24 @@ public class StateManager : IDisposable
         // Step 2: Wait for teleport to finish
         if (nav.IsTeleporting()) return;
 
-        // Step 3: Wait for player position to change (teleport arrival)
+        // Step 3: Wait for XYZ coordinates to change (teleport arrival)
         if (!cyclePositionChanged)
         {
-            // Check if position has changed significantly (teleport completed)
-            var posDiff = Vector3.Distance(playerPos, cycleLastPosition);
-            if (posDiff > 100.0f) // Significant position change = teleport arrived
+            // Check if X, Y, or Z coordinates have changed (teleport completed)
+            bool xChanged = Math.Abs(playerPos.X - cycleLastPosition.X) > 1.0f;
+            bool yChanged = Math.Abs(playerPos.Y - cycleLastPosition.Y) > 1.0f;
+            bool zChanged = Math.Abs(playerPos.Z - cycleLastPosition.Z) > 1.0f;
+            
+            if (xChanged || yChanged || zChanged)
             {
-                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - Position changed by {posDiff:F1}y, waiting 3 seconds");
+                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - XYZ changed: ({cycleLastPosition.X:F1},{cycleLastPosition.Y:F1},{cycleLastPosition.Z:F1}) → ({playerPos.X:F1},{playerPos.Y:F1},{playerPos.Z:F1}), waiting 3 seconds");
                 cyclePositionChanged = true;
                 cyclePositionChangeTime = DateTime.Now;
             }
             else if ((DateTime.Now - cycleTeleportTime).TotalSeconds > 30.0)
             {
                 // Timeout - move to next aetheryte
-                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - Timeout waiting for position change, moving to next");
+                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - Timeout waiting for XYZ change, moving to next");
                 cycleAetheryteIndex++;
                 cycleTeleportIssued = false;
                 stateStartTime = DateTime.Now;
