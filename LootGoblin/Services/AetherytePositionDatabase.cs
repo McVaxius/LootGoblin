@@ -86,6 +86,19 @@ public class AetherytePositionDatabase
     {
         var count = _positions.Count;
         
+        // Clear and restore defaults (normal reset behavior)
+        _positions.Clear();
+        _positions = DefaultAetheryteData.GetDefaults();
+        
+        Save(); // Persist the defaults back to disk
+        _plugin.AddDebugLog($"[AetheryteDB] Cleared all {count} user positions - restored {_positions.Count} community defaults");
+    }
+
+    /// <summary>Clear ALL positions including defaults for fresh scanning (dev use).</summary>
+    public void ClearAllPositionsForFreshScan()
+    {
+        var count = _positions.Count;
+        
         // Delete the user file to force complete reset on next load
         try
         {

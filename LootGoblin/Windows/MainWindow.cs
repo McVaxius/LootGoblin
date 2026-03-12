@@ -412,9 +412,17 @@ public class MainWindow : Window, IDisposable
                         if (ImGui.Button("Reset All Aetherytes"))
                         {
                             if (ImGui.IsItemHovered())
-                                ImGui.SetTooltip("Clear all recorded aetheryte positions - you'll need to re-record them");
+                                ImGui.SetTooltip("Clear user positions - restore community defaults");
                             // TODO: Add confirmation dialog
                             plugin.AetherytePositionDatabase.ClearAllPositions();
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Fresh Scan"))
+                        {
+                            if (ImGui.IsItemHovered())
+                                ImGui.SetTooltip("Clear ALL positions for fresh scanning (dev use)");
+                            // TODO: Add confirmation dialog
+                            plugin.AetherytePositionDatabase.ClearAllPositionsForFreshScan();
                         }
                         ImGui.SameLine();
                         if (ImGui.Button("Open Config Folder"))
