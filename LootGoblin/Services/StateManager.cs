@@ -3019,6 +3019,8 @@ public class StateManager : IDisposable
         {
             // Get estimated position from Level sheet or MapMarker
             var estimatedPos = _plugin.NavigationService.GetEstimatedAetherytePosition(current.Id);
+            _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - Player pos: ({playerPos.X:F1}, {playerPos.Z:F1}), Est pos: ({estimatedPos.X:F1}, {estimatedPos.Z:F1})");
+            
             if (estimatedPos != Vector3.Zero)
             {
                 // Check XZ distance only (ignore Y)
@@ -3026,8 +3028,11 @@ public class StateManager : IDisposable
                 var dz = playerPos.Z - estimatedPos.Z;
                 var xzDist = Math.Sqrt(dx * dx + dz * dz);
                 
+                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - XZ dist: {xzDist:F1}y (need ≤20y)");
+                
                 if (xzDist <= 20.0f)
                 {
+                    _plugin.AddDebugLog($"[CycleAetherytes] RECORDING {current.Name} - within 20y!");
                     _plugin.AetherytePositionDatabase.RecordPosition(
                         current.Id, current.Name,
                         playerPos.X, playerPos.Y, playerPos.Z);
@@ -3039,6 +3044,10 @@ public class StateManager : IDisposable
                     stateStartTime = DateTime.Now;
                     return;
                 }
+            }
+            else
+            {
+                _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - No estimated position, skipping distance check");
             }
         }
 
