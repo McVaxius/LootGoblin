@@ -92,7 +92,7 @@ public class AetherytePositionDatabase
             if (File.Exists(_filePath))
             {
                 File.Delete(_filePath);
-                _plugin.AddDebugLog($"[AetheryteDB] Deleted user file - will reload with defaults only");
+                _plugin.AddDebugLog($"[AetheryteDB] Deleted user file");
             }
         }
         catch (Exception ex)
@@ -100,11 +100,13 @@ public class AetherytePositionDatabase
             _plugin.AddDebugLog($"[AetheryteDB] Failed to delete user file: {ex.Message}");
         }
         
-        // Clear current positions and reload (will load defaults only)
+        // Clear ALL positions - no defaults, nothing
         _positions.Clear();
-        Load(); // This will load only defaults since user file was deleted
         
-        _plugin.AddDebugLog($"[AetheryteDB] Reset complete - {_positions.Count} default positions loaded");
+        // Save empty file to ensure defaults don't reload
+        Save();
+        
+        _plugin.AddDebugLog($"[AetheryteDB] Cleared all {count} positions - ready for fresh scan");
     }
 
     /// <summary>Get all stored positions.</summary>
@@ -219,11 +221,18 @@ public class AetherytePositionDatabase
             {
                 var json = File.ReadAllText(_filePath);
                 var list = JsonSerializer.Deserialize<List<AetherytePosition>>(json, JsonOptions);
-                if (list != null)
+                if (list != null && list.Count > 0)
                 {
+                    // User file has data - overlay on defaults
                     foreach (var pos in list)
                         _positions[pos.AetheryteId] = pos;
                     _plugin.AddDebugLog($"[AetheryteDB] Loaded {list.Count} user positions over {defaultCount} defaults = {_positions.Count} total");
+                }
+                else
+                {
+                    // User file is empty - user wants to start fresh, don't use defaults
+                    _positions.Clear();
+                    _plugin.AddDebugLog($"[AetheryteDB] Empty user file - starting fresh with no positions");
                 }
             }
             else
