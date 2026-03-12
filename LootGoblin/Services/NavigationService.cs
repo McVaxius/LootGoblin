@@ -609,8 +609,12 @@ public class NavigationService : IDisposable
             var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"Aetheryte {aetheryteId}";
 
             // Get position from Level sheet (X,Z coordinates)
+            int levelIdx = 0;
             foreach (var lvl in aetheryte.Level)
             {
+                var levelRowId = lvl.RowId;
+                _plugin.AddDebugLog($"[Aetheryte] {name}: Level[{levelIdx}] RowId={levelRowId}");
+
                 var levelRow = lvl.ValueNullable;
                 if (levelRow != null)
                 {
@@ -618,13 +622,24 @@ public class NavigationService : IDisposable
                     var ly = levelRow.Value.Y;
                     var lz = levelRow.Value.Z;
                     
+                    _plugin.AddDebugLog($"[Aetheryte] {name}: Level coords X={lx}, Y={ly}, Z={lz}");
+                    
                     // Use Level sheet X,Z with Y=0 for distance check
                     if (lx != 0 || lz != 0)
                     {
                         _plugin.AddDebugLog($"[Aetheryte] {name} Level pos: X={lx}, Z={lz}");
                         return new Vector3(lx, 0f, lz);
                     }
+                    else
+                    {
+                        _plugin.AddDebugLog($"[Aetheryte] {name}: Level returned zero coords");
+                    }
                 }
+                else
+                {
+                    _plugin.AddDebugLog($"[Aetheryte] {name}: Level ValueNullable is null");
+                }
+                levelIdx++;
             }
 
             // Fallback: use zero position - this will never trigger recording but prevents crashes
