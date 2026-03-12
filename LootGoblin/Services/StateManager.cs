@@ -648,7 +648,8 @@ public class StateManager : IDisposable
                 _plugin.AddDebugLog($"[Teleporting] Arrived after {elapsed:F1}s");
 
                 // Passively record aetheryte position for future nearest-aetheryte lookups
-                if (CurrentLocation?.NearestAetheryteId > 0)
+                // Only record if we've been in the zone for at least 5 seconds (prevents recording source position)
+                if (CurrentLocation?.NearestAetheryteId > 0 && (DateTime.Now - stateStartTime).TotalSeconds > 5.0)
                 {
                     var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
                     if (playerPos != Vector3.Zero)
@@ -2992,7 +2993,11 @@ public class StateManager : IDisposable
         // Step 3: Wait for teleport to finish
         if (nav.IsTeleporting()) return;
 
-        // Step 4: Record position and move to next
+        // Step 4: Wait a bit more to ensure we've actually arrived at destination
+        // (prevents recording source aetheryte position instead of destination)
+        if (elapsed < 8.0) return; // Extra 3 seconds after teleport completes
+
+        // Step 5: Record position and move to next
         var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         if (playerPos != Vector3.Zero)
         {
