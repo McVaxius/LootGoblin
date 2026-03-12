@@ -3048,11 +3048,20 @@ public class StateManager : IDisposable
             else
             {
                 _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - No estimated position, skipping distance check");
+                
+                // If no estimated position, move to next aetheryte after timeout
+                if ((DateTime.Now - cycleTeleportTime).TotalSeconds > 30.0)
+                {
+                    _plugin.AddDebugLog($"[CycleAetherytes] {current.Name} - Timeout waiting for position, moving to next");
+                    cycleAetheryteIndex++;
+                    cycleTeleportIssued = false;
+                    stateStartTime = DateTime.Now;
+                }
+                return; // Don't advance index yet
             }
         }
 
-        cycleAetheryteIndex++;
-        cycleTeleportIssued = false;
+        // Only advance if we successfully recorded the position (handled above in the if block)
 
         // Reset state timeout for next aetheryte
         stateStartTime = DateTime.Now;

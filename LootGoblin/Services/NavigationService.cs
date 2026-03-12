@@ -666,14 +666,17 @@ public class NavigationService : IDisposable
             }
 
             // Method 2: MapMarker fallback - same as FindNearestAetheryte
+            _plugin.AddDebugLog($"[Aetheryte] {name}: Trying MapMarker fallback...");
             try
             {
                 var territoryTypeSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>();
                 if (territoryTypeSheet != null && aetheryte.Territory.RowId > 0)
                 {
+                    _plugin.AddDebugLog($"[Aetheryte] {name}: Territory {aetheryte.Territory.RowId} found, looking for map...");
                     var territory = territoryTypeSheet.GetRow(aetheryte.Territory.RowId);
                     if (territory.Map.RowId > 0)
                     {
+                        _plugin.AddDebugLog($"[Aetheryte] {name}: Map {territory.Map.RowId} found, scanning markers...");
                         var mapRow = territory.Map.Value;
                         var mapId = territory.Map.RowId;
                         var sizeFactor = mapRow.SizeFactor;
@@ -704,7 +707,16 @@ public class NavigationService : IDisposable
                                 }
                             }
                         }
+                        _plugin.AddDebugLog($"[Aetheryte] {name}: No matching MapMarker found for DataKey {aetheryteId} or {aetheryte.PlaceName.RowId}");
                     }
+                    else
+                    {
+                        _plugin.AddDebugLog($"[Aetheryte] {name}: No map found for territory {aetheryte.Territory.RowId}");
+                    }
+                }
+                else
+                {
+                    _plugin.AddDebugLog($"[Aetheryte] {name}: No territory data (Territory.RowId={aetheryte.Territory.RowId})");
                 }
             }
             catch (Exception ex)
