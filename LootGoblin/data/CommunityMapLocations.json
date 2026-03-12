@@ -10764,5 +10764,33 @@
     "RecordedAt": "2026-03-12 22:09:22",
     "TerritoryId": 1188,
     "ZoneName": "Kozama'uka"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 127.7,
+    "FlagY": 10.7,
+    "FlagZ": -535,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Loboskin Map",
+    "RealX": 127.7,
+    "RealY": 10.7,
+    "RealZ": -535,
+    "RecordedAt": "2026-03-12 22:11:24",
+    "TerritoryId": 1189,
+    "ZoneName": "Yak T'el"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 339.1,
+    "FlagY": 18.1,
+    "FlagZ": -318.1,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Loboskin Map",
+    "RealX": 339.3,
+    "RealY": 18,
+    "RealZ": -317.9,
+    "RecordedAt": "2026-03-12 22:11:52",
+    "TerritoryId": 1189,
+    "ZoneName": "Yak T'el"
   }
 ]
