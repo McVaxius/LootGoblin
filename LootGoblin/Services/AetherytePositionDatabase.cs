@@ -217,6 +217,7 @@ public class AetherytePositionDatabase
             var list = _positions.Values.OrderBy(p => p.AetheryteId).ToList();
             var json = JsonSerializer.Serialize(list, JsonOptions);
             File.WriteAllText(_filePath, json);
+            _plugin.AddDebugLog($"[AetheryteDB] Saved {_positions.Count} positions to {_filePath}");
         }
         catch (Exception ex)
         {

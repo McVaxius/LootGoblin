@@ -627,11 +627,11 @@ public class NavigationService : IDisposable
                 }
             }
 
-            // Fallback: use simple position based on aetheryte ID
-            // This ensures we always have some position for distance checking
-            var fallbackX = (aetheryteId % 100) * 10f; // Simple deterministic position
-            var fallbackZ = (aetheryteId / 100) * 10f;
-            _plugin.AddDebugLog($"[Aetheryte] {name} ID-based fallback: X={fallbackX}, Z={fallbackZ}");
+            // Fallback: use a simple position near where aetherytes typically are
+            // This ensures we always have a position for distance checking
+            var fallbackX = aetheryteId * 100f; // Simple deterministic but reasonable spacing
+            var fallbackZ = aetheryteId * 100f;
+            _plugin.AddDebugLog($"[Aetheryte] {name} Simple fallback: X={fallbackX}, Z={fallbackZ}");
             return new Vector3(fallbackX, 0f, fallbackZ);
         }
         catch (Exception ex)
