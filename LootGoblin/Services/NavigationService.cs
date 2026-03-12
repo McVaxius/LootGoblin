@@ -615,29 +615,37 @@ public class NavigationService : IDisposable
                 var levelRowId = lvl.RowId;
                 _plugin.AddDebugLog($"[Aetheryte] {name}: Level[{levelIdx}] RowId={levelRowId}");
 
-                var levelRow = lvl.ValueNullable;
-                if (levelRow != null)
+                // Try direct access instead of ValueNullable
+                try
                 {
-                    var lx = levelRow.Value.X;
-                    var ly = levelRow.Value.Y;
-                    var lz = levelRow.Value.Z;
-                    
-                    _plugin.AddDebugLog($"[Aetheryte] {name}: Level coords X={lx}, Y={ly}, Z={lz}");
-                    
-                    // Use Level sheet X,Z with Y=0 for distance check
-                    if (lx != 0 || lz != 0)
-                    {
-                        _plugin.AddDebugLog($"[Aetheryte] {name} Level pos: X={lx}, Z={lz}");
-                        return new Vector3(lx, 0f, lz);
+                    var levelRow = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.Level>()?.GetRow(lvl.RowId);
+                    if (levelRow != null)
+                {
+                        var lx = levelRow.Value.X;
+                        var ly = levelRow.Value.Y;
+                        var lz = levelRow.Value.Z;
+                        
+                        _plugin.AddDebugLog($"[Aetheryte] {name}: Level coords X={lx}, Y={ly}, Z={lz}");
+                        
+                        // Use Level sheet X,Z with Y=0 for distance check
+                        if (lx != 0 || lz != 0)
+                        {
+                            _plugin.AddDebugLog($"[Aetheryte] {name} Level pos: X={lx}, Z={lz}");
+                            return new Vector3(lx, 0f, lz);
+                        }
+                        else
+                        {
+                            _plugin.AddDebugLog($"[Aetheryte] {name}: Level returned zero coords");
+                        }
                     }
                     else
                     {
-                        _plugin.AddDebugLog($"[Aetheryte] {name}: Level returned zero coords");
+                        _plugin.AddDebugLog($"[Aetheryte] {name}: Direct Level access returned null");
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    _plugin.AddDebugLog($"[Aetheryte] {name}: Level ValueNullable is null");
+                    _plugin.AddDebugLog($"[Aetheryte] {name}: Direct Level access failed: {ex.Message}");
                 }
                 levelIdx++;
             }

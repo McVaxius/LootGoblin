@@ -19,6 +19,7 @@ public class AetherytePositionDatabase
     private readonly Plugin _plugin;
     private readonly IPluginLog _log;
     private readonly string _filePath;
+    private readonly Dalamud.Plugin.Services.IDataManager _dataManager;
 
     private Dictionary<uint, AetherytePosition> _positions = new();
 
@@ -32,6 +33,7 @@ public class AetherytePositionDatabase
     {
         _plugin = plugin;
         _log = log;
+        _dataManager = Plugin.DataManager;
         var configDir = Plugin.PluginInterface.GetPluginConfigDirectory();
         _filePath = Path.Combine(configDir, "AetherytePositions.json");
         _plugin.AddDebugLog($"[AetheryteDB] Using config directory: {configDir}");
@@ -162,10 +164,22 @@ public class AetherytePositionDatabase
 
             telepo->UpdateAetheryteList();
             int count = 0;
+            var aetheryteSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.Aetheryte>();
             for (int i = 0; i < telepo->TeleportList.Count; i++)
             {
-                if (telepo->TeleportList[i].AetheryteId != 0)
-                    count++;
+                var entry = telepo->TeleportList[i];
+                if (entry.AetheryteId == 0) continue;
+
+                // Skip housing aetherytes (same filter as GetMissingAetherytes)
+                if (aetheryteSheet != null)
+                {
+                    var aetheryte = aetheryteSheet.GetRow(entry.AetheryteId);
+                    var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? "";
+                    if (name.Contains("Estate Hall") || name.Contains("Apartment") || name.Contains("Room"))
+                        continue;
+                }
+
+                count++;
             }
             return count;
         }
