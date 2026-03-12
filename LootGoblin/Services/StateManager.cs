@@ -663,13 +663,20 @@ public class StateManager : IDisposable
                             var dz = playerPos.Z - estimatedPos.Z;
                             var xzDist = Math.Sqrt(dx * dx + dz * dz);
                             
+                            _plugin.AddDebugLog($"[Aetheryte] {CurrentLocation.NearestAetheryteName} - Player pos: ({playerPos.X:F1}, {playerPos.Z:F1}), Est pos: ({estimatedPos.X:F1}, {estimatedPos.Z:F1}), XZ dist: {xzDist:F1}y");
+                            
                             if (xzDist <= 20.0f)
                             {
+                                _plugin.AddDebugLog($"[Aetheryte] RECORDING {CurrentLocation.NearestAetheryteId} - within 20y!");
                                 _plugin.AetherytePositionDatabase.RecordPosition(
                                     CurrentLocation.NearestAetheryteId,
                                     CurrentLocation.NearestAetheryteName,
                                     playerPos.X, playerPos.Y, playerPos.Z);
                             }
+                        }
+                        else
+                        {
+                            _plugin.AddDebugLog($"[Aetheryte] No estimated position for {CurrentLocation.NearestAetheryteName} (ID {CurrentLocation.NearestAetheryteId})");
                         }
                     }
                 }

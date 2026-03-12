@@ -34,6 +34,8 @@ public class AetherytePositionDatabase
         _log = log;
         var configDir = Plugin.PluginInterface.GetPluginConfigDirectory();
         _filePath = Path.Combine(configDir, "AetherytePositions.json");
+        _plugin.AddDebugLog($"[AetheryteDB] Using config directory: {configDir}");
+        _plugin.AddDebugLog($"[AetheryteDB] File path: {_filePath}");
         Load();
     }
 
