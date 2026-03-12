@@ -519,11 +519,12 @@ public class NavigationService : IDisposable
             string bestName;
 
             // Pick closest to target if we have positions and a target
-            if (targetPosition != default && candidates.Any(c => c.WorldPos != Vector3.Zero))
+            var candidatesWithPositions = candidates.Where(c => c.WorldPos != Vector3.Zero).ToList();
+            
+            if (targetPosition != default && candidatesWithPositions.Count > 0)
             {
-                _plugin.AddDebugLog($"[Aetheryte] Selecting closest aetheryte by distance - {candidates.Count(c => c.WorldPos != Vector3.Zero)} candidates with valid positions");
-                var closest = candidates
-                    .Where(c => c.WorldPos != Vector3.Zero)
+                _plugin.AddDebugLog($"[Aetheryte] Selecting closest aetheryte by distance - {candidatesWithPositions.Count} candidates with valid positions");
+                var closest = candidatesWithPositions
                     .OrderBy(c => {
                         // Use full XYZ if we have real Y for BOTH aetheryte and destination
                         var hasRealAethY = hasAetheryteDB && _plugin.AetherytePositionDatabase.HasPosition(c.Id);
@@ -566,7 +567,11 @@ public class NavigationService : IDisposable
             else
             {
                 // Fallback: cheapest cost
-                _plugin.AddDebugLog($"[Aetheryte] FALLBACK - No candidates with valid positions, using cheapest cost");
+                if (targetPosition != default && candidatesWithPositions.Count == 0)
+                    _plugin.AddDebugLog($"[Aetheryte] FALLBACK - No candidates with valid positions ({candidates.Count} total), using cheapest cost");
+                else
+                    _plugin.AddDebugLog($"[Aetheryte] FALLBACK - No target position or no candidates, using cheapest cost");
+                    
                 var cheapest = candidates.OrderBy(c => c.Cost).First();
                 bestId = cheapest.Id;
                 bestName = cheapest.Name;
