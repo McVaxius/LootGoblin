@@ -130,6 +130,10 @@ public class AetherytePositionDatabase
                 var name = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"ID {entry.AetheryteId}";
                 var territoryId = aetheryte.Territory.RowId;
 
+                // Skip housing aetherytes (Private, Free Company, etc.)
+                if (name.Contains("Estate Hall") || name.Contains("Apartment") || name.Contains("Room"))
+                    continue;
+
                 missing.Add((entry.AetheryteId, name, territoryId));
             }
         }
