@@ -231,6 +231,10 @@ public class NavigationService : IDisposable
                         _plugin.AddDebugLog($"  [AetheryteDB] {name}: using stored pos ({storedPos.X:F1}, {storedPos.Y:F1}, {storedPos.Z:F1})");
                     }
                 }
+                else
+                {
+                    _plugin.AddDebugLog($"  [AetheryteDB] {name}: AetherytePositionDatabase is NULL!");
+                }
 
                 // Method 2: Level sheet lookup - ONLY if no database data (fallback)
                 if (worldPos == Vector3.Zero)

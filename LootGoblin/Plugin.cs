@@ -106,7 +106,13 @@ public sealed class Plugin : IDalamudPlugin
         MapLocationDatabase.PopulateFromTreasureSpot(DataManager);
 
         // Initialize aetheryte position database (records player positions at aetherytes)
+        AddDebugLog("[Plugin] Initializing AetherytePositionDatabase...");
         AetherytePositionDatabase = new AetherytePositionDatabase(this, Log);
+        AddDebugLog($"[Plugin] AetherytePositionDatabase initialized: {(AetherytePositionDatabase != null ? "OK" : "NULL")}");
+        if (AetherytePositionDatabase != null)
+        {
+            AddDebugLog($"[Plugin] AetherytePositionDatabase has {AetherytePositionDatabase.Count} positions loaded");
+        }
 
         // Auto-update community data on login
         ClientState.Login += OnLogin;
