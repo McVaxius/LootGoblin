@@ -86,12 +86,25 @@ public class AetherytePositionDatabase
     {
         var count = _positions.Count;
         
-        // Clear and restore defaults (don't lose the seed data!)
-        _positions.Clear();
-        _positions = DefaultAetheryteData.GetDefaults();
+        // Delete the user file to force complete reset on next load
+        try
+        {
+            if (File.Exists(_filePath))
+            {
+                File.Delete(_filePath);
+                _plugin.AddDebugLog($"[AetheryteDB] Deleted user file - will reload with defaults only");
+            }
+        }
+        catch (Exception ex)
+        {
+            _plugin.AddDebugLog($"[AetheryteDB] Failed to delete user file: {ex.Message}");
+        }
         
-        Save(); // Persist the defaults back to disk
-        _plugin.AddDebugLog($"[AetheryteDB] Cleared all {count} user positions - restored {_positions.Count} community defaults");
+        // Clear current positions and reload (will load defaults only)
+        _positions.Clear();
+        Load(); // This will load only defaults since user file was deleted
+        
+        _plugin.AddDebugLog($"[AetheryteDB] Reset complete - {_positions.Count} default positions loaded");
     }
 
     /// <summary>Get all stored positions.</summary>
