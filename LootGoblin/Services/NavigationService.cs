@@ -665,6 +665,53 @@ public class NavigationService : IDisposable
                 levelIdx++;
             }
 
+            // Method 2: MapMarker fallback - same as FindNearestAetheryte
+            try
+            {
+                var territoryTypeSheet = _dataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>();
+                if (territoryTypeSheet != null && aetheryte.Territory.RowId > 0)
+                {
+                    var territory = territoryTypeSheet.GetRow(aetheryte.Territory.RowId);
+                    if (territory.Map.RowId > 0)
+                    {
+                        var mapRow = territory.Map.Value;
+                        var mapId = territory.Map.RowId;
+                        var sizeFactor = mapRow.SizeFactor;
+                        var offsetX = mapRow.OffsetX;
+                        var offsetY = mapRow.OffsetY;
+
+                        var mapMarkerSheet = _dataManager.GetSubrowExcelSheet<Lumina.Excel.Sheets.MapMarker>();
+                        
+                        // Look for aetheryte markers that match this aetheryte
+                        for (ushort subIdx = 0; subIdx < 500; subIdx++)
+                        {
+                            var marker = mapMarkerSheet.GetSubrowOrDefault(mapId, subIdx);
+                            if (marker == null) break;
+
+                            if (marker.Value.DataType == 3 || marker.Value.DataType == 4) // aetheryte/aethernet
+                            {
+                                // Try to match by AetheryteId or PlaceName.RowId
+                                var dataKey = marker.Value.DataKey.RowId;
+                                if (dataKey == aetheryteId || dataKey == aetheryte.PlaceName.RowId)
+                                {
+                                    // Convert map coordinates to world coordinates
+                                    float scaleFactor = sizeFactor / 100.0f;
+                                    float worldX = ((float)marker.Value.X / scaleFactor - 1024.0f) / scaleFactor + offsetX;
+                                    float worldZ = ((float)marker.Value.Y / scaleFactor - 1024.0f) / scaleFactor + offsetY;
+                                    
+                                    _plugin.AddDebugLog($"[Aetheryte] {name}: MapMarker match (DataKey={dataKey}) → ({worldX:F1}, {worldZ:F1})");
+                                    return new Vector3(worldX, 0f, worldZ);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _plugin.AddDebugLog($"[Aetheryte] {name}: MapMarker fallback failed: {ex.Message}");
+            }
+
             // Fallback: use zero position - this will never trigger recording but prevents crashes
             _plugin.AddDebugLog($"[Aetheryte] {name} - no position data available");
             return Vector3.Zero;
