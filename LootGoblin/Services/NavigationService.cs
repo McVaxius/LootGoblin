@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Game.ClientState.Conditions;
@@ -632,6 +633,7 @@ public class NavigationService : IDisposable
             if (mapMarkerSheet == null) return Vector3.Zero;
             
             // Look for aetheryte markers that match this aetheryte
+            var aetheryteMarkers = new List<(ushort Index, uint DataKey, float X, float Y)>();
             for (ushort subIdx = 0; subIdx < 500; subIdx++)
             {
                 var marker = mapMarkerSheet.GetSubrowOrDefault(mapId, subIdx);
@@ -639,8 +641,10 @@ public class NavigationService : IDisposable
                 
                 if (marker.Value.DataType == 3 || marker.Value.DataType == 4) // aetheryte/aethernet
                 {
-                    // Try to match by AetheryteId or PlaceName.RowId
                     var dataKey = marker.Value.DataKey.RowId;
+                    aetheryteMarkers.Add((subIdx, dataKey, marker.Value.X, marker.Value.Y));
+                    
+                    // Try to match by AetheryteId or PlaceName.RowId
                     if (dataKey == aetheryteId || dataKey == aetheryte.PlaceName.RowId)
                     {
                         // Convert map coordinates to world coordinates (exact same formula as FindNearestAetheryte)
@@ -652,6 +656,12 @@ public class NavigationService : IDisposable
                         return new Vector3(worldX, 0f, worldZ);
                     }
                 }
+            }
+            
+            _plugin.AddDebugLog($"[Aetheryte] {name}: Found {aetheryteMarkers.Count} aetheryte markers on map {mapId}");
+            foreach (var (idx, dataKey, x, y) in aetheryteMarkers.Take(5)) // Show first 5
+            {
+                _plugin.AddDebugLog($"[Aetheryte]   Marker[{idx}] DataKey={dataKey} raw=({x},{y})");
             }
             
             _plugin.AddDebugLog($"[Aetheryte] {name}: No matching MapMarker found for DataKey {aetheryteId} or {aetheryte.PlaceName.RowId}");
