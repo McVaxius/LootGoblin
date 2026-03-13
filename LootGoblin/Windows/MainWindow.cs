@@ -731,14 +731,22 @@ public class MainWindow : Window, IDisposable
             if (party.PartyMembers.Count > 1)
             {
                 ImGui.Spacing();
+                var localPlayer = Plugin.ObjectTable.LocalPlayer;
+                var localPos = localPlayer?.Position ?? Vector3.Zero;
+                
                 foreach (var member in party.PartyMembers)
                 {
                     var krangled = plugin.Configuration.KrangleNames ? KrangleService.KrangleName(member.Name) : member.Name;
                     ImGui.Text($"    {krangled}");
                     ImGui.SameLine();
+                    
+                    // Calculate distance from local player
+                    var distance = Vector3.Distance(localPos, member.Position);
+                    var distText = member.IsInSameZone ? $"{distance:F0}y" : "N/A";
+                    
                     if (member.IsMounted)
                     {
-                        ImGui.TextColored(ColorGreen, "[Mounted]");
+                        ImGui.TextColored(ColorGreen, $"[Mounted] {distText}");
                         if (member.IsFlying)
                         {
                             ImGui.SameLine();
@@ -747,8 +755,15 @@ public class MainWindow : Window, IDisposable
                     }
                     else
                     {
-                        ImGui.TextColored(ColorGrey, "[On Foot]");
+                        ImGui.TextColored(ColorGrey, $"[On Foot] {distText}");
                     }
+                    
+                    // Show XYZ coordinates
+                    ImGui.SameLine();
+                    var xyz = member.IsInSameZone 
+                        ? $"({member.Position.X:F0}, {member.Position.Y:F0}, {member.Position.Z:F0})"
+                        : "(Different Zone)";
+                    ImGui.TextColored(ColorGrey, xyz);
                 }
             }
 

@@ -719,7 +719,10 @@ public class StateManager : IDisposable
             mountAttempts = 0;
             
             var partySize = Plugin.PartyList.Length;
-            if (partySize > 0 && _plugin.Configuration.WaitForParty)
+            var waitForParty = _plugin.Configuration.WaitForParty;
+            _plugin.AddDebugLog($"[Mounting] PartySize={partySize}, WaitForParty={waitForParty}");
+            
+            if (partySize > 0 && waitForParty)
                 TransitionTo(BotState.WaitingForParty, "Waiting for party to mount...");
             else
                 TransitionTo(BotState.Flying, "Mounted! Flying to location...");
