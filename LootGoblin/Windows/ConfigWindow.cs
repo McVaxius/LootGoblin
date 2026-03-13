@@ -112,8 +112,10 @@ public class ConfigWindow : Window, IDisposable
         var waitForParty = configuration.WaitForParty;
         if (ImGui.Checkbox("Wait for Party", ref waitForParty))
         {
+            Plugin.Log.Info($"[Config] Wait for Party changed from {configuration.WaitForParty} to {waitForParty}");
             configuration.WaitForParty = waitForParty;
             configuration.Save();
+            Plugin.Log.Info($"[Config] Wait for Party saved as: {configuration.WaitForParty}");
         }
 
         var requireAllMounted = configuration.RequireAllMounted;

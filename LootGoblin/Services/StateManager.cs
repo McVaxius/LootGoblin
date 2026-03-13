@@ -924,7 +924,9 @@ public class StateManager : IDisposable
             if (_plugin.NavigationService.IsMounted())
             {
                 // Check if all party members are within 10y before dismounting (Issue 3)
-                if (_plugin.Configuration.WaitForParty)
+                var waitForPartyDismount = _plugin.Configuration.WaitForParty;
+                _plugin.AddDebugLog($"[Dismount] WaitForParty={waitForPartyDismount} - checking party proximity before dismounting");
+                if (waitForPartyDismount)
                 {
                     _plugin.PartyService.UpdatePartyStatus();
                     var localPlayer = Plugin.ObjectTable.LocalPlayer;
