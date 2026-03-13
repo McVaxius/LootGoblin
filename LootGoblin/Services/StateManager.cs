@@ -249,6 +249,15 @@ public class StateManager : IDisposable
     private void CheckStateTimeout()
     {
         if (!StateTimeouts.TryGetValue(State, out var timeout)) return;
+        
+        // Don't timeout during combat - reset the timer so it starts fresh after combat ends
+        bool inCombat = Plugin.Condition[ConditionFlag.InCombat];
+        if (inCombat)
+        {
+            stateStartTime = DateTime.Now;
+            return;
+        }
+        
         var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
         if (elapsed > timeout)
         {
@@ -2914,9 +2923,21 @@ public class StateManager : IDisposable
         RetryCount++;
         _plugin.AddDebugLog($"[Error #{RetryCount}] {message}");
         
-        // Always retry from SelectingMap - never stop the bot
-        // Errors are counted for informational purposes only
         _plugin.NavigationService.StopNavigation();
+        
+        // CRITICAL: If still in a duty (BoundByDuty), do NOT go to SelectingMap.
+        // Go back to InDungeon to re-evaluate dungeon state instead of trying to start a new map.
+        bool stillInDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                           Plugin.Condition[ConditionFlag.BoundByDuty56];
+        if (stillInDuty)
+        {
+            _plugin.AddDebugLog($"[Error #{RetryCount}] Still in duty (BoundByDuty=true) - recovering to InDungeon instead of SelectingMap");
+            dungeonEntryProcessed = false;
+            TransitionTo(BotState.InDungeon, $"Error #{RetryCount} (recovered): {message}");
+            return;
+        }
+        
+        // Not in duty - safe to retry from SelectingMap
         TransitionTo(BotState.SelectingMap, $"Error #{RetryCount}: {message}");
     }
 
