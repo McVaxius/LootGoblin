@@ -77,7 +77,7 @@ public static class TreasureMapData
 
         // Endwalker
         { 36611, new TreasureMapInfo { ItemId = 36611, Name = "Timeworn Saigaskin Map", Tier = MapTier.Solo, MinLevel = 85, Expansion = "EW", HasDungeon = false, Category = MapCategory.Outdoor, Status = ImplementationStatus.Implemented } },
-        { 36612, new TreasureMapInfo { ItemId = 36612, Name = "Timeworn Kumbhiraskin Map", Tier = MapTier.Party, MinLevel = 90, Expansion = "EW", HasDungeon = true, Category = MapCategory.Roulette, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1000, InstanceName = "The Excitatron 6000" } },
+        { 36612, new TreasureMapInfo { ItemId = 36612, Name = "Timeworn Kumbhiraskin Map", Tier = MapTier.Party, MinLevel = 90, Expansion = "EW", HasDungeon = true, Category = MapCategory.Dungeon, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1000, InstanceName = "The Excitatron 6000" } },
         { 39591, new TreasureMapInfo { ItemId = 39591, Name = "Timeworn Ophiotauroskin Map", Tier = MapTier.Party, MinLevel = 90, Expansion = "EW", HasDungeon = true, Category = MapCategory.Roulette, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1123, InstanceName = "The Shifting Gymnasion Agonon" } },
 //        { 39593, new TreasureMapInfo { ItemId = 39593, Name = "Potentially Special Timeworn Map", Tier = MapTier.Party, MinLevel = 90, Expansion = "EW", HasDungeon = true, Category = MapCategory.GuaranteedPortal, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1000, InstanceName = "The Excitatron 6000", SecondInstanceName = "The Shifting Gymnasion Agonon", SecondTerritoryId = 1123 } },
 //        { 39918, new TreasureMapInfo { ItemId = 39918, Name = "Conceivably Special Timeworn Map", Tier = MapTier.Party, MinLevel = 90, Expansion = "EW", HasDungeon = true, Category = MapCategory.GuaranteedPortal, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1000, InstanceName = "The Excitatron 6000", SecondInstanceName = "The Shifting Gymnasion Agonon", SecondTerritoryId = 1123 } },
@@ -86,7 +86,7 @@ public static class TreasureMapData
 
         // Dawntrail
         { 43556, new TreasureMapInfo { ItemId = 43556, Name = "Timeworn Loboskin Map", Tier = MapTier.Solo, MinLevel = 95, Expansion = "DT", HasDungeon = false, Category = MapCategory.Outdoor, Status = ImplementationStatus.Implemented } },
-        { 43557, new TreasureMapInfo { ItemId = 43557, Name = "Timeworn Br'aaxskin Map", Tier = MapTier.Party, MinLevel = 100, Expansion = "DT", HasDungeon = true, Category = MapCategory.Roulette, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1209, InstanceName = "Cenote Ja Ja Gural" } },
+        { 43557, new TreasureMapInfo { ItemId = 43557, Name = "Timeworn Br'aaxskin Map", Tier = MapTier.Party, MinLevel = 100, Expansion = "DT", HasDungeon = true, Category = MapCategory.Dungeon, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1209, InstanceName = "Cenote Ja Ja Gural" } },
         { 46185, new TreasureMapInfo { ItemId = 46185, Name = "Timeworn Gargantuaskin Map", Tier = MapTier.Party, MinLevel = 100, Expansion = "DT", HasDungeon = true, Category = MapCategory.Roulette, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1279, InstanceName = "Vault Oneiron" } },
 
     };
