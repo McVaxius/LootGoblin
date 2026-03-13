@@ -10988,5 +10988,61 @@
     "RecordedAt": "2026-03-12 23:10:00",
     "TerritoryId": 1190,
     "ZoneName": "Shaaloani"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": 239.1,
+    "FlagY": 115.8,
+    "FlagZ": 467.9,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Br'aaxskin Map",
+    "RealX": 239,
+    "RealY": 115.8,
+    "RealZ": 468,
+    "RecordedAt": "2026-03-12 23:10:39",
+    "TerritoryId": 1191,
+    "ZoneName": "Heritage Found"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -231,
+    "FlagY": -5.1,
+    "FlagZ": 717.2,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Br'aaxskin Map",
+    "RealX": -231,
+    "RealY": -5.1,
+    "RealZ": 717.2,
+    "RecordedAt": "2026-03-12 23:11:19",
+    "TerritoryId": 1191,
+    "ZoneName": "Heritage Found"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -211.3,
+    "FlagY": 28.8,
+    "FlagZ": 38,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Br'aaxskin Map",
+    "RealX": -211.3,
+    "RealY": 28.9,
+    "RealZ": 37.6,
+    "RecordedAt": "2026-03-12 23:12:10",
+    "TerritoryId": 1191,
+    "ZoneName": "Heritage Found"
+  },
+  {
+    "AetheryteName": "",
+    "FlagX": -241.6,
+    "FlagY": 21.3,
+    "FlagZ": -419.3,
+    "HasRealXYZ": true,
+    "MapName": "Timeworn Br'aaxskin Map",
+    "RealX": -242.6,
+    "RealY": 21.2,
+    "RealZ": -426.9,
+    "RecordedAt": "2026-03-12 23:12:49",
+    "TerritoryId": 1191,
+    "ZoneName": "Heritage Found"
   }
 ]
