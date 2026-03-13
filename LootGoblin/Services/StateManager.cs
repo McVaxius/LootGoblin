@@ -2831,11 +2831,19 @@ public class StateManager : IDisposable
                 if (excludedDoorEntityId.HasValue && obj.EntityId == excludedDoorEntityId.Value)
                     return false;
 
-                // Handle unnamed EventObj: potential doors in some dungeons (e.g. territory 794)
-                // Only include unnamed objects for progression (not loot), within 30y, and targetable
+                // Handle unnamed objects - GOLD ROOM FIX
                 if (string.IsNullOrEmpty(name))
                 {
-                    if (lootOnly) return false; // Unnamed objects are never loot
+                    // CRITICAL FIX: In gold rooms, chests are unnamed EventObj objects
+                    // These should be treated as loot, not progression objects
+                    if (lootOnly)
+                    {
+                        // For lootOnly: include unnamed EventObj that are targetable and not attempted
+                        // This catches gold room chests which are EventObj with empty names
+                        return obj.IsTargetable && !attemptedCoffers.Contains(obj.EntityId);
+                    }
+                    
+                    // For progression: unnamed EventObj are doors (tighter radius)
                     if (dist > 30f) return false; // Tighter radius for unnamed objects
                     if (attemptedCoffers.Contains(obj.EntityId)) return false;
                     if (hasNearbyLoot) return false; // Don't pick doors while loot exists
