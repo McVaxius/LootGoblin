@@ -1224,32 +1224,28 @@ private void DrawDependencySection()
             
             reportInfo.AppendLine("=== End Report ===");
             
-            // Copy to clipboard
-            var clipboardText = reportInfo.ToString();
-            try
+            // Log the full report to debug log (user can copy from there)
+            var reportLines = reportInfo.ToString().Split('\n');
+            foreach (var line in reportLines)
             {
-                // Use PInvoke.User32 for clipboard operations
-                PInvoke.User32.OpenClipboard(IntPtr.Zero);
-                PInvoke.User32.EmptyClipboard();
-                var hMem = Marshal.StringToHGlobalUni(clipboardText);
-                PInvoke.User32.SetClipboardData(1, hMem); // CF_UNICODETEXT = 1
-                PInvoke.User32.CloseClipboard();
-                Marshal.FreeHGlobal(hMem);
-            }
-            catch (Exception ex)
-            {
-                plugin.AddDebugLog($"[ReportIssue] Could not copy to clipboard: {ex.Message}");
+                plugin.AddDebugLog($"[REPORT] {line}");
             }
             
             // Open GitHub issues page
             var issueUrl = "https://github.com/McVaxius/LootGoblin/issues/new";
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            try
             {
-                FileName = issueUrl,
-                UseShellExecute = true
-            });
-            
-            plugin.AddDebugLog("[ReportIssue] Issue report copied to clipboard and GitHub issues page opened");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = issueUrl,
+                    UseShellExecute = true
+                });
+                plugin.AddDebugLog("[ReportIssue] GitHub issues page opened - check debug log for full report");
+            }
+            catch (Exception ex)
+            {
+                plugin.AddDebugLog($"[ReportIssue] Could not open browser: {ex.Message}");
+            }
         }
         catch (Exception ex)
         {
