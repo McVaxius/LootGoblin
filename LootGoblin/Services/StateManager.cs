@@ -828,15 +828,41 @@ public class StateManager : IDisposable
             // Just entered diving state - switch to underwater navigation
             _plugin.AddDebugLog("[Underwater] Diving state detected - switching to underwater navigation");
             wasDiving = true;
-            underwaterTargetPosition = CurrentLocation != null ? 
-                new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z) : Vector3.Zero;
+            
+            // Get current map entry for destination info
+            var currentEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
+            int destinationIndex = currentEntry?.Index > 0 ? currentEntry.Index : -1;
+            string destinationText = destinationIndex > 0 ? $"Destination #{destinationIndex}" : "Unknown";
+            string zoneName = currentEntry?.ZoneName ?? "Unknown";
+            
+            // Check for special navigation entry
+            if (currentEntry != null && destinationIndex > 0)
+            {
+                var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
+                if (specialNav != null)
+                {
+                    // Use special navigation underwater coordinates
+                    underwaterTargetPosition = new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
+                    _plugin.AddDebugLog($"[Underwater] Using special navigation for {destinationText} - {zoneName}");
+                }
+                else
+                {
+                    // Use standard navigation
+                    underwaterTargetPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+                    _plugin.AddDebugLog($"[Underwater] Using standard navigation for {destinationText} - {zoneName}");
+                }
+            }
+            else
+            {
+                underwaterTargetPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+            }
             
             // Stop current navigation and fly directly to target
             _plugin.NavigationService.StopNavigation();
             if (underwaterTargetPosition != Vector3.Zero)
             {
                 _plugin.NavigationService.FlyToPosition(underwaterTargetPosition);
-                _plugin.AddDebugLog($"[Underwater] Flying to target XYZ: {CommandHelper.FormatVector(underwaterTargetPosition)}");
+                StateDetail = $"[Underwater {destinationText}] Flying to {zoneName} XYZ: {CommandHelper.FormatVector(underwaterTargetPosition)}";
             }
             return;
         }
@@ -892,19 +918,46 @@ public class StateManager : IDisposable
                 // Check MapLocationDatabase for a stored real XYZ for this flag position
                 var dbEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
                 Vector3 flyTarget;
-                if (dbEntry != null && dbEntry.HasRealXYZ)
+                
+                // Get destination info for display
+                int destinationIndex = dbEntry?.Index > 0 ? dbEntry.Index : -1;
+                string destinationText = destinationIndex > 0 ? $"Destination #{destinationIndex}" : "Unknown";
+                string zoneName = dbEntry?.ZoneName ?? CurrentLocation?.ZoneName ?? "Unknown";
+                
+                // Check for special navigation entry (pre-dive coordinates)
+                if (dbEntry != null && destinationIndex > 0)
                 {
-                    // Use stored real position from previous successful dig
-                    flyTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
-                    _plugin.AddDebugLog($"[Flying] Using stored real XYZ from MapLocDB: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
+                    var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
+                    if (specialNav != null)
+                    {
+                        // Use pre-dive coordinates
+                        flyTarget = new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ);
+                        _plugin.AddDebugLog($"[Flying] Using special pre-dive navigation for {destinationText} - {zoneName}");
+                        StateDetail = $"[{destinationText}] Flying to {zoneName} (pre-dive) XYZ: {CommandHelper.FormatVector(flyTarget)}";
+                    }
+                    else if (dbEntry.HasRealXYZ)
+                    {
+                        // Use stored real position from previous successful dig
+                        flyTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
+                        _plugin.AddDebugLog($"[Flying] Using stored real XYZ for {destinationText} - {zoneName}: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
+                        StateDetail = $"[{destinationText}] Flying to {zoneName} XYZ: {CommandHelper.FormatVector(flyTarget)}";
+                    }
+                    else
+                    {
+                        // No stored location - use Y+50 altitude boost as fallback
+                        flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
+                        _plugin.AddDebugLog($"[Flying] No valid RealXYZ for {destinationText} - using Y+50 fallback: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
+                        StateDetail = $"[{destinationText}] Flying to {zoneName} (fallback) XYZ: {CommandHelper.FormatVector(flyTarget)}";
+                    }
                 }
                 else
                 {
-                    // No stored location - use Y+50 altitude boost as temporary fallback
+                    // No database entry - use fallback
                     flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
-                    //flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y - 350f, CurrentLocation.Z);
-                    _plugin.AddDebugLog($"[Flying] No valid RealXYZ - using Y+50 fallback: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
+                    _plugin.AddDebugLog($"[Flying] No database entry - using Y+50 fallback: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
+                    StateDetail = $"[Unknown] Flying to {zoneName} XYZ: {CommandHelper.FormatVector(flyTarget)}";
                 }
+                
                 nav.FlyToPosition(flyTarget);
                 stateActionIssued = true;
                 lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
@@ -1121,10 +1174,36 @@ public class StateManager : IDisposable
         bool isDiving = Plugin.Condition[ConditionFlag.Diving];
         if (isDiving && !wasDiving)
         {
-            _plugin.AddDebugLog("[Underwater] Diving detected during chest phase - switching to underwater navigation");
+            // Get current map entry for destination info
+            var currentEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
+            int destinationIndex = currentEntry?.Index > 0 ? currentEntry.Index : -1;
+            string destinationText = destinationIndex > 0 ? $"Destination #{destinationIndex}" : "Unknown";
+            string zoneName = currentEntry?.ZoneName ?? "Unknown";
+            
+            _plugin.AddDebugLog($"[Underwater] Diving detected during chest phase - {destinationText} - {zoneName}");
             wasDiving = true;
-            underwaterTargetPosition = CurrentLocation != null ? 
-                new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z) : Vector3.Zero;
+            
+            // Check for special navigation entry
+            if (currentEntry != null && destinationIndex > 0)
+            {
+                var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
+                if (specialNav != null)
+                {
+                    // Use special navigation underwater coordinates
+                    underwaterTargetPosition = new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
+                    _plugin.AddDebugLog($"[Underwater] Using special navigation for {destinationText} - {zoneName}");
+                }
+                else
+                {
+                    // Use standard navigation
+                    underwaterTargetPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+                    _plugin.AddDebugLog($"[Underwater] Using standard navigation for {destinationText} - {zoneName}");
+                }
+            }
+            else
+            {
+                underwaterTargetPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+            }
             
             // Stop current navigation and fly directly to target
             _plugin.NavigationService.StopNavigation();
@@ -3702,24 +3781,11 @@ public class StateManager : IDisposable
                 nav.StopNavigation();
                 var flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
                 nav.FlyToPosition(flyTarget);
-                lastStuckCheckPos = playerPos;
-                lastStuckCheckTime = DateTime.Now;
-                _plugin.AddDebugLog($"[CycleMapLocs] Flying to target ({xzDist:F0}y away)");
-            }
-            else if (lastStuckCheckPos.Equals(Vector3.Zero))
-            {
-                // First time - issue command
-                var flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
-                nav.FlyToPosition(flyTarget);
-                lastStuckCheckPos = playerPos;
-                lastStuckCheckTime = DateTime.Now;
-                _plugin.AddDebugLog($"[CycleMapLocs] Starting flight to target ({xzDist:F0}y away)");
-            }
         }
 
         StateDetail = $"Location {cycleMapLocationIndex + 1}/{cycleMapLocationQueue.Count}: {CurrentLocation?.ZoneName ?? "?"} ({elapsed:F0}s)";
     }
-
+}
     // ─── Alexandrite Farming ──────────────────────────────────────────────────
 
     private static readonly Vector3 AurianaPosition = new(62.98f, 31.29f, -737.07f);

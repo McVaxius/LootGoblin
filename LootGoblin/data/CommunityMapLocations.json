@@ -7504,18 +7504,18 @@
     "ZoneName": "The Lochs"
   },
   {
+    "TerritoryId": 621,
+    "ZoneName": "The Lochs",
+    "MapName": "Timeworn Thief\u0027s Map",
     "AetheryteName": "",
     "FlagX": -0.9,
     "FlagY": -281.6,
     "FlagZ": -282.8,
+    "RealX": -0.75,
+    "RealY": -282.8,
+    "RealZ": -282.9,
     "HasRealXYZ": true,
-    "MapName": "Timeworn Thief's Map",
-    "RealX": -0.9,
-    "RealY": -287,
-    "RealZ": -282.8,
-    "RecordedAt": "2026-03-08 21:26:51",
-    "TerritoryId": 621,
-    "ZoneName": "The Lochs"
+    "RecordedAt": "2026-03-08 21:26:51"
   },
   {
     "AetheryteName": "",
@@ -7552,9 +7552,9 @@
     "FlagZ": 210.6,
     "HasRealXYZ": true,
     "MapName": "Timeworn Thief's Map",
-    "RealX": -210.2,
-    "RealY": -196.1,
-    "RealZ": 209.4,
+    "RealX": -209,
+    "RealY": -151.8,
+    "RealZ": 210.7,
     "RecordedAt": "2026-03-08 21:47:16",
     "TerritoryId": 613,
     "ZoneName": "The Ruby Sea"

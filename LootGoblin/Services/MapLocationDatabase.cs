@@ -67,6 +67,7 @@ public class MapLocationDatabase
         _legacyFilePath = Path.Combine(configDir, "MapLocations.json");
         MigrateLegacyFile();
         LoadCommunity();
+        AssignIndices();
         LoadUser();
     }
 
@@ -89,6 +90,20 @@ public class MapLocationDatabase
     public int UserOnlyResolved => _userEntries.Count(u => u.HasRealXYZ &&
         !_communityEntries.Any(c => c.HasRealXYZ && c.TerritoryId == u.TerritoryId &&
             Math.Sqrt(Math.Pow(c.FlagX - u.FlagX, 2) + Math.Pow(c.FlagZ - u.FlagZ, 2)) <= 10.0));
+
+    /// <summary>
+    /// Assign indices to community entries for easy identification.
+    /// </summary>
+    private void AssignIndices()
+    {
+        // Only assign indices to community entries (preserves user data)
+        for (int i = 0; i < _communityEntries.Count; i++)
+        {
+            _communityEntries[i].Index = i + 1; // 1-based indexing
+        }
+        
+        _log.Information($"[MapLocDB] Assigned indices to {_communityEntries.Count} community entries");
+    }
 
     /// <summary>
     /// Look up a stored entry for a given territory + flag position.
@@ -511,4 +526,5 @@ public class MapLocationEntry
     public bool HasRealXYZ { get; set; }
     public string? RecordedAt { get; set; }
     public string? Source { get; set; }
+    public int Index { get; set; } = -1; // New field, -1 = not assigned
 }

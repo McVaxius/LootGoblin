@@ -46,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin
     public StateManager StateManager { get; init; }
     public ChestDetectionService ChestDetectionService { get; init; }
     public MapLocationDatabase MapLocationDatabase { get; init; }
+    public SpecialNavigationDatabase SpecialNavigationDatabase { get; init; }
     public AetherytePositionDatabase AetherytePositionDatabase { get; init; }
 
     // IPC
@@ -104,6 +105,9 @@ public sealed class Plugin : IDalamudPlugin
         // Initialize map location database
         MapLocationDatabase = new MapLocationDatabase(this, Log);
         MapLocationDatabase.PopulateFromTreasureSpot(DataManager);
+
+        // Initialize special navigation database
+        SpecialNavigationDatabase = new SpecialNavigationDatabase(this, Log);
 
         // Initialize aetheryte position database (records player positions at aetherytes)
         AddDebugLog("[Plugin] Initializing AetherytePositionDatabase...");
@@ -166,18 +170,18 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
 
+        StateManager?.Dispose();
+        NavigationService?.Dispose();
+        PartyService?.Dispose();
+        SpecialNavigationDatabase?.Dispose();
         WindowSystem.RemoveAllWindows();
 
-        ConfigWindow.Dispose();
-        MainWindow.Dispose();
-        AlexandriteMapWindow.Dispose();
+        ConfigWindow?.Dispose();
+        MainWindow?.Dispose();
+        AlexandriteMapWindow?.Dispose();
 
         YesAlreadyIPC.Dispose();
-        StateManager.Dispose();
-        // MapLocationDatabase has no Dispose needed (no subscriptions)
         ChestDetectionService.Dispose();
-        PartyService.Dispose();
-        NavigationService.Dispose();
         RotationPluginIPC.Dispose();
         VNavIPC.Dispose();
         GlobeTrotterIPC.Dispose();
