@@ -63,22 +63,20 @@ public static class GameHelpers
             CommandHelper.SendCommand("/gaction decipher");
             Plugin.Log.Information($"UseItem({itemId}): Opened decipher menu for {count} maps");
             
-            // Find the map's index in the menu using inventory order (no sorting)
-            // The menu shows maps in the same order as inventory scan
-            var allMaps = inventoryService.ScanForMaps();
-            var mapIds = allMaps.Keys.ToList();
-            var mapIndex = mapIds.IndexOf(itemId);
+            // Find the map's index in the actual menu order (NOT inventory order)
+            // The menu sorts maps alphabetically, which differs from inventory order
+            var menuIndex = FindMapIndexInMenu(itemId);
             
-            Plugin.Log.Information($"UseItem({itemId}): All maps in inventory order: {string.Join(", ", mapIds)}");
-            Plugin.Log.Information($"UseItem({itemId}): Target map {itemId} is at menu index {mapIndex}");
-            
-            if (mapIndex < 0)
+            if (menuIndex < 0)
             {
-                Plugin.Log.Error($"UseItem({itemId}): Could not find map in inventory list");
+                Plugin.Log.Error($"UseItem({itemId}): Could not find map in decipher menu");
                 return false;
             }
             
+            Plugin.Log.Information($"UseItem({itemId}): Found map {itemId} at menu index {menuIndex} (0-based)");
+            
             // Check if there's only one map type in inventory
+            var allMaps = inventoryService.ScanForMaps();
             if (allMaps.Count == 1)
             {
                 // Single map type - use AddonMaster.SelectIconString to click the first entry (index 0)
@@ -90,11 +88,11 @@ public static class GameHelpers
             }
             else
             {
-                // Multiple map types - use the existing unsafe callback method
-                Plugin.Log.Information($"UseItem({itemId}): {allMaps.Count} map types detected, using callback method");
+                // Multiple map types - use the corrected menu index from FindMapIndexInMenu
+                Plugin.Log.Information($"UseItem({itemId}): {allMaps.Count} map types detected, using corrected menu index {menuIndex}");
                 System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                    Plugin.Log.Information($"UseItem({itemId}): Triggering callback for map index {mapIndex} (will send {mapIndex + 1} for 1-based)");
-                    TriggerMapDecipherCallback(mapIndex + 1);
+                    Plugin.Log.Information($"UseItem({itemId}): Triggering callback for corrected menu index {menuIndex} (0-based)");
+                    TriggerMapDecipherCallback(menuIndex);
                 });
             }
             
@@ -111,7 +109,7 @@ public static class GameHelpers
     /// Find the index of a specific map in the decipher menu by reading the SelectIconString addon.
     /// The menu order does NOT match inventory order - it's sorted by the game.
     /// </summary>
-    private static unsafe int FindMapIndexInMenu(uint targetItemId)
+    public static unsafe int FindMapIndexInMenu(uint targetItemId)
     {
         Plugin.Log.Information($"[FIND] Looking for map ID {targetItemId} in SelectIconString addon");
         
