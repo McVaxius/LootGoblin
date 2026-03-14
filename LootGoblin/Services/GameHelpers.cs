@@ -63,22 +63,8 @@ public static class GameHelpers
             CommandHelper.SendCommand("/gaction decipher");
             Plugin.Log.Information($"UseItem({itemId}): Opened decipher menu for {count} maps");
             
-            // Find the map's index in inventory order (original working approach)
-            // We'll use the corrected callback logic but need the initial index
-            var allMaps = inventoryService.ScanForMaps();
-            var mapIds = allMaps.Keys.ToList();
-            var mapIndex = mapIds.IndexOf(itemId);
-            
-            Plugin.Log.Information($"UseItem({itemId}): All maps in inventory order: {string.Join(", ", mapIds)}");
-            Plugin.Log.Information($"UseItem({itemId}): Target map {itemId} is at inventory index {mapIndex}");
-            
-            if (mapIndex < 0)
-            {
-                Plugin.Log.Error($"UseItem({itemId}): Could not find map in inventory list");
-                return false;
-            }
-            
             // Check if there's only one map type in inventory
+            var allMaps = inventoryService.ScanForMaps();
             if (allMaps.Count == 1)
             {
                 // Single map type - use AddonMaster.SelectIconString to click the first entry (index 0)
@@ -104,8 +90,12 @@ public static class GameHelpers
                     }
                     else
                     {
-                        Plugin.Log.Error($"UseItem({itemId}): Could not find map in menu, falling back to inventory index {mapIndex}");
+                        Plugin.Log.Error($"UseItem({itemId}): Could not find map in menu, falling back to inventory index calculation");
+                        // Fallback: calculate inventory index
+                        var mapIds = allMaps.Keys.ToList();
+                        var mapIndex = mapIds.IndexOf(itemId);
                         var callbackIndex = mapIndex + 1;
+                        Plugin.Log.Information($"UseItem({itemId}): Using fallback inventory index {mapIndex}, callback index {callbackIndex}");
                         FireAddonCallback("SelectIconString", true, callbackIndex);
                     }
                 });
