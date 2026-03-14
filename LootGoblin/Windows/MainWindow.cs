@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
@@ -693,6 +694,12 @@ public class MainWindow : Window, IDisposable
                 plugin.AlexandriteMapWindow.IsOpen = !plugin.AlexandriteMapWindow.IsOpen;
             }
 
+            ImGui.SameLine();
+            if (ImGui.Button("Report Issue", new Vector2(100, 0)))
+            {
+                ReportIssue();
+            }
+
             // Current map info
             if (sm.SelectedMapItemId > 0)
             {
@@ -1113,6 +1120,140 @@ private void DrawDependencySection()
                     ImGui.SetScrollHereY(1.0f);
             }
             ImGui.EndChild();
+        }
+    }
+
+    private void ReportIssue()
+    {
+        try
+        {
+            var reportInfo = new System.Text.StringBuilder();
+            
+            // Basic info
+            reportInfo.AppendLine("=== LootGoblin Issue Report ===");
+            reportInfo.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            reportInfo.AppendLine();
+            
+            // Plugin info
+            reportInfo.AppendLine("Plugin Information:");
+            reportInfo.AppendLine($"Version: {plugin.GetType().Assembly.GetName().Version}");
+            reportInfo.AppendLine($"Enabled: {plugin.Configuration.Enabled}");
+            reportInfo.AppendLine($"Bot State: {plugin.StateManager.State}");
+            reportInfo.AppendLine($"State Detail: {plugin.StateManager.StateDetail}");
+            reportInfo.AppendLine();
+            
+            // Player info
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player != null)
+            {
+                reportInfo.AppendLine("Player Information:");
+                reportInfo.AppendLine($"Name: {player.Name}");
+                reportInfo.AppendLine($"Level: {player.Level}");
+                reportInfo.AppendLine($"Class Job: {player.ClassJob.Value.Name}");
+                reportInfo.AppendLine($"Position: X={player.Position.X:F2}, Y={player.Position.Y:F2}, Z={player.Position.Z:F2}");
+                reportInfo.AppendLine($"Territory: {Plugin.ClientState.TerritoryType} ({(uint)Plugin.ClientState.TerritoryType})");
+                reportInfo.AppendLine();
+            }
+            
+            // Current map info
+            if (plugin.StateManager.SelectedMapItemId > 0)
+            {
+                var item = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>()?.GetRow(plugin.StateManager.SelectedMapItemId);
+                var mapName = item?.Name.ToString() ?? $"ID {plugin.StateManager.SelectedMapItemId}";
+                reportInfo.AppendLine("Current Map Information:");
+                reportInfo.AppendLine($"Map ID: {plugin.StateManager.SelectedMapItemId}");
+                reportInfo.AppendLine($"Map Name: {mapName}");
+                // Skip initialMapCount as it's private
+                reportInfo.AppendLine();
+            }
+            
+            // Aetheryte info
+            var aetheryteDb = plugin.AetherytePositionDatabase;
+            if (aetheryteDb != null)
+            {
+                reportInfo.AppendLine("Aetheryte Information:");
+                reportInfo.AppendLine($"Total Stored: {aetheryteDb.Count}");
+                reportInfo.AppendLine($"Unlocked Count: {aetheryteDb.GetTotalUnlockedCount()}");
+                
+                // Current territory aetherytes (simplified - just show total)
+                reportInfo.AppendLine($"Current Territory: {Plugin.ClientState.TerritoryType}");
+                reportInfo.AppendLine();
+            }
+            
+            // Map location info
+            var mapLocationDb = plugin.MapLocationDatabase;
+            if (mapLocationDb != null)
+            {
+                reportInfo.AppendLine("Map Location Information:");
+                reportInfo.AppendLine($"Total Locations: {mapLocationDb.TotalLocations}");
+                reportInfo.AppendLine($"Resolved Locations: {mapLocationDb.ResolvedLocations}");
+                reportInfo.AppendLine($"Community Entries: {mapLocationDb.CommunityEntries.Count}");
+                
+                // Current location if available (simplified)
+                if (plugin.StateManager.CurrentLocation != null)
+                {
+                    var loc = plugin.StateManager.CurrentLocation;
+                    reportInfo.AppendLine($"Current Location at ({loc.X:F1}, {loc.Y:F1}, {loc.Z:F1})");
+                }
+                reportInfo.AppendLine();
+            }
+            
+            // Configuration info
+            reportInfo.AppendLine("Configuration:");
+            reportInfo.AppendLine($"Enabled Map Types: {string.Join(", ", plugin.Configuration.EnabledMapTypes)}");
+            reportInfo.AppendLine($"Chest Interaction Range: {plugin.Configuration.ChestInteractionRange}y");
+            reportInfo.AppendLine($"Auto Loot Chest: {plugin.Configuration.AutoLootChest}");
+            reportInfo.AppendLine($"Chest Open Timeout: {plugin.Configuration.ChestOpenTimeout}s");
+            reportInfo.AppendLine();
+            
+            // Recent debug log (last 20 lines)
+            reportInfo.AppendLine("Recent Debug Log (last 20 lines):");
+            var recentLogs = plugin.DebugLog.TakeLast(20);
+            foreach (var log in recentLogs)
+            {
+                reportInfo.AppendLine($"  {log}");
+            }
+            reportInfo.AppendLine();
+            
+            // System info
+            reportInfo.AppendLine("System Information:");
+            reportInfo.AppendLine($"FFXIV Client: {Plugin.ClientState.ClientLanguage.ToString()}");
+            reportInfo.AppendLine($"Dalamud API: {plugin.GetType().Assembly.GetName().Version}");
+            reportInfo.AppendLine($"OS: {Environment.OSVersion}");
+            reportInfo.AppendLine();
+            
+            reportInfo.AppendLine("=== End Report ===");
+            
+            // Copy to clipboard
+            var clipboardText = reportInfo.ToString();
+            try
+            {
+                // Use PInvoke.User32 for clipboard operations
+                PInvoke.User32.OpenClipboard(IntPtr.Zero);
+                PInvoke.User32.EmptyClipboard();
+                var hMem = Marshal.StringToHGlobalUni(clipboardText);
+                PInvoke.User32.SetClipboardData(1, hMem); // CF_UNICODETEXT = 1
+                PInvoke.User32.CloseClipboard();
+                Marshal.FreeHGlobal(hMem);
+            }
+            catch (Exception ex)
+            {
+                plugin.AddDebugLog($"[ReportIssue] Could not copy to clipboard: {ex.Message}");
+            }
+            
+            // Open GitHub issues page
+            var issueUrl = "https://github.com/McVaxius/LootGoblin/issues/new";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = issueUrl,
+                UseShellExecute = true
+            });
+            
+            plugin.AddDebugLog("[ReportIssue] Issue report copied to clipboard and GitHub issues page opened");
+        }
+        catch (Exception ex)
+        {
+            plugin.AddDebugLog($"[ReportIssue] Error generating report: {ex.Message}");
         }
     }
 }
