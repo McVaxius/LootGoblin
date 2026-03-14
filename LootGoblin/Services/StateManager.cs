@@ -40,6 +40,7 @@ public class StateManager : IDisposable
     private DateTime stateStartTime = DateTime.Now;
     private DateTime lastTickTime = DateTime.MinValue;
     private DateTime lastMapScanTime = DateTime.MinValue;
+    private int mapScanCounter = 0; // Counter for reducing log spam
     private bool stateActionIssued;
     private Vector3 lastStuckCheckPos; // Position at last stuck check
     private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
@@ -444,7 +445,13 @@ public class StateManager : IDisposable
         lastMapScanTime = DateTime.Now;
 
         var maps = _plugin.InventoryService.ScanForMaps();
-        _plugin.AddDebugLog($"[TICK] Scanning inventory... Found {maps.Count} different map types");
+        mapScanCounter++;
+        
+        // Only log every 5 scans to reduce spam
+        if (mapScanCounter % 5 == 1)
+        {
+            _plugin.AddDebugLog($"[TICK] Scanning inventory... Found {maps.Count} different map types (scan #{mapScanCounter})");
+        }
         
         if (maps.Count == 0)
         {
