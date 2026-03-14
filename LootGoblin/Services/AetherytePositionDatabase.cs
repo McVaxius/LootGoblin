@@ -327,9 +327,13 @@ public class AetherytePositionDatabase
     {
         try
         {
-            // This should load from the embedded community data file
-            // For now, we'll create empty - the actual community data should be loaded from resources
-            _plugin.AddDebugLog("[AetheryteDB] Loading community data (currently empty - needs implementation)");
+            // Load community default aetheryte positions
+            var defaults = DefaultAetheryteData.GetDefaults();
+            foreach (var kvp in defaults)
+            {
+                _positions[kvp.Key] = kvp.Value;
+            }
+            _plugin.AddDebugLog($"[AetheryteDB] Loaded {defaults.Count} community default aetheryte positions");
         }
         catch (Exception ex)
         {
