@@ -165,6 +165,9 @@ public class StateManager : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        // Update delayed callbacks for SelectIconString
+        GameHelpers.UpdateDelayedCallbacks();
+        
         // Auto-discard runs when bot is enabled (any state)
         if (_plugin.Configuration.Enabled && _plugin.Configuration.EnableAutoDiscard && Plugin.ClientState.IsLoggedIn)
         {

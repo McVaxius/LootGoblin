@@ -26,6 +26,32 @@ namespace LootGoblin.Services;
 /// </summary>
 public static class GameHelpers
 {
+    // Static fields for delayed callback handling
+    private static int _pendingMenuIndex = -1;
+    private static DateTime _callbackStartTime = DateTime.MinValue;
+    private static bool _waitingForSecondCallback = false;
+    /// <summary>
+    /// Check if we need to fire the delayed second callback for SelectIconString.
+    /// Call this method regularly from the main tick loop.
+    /// </summary>
+    public static void UpdateDelayedCallbacks()
+    {
+        if (_waitingForSecondCallback && _pendingMenuIndex >= 0)
+        {
+            var elapsed = (DateTime.Now - _callbackStartTime).TotalSeconds;
+            if (elapsed >= 0.5) // 500ms delay
+            {
+                Plugin.Log.Information($"[DELAYED] Firing second SelectIconString callback with index {_pendingMenuIndex}");
+                FireAddonCallback("SelectIconString", true, _pendingMenuIndex);
+                
+                // Reset state
+                _pendingMenuIndex = -1;
+                _callbackStartTime = DateTime.MinValue;
+                _waitingForSecondCallback = false;
+            }
+        }
+    }
+
     /// <summary>
     /// Use an item from inventory by item ID.
     /// For treasure maps: uses /gaction decipher then selects the map from the menu.
@@ -84,9 +110,12 @@ public static class GameHelpers
                     if (realMenuIndex >= 0)
                     {
                         // Use 0-based index directly (no conversion needed)
-                        Plugin.Log.Information($"UseItem({itemId}): Found real menu index {realMenuIndex}, firing two callbacks");
+                        Plugin.Log.Information($"UseItem({itemId}): Found real menu index {realMenuIndex}, firing first callback");
                         FireAddonCallback("SelectIconString", true, -2);
-                        FireAddonCallback("SelectIconString", true, realMenuIndex);
+                        // Store the menu index for the delayed second callback
+                        _pendingMenuIndex = realMenuIndex;
+                        _callbackStartTime = DateTime.Now;
+                        _waitingForSecondCallback = true;
                     }
                     else
                     {
@@ -97,9 +126,12 @@ public static class GameHelpers
                             var retryIndex = FindMapIndexInMenu(itemId);
                             if (retryIndex >= 0)
                             {
-                                Plugin.Log.Information($"UseItem({itemId}): Found menu index {retryIndex} on retry, firing callbacks");
+                                Plugin.Log.Information($"UseItem({itemId}): Found menu index {retryIndex} on retry, firing first callback");
                                 FireAddonCallback("SelectIconString", true, -2);
-                                FireAddonCallback("SelectIconString", true, retryIndex);
+                                // Store the menu index for the delayed second callback
+                                _pendingMenuIndex = retryIndex;
+                                _callbackStartTime = DateTime.Now;
+                                _waitingForSecondCallback = true;
                             }
                             else
                             {
