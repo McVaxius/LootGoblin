@@ -90,13 +90,22 @@ public static class GameHelpers
                     }
                     else
                     {
-                        Plugin.Log.Error($"UseItem({itemId}): Could not find map in menu, falling back to inventory index calculation");
-                        // Fallback: calculate inventory index
-                        var mapIds = allMaps.Keys.ToList();
-                        var mapIndex = mapIds.IndexOf(itemId);
-                        Plugin.Log.Information($"UseItem({itemId}): Using fallback inventory index {mapIndex}");
-                        FireAddonCallback("SelectIconString", true, -2);
-                        FireAddonCallback("SelectIconString", true, mapIndex);
+                        Plugin.Log.Error($"UseItem({itemId}): Could not find map in menu, retrying with longer delay...");
+                        // Retry with longer delay for SelectIconString to populate
+                        System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
+                            Plugin.Log.Information($"UseItem({itemId}): Retrying SelectIconString lookup...");
+                            var retryIndex = FindMapIndexInMenu(itemId);
+                            if (retryIndex >= 0)
+                            {
+                                Plugin.Log.Information($"UseItem({itemId}): Found menu index {retryIndex} on retry, firing callbacks");
+                                FireAddonCallback("SelectIconString", true, -2);
+                                FireAddonCallback("SelectIconString", true, retryIndex);
+                            }
+                            else
+                            {
+                                Plugin.Log.Error($"UseItem({itemId}): SelectIconString lookup failed twice, cannot select map");
+                            }
+                        });
                     }
                 });
             }
