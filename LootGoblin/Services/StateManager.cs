@@ -45,7 +45,10 @@ public class StateManager : IDisposable
     private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
     private DateTime portalRetryStart = DateTime.MinValue; // Portal interaction retry timer
     private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
-    private bool descentInProgress; // Prevents overlapping async Ctrl+Space descent calls
+    private bool descentInProgress = false; // Whether Ctrl+Space descent is currently running
+    private DateTime descentStartTime = DateTime.MinValue; // When Ctrl+Space descent started
+    private float descentStartY = 0f; // Y position when descent started
+    private bool descentMode = false; // Whether we're in descent+dismount mode (Ctrl+Space first)
     private DateTime lastInteractionTime = DateTime.MinValue; // Throttle chest/portal interaction attempts
     private bool autoMoveActive; // Track if automove is currently on
     
@@ -983,51 +986,81 @@ public class StateManager : IDisposable
                 if (dismountAttemptStart == DateTime.MinValue)
                 {
                     dismountAttemptStart = DateTime.Now;
-                    _plugin.AddDebugLog("Close to target - attempting to land/dismount...");
+                    descentMode = true; // Start with descent+dismount mode
+                    descentStartTime = DateTime.Now;
+                    descentStartY = Plugin.ObjectTable.LocalPlayer?.Position.Y ?? 0f;
+                    _plugin.AddDebugLog("Close to target - attempting descent+dismount mode (Ctrl+Space first)...");
                 }
 
                 var dismountElapsed = (DateTime.Now - dismountAttemptStart).TotalSeconds;
+                var descentElapsed = (DateTime.Now - descentStartTime).TotalSeconds;
 
-                // Normal dismount: try /mount toggle (ForceLand) for up to 60 seconds
-                if (dismountElapsed < 60.0)
+                // DESCENT+DISMOUNT MODE: Try Ctrl+Space first, monitor Y change
+                if (descentMode)
                 {
-                    // Attempt dismount every 2 seconds (ForceLand spams /mount internally)
-                    if (!descentInProgress && (int)dismountElapsed % 2 == 0)
+                    if (!descentInProgress)
                     {
-                        _mountService.Dismount();
+                        // Start Ctrl+Space descent
+                        descentInProgress = true;
+                        _plugin.AddDebugLog($"[Flying] Starting Ctrl+Space descent attempt ({descentElapsed:F0}s into dismount)");
+                        
+                        System.Threading.Tasks.Task.Run(async () => {
+                            await GameHelpers.PerformDescentAsync();
+                            descentInProgress = false;
+                        });
                     }
-                    StateDetail = $"Landing/dismounting... ({dismountElapsed:F0}s)";
-                    return;
-                }
-
-                // 60+ seconds and still mounted = likely underwater, need Ctrl+Space descent
-                if (!descentInProgress)
-                {
-                    descentInProgress = true;
-                    _plugin.AddDebugLog($"[Flying] Dismount failed after {dismountElapsed:F0}s - attempting Ctrl+Space descent (underwater?)");
                     
-                    System.Threading.Tasks.Task.Run(async () => {
-                        // Ctrl+Space hold for 1 second, release, wait - SND pattern
-                        await GameHelpers.PerformDescentAsync();
-                        
-                        // Wait a moment after releasing
-                        await System.Threading.Tasks.Task.Delay(1000);
-                        
-                        // Check if we dismounted
-                        if (!_plugin.NavigationService.IsMounted())
+                    // Monitor Y position change
+                    var currentY = Plugin.ObjectTable.LocalPlayer?.Position.Y ?? 0f;
+                    var yChange = Math.Abs(currentY - descentStartY);
+                    
+                    if (descentElapsed >= 5.0)
+                    {
+                        if (yChange < 5.0f)
                         {
-                            _plugin.AddDebugLog("[Flying] Ctrl+Space descent succeeded - dismounted!");
+                            // Y didn't change much - switch to normal dismount
+                            _plugin.AddDebugLog($"[Flying] Ctrl+Space descent ineffective (Y change: {yChange:F1}y) - switching to normal dismount");
+                            descentMode = false;
+                            descentInProgress = false;
                         }
                         else
                         {
-                            _plugin.AddDebugLog("[Flying] Still mounted after descent attempt - will retry next tick");
+                            // Y changed significantly - reset monitoring and continue descent
+                            _plugin.AddDebugLog($"[Flying] Ctrl+Space descent working (Y change: {yChange:F1}y) - continuing descent");
+                            descentStartTime = DateTime.Now;
+                            descentStartY = currentY;
                         }
-                        
+                    }
+                    
+                    StateDetail = $"Descent mode... (Y change: {yChange:F1}y, {descentElapsed:F0}s)";
+                    return;
+                }
+
+                // NORMAL DISMOUNT MODE: Standard dismount attempts
+                if (dismountElapsed < 60.0)
+                {
+                    // Attempt dismount every 2 seconds
+                    if ((int)dismountElapsed % 2 == 0)
+                    {
+                        _mountService.Dismount();
+                    }
+                    StateDetail = $"Normal dismount... ({dismountElapsed:F0}s)";
+                    return;
+                }
+
+                // Fallback: Try Ctrl+Space as last resort
+                if (!descentInProgress)
+                {
+                    descentInProgress = true;
+                    _plugin.AddDebugLog($"[Flying] Normal dismount failed after {dismountElapsed:F0}s - trying Ctrl+Space as fallback");
+                    
+                    System.Threading.Tasks.Task.Run(async () => {
+                        await GameHelpers.PerformDescentAsync();
                         descentInProgress = false;
                     });
                 }
                 
-                StateDetail = $"Underwater descent in progress... ({dismountElapsed:F0}s)";
+                StateDetail = $"Fallback descent... ({dismountElapsed:F0}s)";
                 return;
             }
         }
