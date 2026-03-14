@@ -86,7 +86,9 @@ public static class GameHelpers
                         // Use 0-based index directly (no conversion needed)
                         Plugin.Log.Information($"UseItem({itemId}): Found real menu index {realMenuIndex}, firing two callbacks");
                         FireAddonCallback("SelectIconString", true, -2);
-                        FireAddonCallback("SelectIconString", true, realMenuIndex);
+                        System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                            FireAddonCallback("SelectIconString", true, realMenuIndex);
+                        });
                     }
                     else
                     {
@@ -99,7 +101,9 @@ public static class GameHelpers
                             {
                                 Plugin.Log.Information($"UseItem({itemId}): Found menu index {retryIndex} on retry, firing callbacks");
                                 FireAddonCallback("SelectIconString", true, -2);
-                                FireAddonCallback("SelectIconString", true, retryIndex);
+                                System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
+                                    FireAddonCallback("SelectIconString", true, retryIndex);
+                                });
                             }
                             else
                             {
