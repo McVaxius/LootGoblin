@@ -1213,6 +1213,9 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[OpeningChest] Interaction attempt with '{chestName}' - returned: {interacted}");
             StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
         }
+        
+        // Continuously pathfind to chest location to counter BMR AI interference
+        _plugin.NavigationService.MoveToPosition(chest.Position);
     }
 
     private void CheckForPortalAfterChest()
@@ -2535,6 +2538,9 @@ public class StateManager : IDisposable
                         _plugin.AddDebugLog($"[Portal] Interacting with '{portal.Name.TextValue}'...");
                         GameHelpers.InteractWithObject(portal);
                     }
+                    
+                    // Continuously pathfind to portal location to counter BMR AI interference
+                    _plugin.NavigationService.MoveToPosition(portal.Position);
                 }
                                 
                 StateDetail = $"Searching for portal... ({sinceStart:F0}/15s)";
