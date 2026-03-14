@@ -1,0 +1,14 @@
+[
+  {
+    "destinationIndex": 42,
+    "zoneName": "The Sea of Clouds - Underwater Area",
+    "preX": 123.4,
+    "preY": 45.6,
+    "preZ": 789.0,
+    "mainX": 124.0,
+    "mainY": 40.0,
+    "mainZ": 790.5,
+    "notes": "Sample underwater map - fly to surface first, then dive when Condition 81 is true",
+    "isActive": true
+  }
+]

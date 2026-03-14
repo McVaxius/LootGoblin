@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <None Include="images\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="SpecialNavigation.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="CopyPluginArtifacts" AfterTargets="Build">
@@ -31,6 +32,7 @@
     <ItemGroup>
       <PluginFiles Include="$(TargetPath)" />
       <PluginFiles Include="$(ProjectDir)$(AssemblyName).json" />
+      <PluginFiles Include="$(ProjectDir)SpecialNavigation.json" />
     </ItemGroup>
 
     <ItemGroup>

@@ -25,8 +25,8 @@ public class SpecialNavigationDatabase : IDisposable
     {
         _plugin = plugin;
         _log = log;
-        var configDir = Plugin.PluginInterface.GetPluginConfigDirectory();
-        _filePath = Path.Combine(configDir, "SpecialNavigation.json");
+        var pluginDir = Plugin.PluginInterface.ConfigDirectory.FullName; // Plugin directory, not user config
+        _filePath = Path.Combine(pluginDir, "SpecialNavigation.json");
         Load();
     }
 
@@ -40,6 +40,7 @@ public class SpecialNavigationDatabase : IDisposable
 
     /// <summary>
     /// Load special navigation entries from JSON file.
+    /// This is a distributed file that overwrites on each release.
     /// </summary>
     public void Load()
     {
@@ -47,7 +48,7 @@ public class SpecialNavigationDatabase : IDisposable
         {
             if (!File.Exists(_filePath))
             {
-                // Create sample file if it doesn't exist
+                // Create sample file if it doesn't exist (for development)
                 CreateSampleFile();
                 return;
             }
@@ -74,43 +75,7 @@ public class SpecialNavigationDatabase : IDisposable
     }
 
     /// <summary>
-    /// Save special navigation entries to JSON file.
-    /// </summary>
-    public void Save()
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(_entries, new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-            File.WriteAllText(_filePath, json);
-            _log.Information($"[SpecialNavDB] Saved {_entries.Count} special navigation entries");
-        }
-        catch (Exception ex)
-        {
-            _log.Error($"[SpecialNavDB] Failed to save special navigation entries: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Add or update a special navigation entry.
-    /// </summary>
-    public void AddOrUpdate(SpecialNavigationEntry entry)
-    {
-        var existing = _entries.FirstOrDefault(e => e.DestinationIndex == entry.DestinationIndex);
-        if (existing != null)
-        {
-            _entries.Remove(existing);
-        }
-        _entries.Add(entry);
-        Save();
-        _log.Information($"[SpecialNavDB] Added/updated special navigation for Destination #{entry.DestinationIndex}");
-    }
-
-    /// <summary>
-    /// Create sample SpecialNavigation.json file.
+    /// Create sample SpecialNavigation.json file (for development only).
     /// </summary>
     private void CreateSampleFile()
     {
@@ -152,6 +117,6 @@ public class SpecialNavigationDatabase : IDisposable
 
     public void Dispose()
     {
-        Save();
+        // No save needed - this is a distributed file
     }
 }
