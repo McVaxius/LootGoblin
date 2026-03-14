@@ -50,15 +50,13 @@ public static class GameHelpers
                 if (realMenuIndex >= 0)
                 {
                     // Use 0-based index directly (no conversion needed)
-                    Plugin.Log.Information($"[MAP_LOOKUP] Found real menu index {realMenuIndex}, firing first callback");
-                    Plugin.Log.Information($"[CALLBACK_1] About to fire: SelectIconString True -2");
-                    FireAddonCallback("SelectIconString", true, -2);
-                    Plugin.Log.Information($"[CALLBACK_1] Fired: SelectIconString True -2");
-                    // Store the menu index for the delayed second callback
+                    Plugin.Log.Information($"[MAP_LOOKUP] Found real menu index {realMenuIndex}, firing single callback");
+                    Plugin.Log.Information($"[CALLBACK] About to fire: SelectIconString True {realMenuIndex}");
+                    // Store the menu index for the delayed callback
                     _pendingMenuIndex = realMenuIndex;
                     _callbackStartTime = DateTime.Now;
                     _waitingForSecondCallback = true;
-                    Plugin.Log.Information($"[CALLBACK_1] Set up delayed second callback for index {realMenuIndex}");
+                    Plugin.Log.Information($"[CALLBACK] Set up delayed callback for index {realMenuIndex}");
                 }
                 else
                 {
@@ -75,27 +73,27 @@ public static class GameHelpers
             }
         }
         
-        // Handle second callback delay
+        // Handle single callback delay (renamed from "second callback")
         if (_waitingForSecondCallback && _pendingMenuIndex >= 0)
         {
             var elapsed = (DateTime.Now - _callbackStartTime).TotalSeconds;
-            Plugin.Log.Information($"[CALLBACK_2] Checking second callback: elapsed={elapsed:F3}s, target=0.5s, index={_pendingMenuIndex}");
+            Plugin.Log.Information($"[CALLBACK] Checking callback: elapsed={elapsed:F3}s, target=0.5s, index={_pendingMenuIndex}");
             if (elapsed >= 0.5) // 500ms delay
             {
-                Plugin.Log.Information($"[CALLBACK_2] About to fire: SelectIconString True {_pendingMenuIndex}");
-                Plugin.Log.Information($"[CALLBACK_2] Checking if SelectIconString addon is visible before firing...");
+                Plugin.Log.Information($"[CALLBACK] About to fire: SelectIconString True {_pendingMenuIndex}");
+                Plugin.Log.Information($"[CALLBACK] Checking if SelectIconString addon is visible before firing...");
                 var isVisible = IsAddonVisible("SelectIconString");
-                Plugin.Log.Information($"[CALLBACK_2] SelectIconString visible: {isVisible}");
+                Plugin.Log.Information($"[CALLBACK] SelectIconString visible: {isVisible}");
                 
-                Plugin.Log.Information($"[DELAYED] Firing second SelectIconString callback with index {_pendingMenuIndex}");
+                Plugin.Log.Information($"[DELAYED] Firing SelectIconString callback with index {_pendingMenuIndex}");
                 FireAddonCallback("SelectIconString", true, _pendingMenuIndex);
-                Plugin.Log.Information($"[CALLBACK_2] Fired: SelectIconString True {_pendingMenuIndex}");
+                Plugin.Log.Information($"[CALLBACK] Fired: SelectIconString True {_pendingMenuIndex}");
                 
                 // Reset state
                 _pendingMenuIndex = -1;
                 _callbackStartTime = DateTime.MinValue;
                 _waitingForSecondCallback = false;
-                Plugin.Log.Information($"[CALLBACK_2] Reset state after second callback");
+                Plugin.Log.Information($"[CALLBACK] Reset state after callback");
             }
         }
     }
