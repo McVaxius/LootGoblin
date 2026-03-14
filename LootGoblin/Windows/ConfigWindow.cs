@@ -124,12 +124,12 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
         {
             ImGui.BeginTooltip();
-            ImGui.Text("When enabled, the bot will:\n" +
-                       "• Wait for party members to mount before taking off\n" +
-                       "• Wait for party members before dismounting at destination\n" +
+            ImGui.Text("When enabled, the bot will wait for party members\n" +
+                       "to mount up before taking off.\n" +
                        "\n" +
-                       "This prevents the bot from leaving party members behind\n" +
-                       "during both mounting and dismounting phases.");
+                       "Note: Use the 'Wait for party before dismounting'\n" +
+                       "option in the main window to wait for party members\n" +
+                       "to reach the destination before dismounting.");
             ImGui.EndTooltip();
         }
 

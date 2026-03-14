@@ -767,7 +767,25 @@ public class MainWindow : Window, IDisposable
                 }
             }
 
-            // Note: Party wait settings are now in Config Window under "Party Coordination"
+            ImGui.Spacing();
+            var partyWait = plugin.Configuration.PartyWaitBeforeDismount;
+            if (ImGui.Checkbox("Wait for party before dismounting", ref partyWait))
+            {
+                plugin.Configuration.PartyWaitBeforeDismount = partyWait;
+                plugin.Configuration.Save();
+            }
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, "(?)");
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.Text("When enabled, the bot will wait at the destination\n" +
+                           "until all party members are within 10 yalms (XZ distance)\n" +
+                           "before dismounting. This prevents the bot from dismounting\n" +
+                           "alone in dangerous zones while party members are still\n" +
+                           "traveling. Works in both flying and ground-only modes.");
+                ImGui.EndTooltip();
+            }
         }
     }
 
