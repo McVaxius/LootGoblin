@@ -287,8 +287,8 @@ public static class GameHelpers
             Plugin.Log.Information("[SELECTICON] Controller mode sequence completed");
             
             // Wait for the confirmation dialog, then click OK
-            Plugin.Log.Information("[SELECTICON] Waiting 500ms for confirmation dialog...");
-            await System.Threading.Tasks.Task.Delay(500);
+            Plugin.Log.Information("[SELECTICON] Waiting 1000ms for confirmation dialog...");
+            await System.Threading.Tasks.Task.Delay(1000);
             Plugin.Log.Information("[SELECTICON] Triggering confirmation dialog callback");
             TriggerConfirmDialog();
         }
@@ -369,9 +369,9 @@ public static class GameHelpers
             Plugin.Log.Information($"[CALLBACK] FireCallback completed - selected index {mapIndex}");
 
             // Wait for the confirmation dialog, then click OK
-            Plugin.Log.Information($"[CALLBACK] Waiting 500ms for confirmation dialog...");
-            System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                Plugin.Log.Information($"[CALLBACK] Triggering confirmation dialog callback");
+            Plugin.Log.Information($"[CALLBACK] Waiting 1000ms for confirmation dialog...");
+            System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
+                Plugin.Log.Information("[CALLBACK] Triggering confirmation dialog callback");
                 TriggerConfirmDialog();
             });
         }
@@ -422,6 +422,12 @@ public static class GameHelpers
         if (addonPtr == 0)
         {
             Plugin.Log.Error("[CALLBACK] Could not find SelectYesno addon");
+            
+            // Retry after a short delay - the dialog might not be ready yet
+            System.Threading.Tasks.Task.Delay(200).ContinueWith(_ => {
+                Plugin.Log.Information("[CALLBACK] Retrying SelectYesno lookup...");
+                TriggerConfirmDialogUnsafe();
+            });
             return;
         }
 
@@ -431,6 +437,12 @@ public static class GameHelpers
         if (!addon->AtkUnitBase.IsVisible)
         {
             Plugin.Log.Error("[CALLBACK] SelectYesno addon is not visible");
+            
+            // Retry after a short delay - the addon might not be visible yet
+            System.Threading.Tasks.Task.Delay(200).ContinueWith(_ => {
+                Plugin.Log.Information("[CALLBACK] Retrying SelectYesno visibility check...");
+                TriggerConfirmDialogUnsafe();
+            });
             return;
         }
 
@@ -438,7 +450,7 @@ public static class GameHelpers
 
         // Use AddonMaster to click Yes - same pattern as FrenRider
         new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
-        Plugin.Log.Information("[CALLBACK] Successfully clicked Yes on decipher confirmation");
+        Plugin.Log.Information($"[CALLBACK] Successfully clicked Yes on decipher confirmation");
     }
 
     /// <summary>
@@ -725,7 +737,7 @@ public static class GameHelpers
 
     /// <summary>
     /// Get the player's current Tomestones of Poetics count.
-    /// Poetics currency ID = 28 (Tomestone type).
+    /// Poetics item ID = 28, use GetItemCount since it's just an untradeable item.
     /// </summary>
     public static unsafe int GetCurrentPoetics()
     {
@@ -733,7 +745,11 @@ public static class GameHelpers
         {
             var im = InventoryManager.Instance();
             if (im == null) return 0;
-            return (int)im->GetTomestoneCount(0); // Index 0 = Poetics (first tomestone type)
+            
+            // Poetics is item ID 28, just use GetInventoryItemCount like any other item
+            var count = im->GetInventoryItemCount(28);
+            Plugin.Log.Debug($"[POETICS] Poetics (item ID 28) count: {count}");
+            return (int)count;
         }
         catch (Exception ex)
         {
