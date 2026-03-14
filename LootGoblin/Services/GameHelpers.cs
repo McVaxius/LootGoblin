@@ -83,10 +83,10 @@ public static class GameHelpers
                     var realMenuIndex = FindMapIndexInMenu(itemId);
                     if (realMenuIndex >= 0)
                     {
-                        // Convert 0-based to 1-based for FireAddonCallback (standard pattern)
-                        var callbackIndex = realMenuIndex + 1;
-                        Plugin.Log.Information($"UseItem({itemId}): Found real menu index {realMenuIndex}, using FireAddonCallback with index {callbackIndex}");
-                        FireAddonCallback("SelectIconString", true, callbackIndex);
+                        // Use 0-based index directly (no conversion needed)
+                        Plugin.Log.Information($"UseItem({itemId}): Found real menu index {realMenuIndex}, firing two callbacks");
+                        FireAddonCallback("SelectIconString", true, -2);
+                        FireAddonCallback("SelectIconString", true, realMenuIndex);
                     }
                     else
                     {
@@ -94,9 +94,9 @@ public static class GameHelpers
                         // Fallback: calculate inventory index
                         var mapIds = allMaps.Keys.ToList();
                         var mapIndex = mapIds.IndexOf(itemId);
-                        var callbackIndex = mapIndex + 1;
-                        Plugin.Log.Information($"UseItem({itemId}): Using fallback inventory index {mapIndex}, callback index {callbackIndex}");
-                        FireAddonCallback("SelectIconString", true, callbackIndex);
+                        Plugin.Log.Information($"UseItem({itemId}): Using fallback inventory index {mapIndex}");
+                        FireAddonCallback("SelectIconString", true, -2);
+                        FireAddonCallback("SelectIconString", true, mapIndex);
                     }
                 });
             }
