@@ -97,13 +97,16 @@ public static class GameHelpers
                     var realMenuIndex = FindMapIndexInMenu(itemId);
                     if (realMenuIndex >= 0)
                     {
-                        Plugin.Log.Information($"UseItem({itemId}): Found real menu index {realMenuIndex}, triggering callback");
-                        TriggerMapDecipherCallback(realMenuIndex);
+                        // Convert 0-based to 1-based for FireAddonCallback (standard pattern)
+                        var callbackIndex = realMenuIndex + 1;
+                        Plugin.Log.Information($"UseItem({itemId}): Found real menu index {realMenuIndex}, using FireAddonCallback with index {callbackIndex}");
+                        FireAddonCallback("SelectIconString", true, callbackIndex);
                     }
                     else
                     {
                         Plugin.Log.Error($"UseItem({itemId}): Could not find map in menu, falling back to inventory index {mapIndex}");
-                        TriggerMapDecipherCallback(mapIndex);
+                        var callbackIndex = mapIndex + 1;
+                        FireAddonCallback("SelectIconString", true, callbackIndex);
                     }
                 });
             }
