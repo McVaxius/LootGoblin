@@ -11,6 +11,7 @@ using Dalamud.Game;
 using Dalamud.Game.Gui;
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Internal;
+using Dalamud.Plugin.Services;
 using ECommons;
 using ECommons.Automation;
 using ECommons.UIHelpers;
@@ -968,9 +969,14 @@ private void DrawDependencySection()
         {
             try
             {
-                // Open decipher menu
-                plugin.AddDebugLog($"[READ INDICES] Using map ID {firstMapId} to open decipher menu");
-                GameHelpers.UseItem(firstMapId, plugin.InventoryService);
+                // Open decipher menu on main thread using PluginInterface
+                Plugin.Log.Information($"[READ INDICES] Using map ID {firstMapId} to open decipher menu");
+                
+                // Switch to main thread for UseItem
+                Plugin.Framework.RunOnFrameworkThread(() =>
+                {
+                    GameHelpers.UseItem(firstMapId, plugin.InventoryService);
+                }).ConfigureAwait(false);
                 
                 // Wait for menu to appear
                 await System.Threading.Tasks.Task.Delay(1000);
