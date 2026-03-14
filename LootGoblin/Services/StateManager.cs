@@ -1166,57 +1166,11 @@ public class StateManager : IDisposable
         // Not in combat - approach and interact with chest using lockon+automove
         Plugin.TargetManager.Target = chest;
         
-        // Multi-tier navigation approach (same as inside-dungeon pattern):
-        // >6y: NavigationService (resistant to BMR AI)
-        // 3-6y: LockOn+AutoMove
-        // <3y: Stop movement, interact
-        if (dist > 6f)
+        if (dist > range)
         {
-            // Long range: Use NavigationService to avoid BMR AI interference
             if (!autoMoveActive)
             {
-                _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {dist:F1}y - using NavigationService to avoid AI interference");
-                _plugin.NavigationService.MoveToPosition(chest.Position);
-                autoMoveActive = true;
-                chestApproachStart = now;
-                chestApproachLastDist = dist;
-            }
-            else
-            {
-                // Stuck detection for NavigationService (same as dungeon pattern)
-                var approachElapsed = (now - chestApproachStart).TotalSeconds;
-                if (approachElapsed >= 10.0)
-                {
-                    var movedDistance = Vector3.Distance(Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero, chest.Position);
-                    if (movedDistance < 3.0f)
-                    {
-                        _plugin.AddDebugLog($"[OpeningChest] NavigationService stuck (moved {movedDistance:F1}y in 10s) - re-pathfinding to '{chestName}'");
-                        _plugin.NavigationService.StopNavigation();
-                        _plugin.NavigationService.MoveToPosition(chest.Position);
-                        chestApproachStart = now;
-                        chestApproachLastDist = dist;
-                    }
-                    else
-                    {
-                        _plugin.AddDebugLog($"[OpeningChest] NavigationService progress: moved {movedDistance:F1}y in 10s, dist={dist:F1}y to '{chestName}'");
-                        chestApproachLastDist = dist;
-                    }
-                }
-            }
-            StateDetail = $"Navigating to '{chestName}' ({dist:F1}y away)...";
-        }
-        else if (dist > 3f)
-        {
-            // Medium range: Stop NavigationService, use LockOn+AutoMove
-            if (_plugin.NavigationService.State == NavigationState.Flying)
-            {
-                _plugin.NavigationService.StopNavigation();
-                _plugin.AddDebugLog($"[OpeningChest] Stopped NavigationService at {dist:F1}y - using LockOn+AutoMove to approach '{chestName}'");
-            }
-            
-            if (!autoMoveActive)
-            {
-                _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {dist:F1}y - LockOn+AutoMove");
+                _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {dist:F1}y - lockon+automove");
                 GameHelpers.LockOnAndAutoMove();
                 autoMoveActive = true;
                 chestApproachStart = now;
@@ -1224,11 +1178,11 @@ public class StateManager : IDisposable
             }
             else
             {
-                // Stuck detection for LockOn+AutoMove (same as original logic)
+                // Stuck detection: if we've been approaching for 5s+ and haven't closed 2y, use vnavmesh
                 var approachElapsed = (now - chestApproachStart).TotalSeconds;
                 if (approachElapsed >= 5.0 && dist >= chestApproachLastDist - 2f)
                 {
-                    _plugin.AddDebugLog($"[OpeningChest] LockOn+AutoMove stuck at {dist:F1}y for {approachElapsed:F0}s - switching back to NavigationService");
+                    _plugin.AddDebugLog($"[OpeningChest] Stuck at {dist:F1}y for {approachElapsed:F0}s (was {chestApproachLastDist:F1}y) - switching to vnavmesh");
                     GameHelpers.StopAutoMove();
                     autoMoveActive = false;
                     _plugin.NavigationService.MoveToPosition(chest.Position);
@@ -1241,7 +1195,7 @@ public class StateManager : IDisposable
         }
         else
         {
-            // Close range: Stop ALL movement and interact continuously
+            // In range - stop automove
             if (autoMoveActive)
             {
                 GameHelpers.StopAutoMove();
@@ -1249,15 +1203,15 @@ public class StateManager : IDisposable
                 autoMoveActive = false;
             }
             chestApproachStart = DateTime.MinValue;
-            
-            // Interact every 2 seconds (same as dungeon pattern)
-            if ((now - lastInteractionTime).TotalSeconds >= 2.0)
-            {
-                lastInteractionTime = now;
-                var interacted = GameHelpers.InteractWithObject(chest);
-                _plugin.AddDebugLog($"[OpeningChest] Interaction attempt with '{chestName}' - returned: {interacted}");
-            }
-            StateDetail = $"Interacting with '{chestName}' (in range)...";
+        }
+
+        // Continually try to interact every ~1 second (only when NOT in combat)
+        if ((now - lastInteractionTime).TotalSeconds >= 1.0)
+        {
+            lastInteractionTime = now;
+            var interacted = GameHelpers.InteractWithObject(chest);
+            _plugin.AddDebugLog($"[OpeningChest] Interaction attempt with '{chestName}' - returned: {interacted}");
+            StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
         }
     }
 
