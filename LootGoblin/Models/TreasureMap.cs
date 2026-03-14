@@ -53,7 +53,7 @@ public static class TreasureMapData
         { 6691, new TreasureMapInfo { ItemId = 6691, Name = "Timeworn Boarskin Map", Tier = MapTier.Solo, MinLevel = 50, Expansion = "ARR", HasDungeon = false, Category = MapCategory.Outdoor, Status = ImplementationStatus.Implemented } },
         { 6692, new TreasureMapInfo { ItemId = 6692, Name = "Timeworn Peisteskin Map", Tier = MapTier.Party, MinLevel = 50, Expansion = "ARR", HasDungeon = false, Category = MapCategory.Outdoor, Status = ImplementationStatus.Implemented } },
         { 7884, new TreasureMapInfo { ItemId = 7884, Name = "Mysterious Map", Tier = MapTier.Solo, MinLevel = 50, Expansion = "ARR", HasDungeon = false, Category = MapCategory.Outdoor, Status = ImplementationStatus.Implemented } },
-        { 8156, new TreasureMapInfo { ItemId = 7884, Name = "Unhidden Leather Map", Tier = MapTier.Solo, MinLevel = 50, Expansion = "ARR", HasDungeon = false, Category = MapCategory.Outdoor, Status = ImplementationStatus.Implemented } },
+        { 8156, new TreasureMapInfo { ItemId = 8156, Name = "Unhidden Leather Map", Tier = MapTier.Solo, MinLevel = 50, Expansion = "ARR", HasDungeon = false, Category = MapCategory.Outdoor, Status = ImplementationStatus.Implemented } },
 
         // Heavensward
         { 12241, new TreasureMapInfo { ItemId = 12241, Name = "Timeworn Archaeoskin Map", Tier = MapTier.Solo, MinLevel = 55, Expansion = "HW", HasDungeon = false, Category = MapCategory.Outdoor, Status = ImplementationStatus.Implemented } },

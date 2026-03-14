@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -42,6 +43,22 @@ public class MainWindow : Window, IDisposable
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
         ImGui.Text($"Loot Goblin v{version}");
+        
+        // Ko-fi donation button in upper right
+        ImGui.SameLine(ImGui.GetWindowWidth() - 120);
+        if (ImGui.SmallButton("\u2661 Ko-fi \u2661"))
+        {
+            System.Diagnostics.Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://ko-fi.com/mcvaxius",
+                UseShellExecute = true
+            });
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Support development on Ko-fi");
+        }
+        
         ImGui.Separator();
         ImGui.Spacing();
 
@@ -199,6 +216,14 @@ public class MainWindow : Window, IDisposable
                 {
                     var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
                     var enabledTypes = plugin.Configuration.EnabledMapTypes;
+
+                    // Show warning if multiple map types detected
+                    if (cachedMaps.Count > 1)
+                    {
+                        ImGui.TextColored(new Vector4(1.0f, 0.2f, 0.2f, 1.0f), "  ⚠ MAP SELECTION IS UNRELIABLE AT THE MOMENT");
+                        ImGui.TextColored(new Vector4(1.0f, 0.2f, 0.2f, 1.0f), "  ⚠ ITS RECOMMENDED YOU PLACE THE MAPS YOU DONT WANT TO RUN INTO SADDLEBAGS FOR NOW");
+                        ImGui.Spacing();
+                    }
 
                     // Sort entries lowest MinLevel first (matches StateManager selection order)
                     var sortedMaps = cachedMaps

@@ -1,5 +1,13 @@
 # Loot Goblin
 
+---
+
+**Help fund my AI overlords' coffee addiction so they can keep generating more plugins instead of taking over the world**
+
+[☕ Support development on Ko-fi](https://ko-fi.com/mcvaxius)
+
+---
+
 A Dalamud plugin for FFXIV that automates treasure map hunting with party coordination.
 
 ## Features

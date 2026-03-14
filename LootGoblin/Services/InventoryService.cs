@@ -63,8 +63,8 @@ public class InventoryService : IDisposable
                     var itemName = item.Name.ToString();
                     if (string.IsNullOrEmpty(itemName)) continue;
 
-                    // Pattern: "Timeworn * Map" or "* Special Timeworn Map"
-                    if (itemName.Contains("Timeworn") && itemName.Contains("Map"))
+                    // Pattern: "Timeworn * Map", "* Special Timeworn Map", or "Mysterious Map"
+                    if ((itemName.Contains("Timeworn") && itemName.Contains("Map")) || itemName == "Mysterious Map")
                     {
                         var itemId = slot->ItemId;
                         var quantity = (int)slot->Quantity;

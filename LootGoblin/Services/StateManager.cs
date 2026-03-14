@@ -3586,7 +3586,7 @@ public class StateManager : IDisposable
     private static readonly Vector3 AurianaPosition = new(62.98f, 31.29f, -737.07f);
     private const uint MorDhonaTerritoryId = 156;
     private const uint RevenantsTollAetheryteId = 24; // Revenant's Toll aetheryte
-    private const uint MysteriousMapItemId = 7885; // Timeworn Mysterious Map
+    private const uint MysteriousMapItemId = 7884; // Mysterious Map
 
     /// <summary>
     /// Start the Alexandrite farming loop: buy Mysterious Map from Auriana, run it, repeat.
@@ -3734,10 +3734,11 @@ public class StateManager : IDisposable
                 {
                     // Click "Allagan Tomestones of Poetics (Other)" - index 5 (1-based for callback)
                     GameHelpers.FireAddonCallback("SelectIconString", true, 5);
+                    _plugin.AddDebugLog("[Alexandrite] Selected Poetics (Other) from Auriana menu");
+                    // Immediately start handling Yes/No dialog
                     alexandriteStep = 3;
                     alexandriteStepTime = DateTime.Now;
                     alexandriteActionIssued = false;
-                    _plugin.AddDebugLog("[Alexandrite] Selected Poetics (Other) from Auriana menu");
                 }
                 else if (stepElapsed > 15.0)
                 {
@@ -3745,45 +3746,34 @@ public class StateManager : IDisposable
                 }
                 return;
 
-            case 3: // Shop Exchange - buy Mysterious Map
-                if (stepElapsed < 1.0) return;
-
-                if (GameHelpers.IsAddonVisible("ShopExchangeCurrency"))
+            case 3: // Handle Yes/No dialog after SelectIconString
+                // Fire SelectYesno True 0 every 2 seconds until item 7884 count == 1
+                if (stepElapsed % 2.0 < 0.5) // Every 2 seconds
                 {
-                    // Buy the Mysterious Map: FireCallback with (0, 1, 1, Undef)
-                    // Index 0 = first item, Qty 1
-                    GameHelpers.FireAddonCallback("ShopExchangeCurrency", true, 0, (uint)1, (uint)1);
-                    alexandriteStep = 4;
-                    alexandriteStepTime = DateTime.Now;
-                    alexandriteActionIssued = false;
-                    _plugin.AddDebugLog("[Alexandrite] Purchasing Mysterious Map");
+                    GameHelpers.FireAddonCallback("SelectYesno", true, 0);
+                    var mapCount = GameHelpers.GetInventoryItemCount(MysteriousMapItemId);
+                    _plugin.AddDebugLog($"[Alexandrite] Fired SelectYesno callback, map count: {mapCount}");
+                    
+                    if (mapCount == 1)
+                    {
+                        _plugin.AddDebugLog("[Alexandrite] Mysterious Map purchased successfully");
+                        alexandriteStep = 5; // Skip to map use
+                        alexandriteStepTime = DateTime.Now;
+                        alexandriteActionIssued = false;
+                    }
                 }
-                else if (stepElapsed > 15.0)
+                else if (stepElapsed > 30.0)
                 {
-                    HandleError("[Alexandrite] ShopExchangeCurrency not appearing");
+                    HandleError("[Alexandrite] Yes/No confirmation timed out");
                 }
                 return;
 
-            case 4: // Confirm purchase (SelectYesNo) and close shop
-                if (stepElapsed < 0.5) return;
-
-                // Click Yes on confirmation
-                GameHelpers.ClickYesIfVisible();
-
-                // Wait for map to appear in inventory
-                if (stepElapsed > 2.0 && GameHelpers.GetInventoryItemCount(MysteriousMapItemId) > 0)
-                {
-                    _plugin.AddDebugLog("[Alexandrite] Mysterious Map purchased successfully");
-                    // Close the shop window
-                    GameHelpers.CloseCurrentAddon();
-                    alexandriteStep = 5;
-                    alexandriteStepTime = DateTime.Now;
-                    alexandriteActionIssued = false;
-                }
-                else if (stepElapsed > 15.0)
-                {
-                    HandleError("[Alexandrite] Map purchase confirmation timed out");
-                }
+            case 4: // Shop Exchange - buy Mysterious Map (skipped - we handle Yes/No directly)
+                // This step is now handled by the Yes/No logic in case 3
+                // We skip directly to case 5 after successful purchase
+                alexandriteStep = 5;
+                alexandriteStepTime = DateTime.Now;
+                alexandriteActionIssued = false;
                 return;
 
             case 5: // Use the Mysterious Map (decipher)
@@ -3791,8 +3781,8 @@ public class StateManager : IDisposable
 
                 if (!alexandriteActionIssued)
                 {
-                    // Use the map item to decipher it
-                    var used = GameHelpers.UseItem(MysteriousMapItemId);
+                    // Use the map item to decipher it using the map-specific method
+                    var used = GameHelpers.UseItem(MysteriousMapItemId, _plugin.InventoryService);
                     if (used)
                     {
                         alexandriteActionIssued = true;
