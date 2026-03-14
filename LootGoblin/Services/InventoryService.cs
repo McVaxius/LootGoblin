@@ -11,6 +11,7 @@ public class InventoryService : IDisposable
     private readonly IPluginLog _log;
     private readonly Plugin _plugin;
     private readonly IDataManager _dataManager;
+    private static int scanCounter = 0; // Static counter for reducing log spam across all instances
 
     public InventoryService(Plugin plugin, IDataManager dataManager, IPluginLog log)
     {
@@ -79,16 +80,26 @@ public class InventoryService : IDisposable
 
             if (results.Count == 0)
             {
-                _plugin.AddDebugLog("No treasure maps found in inventory.");
+                scanCounter++;
+                if (scanCounter % 5 == 1)
+                {
+                    _plugin.AddDebugLog("No treasure maps found in inventory.");
+                }
             }
             else
             {
-                foreach (var kvp in results)
+                scanCounter++;
+                // Only log details every 5 scans to reduce spam
+                if (scanCounter % 5 == 1)
                 {
-                    var item = itemSheet.GetRow(kvp.Key);
-                    var name = item.Name.ToString();
-                    if (string.IsNullOrEmpty(name)) name = "Unknown";
-                    _plugin.AddDebugLog($"Found {kvp.Value}x {name} (ID: {kvp.Key})");
+                    _plugin.AddDebugLog($"Found {results.Count} map types (scan #{scanCounter}):");
+                    foreach (var kvp in results)
+                    {
+                        var item = itemSheet.GetRow(kvp.Key);
+                        var name = item.Name.ToString();
+                        if (string.IsNullOrEmpty(name)) name = "Unknown";
+                        _plugin.AddDebugLog($"  Found {kvp.Value}x {name} (ID: {kvp.Key})");
+                    }
                 }
             }
         }
