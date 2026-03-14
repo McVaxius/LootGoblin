@@ -3790,7 +3790,7 @@ public class StateManager : IDisposable
                         // Force enable TextAdvance for Auriana dialogue
                         if (_plugin.IsTextAdvanceAvailable)
                         {
-                            CommandHelper.SendCommand("/textadvance on");
+                            CommandHelper.SendCommand("/textadvance enable");
                             _plugin.AddDebugLog("[Alexandrite] Enabled TextAdvance for Auriana dialogue");
                         }
                         
