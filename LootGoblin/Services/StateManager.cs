@@ -816,9 +816,24 @@ public class StateManager : IDisposable
             var xzDist2 = Math.Sqrt(Math.Pow(playerPos.X - targetPos2.X, 2) + Math.Pow(playerPos.Z - targetPos2.Z, 2));
             if (xzDist2 < 10.0f)
             {
-                _plugin.AddDebugLog($"[Flying] Already within {xzDist2:F1}y of destination - skipping pathfinding, proceeding to dismount");
-                stateActionIssued = true;
-                // Fall through to the arrival/dismount logic below
+                _plugin.AddDebugLog($"[Flying] Already within {xzDist2:F1}y of destination - immediate dismount and dig");
+                
+                // Immediate dismount if mounted
+                if (_plugin.NavigationService.IsMounted())
+                {
+                    _mountService.Dismount();
+                }
+                
+                // Enable BMR AI and dig immediately
+                CommandHelper.SendCommand("/bmrai on");
+                CommandHelper.SendCommand("/gaction dig");
+                _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
+                
+                // Wait 2 seconds for chest to spawn before looking for it
+                System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
+                    TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+                });
+                return;
             }
             else
             {
