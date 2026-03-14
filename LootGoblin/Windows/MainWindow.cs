@@ -951,31 +951,18 @@ private void DrawDependencySection()
             plugin.AddDebugLog("[READ INDICES] No maps in inventory to compare against");
             return;
         }
-
-        plugin.AddDebugLog("[READ INDICES] Opening decipher menu to read map indices...");
         
-        // Get the first enabled map to trigger decipher menu
-        var enabledTypes = plugin.Configuration.EnabledMapTypes;
-        var firstMapId = cachedMaps.Keys.FirstOrDefault(id => enabledTypes.Contains(id));
-        
-        if (firstMapId == 0)
-        {
-            plugin.AddDebugLog("[READ INDICES] No enabled maps found - cannot open decipher menu");
-            return;
-        }
-
-        // Use the existing GameHelpers method to open decipher
         System.Threading.Tasks.Task.Run(async () =>
         {
             try
             {
-                // Open decipher menu on main thread using PluginInterface
-                Plugin.Log.Information($"[READ INDICES] Using map ID {firstMapId} to open decipher menu");
+                // Open decipher menu safely with /gaction decipher
+                Plugin.Log.Information("[READ INDICES] Opening decipher menu with /gaction decipher");
                 
-                // Switch to main thread for UseItem
+                // Use /gaction decipher to open menu safely (no map consumption)
                 Plugin.Framework.RunOnFrameworkThread(() =>
                 {
-                    GameHelpers.UseItem(firstMapId, plugin.InventoryService);
+                    CommandHelper.SendCommand("/gaction decipher");
                 }).ConfigureAwait(false);
                 
                 // Wait for menu to appear
