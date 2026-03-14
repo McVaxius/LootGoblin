@@ -821,6 +821,37 @@ public class StateManager : IDisposable
 
     private void TickFlying()
     {
+        // Check for diving state change (Condition 81)
+        bool isDiving = Plugin.Condition[ConditionFlag.Diving];
+        if (isDiving && !wasDiving)
+        {
+            // Just entered diving state - switch to underwater navigation
+            _plugin.AddDebugLog("[Underwater] Diving state detected - switching to underwater navigation");
+            wasDiving = true;
+            underwaterTargetPosition = CurrentLocation != null ? 
+                new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z) : Vector3.Zero;
+            
+            // Stop current navigation and fly directly to target
+            _plugin.NavigationService.StopNavigation();
+            if (underwaterTargetPosition != Vector3.Zero)
+            {
+                _plugin.NavigationService.FlyToPosition(underwaterTargetPosition);
+                _plugin.AddDebugLog($"[Underwater] Flying to target XYZ: {CommandHelper.FormatVector(underwaterTargetPosition)}");
+            }
+            return;
+        }
+        else if (!isDiving && wasDiving)
+        {
+            // Exited diving state
+            _plugin.AddDebugLog("[Underwater] Exited diving state");
+            wasDiving = false;
+        }
+        
+        // Rate limit diving checks to every 2 seconds
+        if ((DateTime.Now - lastDivingCheck).TotalSeconds < 2.0) return;
+        lastDivingCheck = DateTime.Now;
+        
+        // Original flying logic continues...
         if (CurrentLocation == null)
         {
             HandleError("No location data for navigation.");
@@ -1086,6 +1117,24 @@ public class StateManager : IDisposable
 
     private void TickOpeningChest()
     {
+        // Check for diving state change - if we just entered diving, go to underwater navigation
+        bool isDiving = Plugin.Condition[ConditionFlag.Diving];
+        if (isDiving && !wasDiving)
+        {
+            _plugin.AddDebugLog("[Underwater] Diving detected during chest phase - switching to underwater navigation");
+            wasDiving = true;
+            underwaterTargetPosition = CurrentLocation != null ? 
+                new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z) : Vector3.Zero;
+            
+            // Stop current navigation and fly directly to target
+            _plugin.NavigationService.StopNavigation();
+            if (underwaterTargetPosition != Vector3.Zero)
+            {
+                _plugin.NavigationService.FlyToPosition(underwaterTargetPosition);
+            }
+            return;
+        }
+        
         // Click Yes on any dialog (Open the treasure coffer? etc)
         GameHelpers.ClickYesIfVisible();
         
@@ -2526,18 +2575,37 @@ public class StateManager : IDisposable
                     }
 
                     // /gaction jump for 0.5s bursts to get Y-axis range for underwater portals
-                    if ((int)(sinceStart * 2) % 2 == 0 && (int)sinceStart > 0)
+                    // Only jump if we're diving (Condition 81)
+                    if ((int)(sinceStart * 2) % 2 == 0 && (int)sinceStart > 0 && Plugin.Condition[ConditionFlag.Diving])
                     {
                         CommandHelper.SendCommand("/gaction jump");
                     }
 
-                    // Continually interact every ~1 second
-                    if ((now - lastInteractionTime).TotalSeconds >= 1.0)
+                // Continually interact every ~1 second
+                if ((now - lastInteractionTime).TotalSeconds >= 1.0)
+                {
+                    lastInteractionTime = now;
+                    _plugin.AddDebugLog($"[Portal] Interacting with '{portal.Name.TextValue}'...");
+                    GameHelpers.InteractWithObject(portal);
+                }
+                
+                // If diving, continually try to dig and target portal
+                if (Plugin.Condition[ConditionFlag.Diving])
+                {
+                    // Try to dig every 3 seconds (rate limited)
+                    if ((DateTime.Now - lastDigTime).TotalSeconds >= 3.0)
                     {
-                        lastInteractionTime = now;
-                        _plugin.AddDebugLog($"[Portal] Interacting with '{portal.Name.TextValue}'...");
-                        GameHelpers.InteractWithObject(portal);
+                        CommandHelper.SendCommand("/dig");
+                        lastDigTime = DateTime.Now;
                     }
+                    
+                    // Try to target portal periodically
+                    if ((DateTime.Now - lastTargetTime).TotalSeconds >= 2.0)
+                    {
+                        Plugin.TargetManager.Target = portal;
+                        lastTargetTime = DateTime.Now;
+                    }
+                }
                     
                     // Continuously pathfind to portal location to counter BMR AI interference
                     _plugin.NavigationService.MoveToPosition(portal.Position);
@@ -3659,6 +3727,13 @@ public class StateManager : IDisposable
     private const uint RevenantsTollAetheryteId = 24; // Revenant's Toll aetheryte
     private static DateTime lastPoeticsLog = DateTime.MinValue; // Rate limiting for poetics logging
     private const uint MysteriousMapItemId = 7884; // Mysterious Map
+    
+    // Underwater navigation tracking
+    private bool wasDiving = false;
+    private DateTime lastDivingCheck = DateTime.MinValue;
+    private Vector3 underwaterTargetPosition = Vector3.Zero;
+    private static DateTime lastDigTime = DateTime.MinValue;
+    private static DateTime lastTargetTime = DateTime.MinValue;
 
     /// <summary>
     /// Start the Alexandrite farming loop: buy Mysterious Map from Auriana, run it, repeat.
