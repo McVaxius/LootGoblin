@@ -1123,7 +1123,7 @@ private void DrawDependencySection()
         }
     }
 
-    private void ReportIssue()
+    private async void ReportIssue()
     {
         try
         {
@@ -1163,7 +1163,6 @@ private void DrawDependencySection()
                 reportInfo.AppendLine("Current Map Information:");
                 reportInfo.AppendLine($"Map ID: {plugin.StateManager.SelectedMapItemId}");
                 reportInfo.AppendLine($"Map Name: {mapName}");
-                // Skip initialMapCount as it's private
                 reportInfo.AppendLine();
             }
             
@@ -1174,8 +1173,6 @@ private void DrawDependencySection()
                 reportInfo.AppendLine("Aetheryte Information:");
                 reportInfo.AppendLine($"Total Stored: {aetheryteDb.Count}");
                 reportInfo.AppendLine($"Unlocked Count: {aetheryteDb.GetTotalUnlockedCount()}");
-                
-                // Current territory aetherytes (simplified - just show total)
                 reportInfo.AppendLine($"Current Territory: {Plugin.ClientState.TerritoryType}");
                 reportInfo.AppendLine();
             }
@@ -1189,7 +1186,6 @@ private void DrawDependencySection()
                 reportInfo.AppendLine($"Resolved Locations: {mapLocationDb.ResolvedLocations}");
                 reportInfo.AppendLine($"Community Entries: {mapLocationDb.CommunityEntries.Count}");
                 
-                // Current location if available (simplified)
                 if (plugin.StateManager.CurrentLocation != null)
                 {
                     var loc = plugin.StateManager.CurrentLocation;
@@ -1231,21 +1227,25 @@ private void DrawDependencySection()
                 plugin.AddDebugLog($"[REPORT] {line}");
             }
             
-            // Open GitHub issues page
+            // Open GitHub issues page asynchronously
             var issueUrl = "https://github.com/McVaxius/LootGoblin/issues/new";
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            
+            await Task.Run(() => {
+                try
                 {
-                    FileName = issueUrl,
-                    UseShellExecute = true
-                });
-                plugin.AddDebugLog("[ReportIssue] GitHub issues page opened - check debug log for full report");
-            }
-            catch (Exception ex)
-            {
-                plugin.AddDebugLog($"[ReportIssue] Could not open browser: {ex.Message}");
-            }
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = issueUrl,
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    plugin.AddDebugLog($"[ReportIssue] Could not open browser: {ex.Message}");
+                }
+            });
+            
+            plugin.AddDebugLog("[ReportIssue] GitHub issues page opened - check debug log for full report");
         }
         catch (Exception ex)
         {
