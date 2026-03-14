@@ -301,20 +301,6 @@ public class MainWindow : Window, IDisposable
                     {
                         ImGui.SetTooltip("Opens decipher menu and reads all map entries to show correct indices");
                     }
-                    
-                    // Debug: Show current debug mode state
-                    if (plugin.Configuration.ShowDebugMapCompletion)
-                    {
-                        ImGui.TextColored(new Vector4(0.3f, 1.0f, 0.3f, 1.0f), $"  Debug Mode: ON (cached maps: {cachedMaps.Count})");
-                    }
-                }
-                else
-                {
-                    // Debug: Show why button is hidden
-                    if (!plugin.Configuration.ShowDebugMapCompletion && cachedMaps.Count > 0)
-                    {
-                        ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1.0f), $"  Debug Mode: OFF (button hidden)");
-                    }
                 }
             }
             else
