@@ -3654,10 +3654,10 @@ public class StateManager : IDisposable
 
     // ─── Alexandrite Farming ──────────────────────────────────────────────────
 
-    // Auriana NPC in Revenant's Toll (Mor Dhona)
     private static readonly Vector3 AurianaPosition = new(62.98f, 31.29f, -737.07f);
     private const uint MorDhonaTerritoryId = 156;
     private const uint RevenantsTollAetheryteId = 24; // Revenant's Toll aetheryte
+    private static DateTime lastPoeticsLog = DateTime.MinValue; // Rate limiting for poetics logging
     private const uint MysteriousMapItemId = 7884; // Mysterious Map
 
     /// <summary>
@@ -3760,7 +3760,7 @@ public class StateManager : IDisposable
                     CommandHelper.SendCommand("/vnav clearflag");
                     _plugin.AddDebugLog("[Alexandrite] Cleared navigation flags before purchase");
                     
-                    nav.NavigateTo(AurianaPosition, "Walking to Auriana");
+                    nav.MoveToPosition(AurianaPosition);
                     alexandriteActionIssued = true;
                     alexandriteStepTime = DateTime.Now;
                     StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Walking to Auriana...";
@@ -3825,7 +3825,6 @@ public class StateManager : IDisposable
                     // Force refresh poetics count after purchase (rate limited)
                     var currentPoetics = GameHelpers.GetCurrentPoetics();
                     // Only log poetics every 10 seconds to reduce spam
-                    static DateTime lastPoeticsLog = DateTime.MinValue;
                     if ((DateTime.Now - lastPoeticsLog).TotalSeconds >= 10.0)
                     {
                         _plugin.AddDebugLog($"[Alexandrite] After purchase - Current poetics: {currentPoetics}/2000");
