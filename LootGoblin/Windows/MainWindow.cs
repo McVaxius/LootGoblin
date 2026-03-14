@@ -232,8 +232,7 @@ public class MainWindow : Window, IDisposable
                     // Show warning if multiple map types detected
                     if (cachedMaps.Count > 1)
                     {
-                        ImGui.TextColored(new Vector4(1.0f, 0.2f, 0.2f, 1.0f), "  ⚠ MAP SELECTION IS UNRELIABLE AT THE MOMENT");
-                        ImGui.TextColored(new Vector4(1.0f, 0.2f, 0.2f, 1.0f), "  ⚠ ITS RECOMMENDED YOU PLACE THE MAPS YOU DONT WANT TO RUN INTO SADDLEBAGS FOR NOW");
+                        ImGui.TextColored(ColorGrey, "  Multiple map types detected - use checkboxes to select which to run");
                         ImGui.Spacing();
                     }
 

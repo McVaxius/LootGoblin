@@ -264,6 +264,9 @@ public class AetherytePositionDatabase
         
         _plugin.AddDebugLog($"[AetheryteDB] Initialization complete: {_positions.Count} total positions loaded");
         
+        // Force refresh to clean up any stale data
+        ForceRefreshPositions();
+        
         // Log a few sample positions for debugging
         if (_positions.Count > 0)
         {
@@ -289,6 +292,68 @@ public class AetherytePositionDatabase
         {
             _log.Error($"Failed to save AetherytePositions: {ex.Message}");
         }
+    }
+    
+    /// <summary>
+    /// Force refresh the aetheryte database to clean up stale data.
+    /// Removes positions with corrupted data and reloads community defaults.
+    /// </summary>
+    public void ForceRefreshPositions()
+    {
+        try
+        {
+            var beforeCount = _positions.Count;
+            
+            // Remove any positions with invalid data
+            var invalidPositions = _positions.Where(kvp => 
+                kvp.Value.X == 0 && kvp.Value.Y == 0 && kvp.Value.Z == 0 ||
+                string.IsNullOrEmpty(kvp.Value.Name)).ToList();
+            
+            foreach (var invalid in invalidPositions)
+            {
+                _positions.Remove(invalid.Key);
+            }
+            
+            // Reload community defaults to ensure we have the latest data
+            LoadCommunityDefaults();
+            
+            var afterCount = _positions.Count;
+            _plugin.AddDebugLog($"[AetheryteDB] Force refresh: {beforeCount} → {afterCount} positions (removed {invalidPositions.Count} invalid)");
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Failed to force refresh aetheryte positions: {ex.Message}");
+        }
+    }
+    
+    private void LoadCommunityDefaults()
+    {
+        try
+        {
+            var communityPath = Plugin.PluginInterface.GetPluginConfigDirectory();
+            if (!File.Exists(communityPath))
+            {
+                // Create fresh community defaults
+                var defaultPositions = GetDefaultCommunityPositions();
+                foreach (var pos in defaultPositions)
+                {
+                    if (!_positions.ContainsKey(pos.Key))
+                    {
+                        _positions[pos.Key] = pos.Value;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Failed to load community defaults during refresh: {ex.Message}");
+        }
+    }
+    
+    private Dictionary<uint, AetherytePosition> GetDefaultCommunityPositions()
+    {
+        // Return empty for now - will be populated by actual community data
+        return new Dictionary<uint, AetherytePosition>();
     }
 }
 

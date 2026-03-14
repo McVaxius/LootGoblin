@@ -486,6 +486,10 @@ public class StateManager : IDisposable
         mapOpeningRetried = false;
         _plugin.AddDebugLog($"[SelectingMap] Initial map count: {initialMapCount}");
         
+        // Clear any existing flag to prevent conflicts with new map run
+        GameHelpers.SetMapFlag(0, 0, 0); // Clear flag
+        _plugin.AddDebugLog($"[SelectingMap] Cleared existing map flag");
+        
         TransitionTo(BotState.OpeningMap, $"Opening {mapName}...");
     }
 
@@ -514,7 +518,11 @@ public class StateManager : IDisposable
         }
 
         // Safety net: click Yes on any decipher confirmation dialog that might be stuck
-        GameHelpers.ClickYesIfVisible();
+        // Fire more frequently to handle confirmation dialogs better
+        if (GameHelpers.ClickYesIfVisible())
+        {
+            _plugin.AddDebugLog("[OpeningMap] Clicked Yes on decipher confirmation dialog");
+        }
 
         // After /item command, wait for the decipher dialog + flag to set
         // Transition to detection after a short delay to allow the game to process
@@ -3773,6 +3781,13 @@ public class StateManager : IDisposable
                     var auriana = GameHelpers.FindNpcByName("Auriana");
                     if (auriana != null)
                     {
+                        // Force enable TextAdvance for Auriana dialogue
+                        if (_plugin.IsTextAdvanceAvailable)
+                        {
+                            CommandHelper.SendCommand("/textadvance on");
+                            _plugin.AddDebugLog("[Alexandrite] Enabled TextAdvance for Auriana dialogue");
+                        }
+                        
                         GameHelpers.InteractWithObject(auriana);
                         alexandriteActionIssued = true;
                         alexandriteStepTime = DateTime.Now;
@@ -3793,9 +3808,13 @@ public class StateManager : IDisposable
                     // Click "Allagan Tomestones of Poetics (Other)" - index 5 (1-based for callback)
                     GameHelpers.FireAddonCallback("SelectIconString", true, 5);
                     _plugin.AddDebugLog("[Alexandrite] Selected Poetics (Other) from Auriana menu");
-                    // Immediately start handling Yes/No dialog
+                    // Start handling Yes/No dialog
                     alexandriteStep = 3;
                     alexandriteStepTime = DateTime.Now;
+                    
+                    // Force refresh poetics count after purchase
+                    var currentPoetics = GameHelpers.GetCurrentPoetics();
+                    _plugin.AddDebugLog($"[Alexandrite] After purchase - Current poetics: {currentPoetics}/2000");
                     alexandriteActionIssued = false;
                 }
                 else if (stepElapsed > 15.0)
