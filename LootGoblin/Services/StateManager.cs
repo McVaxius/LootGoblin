@@ -3753,10 +3753,14 @@ public class StateManager : IDisposable
                 }
                 return;
 
-            case 1: // Walk to Auriana
+            case 1: // Walk to Auriana NPC
                 if (!alexandriteActionIssued)
                 {
-                    nav.MoveToPosition(AurianaPosition);
+                    // Clear any existing navigation flags before starting purchase
+                    CommandHelper.SendCommand("/vnav clearflag");
+                    _plugin.AddDebugLog("[Alexandrite] Cleared navigation flags before purchase");
+                    
+                    nav.NavigateTo(AurianaPosition, "Walking to Auriana");
                     alexandriteActionIssued = true;
                     alexandriteStepTime = DateTime.Now;
                     StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Walking to Auriana...";
@@ -3818,9 +3822,15 @@ public class StateManager : IDisposable
                     alexandriteStep = 3;
                     alexandriteStepTime = DateTime.Now;
                     
-                    // Force refresh poetics count after purchase
+                    // Force refresh poetics count after purchase (rate limited)
                     var currentPoetics = GameHelpers.GetCurrentPoetics();
-                    _plugin.AddDebugLog($"[Alexandrite] After purchase - Current poetics: {currentPoetics}/2000");
+                    // Only log poetics every 10 seconds to reduce spam
+                    static DateTime lastPoeticsLog = DateTime.MinValue;
+                    if ((DateTime.Now - lastPoeticsLog).TotalSeconds >= 10.0)
+                    {
+                        _plugin.AddDebugLog($"[Alexandrite] After purchase - Current poetics: {currentPoetics}/2000");
+                        lastPoeticsLog = DateTime.Now;
+                    }
                     alexandriteActionIssued = false;
                 }
                 else if (stepElapsed > 15.0)
@@ -3830,19 +3840,29 @@ public class StateManager : IDisposable
                 return;
 
             case 3: // Handle Yes/No dialog after SelectIconString
-                // Fire SelectYesno True 0 every 2 seconds until item 7884 count == 1
-                if (stepElapsed % 2.0 < 0.5) // Every 2 seconds
+                // Wait a moment for dialog to appear, then fire SelectYesno True 0
+                if (stepElapsed < 2.0) return; // Wait 2 seconds for dialog to appear
+                
+                if (stepElapsed % 2.0 < 0.5) // Every 2 seconds after initial wait
                 {
-                    GameHelpers.FireAddonCallback("SelectYesno", true, 0);
-                    var mapCount = GameHelpers.GetInventoryItemCount(MysteriousMapItemId);
-                    _plugin.AddDebugLog($"[Alexandrite] Fired SelectYesno callback, map count: {mapCount}");
-                    
-                    if (mapCount == 1)
+                    // Only fire if dialog is actually visible
+                    if (GameHelpers.IsAddonVisible("SelectYesno"))
                     {
-                        _plugin.AddDebugLog("[Alexandrite] Mysterious Map purchased successfully");
-                        alexandriteStep = 5; // Skip to map use
-                        alexandriteStepTime = DateTime.Now;
-                        alexandriteActionIssued = false;
+                        GameHelpers.FireAddonCallback("SelectYesno", true, 0);
+                        var mapCount = GameHelpers.GetInventoryItemCount(MysteriousMapItemId);
+                        _plugin.AddDebugLog($"[Alexandrite] Fired SelectYesno callback, map count: {mapCount}");
+                        
+                        if (mapCount == 1)
+                        {
+                            _plugin.AddDebugLog("[Alexandrite] Mysterious Map purchased successfully");
+                            alexandriteStep = 5; // Skip to map use
+                            alexandriteStepTime = DateTime.Now;
+                            alexandriteActionIssued = false;
+                        }
+                    }
+                    else
+                    {
+                        _plugin.AddDebugLog("[Alexandrite] SelectYesno dialog not visible yet, waiting...");
                     }
                 }
                 else if (stepElapsed > 30.0)
