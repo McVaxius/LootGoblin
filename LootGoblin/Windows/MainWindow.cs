@@ -4,8 +4,19 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Threading.Tasks;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game;
+using Dalamud.Game.Gui;
+using Dalamud.Game.ClientState.Keys;
+using Dalamud.Interface.Internal;
+using ECommons;
+using ECommons.Automation;
+using ECommons.UIHelpers;
+using ECommons.UIHelpers.AddonMasterImplementations;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using LootGoblin.Models;
 using LootGoblin.Services;
 
@@ -275,6 +286,20 @@ public class MainWindow : Window, IDisposable
                     cachedMaps = plugin.InventoryService.ScanForMaps();
                     lastScanTime = DateTime.Now;
                     plugin.AddDebugLog("Manual map inventory refresh.");
+                }
+                
+                // Debug button to read decipher menu indices
+                if (plugin.Configuration.DebugMode && cachedMaps.Count > 0)
+                {
+                    ImGui.Spacing();
+                    if (ImGui.Button("[READ MAP INDICES]"))
+                    {
+                        ReadMapIndicesFromDecipherMenu();
+                    }
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip("Opens decipher menu and reads all map entries to show correct indices");
+                    }
                 }
             }
             else
@@ -916,6 +941,166 @@ private void DrawDependencySection()
         }
 
         return (tier, level);
+    }
+
+    private void ReadMapIndicesFromDecipherMenu()
+    {
+        if (cachedMaps.Count == 0)
+        {
+            plugin.AddDebugLog("[READ INDICES] No maps in inventory to compare against");
+            return;
+        }
+
+        plugin.AddDebugLog("[READ INDICES] Opening decipher menu to read map indices...");
+        
+        // Get the first enabled map to trigger decipher menu
+        var enabledTypes = plugin.Configuration.EnabledMapTypes;
+        var firstMapId = cachedMaps.Keys.FirstOrDefault(id => enabledTypes.Contains(id));
+        
+        if (firstMapId == 0)
+        {
+            plugin.AddDebugLog("[READ INDICES] No enabled maps found - cannot open decipher menu");
+            return;
+        }
+
+        // Use the existing GameHelpers method to open decipher
+        System.Threading.Tasks.Task.Run(async () =>
+        {
+            try
+            {
+                // Open decipher menu
+                plugin.AddDebugLog($"[READ INDICES] Using map ID {firstMapId} to open decipher menu");
+                GameHelpers.UseItem(firstMapId, plugin.InventoryService);
+                
+                // Wait for menu to appear
+                await System.Threading.Tasks.Task.Delay(1000);
+                
+                // Read the menu entries
+                await ReadSelectIconStringEntries(plugin);
+            }
+            catch (Exception ex)
+            {
+                plugin.AddDebugLog($"[READ INDICES] Error: {ex.Message}");
+            }
+        });
+    }
+
+    private static unsafe System.Threading.Tasks.Task ReadSelectIconStringEntries(Plugin plugin)
+    {
+        return System.Threading.Tasks.Task.Run(() =>
+        {
+            try
+            {
+                // Wait for addon to be ready
+                AddonSelectIconString* addon = null;
+                int entryCount = 0;
+                
+                for (int attempt = 0; attempt < 20; attempt++)
+                {
+                    System.Threading.Thread.Sleep(100);
+                    
+                    nint addonPtr = Plugin.GameGui.GetAddonByName("SelectIconString", 1);
+                    if (addonPtr == 0) continue;
+
+                    addon = (AddonSelectIconString*)addonPtr;
+                    if (!addon->AtkUnitBase.IsVisible) continue;
+
+                    var addonMaster = new ECommons.UIHelpers.AddonMasterImplementations.AddonMaster.SelectIconString(&addon->AtkUnitBase);
+                    entryCount = addonMaster.EntryCount;
+                    
+                    if (entryCount > 0)
+                    {
+                        Plugin.Log.Information($"[READ INDICES] Addon ready with {entryCount} entries");
+                        break;
+                    }
+                }
+
+                if (addon == null || entryCount == 0)
+                {
+                    Plugin.Log.Error("[READ INDICES] SelectIconString addon not ready after 2 seconds");
+                    return;
+                }
+
+                // Get enabled maps from main window for comparison
+                var enabledTypes = plugin.Configuration.EnabledMapTypes;
+                var cachedMaps = plugin.InventoryService.ScanForMaps();
+                var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
+
+                Plugin.Log.Information($"[READ INDICES] === SELECTICONSTRING MENU ANALYSIS ===");
+                Plugin.Log.Information($"[READ INDICES] Total entries in menu: {entryCount}");
+                Plugin.Log.Information($"[READ INDICES] Enabled maps in inventory: {enabledTypes.Count}");
+                Plugin.Log.Information($"[READ INDICES] Total maps in inventory: {cachedMaps.Count}");
+                Plugin.Log.Information($"[READ INDICES] ======================================");
+
+                // Read all entries using node traversal as specified
+                var addonNode = &addon->AtkUnitBase;
+                
+                for (int i = 0; i < Math.Min(entryCount, 30); i++) // Cap at 30 entries
+                {
+                    try
+                    {
+                        // Node traversal: 2 (List Component Node) -> 51001 + i (Text Node)
+                        var textNodePtr = addonNode->GetNodeById((ushort)(51001 + i));
+                        string entryText = "";
+                        
+                        if (textNodePtr != null)
+                        {
+                            var textNode = (AtkTextNode*)textNodePtr;
+                            if (textNode->AtkResNode.Type == NodeType.Text && textNode->AtkResNode.IsVisible())
+                            {
+                                entryText = textNode->NodeText.ToString();
+                            }
+                        }
+                        
+                        // Fallback to AddonMaster if node traversal fails
+                        if (string.IsNullOrEmpty(entryText))
+                        {
+                            var addonMaster2 = new ECommons.UIHelpers.AddonMasterImplementations.AddonMaster.SelectIconString(&addon->AtkUnitBase);
+                            if (i < addonMaster2.EntryCount)
+                            {
+                                entryText = addonMaster2.Entries[i].Text;
+                            }
+                        }
+                        
+                        // Check if this entry matches any enabled maps
+                        string matchIndicator = "";
+                        if (!string.IsNullOrEmpty(entryText))
+                        {
+                            foreach (var enabledMapId in enabledTypes)
+                            {
+                                var mapItem = itemSheet?.GetRow(enabledMapId);
+                                if (mapItem != null)
+                                {
+                                    var mapName = mapItem.Value.Name.ToString();
+                                    if (entryText.Contains(mapName))
+                                    {
+                                        matchIndicator = $" ✓ MATCHES: {mapName} (ID: {enabledMapId})";
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Plugin.Log.Information($"[READ INDICES] Entry[{i:D2}]: '{entryText}'{matchIndicator}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.Error($"[READ INDICES] Error reading entry {i}: {ex.Message}");
+                    }
+                }
+                
+                Plugin.Log.Information($"[READ INDICES] ======================================");
+                Plugin.Log.Information($"[READ INDICES] Analysis complete. Close the decipher menu to continue.");
+                
+                // Auto-close the menu after a delay
+                System.Threading.Thread.Sleep(5000);
+                GameHelpers.KeyPress(VirtualKey.ESCAPE);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error($"[READ INDICES] ReadSelectIconStringEntries failed: {ex.Message}\n{ex.StackTrace}");
+            }
+        });
     }
 
     private void DrawDebugLogSection()
