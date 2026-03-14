@@ -1147,7 +1147,7 @@ private void DrawDependencySection()
             if (player != null)
             {
                 reportInfo.AppendLine("Player Information:");
-                reportInfo.AppendLine($"Name: {player.Name}");
+                reportInfo.AppendLine($"Name: {KrangleName(player.Name.ToString())}");
                 reportInfo.AppendLine($"Level: {player.Level}");
                 reportInfo.AppendLine($"Class Job: {player.ClassJob.Value.Name}");
                 reportInfo.AppendLine($"Position: X={player.Position.X:F2}, Y={player.Position.Y:F2}, Z={player.Position.Z:F2}");
@@ -1276,5 +1276,39 @@ private void DrawDependencySection()
         {
             plugin.AddDebugLog($"[ReportIssue] Error generating report: {ex.Message}");
         }
+    }
+
+    private string KrangleName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "[REDACTED]";
+        
+        // Simple krangling: replace characters with similar-looking ones
+        var krangled = new System.Text.StringBuilder();
+        var random = new Random(name.GetHashCode()); // Seed with name for consistency
+        
+        foreach (var c in name)
+        {
+            if (char.IsLetter(c))
+            {
+                // Replace with random letter of same case
+                var replacement = (char)('a' + random.Next(26));
+                if (char.IsUpper(c))
+                    replacement = char.ToUpper(replacement);
+                krangled.Append(replacement);
+            }
+            else if (char.IsDigit(c))
+            {
+                // Replace with random digit
+                krangled.Append(random.Next(10).ToString());
+            }
+            else
+            {
+                // Keep non-alphanumeric characters
+                krangled.Append(c);
+            }
+        }
+        
+        return krangled.ToString();
     }
 }
