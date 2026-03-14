@@ -3331,7 +3331,7 @@ public class StateManager : IDisposable
             if (nav.IsMounted())
             {
                 // Check party wait before dismounting
-                if (_plugin.Configuration.PartyWaitBeforeDismount && !ArePartyMembersClose(10.0))
+                if (_plugin.Configuration.WaitForParty && !ArePartyMembersClose(10.0))
                 {
                     StateDetail = "[Flying] Waiting for party before dismounting...";
                     return;
@@ -3449,7 +3449,7 @@ public class StateManager : IDisposable
                 if (nav.IsMounted())
                 {
                     // Check party wait before dismounting
-                    if (_plugin.Configuration.PartyWaitBeforeDismount && !ArePartyMembersClose(10.0))
+                    if (_plugin.Configuration.WaitForParty && !ArePartyMembersClose(10.0))
                     {
                         StateDetail = "[Ground] Waiting for party before dismounting...";
                         return;

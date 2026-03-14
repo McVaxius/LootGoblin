@@ -7,6 +7,8 @@ namespace LootGoblin.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
+    private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
+    
     private readonly Configuration configuration;
     private readonly Plugin plugin;
     private string mountSearch = "";
@@ -116,6 +118,19 @@ public class ConfigWindow : Window, IDisposable
             configuration.WaitForParty = waitForParty;
             configuration.Save();
             Plugin.Log.Info($"[Config] Wait for Party saved as: {configuration.WaitForParty}");
+        }
+        ImGui.SameLine();
+        ImGui.TextColored(ColorGrey, "(?)");
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.BeginTooltip();
+            ImGui.Text("When enabled, the bot will:\n" +
+                       "• Wait for party members to mount before taking off\n" +
+                       "• Wait for party members before dismounting at destination\n" +
+                       "\n" +
+                       "This prevents the bot from leaving party members behind\n" +
+                       "during both mounting and dismounting phases.");
+            ImGui.EndTooltip();
         }
 
         var requireAllMounted = configuration.RequireAllMounted;
