@@ -290,7 +290,7 @@ public class MainWindow : Window, IDisposable
                 }
                 
                 // Debug button to read decipher menu indices
-                if (plugin.Configuration.DebugMode && cachedMaps.Count > 0)
+                if (plugin.Configuration.ShowDebugMapCompletion && cachedMaps.Count > 0)
                 {
                     ImGui.Spacing();
                     if (ImGui.Button("[READ MAP INDICES]"))
@@ -303,7 +303,7 @@ public class MainWindow : Window, IDisposable
                     }
                     
                     // Debug: Show current debug mode state
-                    if (plugin.Configuration.DebugMode)
+                    if (plugin.Configuration.ShowDebugMapCompletion)
                     {
                         ImGui.TextColored(new Vector4(0.3f, 1.0f, 0.3f, 1.0f), $"  Debug Mode: ON (cached maps: {cachedMaps.Count})");
                     }
@@ -311,7 +311,7 @@ public class MainWindow : Window, IDisposable
                 else
                 {
                     // Debug: Show why button is hidden
-                    if (!plugin.Configuration.DebugMode && cachedMaps.Count > 0)
+                    if (!plugin.Configuration.ShowDebugMapCompletion && cachedMaps.Count > 0)
                     {
                         ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1.0f), $"  Debug Mode: OFF (button hidden)");
                     }
