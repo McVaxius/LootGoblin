@@ -30,12 +30,49 @@ public static class GameHelpers
     private static int _pendingMenuIndex = -1;
     private static DateTime _callbackStartTime = DateTime.MinValue;
     private static bool _waitingForSecondCallback = false;
+    private static uint _pendingItemId = 0;
+    private static DateTime _mapLookupStartTime = DateTime.MinValue;
+    private static bool _waitingForMapLookup = false;
     /// <summary>
     /// Check if we need to fire the delayed second callback for SelectIconString.
     /// Call this method regularly from the main tick loop.
     /// </summary>
     public static void UpdateDelayedCallbacks()
     {
+        // Handle map lookup delay
+        if (_waitingForMapLookup && _pendingItemId > 0)
+        {
+            var elapsed = (DateTime.Now - _mapLookupStartTime).TotalSeconds;
+            if (elapsed >= 0.5) // 500ms delay for map lookup
+            {
+                Plugin.Log.Information($"[MAP_LOOKUP] Looking for real menu index for map {_pendingItemId}...");
+                var realMenuIndex = FindMapIndexInMenu(_pendingItemId);
+                if (realMenuIndex >= 0)
+                {
+                    // Use 0-based index directly (no conversion needed)
+                    Plugin.Log.Information($"[MAP_LOOKUP] Found real menu index {realMenuIndex}, firing first callback");
+                    FireAddonCallback("SelectIconString", true, -2);
+                    // Store the menu index for the delayed second callback
+                    _pendingMenuIndex = realMenuIndex;
+                    _callbackStartTime = DateTime.Now;
+                    _waitingForSecondCallback = true;
+                }
+                else
+                {
+                    Plugin.Log.Error($"[MAP_LOOKUP] Could not find map in menu, retrying with longer delay...");
+                    // Retry with longer delay for SelectIconString to populate
+                    _mapLookupStartTime = DateTime.Now; // Reset start time for retry
+                    // Don't change state, will retry after additional time
+                }
+                
+                // Reset map lookup state
+                _pendingItemId = 0;
+                _mapLookupStartTime = DateTime.MinValue;
+                _waitingForMapLookup = false;
+            }
+        }
+        
+        // Handle second callback delay
         if (_waitingForSecondCallback && _pendingMenuIndex >= 0)
         {
             var elapsed = (DateTime.Now - _callbackStartTime).TotalSeconds;
@@ -104,42 +141,11 @@ public static class GameHelpers
             {
                 // Multiple map types - use the corrected approach: Find real menu index first, then callback
                 Plugin.Log.Information($"UseItem({itemId}): {allMaps.Count} map types detected, using corrected menu index approach");
-                System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                    Plugin.Log.Information($"UseItem({itemId}): Looking for real menu index for map {itemId}...");
-                    var realMenuIndex = FindMapIndexInMenu(itemId);
-                    if (realMenuIndex >= 0)
-                    {
-                        // Use 0-based index directly (no conversion needed)
-                        Plugin.Log.Information($"UseItem({itemId}): Found real menu index {realMenuIndex}, firing first callback");
-                        FireAddonCallback("SelectIconString", true, -2);
-                        // Store the menu index for the delayed second callback
-                        _pendingMenuIndex = realMenuIndex;
-                        _callbackStartTime = DateTime.Now;
-                        _waitingForSecondCallback = true;
-                    }
-                    else
-                    {
-                        Plugin.Log.Error($"UseItem({itemId}): Could not find map in menu, retrying with longer delay...");
-                        // Retry with longer delay for SelectIconString to populate
-                        System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
-                            Plugin.Log.Information($"UseItem({itemId}): Retrying SelectIconString lookup...");
-                            var retryIndex = FindMapIndexInMenu(itemId);
-                            if (retryIndex >= 0)
-                            {
-                                Plugin.Log.Information($"UseItem({itemId}): Found menu index {retryIndex} on retry, firing first callback");
-                                FireAddonCallback("SelectIconString", true, -2);
-                                // Store the menu index for the delayed second callback
-                                _pendingMenuIndex = retryIndex;
-                                _callbackStartTime = DateTime.Now;
-                                _waitingForSecondCallback = true;
-                            }
-                            else
-                            {
-                                Plugin.Log.Error($"UseItem({itemId}): SelectIconString lookup failed twice, cannot select map");
-                            }
-                        });
-                    }
-                });
+                
+                // Start delayed map lookup using state-based timing
+                _pendingItemId = itemId;
+                _mapLookupStartTime = DateTime.Now;
+                _waitingForMapLookup = true;
             }
             
             return true;
