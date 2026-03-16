@@ -90,8 +90,8 @@ public class AutoDutyDetectionService : IDisposable
             // Log state changes and show warning if both conditions are met
             if (autoDutyDetected && !wasDetected)
             {
-                log.Warning("[LootGoblin.AutoDutyDetection] AutoDuty plugin detected - showing warning");
-                ShowWarning();
+                log.Warning("[LootGoblin.AutoDutyDetection] AutoDuty plugin detected");
+                // Don't show warning automatically - only when START is clicked
             }
             else if (!autoDutyDetected && wasDetected)
             {
@@ -107,14 +107,8 @@ public class AutoDutyDetectionService : IDisposable
             }
             else if (autoDutyDetected && wasDetected)
             {
-                log.Debug("[LootGoblin.AutoDutyDetection] AutoDuty still detected - checking if warning should be shown");
-                
-                // Also show warning if LootGoblin is running and AutoDuty is detected (even if no state change)
-                if (plugin.StateManager.State != BotState.Idle && !warningShown)
-                {
-                    log.Information("[LootGoblin.AutoDutyDetection] LootGoblin running + AutoDuty detected - showing warning (no state change)");
-                    ShowWarning();
-                }
+                log.Debug("[LootGoblin.AutoDutyDetection] AutoDuty still detected - no action taken");
+                // Don't show warning automatically - only when START is clicked
             }
         }
         catch (Exception ex)
