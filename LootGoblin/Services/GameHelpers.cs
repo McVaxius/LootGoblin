@@ -142,9 +142,16 @@ public static class GameHelpers
                 // Single map type - use AddonMaster.SelectIconString to click the first entry (index 0)
                 Plugin.Log.Information($"UseItem({itemId}): Only 1 map type detected, using AddonMaster.SelectIconString");
                 System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                    Plugin.Log.Information($"UseItem({itemId}): Looking for SelectIconString addon...");
-                    TriggerSelectIconStringClick();
-                });
+                    try
+                    {
+                        Plugin.Log.Information($"UseItem({itemId}): Looking for SelectIconString addon...");
+                        TriggerSelectIconStringClick();
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.Error($"[GameHelpers] ContinueWith exception in TriggerSelectIconStringClick: {ex.Message}");
+                    }
+                }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
             }
             else
             {
@@ -371,9 +378,16 @@ public static class GameHelpers
             // Wait for the confirmation dialog, then click OK
             Plugin.Log.Information($"[CALLBACK] Waiting 1000ms for confirmation dialog...");
             System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => {
-                Plugin.Log.Information("[CALLBACK] Triggering confirmation dialog callback");
-                TriggerConfirmDialog();
-            });
+                try
+                {
+                    Plugin.Log.Information("[CALLBACK] Triggering confirmation dialog callback");
+                    TriggerConfirmDialog();
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.Error($"[GameHelpers] ContinueWith exception in TriggerConfirmDialog: {ex.Message}");
+                }
+            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
         }
         catch (Exception ex)
         {
@@ -441,9 +455,16 @@ public static class GameHelpers
             
             // Retry after a short delay - the dialog might not be ready yet
             System.Threading.Tasks.Task.Delay(200).ContinueWith(_ => {
-                Plugin.Log.Information("[CALLBACK] Retrying SelectYesno lookup...");
-                TriggerConfirmDialogUnsafe();
-            });
+                try
+                {
+                    Plugin.Log.Information("[CALLBACK] Retrying SelectYesno lookup...");
+                    TriggerConfirmDialogUnsafe();
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.Error($"[GameHelpers] ContinueWith exception in TriggerConfirmDialogUnsafe (retry 1): {ex.Message}");
+                }
+            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
             return;
         }
 
@@ -456,9 +477,16 @@ public static class GameHelpers
             
             // Retry after a short delay - the addon might not be visible yet
             System.Threading.Tasks.Task.Delay(200).ContinueWith(_ => {
-                Plugin.Log.Information("[CALLBACK] Retrying SelectYesno visibility check...");
-                TriggerConfirmDialogUnsafe();
-            });
+                try
+                {
+                    Plugin.Log.Information("[CALLBACK] Retrying SelectYesno visibility check...");
+                    TriggerConfirmDialogUnsafe();
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.Error($"[GameHelpers] ContinueWith exception in TriggerConfirmDialogUnsafe (retry 2): {ex.Message}");
+                }
+            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
             return;
         }
 

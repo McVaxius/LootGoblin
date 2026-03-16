@@ -936,8 +936,15 @@ public class StateManager : IDisposable
                 
                 // Wait 2 seconds for chest to spawn before looking for it
                 System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
-                    TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
-                });
+                    try
+                    {
+                        TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (overworld): {ex.Message}");
+                    }
+                }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
                 return;
             }
             else
@@ -1060,8 +1067,15 @@ public class StateManager : IDisposable
             
             // Wait 2 seconds for chest to spawn before looking for it
             System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
-                TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
-            });
+                try
+                {
+                    TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (dungeon): {ex.Message}");
+                }
+            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
             return;
         }
         
