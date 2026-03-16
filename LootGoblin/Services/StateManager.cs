@@ -352,6 +352,23 @@ public class StateManager : IDisposable
             return;
         }
 
+        // Check for AutoDuty when starting LootGoblin
+        _plugin.AddDebugLog("[Start] Checking for AutoDuty before starting...");
+        _plugin.AutoDutyDetectionService.ForceCheck();
+        
+        var isAutoDutyDetected = _plugin.AutoDutyDetectionService.IsAutoDutyDetected();
+        _plugin.AddDebugLog($"[Start] AutoDuty detected: {isAutoDutyDetected}");
+        
+        if (isAutoDutyDetected)
+        {
+            _plugin.AddDebugLog("[Start] AutoDuty detected - showing warning window");
+            _plugin.AutoDutyDetectionService.ForceShowWarning();
+        }
+        else
+        {
+            _plugin.AddDebugLog("[Start] AutoDuty not detected - proceeding with start");
+        }
+
         // Check if already in dungeon and start objective system
         bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                       Plugin.Condition[ConditionFlag.BoundByDuty56];

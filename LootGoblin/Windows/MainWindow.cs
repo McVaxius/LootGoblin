@@ -149,6 +149,13 @@ public class MainWindow : Window, IDisposable
         ImGui.SameLine();
         ImGui.TextColored(loggedIn ? ColorGreen : ColorRed, loggedIn ? "Yes" : "No");
 
+        // AutoDuty detection warning
+        var autoDutyDetection = plugin.AutoDutyDetectionService;
+        if (autoDutyDetection.IsAutoDutyDetected())
+        {
+            ImGui.TextColored(new Vector4(1f, 0.2f, 0.2f, 1), "⚠️ AutoDuty Detected - May interfere with LootGoblin");
+        }
+
         if (loggedIn)
         {
             var player = Plugin.ObjectTable.LocalPlayer;

@@ -37,6 +37,7 @@ public sealed class Plugin : IDalamudPlugin
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
     public AlexandriteMapWindow AlexandriteMapWindow { get; init; }
+    public AutoDutyWarningWindow AutoDutyWarningWindow { get; init; }
 
     // Services
     public InventoryService InventoryService { get; init; }
@@ -48,6 +49,7 @@ public sealed class Plugin : IDalamudPlugin
     public MapLocationDatabase MapLocationDatabase { get; init; }
     public SpecialNavigationDatabase SpecialNavigationDatabase { get; init; }
     public AetherytePositionDatabase AetherytePositionDatabase { get; init; }
+    public AutoDutyDetectionService AutoDutyDetectionService { get; init; }
 
     // IPC
     public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
@@ -124,6 +126,10 @@ public sealed class Plugin : IDalamudPlugin
         // Initialize state machine
         StateManager = new StateManager(this, Framework, Log);
 
+        // Initialize AutoDuty warning system
+        AutoDutyWarningWindow = new AutoDutyWarningWindow(this, ChatGui, Log);
+        AutoDutyDetectionService = new AutoDutyDetectionService(this, ChatGui, Framework, Log, AutoDutyWarningWindow);
+
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this);
         AlexandriteMapWindow = new AlexandriteMapWindow(this);
@@ -131,6 +137,7 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(MainWindow);
         WindowSystem.AddWindow(AlexandriteMapWindow);
+        WindowSystem.AddWindow(AutoDutyWarningWindow);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -174,6 +181,7 @@ public sealed class Plugin : IDalamudPlugin
         NavigationService?.Dispose();
         PartyService?.Dispose();
         SpecialNavigationDatabase?.Dispose();
+        AutoDutyDetectionService?.Dispose();
         WindowSystem.RemoveAllWindows();
 
         ConfigWindow?.Dispose();
@@ -254,6 +262,28 @@ public sealed class Plugin : IDalamudPlugin
                 var debugState = Configuration.ShowDebugMapCompletion ? "ON" : "OFF";
                 PrintChat($"Map Completion debug controls: {debugState}");
                 AddDebugLog($"Debug map completion controls toggled: {debugState}");
+                break;
+
+            case "testautoduty":
+                PrintChat("Testing AutoDuty detection...");
+                var isDetected = AutoDutyDetectionService.IsAutoDutyDetected();
+                PrintChat($"AutoDuty detected: {isDetected}");
+                
+                if (isDetected)
+                {
+                    PrintChat("AutoDuty detected - showing warning window");
+                    AutoDutyDetectionService.ForceShowWarning();
+                }
+                else
+                {
+                    PrintChat("AutoDuty not detected - cannot show warning window");
+                }
+                break;
+
+            case "resetautoduty":
+                PrintChat("Resetting AutoDuty detection state");
+                AutoDutyDetectionService.ResetWarning();
+                PrintChat("AutoDuty detection state reset");
                 break;
 
             default:
