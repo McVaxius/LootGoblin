@@ -504,8 +504,18 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog($"[SelectingMap] Initial map count: {initialMapCount}");
         
         // Clear any existing flag to prevent conflicts with new map run
-        GameHelpers.SetMapFlag(0, 0, 0); // Clear flag
-        _plugin.AddDebugLog($"[SelectingMap] Cleared existing map flag");
+        // Skip during zone transitions to prevent AgentHUD.UpdateNaviMap crashes
+        bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] || 
+                       Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (!loading)
+        {
+            GameHelpers.SetMapFlag(0, 0, 0); // Clear flag
+            _plugin.AddDebugLog($"[SelectingMap] Cleared existing map flag");
+        }
+        else
+        {
+            _plugin.AddDebugLog($"[SelectingMap] Skipping flag clear during zone transition");
+        }
         
         TransitionTo(BotState.OpeningMap, $"Opening {mapName}...");
     }
@@ -3415,9 +3425,18 @@ public class StateManager : IDisposable
         SetLocation(location);
 
         // Always mark destination flag on map
-        GameHelpers.SetMapFlag(entry.TerritoryId, entry.FlagX, entry.FlagZ);
-
-        _plugin.AddDebugLog($"[CycleMapLocs] [{cycleMapLocationIndex + 1}/{cycleMapLocationQueue.Count}] {entry.ZoneName} flag=({entry.FlagX:F1},{entry.FlagZ:F1})");
+        // Skip during zone transitions to prevent AgentHUD.UpdateNaviMap crashes
+        bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] || 
+                       Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (!loading)
+        {
+            GameHelpers.SetMapFlag(entry.TerritoryId, entry.FlagX, entry.FlagZ);
+            _plugin.AddDebugLog($"[CycleMapLocs] [{cycleMapLocationIndex + 1}/{cycleMapLocationQueue.Count}] {entry.ZoneName} flag=({entry.FlagX:F1},{entry.FlagZ:F1})");
+        }
+        else
+        {
+            _plugin.AddDebugLog($"[CycleMapLocs] Skipping flag placement during zone transition");
+        }
 
         // Use CyclingMapLocations state which runs the normal teleport→mount→fly flow
         // but skips dig/chest and instead records position after landing
