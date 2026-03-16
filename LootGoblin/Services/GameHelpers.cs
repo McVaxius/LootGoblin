@@ -415,6 +415,22 @@ public static class GameHelpers
     /// </summary>
     private static unsafe void TriggerConfirmDialogUnsafe()
     {
+        // Don't run callbacks if the bot is disabled
+        // Note: This is a workaround - ideally we should pass the plugin instance
+        try
+        {
+            var pluginInstance = Plugin.PluginInterface.GetPluginConfig() as Configuration;
+            if (pluginInstance != null && !pluginInstance.Enabled)
+            {
+                Plugin.Log.Debug("[CALLBACK] Bot is disabled, skipping callback retry");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[CALLBACK] Error checking bot enabled state: {ex.Message}");
+        }
+        
         Plugin.Log.Information($"[CALLBACK] Looking for SelectYesno addon...");
         
         // Find the SelectYesno addon
