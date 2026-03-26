@@ -2,6 +2,22 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
+## [Unreleased] - 2026-03-25
+
+### Fixed
+- **Existing deciphered-map flow** - When no maps remain in inventory but a treasure-map flag is already set, LootGoblin now proceeds from the existing flag instead of failing immediately
+
+### Changed
+- **Dungeon object handling cadence** - Dungeon interaction retries now run on a 1-second cadence to match the faster proven chest/portal handling rhythm
+- **Dungeon object scan overhead** - `FindDungeonObjects()` no longer target-swaps every candidate just to validate ordinary dungeon loot/progression objects, reducing per-scan overhead while preserving the dedicated ghost-object checks where they still matter
+- **UI warning surface** - The main window now shows a red warning when LootGoblin is continuing from an already-set map flag without maps left in inventory
+
+### Validation
+- Built `Debug x64` successfully from `z:\LootGoblin\LootGoblin.sln`
+- Build result: `0 errors`
+- Build produced `z:\LootGoblin\LootGoblin\bin\x64\Debug\LootGoblin.dll`
+- Existing warnings remain in the project and were not introduced by this pass
+
 ## [0.0.1.70] - 2026-03-05
 
 ### Fixed

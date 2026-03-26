@@ -156,6 +156,11 @@ public class MainWindow : Window, IDisposable
             ImGui.TextColored(new Vector4(1f, 0.2f, 0.2f, 1), "⚠️ AutoDuty Detected - May interfere with LootGoblin");
         }
 
+        if (!string.IsNullOrWhiteSpace(plugin.StateManager.WarningMessage))
+        {
+            ImGui.TextColored(ColorRed, plugin.StateManager.WarningMessage);
+        }
+
         if (loggedIn)
         {
             var player = Plugin.ObjectTable.LocalPlayer;

@@ -32,6 +32,7 @@ public class StateManager : IDisposable
 
     public BotState State { get; private set; } = BotState.Idle;
     public string StateDetail { get; private set; } = "";
+    public string WarningMessage { get; private set; } = "";
     public bool IsPaused { get; private set; }
     public int RetryCount { get; private set; }
     public uint SelectedMapItemId { get; private set; }
@@ -58,6 +59,7 @@ public class StateManager : IDisposable
     private bool mapCountChecked = false;
     private bool mapOpeningRetried = false;
     private const double TickIntervalSeconds = 0.5;
+    private const double DungeonInteractionIntervalSeconds = 1.0;
 
     // Dungeon state tracking (Phase 8)
     private int dungeonFloor;
@@ -352,6 +354,8 @@ public class StateManager : IDisposable
             return;
         }
 
+        ClearWarning();
+
         // Check for AutoDuty when starting LootGoblin
         _plugin.AddDebugLog("[Start] Checking for AutoDuty before starting...");
         _plugin.AutoDutyDetectionService.ForceCheck();
@@ -421,6 +425,7 @@ public class StateManager : IDisposable
         RetryCount = 0;
         portalRetryStart = DateTime.MinValue;
         dungeonEntryProcessed = false;
+        ClearWarning();
         TransitionTo(BotState.Idle, "Stopped by user.");
     }
 
@@ -433,6 +438,7 @@ public class StateManager : IDisposable
         SelectedMapItemId = 0;
         portalRetryStart = DateTime.MinValue;
         KrangleService.ClearCache();
+        ClearWarning();
         TransitionTo(BotState.Idle, "Full reset by user.");
         _plugin.AddDebugLog("All plugin states reset.");
     }
@@ -475,9 +481,23 @@ public class StateManager : IDisposable
         
         if (maps.Count == 0)
         {
+            var existingFlag = _plugin.GlobeTrotterIPC.TryGetMapLocation();
+            if (existingFlag != null)
+            {
+                SelectedMapItemId = 0;
+                initialMapCount = 0;
+                mapCountChecked = true;
+                mapOpeningRetried = false;
+                SetWarning("No maps are left in inventory, but a deciphered map flag is already set. LootGoblin is proceeding from the existing flag.");
+                TransitionTo(BotState.DetectingLocation, "Using existing map flag already set in the world map...");
+                return;
+            }
+
             HandleError("No maps found in inventory.");
             return;
         }
+
+        ClearWarning();
 
         var enabled = _plugin.Configuration.EnabledMapTypes;
 
@@ -2362,7 +2382,7 @@ public class StateManager : IDisposable
             
             // ALSO attempt interaction while approaching (proven TickOpeningChest pattern)
             // Many objects can be interacted from 4-6y range
-            if ((DateTime.Now - lastDungeonInteractionTime).TotalSeconds >= 2.0)
+            if ((DateTime.Now - lastDungeonInteractionTime).TotalSeconds >= DungeonInteractionIntervalSeconds)
             {
                 lastDungeonInteractionTime = DateTime.Now;
                 dungeonInteractionAttemptCount++;
@@ -2387,7 +2407,7 @@ public class StateManager : IDisposable
             }
 
             // Interact every 2 seconds (continuous retry until despawn or timeout)
-            if ((DateTime.Now - lastDungeonInteractionTime).TotalSeconds >= 2.0)
+            if ((DateTime.Now - lastDungeonInteractionTime).TotalSeconds >= DungeonInteractionIntervalSeconds)
             {
                 lastDungeonInteractionTime = DateTime.Now;
                 dungeonInteractionAttemptCount++;
@@ -3135,7 +3155,6 @@ public class StateManager : IDisposable
                 if (!obj.IsTargetable) return false;
                 return true;
             })
-            .Where(obj => IsObjectTargetable(obj))
             .OrderBy(obj =>
             {
                 // Priority order: Arcane Sphere first, then by distance
@@ -3154,6 +3173,17 @@ public class StateManager : IDisposable
         }
         
         return candidates;
+    }
+
+    private void SetWarning(string message)
+    {
+        WarningMessage = message;
+        _plugin.AddDebugLog($"[Warning] {message}");
+    }
+
+    private void ClearWarning()
+    {
+        WarningMessage = string.Empty;
     }
 
     private void LogDungeonObjects()
