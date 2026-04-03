@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/14.0.2">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Version>0.0.1.107</Version>
+    <Version>0.0.1.108</Version>
     <PackageProjectUrl>https://github.com/McVaxius/LootGoblin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="images\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="images\icon.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="SpecialNavigation.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
