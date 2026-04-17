@@ -24,6 +24,12 @@ public enum DungeonObjective
     HeadingToExit      // Level 3: After all objectives done
 }
 
+public enum OverworldLandingMode
+{
+    MountToggle,
+    UnderwaterBounce,
+}
+
 public class StateManager : IDisposable
 {
     private readonly Plugin _plugin;
@@ -108,6 +114,11 @@ public class StateManager : IDisposable
     private DateTime lastDiscardTime = DateTime.MinValue; // Auto-discard timer
     private DateTime lastCompanionCheckTime = DateTime.MinValue; // Companion summoning timer
     private DateTime companionStanceDeferred = DateTime.MinValue; // Deferred stance set after summon
+    private bool adsDutyHandoffActive; // True while ADS owns the dungeon phase for the current map
+    private DateTime adsDutyHandoffStarted = DateTime.MinValue;
+    private DateTime adsDutyEntryConfirmedAt = DateTime.MinValue;
+    private bool mountedRotationSuppressed;
+    private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
 
     // Cycling mode state
     private List<(uint Id, string Name, uint TerritoryId)> cycleAetheryteQueue = new();
@@ -285,6 +296,8 @@ public class StateManager : IDisposable
             return;
         }
 
+        UpdateMountedRotationLifecycle();
+
         // Check for territory change and refresh maps to fix inventory index issues
         var currentTerritory = Plugin.ClientState.TerritoryType;
         if (lastGlobalTerritoryId != 0 && lastGlobalTerritoryId != currentTerritory)
@@ -295,7 +308,7 @@ public class StateManager : IDisposable
         lastGlobalTerritoryId = currentTerritory;
 
         // Enable BMR on territory changes (never turn off)
-        if (lastBMRTerritoryId != 0 && lastBMRTerritoryId != currentTerritory)
+        if (!adsDutyHandoffActive && !mountedRotationSuppressed && lastBMRTerritoryId != 0 && lastBMRTerritoryId != currentTerritory)
         {
             CommandHelper.SendCommand("/bmrai on");
             _plugin.AddDebugLog($"[BMR] Enabled on territory change: {lastBMRTerritoryId} -> {currentTerritory}");
@@ -383,6 +396,7 @@ public class StateManager : IDisposable
             RetryCount = 0;
             CurrentLocation = null;
             SelectedMapItemId = 0;
+            currentLandingMode = OverworldLandingMode.MountToggle;
             _plugin.YesAlreadyIPC.Pause();
             _plugin.AddDebugLog($"[Start] YesAlready paused: {_plugin.YesAlreadyIPC.IsPaused}");
             
@@ -408,8 +422,15 @@ public class StateManager : IDisposable
         RetryCount = 0;
         CurrentLocation = null;
         SelectedMapItemId = 0;
+        currentLandingMode = OverworldLandingMode.MountToggle;
         _plugin.YesAlreadyIPC.Pause();
         _plugin.AddDebugLog($"[Start] YesAlready paused: {_plugin.YesAlreadyIPC.IsPaused}");
+
+        if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !_plugin.IsAdsAvailable)
+        {
+            _plugin.ShowAdsMissingToast();
+        }
+
         TransitionTo(BotState.SelectingMap, "Starting map run...");
     }
 
@@ -425,6 +446,11 @@ public class StateManager : IDisposable
         RetryCount = 0;
         portalRetryStart = DateTime.MinValue;
         dungeonEntryProcessed = false;
+        adsDutyHandoffActive = false;
+        adsDutyHandoffStarted = DateTime.MinValue;
+        adsDutyEntryConfirmedAt = DateTime.MinValue;
+        currentLandingMode = OverworldLandingMode.MountToggle;
+        RestoreMountedRotationLifecycle("bot stop");
         ClearWarning();
         TransitionTo(BotState.Idle, "Stopped by user.");
     }
@@ -437,6 +463,11 @@ public class StateManager : IDisposable
         CurrentLocation = null;
         SelectedMapItemId = 0;
         portalRetryStart = DateTime.MinValue;
+        adsDutyHandoffActive = false;
+        adsDutyHandoffStarted = DateTime.MinValue;
+        adsDutyEntryConfirmedAt = DateTime.MinValue;
+        currentLandingMode = OverworldLandingMode.MountToggle;
+        RestoreMountedRotationLifecycle("full reset");
         KrangleService.ClearCache();
         ClearWarning();
         TransitionTo(BotState.Idle, "Full reset by user.");
@@ -485,6 +516,7 @@ public class StateManager : IDisposable
             if (existingFlag != null)
             {
                 SelectedMapItemId = 0;
+                currentLandingMode = OverworldLandingMode.MountToggle;
                 initialMapCount = 0;
                 mapCountChecked = true;
                 mapOpeningRetried = false;
@@ -515,7 +547,9 @@ public class StateManager : IDisposable
         // Don't sort - use inventory order to match menu order
         SelectedMapItemId = candidates[0];
         var mapName = TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var info) ? info.Name : $"ID {SelectedMapItemId}";
+        currentLandingMode = ResolveLandingMode(SelectedMapItemId);
         _plugin.AddDebugLog($"Selected: {mapName} (ID {SelectedMapItemId}).");
+        _plugin.AddDebugLog($"[Landing] Using {currentLandingMode} for this run.");
         
         // Initialize map count validation variables
         initialMapCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
@@ -1145,18 +1179,33 @@ public class StateManager : IDisposable
                     }
                 }
 
-                // Record when we first started trying to dismount at this location
+                // Record when we first started trying to land at this location
                 if (dismountAttemptStart == DateTime.MinValue)
                 {
                     dismountAttemptStart = DateTime.Now;
-                    descentMode = true; // Start with descent+dismount mode
+                    descentMode = currentLandingMode == OverworldLandingMode.UnderwaterBounce;
                     descentStartTime = DateTime.Now;
                     descentStartY = Plugin.ObjectTable.LocalPlayer?.Position.Y ?? 0f;
-                    _plugin.AddDebugLog("Close to target - attempting descent+dismount mode (Ctrl+Space first)...");
+                    _plugin.AddDebugLog(currentLandingMode == OverworldLandingMode.UnderwaterBounce
+                        ? "Close to target - attempting underwater descent+dismount mode (Ctrl+Space first)..."
+                        : "Close to target - using /mount landing toggles until dismounted...");
                 }
 
                 var dismountElapsed = (DateTime.Now - dismountAttemptStart).TotalSeconds;
                 var descentElapsed = (DateTime.Now - descentStartTime).TotalSeconds;
+
+                if (currentLandingMode == OverworldLandingMode.MountToggle)
+                {
+                    if (dismountElapsed < 60.0)
+                    {
+                        _mountService.Dismount();
+                        StateDetail = $"Landing by /mount toggle... ({dismountElapsed:F0}s)";
+                        return;
+                    }
+
+                    StateDetail = $"Still trying to land by /mount toggle... ({dismountElapsed:F0}s)";
+                    return;
+                }
 
                 // DESCENT+DISMOUNT MODE: Try Ctrl+Space first, monitor Y change
                 if (descentMode)
@@ -2624,6 +2673,24 @@ public class StateManager : IDisposable
 
     private void TickCompleted()
     {
+        if (adsDutyHandoffActive)
+        {
+            bool adsStillInDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                                  Plugin.Condition[ConditionFlag.BoundByDuty56];
+            if (adsStillInDuty)
+            {
+                var elapsed = adsDutyHandoffStarted == DateTime.MinValue
+                    ? 0.0
+                    : (DateTime.Now - adsDutyHandoffStarted).TotalSeconds;
+                StateDetail = $"ADS handoff active - waiting for duty exit... ({elapsed:F0}s)";
+                return;
+            }
+
+            adsDutyHandoffActive = false;
+            adsDutyHandoffStarted = DateTime.MinValue;
+            _plugin.AddDebugLog("[ADS] Duty exit detected after ADS handoff - resuming normal completion flow.");
+        }
+
         // If portalRetryStart is set, we're searching for a portal before finishing
         if (portalRetryStart != DateTime.MinValue)
         {
@@ -2660,8 +2727,55 @@ public class StateManager : IDisposable
                 var portalCheck = FindNearestPortal();
                 if (inDuty && (portalCheck == null || loading))
                 {
+                    if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
+                    {
+                        if (loading)
+                        {
+                            adsDutyEntryConfirmedAt = DateTime.MinValue;
+                            StateDetail = "Duty entered - waiting for loading to finish before ADS handoff...";
+                            return;
+                        }
+
+                        if (adsDutyEntryConfirmedAt == DateTime.MinValue)
+                        {
+                            adsDutyEntryConfirmedAt = DateTime.Now;
+                            StateDetail = "Duty entered - waiting for ADS-safe handoff seam...";
+                            _plugin.AddDebugLog("[Portal][ADS] BoundByDuty detected; waiting for loading to finish and the duty context to settle before sending /ads inside.");
+                            return;
+                        }
+
+                        if ((DateTime.Now - adsDutyEntryConfirmedAt).TotalSeconds < 2.0 || !IsCharacterReady())
+                        {
+                            StateDetail = "Duty entered - waiting for ADS-safe handoff seam...";
+                            return;
+                        }
+
+                        _plugin.AddDebugLog("[Portal][ADS] Duty entry settled - handing dungeon phase to ADS.");
+                        if (autoMoveActive)
+                        {
+                            _plugin.NavigationService.StopNavigation();
+                            autoMoveActive = false;
+                        }
+
+                        portalRetryStart = DateTime.MinValue;
+                        adsDutyHandoffActive = true;
+                        adsDutyHandoffStarted = DateTime.Now;
+                        adsDutyEntryConfirmedAt = DateTime.MinValue;
+                        CommandHelper.SendCommand("/bmrai off");
+                        CommandHelper.SendCommand("/ads inside");
+                        TransitionTo(BotState.Completed, "ADS handoff active - waiting for dungeon to finish...");
+                        return;
+                    }
+
+                    if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !_plugin.IsAdsAvailable)
+                    {
+                        _plugin.ShowAdsMissingToast();
+                        _plugin.AddDebugLog("[Portal][ADS] ADS handoff requested, but ADS is not installed/loaded. Falling back to legacy dungeon solver.");
+                    }
+
                     _plugin.AddDebugLog("[Portal] BoundByDuty detected and portal gone/loading - entering dungeon!");
                     portalRetryStart = DateTime.MinValue;
+                    adsDutyEntryConfirmedAt = DateTime.MinValue;
                     dungeonEntryProcessed = false;
                     dungeonFloor = 0;
                     excludedDoorEntityId = null;
@@ -2763,6 +2877,7 @@ public class StateManager : IDisposable
                 autoMoveActive = false;
             }
             portalRetryStart = DateTime.MinValue;
+            adsDutyEntryConfirmedAt = DateTime.MinValue;
         }
         
         _plugin.AddDebugLog("[Completed] Map run complete.");
@@ -2966,6 +3081,60 @@ public class StateManager : IDisposable
     private bool IsDungeonState() =>
         State == BotState.InDungeon || State == BotState.DungeonCombat ||
         State == BotState.DungeonLooting || State == BotState.DungeonProgressing;
+
+    private void UpdateMountedRotationLifecycle()
+    {
+        if (adsDutyHandoffActive)
+            return;
+
+        var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] || Plugin.Condition[ConditionFlag.BoundByDuty56];
+        var mountedOrMounting = Plugin.Condition[ConditionFlag.Mounted] || Plugin.Condition[ConditionFlag.Mounting71];
+
+        if (inDuty)
+        {
+            RestoreMountedRotationLifecycle("duty entry");
+            return;
+        }
+
+        if (mountedOrMounting)
+        {
+            SuppressMountedRotationLifecycle();
+            return;
+        }
+
+        RestoreMountedRotationLifecycle("dismount");
+    }
+
+    private void SuppressMountedRotationLifecycle()
+    {
+        if (mountedRotationSuppressed)
+            return;
+
+        CommandHelper.SendCommand("/vbmai off");
+        CommandHelper.SendCommand("/bmrai off");
+        CommandHelper.SendCommand("/rotation cancel");
+        mountedRotationSuppressed = true;
+        _plugin.AddDebugLog("[Rotation] Mounted lifecycle suppression active.");
+    }
+
+    private void RestoreMountedRotationLifecycle(string reason)
+    {
+        if (!mountedRotationSuppressed)
+            return;
+
+        CommandHelper.SendCommand("/vbmai on");
+        CommandHelper.SendCommand("/bmrai on");
+        CommandHelper.SendCommand("/rotation auto");
+        mountedRotationSuppressed = false;
+        _plugin.AddDebugLog($"[Rotation] Mounted lifecycle restore after {reason}.");
+    }
+
+    private static OverworldLandingMode ResolveLandingMode(uint mapItemId)
+    {
+        return mapItemId == 4574
+            ? OverworldLandingMode.UnderwaterBounce
+            : OverworldLandingMode.MountToggle;
+    }
 
     private bool IsCharacterReady()
     {

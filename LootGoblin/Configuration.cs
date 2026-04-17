@@ -29,6 +29,7 @@ public class Configuration : IPluginConfiguration
     // Phase 5: State Machine
     public bool AutoStartNextMap { get; set; } = false;
     public bool EnableStateLogging { get; set; } = true;
+    public bool UseAdsInsteadOfLegacyDungeonSolver { get; set; } = true;
 
     // Phase 6: Map Selection + Chest Interaction
     public List<uint> EnabledMapTypes { get; set; } = new();

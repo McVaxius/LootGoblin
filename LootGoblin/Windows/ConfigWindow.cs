@@ -8,6 +8,7 @@ namespace LootGoblin.Windows;
 public class ConfigWindow : Window, IDisposable
 {
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
+    private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     
     private readonly Configuration configuration;
     private readonly Plugin plugin;
@@ -166,6 +167,20 @@ public class ConfigWindow : Window, IDisposable
         {
             configuration.EnableStateLogging = stateLogging;
             configuration.Save();
+        }
+
+        var useAdsDungeonSolver = configuration.UseAdsInsteadOfLegacyDungeonSolver;
+        if (ImGui.Checkbox("Use ADS for dungeon phase", ref useAdsDungeonSolver))
+        {
+            configuration.UseAdsInsteadOfLegacyDungeonSolver = useAdsDungeonSolver;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("After a portal is accepted and duty entry is confirmed, LootGoblin will send /ads inside and wait for ADS to finish the dungeon instead of running its legacy dungeon solver.");
+
+        if (configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
+        {
+            ImGui.TextColored(ColorRed, "ADS is not loaded. Install ADS or disable this setting.");
         }
 
         var autoDiscard = configuration.EnableAutoDiscard;

@@ -869,6 +869,12 @@ private void DrawDependencySection()
             DrawPluginStatus("  vnavmesh", plugin.VNavIPC.IsAvailable, true);
             DrawPluginStatus("  GlobeTrotter", plugin.GlobeTrotterIPC.IsAvailable, false);
             DrawPluginStatus("  TextAdvance", plugin.IsTextAdvanceAvailable, false);
+            DrawPluginStatus("  ADS", plugin.IsAdsAvailable, plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver);
+
+            if (plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
+            {
+                ImGui.TextColored(ColorRed, "  ADS dungeon handoff is enabled. Install ADS or disable it in settings.");
+            }
 
             ImGui.Spacing();
             ImGui.Text("Optional (Combat/Rotation):");

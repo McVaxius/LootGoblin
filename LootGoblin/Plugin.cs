@@ -27,6 +27,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
+    [PluginService] internal static IToastGui ToastGui { get; private set; } = null!;
 
     private const string CommandName = "/lootgoblin";
     private const string CommandAlias = "/lg";
@@ -80,6 +81,33 @@ public sealed class Plugin : IDalamudPlugin
 
     public List<string> DebugLog { get; } = new();
     private const int MaxDebugLogLines = 200;
+    private DateTime lastAdsMissingToastAt = DateTime.MinValue;
+
+    public bool IsAdsAvailable
+    {
+        get
+        {
+            try
+            {
+                foreach (var p in PluginInterface.InstalledPlugins)
+                {
+                    if (!p.IsLoaded)
+                        continue;
+
+                    if (string.Equals(p.InternalName, "ADS", StringComparison.OrdinalIgnoreCase) ||
+                        p.Name.Contains("ADS", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return false;
+        }
+    }
 
     public Plugin()
     {
@@ -295,6 +323,19 @@ public sealed class Plugin : IDalamudPlugin
     public void PrintChat(string message)
     {
         ChatGui.Print($"[LootGoblin] {message}");
+    }
+
+    public void ShowAdsMissingToast()
+    {
+        if ((DateTime.Now - lastAdsMissingToastAt).TotalSeconds < 10.0)
+            return;
+
+        lastAdsMissingToastAt = DateTime.Now;
+
+        const string message = "ADS is enabled for LootGoblin dungeon phase, but ADS is not installed or loaded. Install ADS or disable it in LootGoblin settings.";
+        ToastGui.ShowError(message);
+        PrintChat(message);
+        AddDebugLog($"[ADS] {message}");
     }
 
     public void AddDebugLog(string message)
