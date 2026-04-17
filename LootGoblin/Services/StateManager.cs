@@ -2761,7 +2761,8 @@ public class StateManager : IDisposable
                         adsDutyHandoffActive = true;
                         adsDutyHandoffStarted = DateTime.Now;
                         adsDutyEntryConfirmedAt = DateTime.MinValue;
-                        //CommandHelper.SendCommand("/bmrai off"); // why the fuck would we turn this off?
+                        CommandHelper.SendCommand("/bmrai on");
+                        CommandHelper.SendCommand("/vbmai on");
                         CommandHelper.SendCommand("/ads inside");
                         TransitionTo(BotState.Completed, "ADS handoff active - waiting for dungeon to finish...");
                         return;
