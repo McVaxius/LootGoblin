@@ -119,6 +119,7 @@ public class StateManager : IDisposable
     private DateTime adsDutyEntryConfirmedAt = DateTime.MinValue;
     private bool mountedRotationSuppressed;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
+    private string lastLandingPartyWaitSignature = string.Empty;
 
     // Cycling mode state
     private List<(uint Id, string Name, uint TerritoryId)> cycleAetheryteQueue = new();
@@ -971,11 +972,11 @@ public class StateManager : IDisposable
         {
             // Check if we're already close enough to skip pathfinding entirely
             var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-            var targetPos2 = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
-            var xzDist2 = Math.Sqrt(Math.Pow(playerPos.X - targetPos2.X, 2) + Math.Pow(playerPos.Z - targetPos2.Z, 2));
+            var initialNavTargets = ResolveOverworldNavigationTargets();
+            var xzDist2 = CalculateXZDistance(playerPos, initialNavTargets.LandingTarget);
             if (xzDist2 < 10.0f)
             {
-                _plugin.AddDebugLog($"[Flying] Already within {xzDist2:F1}y of destination - immediate dismount and dig");
+                _plugin.AddDebugLog($"[Flying] Already within {xzDist2:F1}y of landing target ({initialNavTargets.Basis}) - immediate dismount and dig");
                 
                 // Immediate dismount if mounted
                 if (_plugin.NavigationService.IsMounted())
@@ -1003,50 +1004,13 @@ public class StateManager : IDisposable
             }
             else
             {
-                // Check MapLocationDatabase for a stored real XYZ for this flag position
-                var dbEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
-                Vector3 flyTarget;
-                
-                // Get destination info for display
-                int destinationIndex = dbEntry?.Index > 0 ? dbEntry.Index : -1;
-                string destinationText = destinationIndex > 0 ? $"Destination #{destinationIndex}" : "Unknown";
-                string zoneName = dbEntry?.ZoneName ?? CurrentLocation?.ZoneName ?? "Unknown";
-                
-                // Check for special navigation entry (pre-dive coordinates)
-                if (dbEntry != null && destinationIndex > 0)
-                {
-                    var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
-                    if (specialNav != null)
-                    {
-                        // Use pre-dive coordinates
-                        flyTarget = new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ);
-                        _plugin.AddDebugLog($"[Flying] Using special pre-dive navigation for {destinationText} - {zoneName}");
-                        StateDetail = $"[{destinationText}] Flying to {zoneName} (pre-dive) XYZ: {CommandHelper.FormatVector(flyTarget)}";
-                    }
-                    else if (dbEntry.HasRealXYZ)
-                    {
-                        // Use stored real position from previous successful dig
-                        flyTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
-                        _plugin.AddDebugLog($"[Flying] Using stored real XYZ for {destinationText} - {zoneName}: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
-                        StateDetail = $"[{destinationText}] Flying to {zoneName} XYZ: {CommandHelper.FormatVector(flyTarget)}";
-                    }
-                    else
-                    {
-                        // No stored location - use Y+50 altitude boost as fallback
-                        flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
-                        _plugin.AddDebugLog($"[Flying] No valid RealXYZ for {destinationText} - using Y+50 fallback: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
-                        StateDetail = $"[{destinationText}] Flying to {zoneName} (fallback) XYZ: {CommandHelper.FormatVector(flyTarget)}";
-                    }
-                }
-                else
-                {
-                    // No database entry - use fallback
-                    flyTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
-                    _plugin.AddDebugLog($"[Flying] No database entry - using Y+50 fallback: ({flyTarget.X:F1}, {flyTarget.Y:F1}, {flyTarget.Z:F1})");
-                    StateDetail = $"[Unknown] Flying to {zoneName} XYZ: {CommandHelper.FormatVector(flyTarget)}";
-                }
-                
-                nav.FlyToPosition(flyTarget);
+                nav.FlyToPosition(initialNavTargets.NavigationTarget);
+                _plugin.AddDebugLog(
+                    $"[Flying] Issued navigation using {initialNavTargets.Basis} for {initialNavTargets.DestinationText} - {initialNavTargets.ZoneName}; " +
+                    $"navTarget={FormatVectorCompact(initialNavTargets.NavigationTarget)}; " +
+                    $"landingTarget={FormatVectorCompact(initialNavTargets.LandingTarget)}");
+                StateDetail =
+                    $"[{initialNavTargets.DestinationText}] Flying to {initialNavTargets.ZoneName} ({initialNavTargets.Basis}) XYZ: {CommandHelper.FormatVector(initialNavTargets.NavigationTarget)}";
                 stateActionIssued = true;
                 lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
                 lastStuckCheckTime = DateTime.Now;
@@ -1061,14 +1025,8 @@ public class StateManager : IDisposable
         }
 
         var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-        // Ground-level target for XZ arrival check and distance display
-        var targetPos = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
-        // Recalculate fly target for stuck re-pathfind (same logic as initial)
-        var dbEntryRepathfind = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
-        var flyTargetPos = (dbEntryRepathfind != null && dbEntryRepathfind.HasRealXYZ)
-            ? new Vector3(dbEntryRepathfind.RealX, dbEntryRepathfind.RealY, dbEntryRepathfind.RealZ)
-            : new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z);
-        var distanceFromTarget = Vector3.Distance(currentPos, targetPos);
+        var activeNavTargets = ResolveOverworldNavigationTargets();
+        var distanceFromTarget = Vector3.Distance(currentPos, activeNavTargets.NavigationTarget);
         
         // Stuck detection: only re-pathfind if stuck (10+ seconds without moving 5+ yalms)
         var sinceStuckCheck = (DateTime.Now - lastStuckCheckTime).TotalSeconds;
@@ -1079,15 +1037,18 @@ public class StateManager : IDisposable
             {
                 // Stuck! Stop current navigation before re-pathfinding to prevent erratic movement
                 nav.StopNavigation();
-                nav.FlyToPosition(flyTargetPos);
-                _plugin.AddDebugLog($"[Flying] Stuck detected (moved {movedDistance:F1}y in 10s) - stopped + re-pathfinding (distance: {distanceFromTarget:F1}y)");
+                nav.FlyToPosition(activeNavTargets.NavigationTarget);
+                _plugin.AddDebugLog(
+                    $"[Flying] Stuck detected (moved {movedDistance:F1}y in 10s) - stopped + re-pathfinding using {activeNavTargets.Basis}; " +
+                    $"navDistance={distanceFromTarget:F1}y; current={FormatVectorCompact(currentPos)}; " +
+                    $"navTarget={FormatVectorCompact(activeNavTargets.NavigationTarget)}; landingTarget={FormatVectorCompact(activeNavTargets.LandingTarget)}");
             }
             lastStuckCheckPos = currentPos;
             lastStuckCheckTime = DateTime.Now;
         }
 
         // Check if we're close enough to X,Z coordinates (within 5 yalms) — uses ground target, not elevated
-        var xzDist = Math.Sqrt(Math.Pow(currentPos.X - targetPos.X, 2) + Math.Pow(currentPos.Z - targetPos.Z, 2));
+        var xzDist = CalculateXZDistance(currentPos, activeNavTargets.LandingTarget);
         
         // If we're not mounted, we've already dismounted - proceed with dig regardless of nav state
         if (!_plugin.NavigationService.IsMounted() && dismountAttemptStart != DateTime.MinValue)
@@ -1133,7 +1094,7 @@ public class StateManager : IDisposable
             return;
         }
         
-        if (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle || xzDist < 5.0f)
+        if ((activeNavTargets.UseNavStateForLanding && (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle)) || xzDist < 5.0f)
         {
             // We've arrived at the flag X,Z — now we need to dismount
             if (_plugin.NavigationService.IsMounted())
@@ -1143,39 +1104,13 @@ public class StateManager : IDisposable
                 _plugin.AddDebugLog($"[Dismount] PartyWaitBeforeDismount={waitForPartyDismount} - checking party proximity before dismounting");
                 if (waitForPartyDismount)
                 {
-                    _plugin.PartyService.UpdatePartyStatus();
-                    var localPlayer = Plugin.ObjectTable.LocalPlayer;
-                    if (localPlayer != null)
+                    var partyWait = EvaluateLandingPartyWait(10.0, "OverworldLanding");
+                    if (!partyWait.CanProceed)
                     {
-                        var allNearby = true;
-                        var nearbyCount = 0;
-                        var totalOthers = 0;
-                        foreach (var member in _plugin.PartyService.PartyMembers)
-                        {
-                            if (member.Name == localPlayer.Name.TextValue) continue;
-                            totalOthers++;
-                            if (!member.IsInSameZone)
-                            {
-                                allNearby = false;
-                                continue;
-                            }
-                            var dist = Vector3.Distance(localPlayer.Position, member.Position);
-                            if (dist <= 10.0f)
-                                nearbyCount++;
-                            else
-                                allNearby = false;
-                        }
-
-                        if (totalOthers > 0 && !allNearby)
-                        {
-                            StateDetail = $"Waiting for party ({nearbyCount}/{totalOthers} within 10y) before dismounting...";
-                            return; // Don't attempt dismount yet
-                        }
-                        
-                        if (totalOthers > 0 && allNearby)
-                        {
-                            _plugin.AddDebugLog($"[Flying] All {totalOthers} party members within 10y - proceeding to dismount");
-                        }
+                        StateDetail = partyWait.IgnoredOutOfZone > 0
+                            ? $"Waiting for party ({partyWait.NearbyCount}/{partyWait.TotalSameZone} same-zone within 10y, {partyWait.IgnoredOutOfZone} out-of-zone ignored) before dismounting..."
+                            : $"Waiting for party ({partyWait.NearbyCount}/{partyWait.TotalSameZone} same-zone within 10y) before dismounting...";
+                        return; // Don't attempt dismount yet
                     }
                 }
 
@@ -1186,6 +1121,10 @@ public class StateManager : IDisposable
                     descentMode = currentLandingMode == OverworldLandingMode.UnderwaterBounce;
                     descentStartTime = DateTime.Now;
                     descentStartY = Plugin.ObjectTable.LocalPlayer?.Position.Y ?? 0f;
+                    _plugin.AddDebugLog(
+                        $"[Flying] Landing phase ready via {activeNavTargets.Basis}; navState={nav.State}; " +
+                        $"landingXZ={xzDist:F1}y; current={FormatVectorCompact(currentPos)}; " +
+                        $"landingTarget={FormatVectorCompact(activeNavTargets.LandingTarget)}");
                     _plugin.AddDebugLog(currentLandingMode == OverworldLandingMode.UnderwaterBounce
                         ? "Close to target - attempting underwater descent+dismount mode (Ctrl+Space first)..."
                         : "Close to target - using /mount landing toggles until dismounted...");
@@ -1198,7 +1137,7 @@ public class StateManager : IDisposable
                 {
                     if (dismountElapsed < 60.0)
                     {
-                        _mountService.Dismount();
+                        _mountService.TryLandingToggle();
                         StateDetail = $"Landing by /mount toggle... ({dismountElapsed:F0}s)";
                         return;
                     }
@@ -3425,6 +3364,7 @@ public class StateManager : IDisposable
         stateActionIssued = false;
         dismountAttemptStart = DateTime.MinValue;
         descentInProgress = false;
+        lastLandingPartyWaitSignature = string.Empty;
 
         // Stop navigation if it was active
         if (autoMoveActive)
@@ -4344,29 +4284,155 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog($"Location set: {location.ZoneName} ({location.X:F1}, {location.Y:F1}, {location.Z:F1})");
     }
 
+    private (Vector3 NavigationTarget, Vector3 LandingTarget, string Basis, string DestinationText, string ZoneName, bool UseNavStateForLanding)
+        ResolveOverworldNavigationTargets()
+    {
+        if (CurrentLocation == null)
+            return (Vector3.Zero, Vector3.Zero, "none", "Unknown", "Unknown", true);
+
+        var rawGroundTarget = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+        var dbEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
+        var destinationIndex = dbEntry?.Index > 0 ? dbEntry.Index : -1;
+        var destinationText = destinationIndex > 0 ? $"Destination #{destinationIndex}" : "Unknown";
+        var zoneName = dbEntry?.ZoneName ?? CurrentLocation.ZoneName ?? "Unknown";
+
+        if (dbEntry != null && destinationIndex > 0)
+        {
+            var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
+            if (specialNav != null)
+            {
+                return (
+                    new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ),
+                    rawGroundTarget,
+                    "special pre-dive",
+                    destinationText,
+                    zoneName,
+                    false);
+            }
+
+            if (dbEntry.HasRealXYZ)
+            {
+                var realTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
+                return (realTarget, realTarget, "stored RealXYZ", destinationText, zoneName, true);
+            }
+
+            return (
+                new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z),
+                rawGroundTarget,
+                "fallback +50Y",
+                destinationText,
+                zoneName,
+                true);
+        }
+
+        return (
+            new Vector3(CurrentLocation.X, CurrentLocation.Y + 50f, CurrentLocation.Z),
+            rawGroundTarget,
+            dbEntry != null ? "fallback +50Y" : "no-db fallback +50Y",
+            destinationText,
+            zoneName,
+            true);
+    }
+
+    private static double CalculateXZDistance(Vector3 from, Vector3 to)
+    {
+        var dx = from.X - to.X;
+        var dz = from.Z - to.Z;
+        return Math.Sqrt(dx * dx + dz * dz);
+    }
+
+    private static string FormatVectorCompact(Vector3 value)
+    {
+        return $"<{value.X:F1}, {value.Y:F1}, {value.Z:F1}>";
+    }
+
     private bool ArePartyMembersClose(double maxDistance)
+    {
+        return EvaluateLandingPartyWait(maxDistance, "CycleMapLocs").CanProceed;
+    }
+
+    private (bool CanProceed, int NearbyCount, int TotalSameZone, int IgnoredOutOfZone) EvaluateLandingPartyWait(double maxDistance, string context)
     {
         var party = _plugin.PartyService;
         party.UpdatePartyStatus();
-        if (party.PartyMembers.Count <= 1) return true; // Solo = always ready
+        if (party.PartyMembers.Count <= 1)
+        {
+            LogLandingPartyWaitOnce($"{context}:solo", $"[PartyWait][{context}] Solo or no party members - dismounting allowed");
+            return (true, 0, 0, 0);
+        }
 
         var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-        if (playerPos == Vector3.Zero) return false;
+        if (playerPos == Vector3.Zero)
+        {
+            LogLandingPartyWaitOnce($"{context}:no-local-player", $"[PartyWait][{context}] Local player unavailable - holding dismount");
+            return (false, 0, 0, 0);
+        }
 
+        var blockingNames = new List<string>();
+        var blockingDescriptions = new List<string>();
+        var ignoredOutOfZoneNames = new List<string>();
+        var nearbyCount = 0;
+        var totalSameZone = 0;
         foreach (var member in party.PartyMembers)
         {
             if (member.Name == Plugin.ObjectTable.LocalPlayer?.Name.TextValue) continue;
+
+            if (!member.IsInSameZone)
+            {
+                ignoredOutOfZoneNames.Add(member.Name);
+                continue;
+            }
+
+            totalSameZone++;
             var dx = playerPos.X - member.Position.X;
             var dz = playerPos.Z - member.Position.Z;
             var xzDist = Math.Sqrt(dx * dx + dz * dz);
-            if (xzDist > maxDistance)
+            if (xzDist <= maxDistance)
             {
-                _plugin.AddDebugLog($"[PartyWait] {member.Name} is {xzDist:F1}y away (XZ) - waiting");
-                return false;
+                nearbyCount++;
+                continue;
             }
+
+            blockingNames.Add(member.Name);
+            blockingDescriptions.Add($"{member.Name} is {xzDist:F1}y away (XZ)");
         }
-        _plugin.AddDebugLog("[PartyWait] All party members within range - dismounting allowed");
-        return true;
+
+        var blockerSignature = string.Join("|", blockingNames.OrderBy(name => name, StringComparer.Ordinal));
+        var ignoredSignature = string.Join("|", ignoredOutOfZoneNames.OrderBy(name => name, StringComparer.Ordinal));
+
+        if (blockingNames.Count > 0)
+        {
+            var message = $"[PartyWait][{context}] Blocking dismount; same-zone blockers: {string.Join(", ", blockingDescriptions)}";
+            if (ignoredOutOfZoneNames.Count > 0)
+                message += $"; ignoring out-of-zone members: {string.Join(", ", ignoredOutOfZoneNames)}";
+
+            LogLandingPartyWaitOnce($"{context}:block:{blockerSignature}:ignored:{ignoredSignature}", message);
+            return (false, nearbyCount, totalSameZone, ignoredOutOfZoneNames.Count);
+        }
+
+        if (ignoredOutOfZoneNames.Count > 0)
+        {
+            LogLandingPartyWaitOnce(
+                $"{context}:proceed-ignored:{ignoredSignature}",
+                $"[PartyWait][{context}] Dismount allowed; ignoring out-of-zone members: {string.Join(", ", ignoredOutOfZoneNames)}");
+        }
+        else
+        {
+            LogLandingPartyWaitOnce(
+                $"{context}:clear:{nearbyCount}:{totalSameZone}",
+                $"[PartyWait][{context}] All same-zone party members within {maxDistance:F1}y - dismounting allowed");
+        }
+
+        return (true, nearbyCount, totalSameZone, ignoredOutOfZoneNames.Count);
+    }
+
+    private void LogLandingPartyWaitOnce(string signature, string message)
+    {
+        if (lastLandingPartyWaitSignature == signature)
+            return;
+
+        lastLandingPartyWaitSignature = signature;
+        _plugin.AddDebugLog(message);
     }
 
 }

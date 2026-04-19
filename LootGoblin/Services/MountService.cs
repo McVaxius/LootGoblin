@@ -11,6 +11,7 @@ public class MountService
 {
     private readonly Plugin _plugin;
     private long _mountCooldownMs;
+    private long _landingToggleCooldownMs;
 
     public MountService(Plugin plugin)
     {
@@ -78,6 +79,31 @@ public class MountService
         catch (Exception ex)
         {
             _plugin.AddDebugLog($"Dismount command failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Toggle mount state specifically for landing recovery without inheriting the
+    /// general dismount cooldown used by other mount flows.
+    /// </summary>
+    public void TryLandingToggle()
+    {
+        if (Environment.TickCount64 < _landingToggleCooldownMs)
+            return;
+
+        if (!IsMounted())
+            return;
+
+        _landingToggleCooldownMs = Environment.TickCount64 + 1000;
+
+        try
+        {
+            SendCommand("/mount");
+            _plugin.AddDebugLog("Landing toggle sent via /mount");
+        }
+        catch (Exception ex)
+        {
+            _plugin.AddDebugLog($"Landing toggle failed: {ex.Message}");
         }
     }
 
