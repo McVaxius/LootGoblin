@@ -849,11 +849,45 @@ public class MainWindow : Window, IDisposable
             {
                 ImGui.BeginTooltip();
                 ImGui.Text("When enabled, the bot will wait at the destination\n" +
-                           "until all party members are within 10 yalms (XZ distance)\n" +
+                           "until the required party members are within 10 yalms (XZ distance)\n" +
                            "before dismounting. This prevents the bot from dismounting\n" +
                            "alone in dangerous zones while party members are still\n" +
                            "traveling. Works in both flying and ground-only modes.");
                 ImGui.EndTooltip();
+            }
+
+            if (partyWait)
+            {
+                var useThreshold = plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold;
+                if (ImGui.Checkbox("Specify number of party to wait for", ref useThreshold))
+                {
+                    plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold = useThreshold;
+                    plugin.Configuration.Save();
+                }
+                ImGui.SameLine();
+                ImGui.TextColored(ColorGrey, "(?)");
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.Text("When enabled, use the number below as the count of\n" +
+                               "other party members to wait for before dismounting\n" +
+                               "and opening. When disabled, LootGoblin waits for the\n" +
+                               "entire party roster.");
+                    ImGui.EndTooltip();
+                }
+
+                if (useThreshold)
+                {
+                    var requiredOthers = Math.Clamp(plugin.Configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);
+                    ImGui.SetNextItemWidth(70f);
+                    if (ImGui.InputInt("##PartyWaitBeforeDismountRequiredOthers", ref requiredOthers))
+                    {
+                        plugin.Configuration.PartyWaitBeforeDismountRequiredOthers = Math.Clamp(requiredOthers, 1, 7);
+                        plugin.Configuration.Save();
+                    }
+                    ImGui.SameLine();
+                    ImGui.Text("players (not yourself)");
+                }
             }
         }
     }

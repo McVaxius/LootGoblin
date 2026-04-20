@@ -32,6 +32,16 @@ public enum OverworldLandingMode
 
 public class StateManager : IDisposable
 {
+    private readonly struct OverworldLandingPartyWaitResult
+    {
+        public bool CanProceed { get; init; }
+        public int NearbyOthers { get; init; }
+        public int RequiredOthers { get; init; }
+        public int TotalOthers { get; init; }
+        public int SameZoneFarCount { get; init; }
+        public int OutOfZoneCount { get; init; }
+    }
+
     private const uint ThiefMapItemId = 19770;
     private readonly Plugin _plugin;
     private readonly IFramework _framework;
@@ -1135,12 +1145,10 @@ public class StateManager : IDisposable
                 }
                 if (waitForPartyDismount)
                 {
-                    var partyWait = EvaluateLandingPartyWait(10.0, "OverworldLanding");
+                    var partyWait = EvaluateOverworldLandingPartyWait(10.0);
                     if (!partyWait.CanProceed)
                     {
-                        StateDetail = partyWait.IgnoredOutOfZone > 0
-                            ? $"Waiting for party ({partyWait.NearbyCount}/{partyWait.TotalSameZone} same-zone within 10y, {partyWait.IgnoredOutOfZone} out-of-zone ignored) before dismounting..."
-                            : $"Waiting for party ({partyWait.NearbyCount}/{partyWait.TotalSameZone} same-zone within 10y) before dismounting...";
+                        StateDetail = BuildOverworldLandingPartyWaitDetail(partyWait, 10.0);
                         return; // Don't attempt dismount yet
                     }
                 }
@@ -4701,6 +4709,130 @@ public class StateManager : IDisposable
     private bool ArePartyMembersClose(double maxDistance)
     {
         return EvaluateLandingPartyWait(maxDistance, "CycleMapLocs").CanProceed;
+    }
+
+    private OverworldLandingPartyWaitResult EvaluateOverworldLandingPartyWait(double maxDistance)
+    {
+        var party = _plugin.PartyService;
+        party.UpdatePartyStatus();
+        if (party.PartyMembers.Count <= 1)
+        {
+            LogLandingPartyWaitOnce("OverworldLanding:solo", "[PartyWait][OverworldLanding] Solo or no party members - dismounting allowed");
+            return new OverworldLandingPartyWaitResult
+            {
+                CanProceed = true,
+                NearbyOthers = 0,
+                RequiredOthers = 0,
+                TotalOthers = 0,
+            };
+        }
+
+        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        if (playerPos == Vector3.Zero)
+        {
+            LogLandingPartyWaitOnce("OverworldLanding:no-local-player", "[PartyWait][OverworldLanding] Local player unavailable - holding dismount");
+            return new OverworldLandingPartyWaitResult
+            {
+                CanProceed = false,
+                NearbyOthers = 0,
+                RequiredOthers = 0,
+                TotalOthers = party.PartyMembers.Count - 1,
+            };
+        }
+
+        var localPlayerName = Plugin.ObjectTable.LocalPlayer?.Name.TextValue;
+        var sameZoneFarDescriptions = new List<string>();
+        var outOfZoneNames = new List<string>();
+        var nearbyOthers = 0;
+        var totalOthers = 0;
+
+        foreach (var member in party.PartyMembers)
+        {
+            if (member.Name == localPlayerName)
+                continue;
+
+            totalOthers++;
+
+            if (!member.IsInSameZone)
+            {
+                outOfZoneNames.Add(member.Name);
+                continue;
+            }
+
+            var dx = playerPos.X - member.Position.X;
+            var dz = playerPos.Z - member.Position.Z;
+            var xzDist = Math.Sqrt(dx * dx + dz * dz);
+            if (xzDist <= maxDistance)
+            {
+                nearbyOthers++;
+                continue;
+            }
+
+            sameZoneFarDescriptions.Add($"{member.Name} is {xzDist:F1}y away (XZ)");
+        }
+
+        var useThreshold = _plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold;
+        var configuredThreshold = Math.Clamp(_plugin.Configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);
+        var requiredOthers = useThreshold ? Math.Min(configuredThreshold, totalOthers) : totalOthers;
+        var canProceed = nearbyOthers >= requiredOthers;
+
+        var farSignature = string.Join("|", sameZoneFarDescriptions.OrderBy(text => text, StringComparer.Ordinal));
+        var outOfZoneSignature = string.Join("|", outOfZoneNames.OrderBy(name => name, StringComparer.Ordinal));
+        var modeSignature = useThreshold ? $"threshold:{requiredOthers}" : "full-party";
+
+        if (!canProceed)
+        {
+            var message =
+                $"[PartyWait][OverworldLanding] Blocking dismount; nearby {nearbyOthers}/{totalOthers} within {maxDistance:F1}y, " +
+                $"required {requiredOthers}";
+            if (sameZoneFarDescriptions.Count > 0)
+                message += $"; same-zone far: {string.Join(", ", sameZoneFarDescriptions)}";
+            if (outOfZoneNames.Count > 0)
+                message += $"; out-of-zone: {string.Join(", ", outOfZoneNames)}";
+
+            LogLandingPartyWaitOnce(
+                $"OverworldLanding:block:{modeSignature}:near:{nearbyOthers}:far:{farSignature}:ooz:{outOfZoneSignature}",
+                message);
+        }
+        else
+        {
+            var message =
+                $"[PartyWait][OverworldLanding] Dismount allowed; nearby {nearbyOthers}/{totalOthers} within {maxDistance:F1}y, " +
+                $"required {requiredOthers}";
+            if (sameZoneFarDescriptions.Count > 0)
+                message += $"; threshold satisfied with same-zone far members still trailing: {string.Join(", ", sameZoneFarDescriptions)}";
+            if (outOfZoneNames.Count > 0)
+                message += $"; threshold satisfied with out-of-zone members not yet present: {string.Join(", ", outOfZoneNames)}";
+
+            LogLandingPartyWaitOnce(
+                $"OverworldLanding:clear:{modeSignature}:near:{nearbyOthers}:far:{sameZoneFarDescriptions.Count}:ooz:{outOfZoneNames.Count}",
+                message);
+        }
+
+        return new OverworldLandingPartyWaitResult
+        {
+            CanProceed = canProceed,
+            NearbyOthers = nearbyOthers,
+            RequiredOthers = requiredOthers,
+            TotalOthers = totalOthers,
+            SameZoneFarCount = sameZoneFarDescriptions.Count,
+            OutOfZoneCount = outOfZoneNames.Count,
+        };
+    }
+
+    private string BuildOverworldLandingPartyWaitDetail(OverworldLandingPartyWaitResult result, double maxDistance)
+    {
+        var summary =
+            $"Waiting for party ({result.NearbyOthers}/{result.TotalOthers} nearby within {maxDistance:F0}y, " +
+            $"need {result.RequiredOthers} before dismounting";
+
+        if (result.SameZoneFarCount > 0)
+            summary += $", {result.SameZoneFarCount} far";
+
+        if (result.OutOfZoneCount > 0)
+            summary += $", {result.OutOfZoneCount} out-of-zone";
+
+        return summary + ")...";
     }
 
     private (bool CanProceed, int NearbyCount, int TotalSameZone, int IgnoredOutOfZone) EvaluateLandingPartyWait(double maxDistance, string context)
