@@ -37,6 +37,11 @@ public static class GameHelpers
     private static DateTime _confirmDialogStartTime = DateTime.MinValue;
     private static DateTime _confirmDialogReadyAt = DateTime.MinValue;
     private static DateTime _lastConfirmDialogLogTime = DateTime.MinValue;
+    private static string? _pendingSequenceAddonName;
+    private static bool _pendingSequenceUpdateState;
+    private static object[]? _pendingSequenceSecondArgs;
+    private static DateTime _pendingSequenceSecondReadyAt = DateTime.MinValue;
+    private static bool _pendingSequenceWaitingForSecond = false;
     private const double ConfirmDialogWatchTimeoutSeconds = 5.0;
     private const double ConfirmDialogLogIntervalSeconds = 1.0;
     /// <summary>
@@ -104,6 +109,59 @@ public static class GameHelpers
         }
 
         UpdatePendingConfirmDialogWatch();
+        UpdatePendingAddonCallbackSequence();
+    }
+
+    public static bool IsAddonCallbackSequencePending(string addonName)
+    {
+        return _pendingSequenceWaitingForSecond &&
+               string.Equals(_pendingSequenceAddonName, addonName, StringComparison.Ordinal);
+    }
+
+    public static bool QueueTwoStepAddonCallbackSequence(
+        string addonName,
+        bool updateState,
+        TimeSpan secondDelay,
+        object[] firstArgs,
+        object[] secondArgs)
+    {
+        try
+        {
+            if (_pendingSequenceWaitingForSecond)
+            {
+                Plugin.Log.Warning(
+                    $"[CALLBACKSEQ] Sequence already pending for '{_pendingSequenceAddonName}' - " +
+                    $"cannot queue '{addonName}'");
+                return false;
+            }
+
+            if (!IsAddonVisible(addonName))
+            {
+                Plugin.Log.Warning($"[CALLBACKSEQ] Addon '{addonName}' not visible - cannot queue sequence");
+                return false;
+            }
+
+            Plugin.Log.Information(
+                $"[CALLBACKSEQ] Firing first step for '{addonName}' with args [{FormatCallbackArgs(firstArgs)}]");
+            FireAddonCallback(addonName, updateState, firstArgs);
+
+            _pendingSequenceAddonName = addonName;
+            _pendingSequenceUpdateState = updateState;
+            _pendingSequenceSecondArgs = secondArgs;
+            _pendingSequenceSecondReadyAt = DateTime.Now.Add(secondDelay);
+            _pendingSequenceWaitingForSecond = true;
+
+            Plugin.Log.Information(
+                $"[CALLBACKSEQ] Queued second step for '{addonName}' in {secondDelay.TotalMilliseconds:F0}ms " +
+                $"with args [{FormatCallbackArgs(secondArgs)}]");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[CALLBACKSEQ] Failed to queue '{addonName}': {ex.Message}");
+            ResetPendingAddonCallbackSequence();
+            return false;
+        }
     }
 
     /// <summary>
@@ -857,6 +915,56 @@ public static class GameHelpers
         {
             return false;
         }
+    }
+
+    private static void UpdatePendingAddonCallbackSequence()
+    {
+        if (!_pendingSequenceWaitingForSecond ||
+            string.IsNullOrEmpty(_pendingSequenceAddonName) ||
+            _pendingSequenceSecondArgs == null)
+            return;
+
+        if (DateTime.Now < _pendingSequenceSecondReadyAt)
+            return;
+
+        if (!IsAddonVisible(_pendingSequenceAddonName))
+        {
+            Plugin.Log.Warning(
+                $"[CALLBACKSEQ] Addon '{_pendingSequenceAddonName}' disappeared before second step");
+            ResetPendingAddonCallbackSequence();
+            return;
+        }
+
+        try
+        {
+            Plugin.Log.Information(
+                $"[CALLBACKSEQ] Firing second step for '{_pendingSequenceAddonName}' with args " +
+                $"[{FormatCallbackArgs(_pendingSequenceSecondArgs)}]");
+            FireAddonCallback(_pendingSequenceAddonName, _pendingSequenceUpdateState, _pendingSequenceSecondArgs);
+            Plugin.Log.Information($"[CALLBACKSEQ] Completed sequence for '{_pendingSequenceAddonName}'");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[CALLBACKSEQ] Failed second step for '{_pendingSequenceAddonName}': {ex.Message}");
+        }
+        finally
+        {
+            ResetPendingAddonCallbackSequence();
+        }
+    }
+
+    private static void ResetPendingAddonCallbackSequence()
+    {
+        _pendingSequenceAddonName = null;
+        _pendingSequenceSecondArgs = null;
+        _pendingSequenceSecondReadyAt = DateTime.MinValue;
+        _pendingSequenceWaitingForSecond = false;
+        _pendingSequenceUpdateState = false;
+    }
+
+    private static string FormatCallbackArgs(object[] args)
+    {
+        return string.Join(", ", args.Select(arg => arg?.ToString() ?? "<null>"));
     }
 
     /// <summary>

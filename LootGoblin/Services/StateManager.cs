@@ -61,6 +61,7 @@ public class StateManager : IDisposable
     private DateTime lastInteractionTime = DateTime.MinValue; // Throttle chest/portal interaction attempts
     private bool autoMoveActive; // Track if automove is currently on
     private bool pendingDungeonMapFlagClear; // Clear the overworld flag once dungeon entry has settled
+    private bool treasureHighLowHandledThisOpen; // Prevent callback spam while puzzle addon stays open
     
     // Map opening validation variables
     private int initialMapCount;
@@ -68,6 +69,7 @@ public class StateManager : IDisposable
     private bool mapOpeningRetried = false;
     private const double TickIntervalSeconds = 0.5;
     private const double DungeonInteractionIntervalSeconds = 1.0;
+    private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
 
     // Dungeon state tracking (Phase 8)
     private int dungeonFloor;
@@ -3577,13 +3579,53 @@ public class StateManager : IDisposable
 
     private bool TrySkipCardGame()
     {
-        // Try to detect and skip the card game by clicking "Open Chest"
-        // The addon name is currently unknown - will be discovered via testing
-        // For now, ClickYesIfVisible() at the top of each tick method handles most dialogs
-        // This function is a placeholder for future addon-specific detection
-        
-        // Don't spam - card game detection will be implemented when addon name is known
-        return false; // Not blocking - continue normal tick
+        const string addonName = "TreasureHighLow";
+
+        if (!GameHelpers.IsAddonVisible(addonName))
+        {
+            treasureHighLowHandledThisOpen = false;
+            return false;
+        }
+
+        if (autoMoveActive)
+        {
+            GameHelpers.StopAutoMove();
+            autoMoveActive = false;
+        }
+
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+        {
+            _plugin.NavigationService.StopNavigation();
+        }
+
+        if (GameHelpers.IsAddonCallbackSequencePending(addonName))
+        {
+            StateDetail = "Skipping Higher/Lower puzzle...";
+            return true;
+        }
+
+        if (!treasureHighLowHandledThisOpen)
+        {
+            _plugin.AddDebugLog(
+                "[CardGame] TreasureHighLow detected - scheduling Open Chest callbacks (-2 then 1).");
+
+            if (GameHelpers.QueueTwoStepAddonCallbackSequence(
+                    addonName,
+                    true,
+                    TreasureHighLowSecondCallbackDelay,
+                    new object[] { -2 },
+                    new object[] { 1 }))
+            {
+                treasureHighLowHandledThisOpen = true;
+            }
+            else
+            {
+                _plugin.AddDebugLog("[CardGame] Failed to queue TreasureHighLow skip sequence.");
+            }
+        }
+
+        StateDetail = "Waiting for Higher/Lower puzzle to close...";
+        return true;
     }
 
     // ─── Error Handling ───────────────────────────────────────────────────────
@@ -3624,6 +3666,7 @@ public class StateManager : IDisposable
         descentInProgress = false;
         lastLandingPartyWaitSignature = string.Empty;
         openingChestCombatInterrupted = false;
+        treasureHighLowHandledThisOpen = false;
         openingChestRecoveryDigIssued = false;
         openingChestReturningToFlag = false;
 
