@@ -67,7 +67,7 @@ public static class TreasureMapData
         { 17836, new TreasureMapInfo { ItemId = 17836, Name = "Timeworn Gazelleskin Map", Tier = MapTier.Party, MinLevel = 70, Expansion = "SB", HasDungeon = true, Category = MapCategory.AllTypesRandom, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 712, InstanceName = "The Lost Canals of Uznair", SecondInstanceName = "The Shifting Altars of Uznair", SecondTerritoryId = 725 } },
         { 24794, new TreasureMapInfo { ItemId = 24794, Name = "Seemingly Special Timeworn Map", Tier = MapTier.Party, MinLevel = 70, Expansion = "SB", HasDungeon = true, Category = MapCategory.GuaranteedPortal, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 712, InstanceName = "The Lost Canals of Uznair", SecondInstanceName = "The Shifting Altars of Uznair", SecondTerritoryId = 725 } },
         // Thief's Map
-        { 4574, new TreasureMapInfo { ItemId = 4574, Name = "Timeworn Thief's Map", Tier = MapTier.Party, MinLevel = 60, Expansion = "SB", HasDungeon = true, Category = MapCategory.GuaranteedPortal, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 725, InstanceName = "The Hidden Canals of Uznair" } },
+        { 19770, new TreasureMapInfo { ItemId = 19770, Name = "Timeworn Thief's Map", Tier = MapTier.Party, MinLevel = 60, Expansion = "SB", HasDungeon = true, Category = MapCategory.GuaranteedPortal, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 725, InstanceName = "The Hidden Canals of Uznair" } },
 
         // Shadowbringers
         { 26744, new TreasureMapInfo { ItemId = 26744, Name = "Timeworn Gliderskin Map", Tier = MapTier.Solo, MinLevel = 75, Expansion = "ShB", HasDungeon = false, Category = MapCategory.Outdoor, Status = ImplementationStatus.Implemented } },

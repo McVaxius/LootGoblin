@@ -32,6 +32,7 @@ public enum OverworldLandingMode
 
 public class StateManager : IDisposable
 {
+    private const uint ThiefMapItemId = 19770;
     private readonly Plugin _plugin;
     private readonly IFramework _framework;
     private readonly IPluginLog _log;
@@ -559,7 +560,7 @@ public class StateManager : IDisposable
         var mapName = TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var info) ? info.Name : $"ID {SelectedMapItemId}";
         currentLandingMode = ResolveLandingMode(SelectedMapItemId);
         _plugin.AddDebugLog($"Selected: {mapName} (ID {SelectedMapItemId}).");
-        _plugin.AddDebugLog($"[Landing] Using {currentLandingMode} for this run.");
+        _plugin.AddDebugLog($"[Landing] SelectedMapItemId={SelectedMapItemId}, Using {currentLandingMode} for this run.");
         
         // Initialize map count validation variables
         initialMapCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
@@ -985,32 +986,42 @@ public class StateManager : IDisposable
             var xzDist2 = CalculateXZDistance(playerPos, initialNavTargets.LandingTarget);
             if (xzDist2 < 10.0f)
             {
-                _plugin.AddDebugLog($"[Flying] Already within {xzDist2:F1}y of landing target ({initialNavTargets.Basis}) - immediate dismount and dig");
-                
-                // Immediate dismount if mounted
-                if (_plugin.NavigationService.IsMounted())
+                if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
                 {
-                    _mountService.Dismount();
+                    _plugin.AddDebugLog(
+                        $"[Flying] Already within {xzDist2:F1}y of landing target ({initialNavTargets.Basis}) - " +
+                        "dive landing mode active, skipping immediate dismount/dig");
+                    stateActionIssued = true;
                 }
-                
-                // Enable BMR AI and dig immediately
-                CommandHelper.SendCommand("/bmrai on");
-                CommandHelper.SendCommand("/gaction dig");
-                lastDigTime = DateTime.Now;
-                _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
-                
-                // Wait 2 seconds for chest to spawn before looking for it
-                System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
-                    try
+                else
+                {
+                    _plugin.AddDebugLog($"[Flying] Already within {xzDist2:F1}y of landing target ({initialNavTargets.Basis}) - immediate dismount and dig");
+
+                    // Immediate dismount if mounted
+                    if (_plugin.NavigationService.IsMounted())
                     {
-                        TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+                        _mountService.Dismount();
                     }
-                    catch (Exception ex)
-                    {
-                        Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (overworld): {ex.Message}");
-                    }
-                }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
-                return;
+
+                    // Enable BMR AI and dig immediately
+                    CommandHelper.SendCommand("/bmrai on");
+                    CommandHelper.SendCommand("/gaction dig");
+                    lastDigTime = DateTime.Now;
+                    _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
+
+                    // Wait 2 seconds for chest to spawn before looking for it
+                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
+                        try
+                        {
+                            TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (overworld): {ex.Message}");
+                        }
+                    }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
+                    return;
+                }
             }
             else
             {
@@ -1111,8 +1122,15 @@ public class StateManager : IDisposable
             if (_plugin.NavigationService.IsMounted())
             {
                 // Check if all party members are within 10y before dismounting (Issue 3)
-                var waitForPartyDismount = _plugin.Configuration.PartyWaitBeforeDismount;
-                _plugin.AddDebugLog($"[Dismount] PartyWaitBeforeDismount={waitForPartyDismount} - checking party proximity before dismounting");
+                var bypassPartyWaitForDive = currentLandingMode == OverworldLandingMode.UnderwaterBounce;
+                var waitForPartyDismount = _plugin.Configuration.PartyWaitBeforeDismount && !bypassPartyWaitForDive;
+                _plugin.AddDebugLog(
+                    $"[Dismount] PartyWaitBeforeDismount={_plugin.Configuration.PartyWaitBeforeDismount}, " +
+                    $"LandingMode={currentLandingMode}, BypassForDive={bypassPartyWaitForDive}");
+                if (bypassPartyWaitForDive)
+                {
+                    _plugin.AddDebugLog("[Dismount] Skipping party wait for thief-map dive landing.");
+                }
                 if (waitForPartyDismount)
                 {
                     var partyWait = EvaluateLandingPartyWait(10.0, "OverworldLanding");
@@ -3306,9 +3324,14 @@ public class StateManager : IDisposable
 
     private static OverworldLandingMode ResolveLandingMode(uint mapItemId)
     {
-        return mapItemId == 4574
+        return IsThiefMap(mapItemId)
             ? OverworldLandingMode.UnderwaterBounce
             : OverworldLandingMode.MountToggle;
+    }
+
+    private static bool IsThiefMap(uint mapItemId)
+    {
+        return mapItemId == ThiefMapItemId;
     }
 
     private bool IsCharacterReady()
