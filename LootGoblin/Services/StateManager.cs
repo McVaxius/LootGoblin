@@ -3213,9 +3213,11 @@ public class StateManager : IDisposable
         if (!adsLeaveIssued)
         {
             adsLeaveIssued = true;
+            CommandHelper.SendCommand("/ads stop");
+            _plugin.AddDebugLog($"[ADS] ADS no longer owns the duty ({adsStatus.OwnershipMode}/{adsStatus.ExecutionPhase}) - sending /ads stop before leave.");
             CommandHelper.SendCommand("/ads leave");
             _plugin.AddDebugLog($"[ADS] ADS no longer owns the duty ({adsStatus.OwnershipMode}/{adsStatus.ExecutionPhase}) - sending /ads leave.");
-            StateDetail = "ADS released ownership - leaving duty...";
+            StateDetail = "ADS released ownership - stopping ADS and leaving duty...";
             return true;
         }
 
