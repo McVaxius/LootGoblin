@@ -15,7 +15,7 @@ public class AutoDutyWarningWindow : Window
     private bool warningAcknowledged = false;
 
     public AutoDutyWarningWindow(Plugin plugin, IChatGui chatGui, IPluginLog log) 
-        : base("⚠️ AutoDuty Detected - Action Required", ImGuiWindowFlags.AlwaysAutoResize)
+        : base("⚠️ AutoDuty or ReAction Detected - Action Required", ImGuiWindowFlags.AlwaysAutoResize)
     {
         this.plugin = plugin;
         this.chatGui = chatGui;
@@ -41,11 +41,14 @@ public class AutoDutyWarningWindow : Window
         ImGui.TextColored(new Vector4(1.0f, 0.3f, 0.3f, 1.0f), "⚠️ WARNING: AutoDuty Plugin Detected");
         ImGui.Spacing();
         
-        ImGui.Text("AutoDuty is enabled and may cause issues:");
+        ImGui.Text("AutoDuty and or Reaction is enabled and may cause issues:");
+        ImGui.Text("AutoDuty causes:");
         ImGui.Text("• Force respawn at entrance");
         ImGui.Text("• Leave instances at random times");
         ImGui.Text("• Disband from the party to do a repair operation");
         ImGui.Text("• Interfere with LootGoblin automation");
+        ImGui.Text("Reaction causes:");
+        ImGui.Text("• Sitting at chests forever and breaknig LazyLoot operations");
         ImGui.Spacing();
         
         ImGui.TextColored(new Vector4(0.8f, 0.8f, 0.8f, 1.0f), "LootGoblin requires AutoDuty to be disabled for proper operation.");
@@ -56,13 +59,14 @@ public class AutoDutyWarningWindow : Window
         var windowWidth = 400;
         ImGui.SetCursorPosX((windowWidth - buttonWidth) / 2);
         
-        if (ImGui.Button("Disable AutoDuty", new Vector2(buttonWidth, 30)))
+        if (ImGui.Button("Disable AutoDuty/ReAction", new Vector2(buttonWidth, 30)))
         {
             try
             {
                 // Send the command to disable AutoDuty using CommandManager
                 commandManager?.ProcessCommand("/xldisableplugin AutoDuty");
-                log.Information("[LootGoblin.AutoDutyWarning] Sent /xldisableplugin AutoDuty command");
+                commandManager?.ProcessCommand("/xldisableplugin ReAction");
+                log.Information("[LootGoblin.AutoDutyWarning] Sent /xldisableplugin AutoDuty and reaction command");
                 warningAcknowledged = true;
                 IsOpen = false;
             }
