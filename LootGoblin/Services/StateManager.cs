@@ -59,6 +59,7 @@ public class StateManager : IDisposable
     private bool descentMode = false; // Whether we're in descent+dismount mode (Ctrl+Space first)
     private DateTime lastInteractionTime = DateTime.MinValue; // Throttle chest/portal interaction attempts
     private bool autoMoveActive; // Track if automove is currently on
+    private bool pendingDungeonMapFlagClear; // Clear the overworld flag once dungeon entry has settled
     
     // Map opening validation variables
     private int initialMapCount;
@@ -301,6 +302,7 @@ public class StateManager : IDisposable
         }
 
         UpdateMountedRotationLifecycle();
+        TryClearPendingDungeonMapFlag();
 
         // Check for territory change and refresh maps to fix inventory index issues
         var currentTerritory = Plugin.ClientState.TerritoryType;
@@ -2827,6 +2829,7 @@ public class StateManager : IDisposable
                         }
 
                         portalRetryStart = DateTime.MinValue;
+                        QueueDungeonMapFlagClear("[Portal][ADS]");
                         adsDutyHandoffActive = true;
                         adsDutyHandoffStarted = DateTime.Now;
                         adsDutyEntryConfirmedAt = DateTime.MinValue;
@@ -2845,6 +2848,7 @@ public class StateManager : IDisposable
 
                     _plugin.AddDebugLog("[Portal] BoundByDuty detected and portal gone/loading - entering dungeon!");
                     portalRetryStart = DateTime.MinValue;
+                    QueueDungeonMapFlagClear("[Portal]");
                     adsDutyEntryConfirmedAt = DateTime.MinValue;
                     dungeonEntryProcessed = false;
                     dungeonFloor = 0;
@@ -4439,6 +4443,30 @@ public class StateManager : IDisposable
         flagPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
         distToFlag = Vector3.Distance(player.Position, flagPosition);
         return true;
+    }
+
+    private void QueueDungeonMapFlagClear(string source)
+    {
+        if (pendingDungeonMapFlagClear)
+            return;
+
+        pendingDungeonMapFlagClear = true;
+        _plugin.AddDebugLog($"[MapFlag] Queued overworld flag clear after treasure dungeon entry via {source}");
+    }
+
+    private void TryClearPendingDungeonMapFlag()
+    {
+        if (!pendingDungeonMapFlagClear)
+            return;
+
+        bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                       Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (loading)
+            return;
+
+        GameHelpers.SetMapFlag(0, 0, 0);
+        pendingDungeonMapFlagClear = false;
+        _plugin.AddDebugLog("[MapFlag] Cleared overworld flag after treasure dungeon entry");
     }
 
     private (Vector3 NavigationTarget, Vector3 LandingTarget, string Basis, string DestinationText, string ZoneName, bool UseNavStateForLanding)

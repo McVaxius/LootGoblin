@@ -33,6 +33,12 @@ public static class GameHelpers
     private static uint _pendingItemId = 0;
     private static DateTime _mapLookupStartTime = DateTime.MinValue;
     private static bool _waitingForMapLookup = false;
+    private static bool _waitingForConfirmDialog = false;
+    private static DateTime _confirmDialogStartTime = DateTime.MinValue;
+    private static DateTime _confirmDialogReadyAt = DateTime.MinValue;
+    private static DateTime _lastConfirmDialogLogTime = DateTime.MinValue;
+    private const double ConfirmDialogWatchTimeoutSeconds = 5.0;
+    private const double ConfirmDialogLogIntervalSeconds = 1.0;
     /// <summary>
     /// Check if we need to fire the delayed second callback for SelectIconString.
     /// Call this method regularly from the main tick loop.
@@ -96,6 +102,8 @@ public static class GameHelpers
                 Plugin.Log.Information($"[CALLBACK] Reset state after callback");
             }
         }
+
+        UpdatePendingConfirmDialogWatch();
     }
 
     /// <summary>
@@ -404,39 +412,38 @@ public static class GameHelpers
     /// Click OK on the "Decipher the [map name]?" confirmation dialog.
     /// Uses async/await pattern like SND for reliable addon interactions.
     /// </summary>
-    private static async void TriggerConfirmDialog()
+    private static void TriggerConfirmDialog()
     {
-        Plugin.Log.Information($"[CALLBACK] Starting confirmation dialog callback");
-        
-        try
-        {
-            // Wait a bit for the addon to be ready
-            Plugin.Log.Information($"[CALLBACK] Waiting 100ms for SelectYesno addon...");
-            await System.Threading.Tasks.Task.Delay(100);
-            Plugin.Log.Information($"[CALLBACK] Wait complete, triggering unsafe confirmation");
-
-            // Trigger the actual callback
-            TriggerConfirmDialogUnsafe();
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Error($"[CALLBACK] TriggerConfirmDialog failed: {ex.Message}");
-        }
+        Plugin.Log.Information("[CALLBACK] Starting confirmation dialog callback");
+        QueueConfirmDialogWatch("decipher confirmation");
     }
 
-    /// <summary>
-    /// Unsafe part of the confirmation dialog callback.
-    /// </summary>
-    private static unsafe void TriggerConfirmDialogUnsafe()
+    private static void QueueConfirmDialogWatch(string reason)
     {
-        // Don't run callbacks if the bot is disabled
-        // Note: This is a workaround - ideally we should pass the plugin instance
+        ResetPendingConfirmDialogWatch();
+        _waitingForConfirmDialog = true;
+        _confirmDialogStartTime = DateTime.Now;
+        _confirmDialogReadyAt = DateTime.Now.AddMilliseconds(100);
+        _lastConfirmDialogLogTime = DateTime.MinValue;
+        Plugin.Log.Information($"[CALLBACK] Queued SelectYesno watch for {reason}");
+    }
+
+    private static unsafe void UpdatePendingConfirmDialogWatch()
+    {
+        if (!_waitingForConfirmDialog)
+            return;
+
+        var now = DateTime.Now;
+        if (now < _confirmDialogReadyAt)
+            return;
+
         try
         {
             var pluginInstance = Plugin.PluginInterface.GetPluginConfig() as Configuration;
             if (pluginInstance != null && !pluginInstance.Enabled)
             {
-                Plugin.Log.Debug("[CALLBACK] Bot is disabled, skipping callback retry");
+                Plugin.Log.Debug("[CALLBACK] Bot is disabled, cancelling pending decipher confirmation watch");
+                ResetPendingConfirmDialogWatch();
                 return;
             }
         }
@@ -444,57 +451,51 @@ public static class GameHelpers
         {
             Plugin.Log.Error($"[CALLBACK] Error checking bot enabled state: {ex.Message}");
         }
-        
-        Plugin.Log.Information($"[CALLBACK] Looking for SelectYesno addon...");
-        
-        // Find the SelectYesno addon
+
         nint addonPtr = Plugin.GameGui.GetAddonByName("SelectYesno", 1);
-        if (addonPtr == 0)
+        if (addonPtr != 0)
         {
-            Plugin.Log.Error("[CALLBACK] Could not find SelectYesno addon");
-            
-            // Retry after a short delay - the dialog might not be ready yet
-            System.Threading.Tasks.Task.Delay(200).ContinueWith(_ => {
+            var addon = (AddonSelectYesno*)addonPtr;
+            if (addon->AtkUnitBase.IsVisible)
+            {
+                Plugin.Log.Information("[CALLBACK] Pending SelectYesno became visible, clicking Yes...");
+
                 try
                 {
-                    Plugin.Log.Information("[CALLBACK] Retrying SelectYesno lookup...");
-                    TriggerConfirmDialogUnsafe();
+                    new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
+                    Plugin.Log.Information("[CALLBACK] Successfully clicked Yes on decipher confirmation");
                 }
                 catch (Exception ex)
                 {
-                    Plugin.Log.Error($"[GameHelpers] ContinueWith exception in TriggerConfirmDialogUnsafe (retry 1): {ex.Message}");
+                    Plugin.Log.Error($"[CALLBACK] Pending decipher confirmation click failed: {ex.Message}");
                 }
-            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
-            return;
+
+                ResetPendingConfirmDialogWatch();
+                return;
+            }
         }
 
-        Plugin.Log.Information($"[CALLBACK] Found SelectYesno addon at 0x{addonPtr:X}");
-
-        var addon = (AddonSelectYesno*)addonPtr;
-        if (!addon->AtkUnitBase.IsVisible)
+        var elapsed = (now - _confirmDialogStartTime).TotalSeconds;
+        if (elapsed >= ConfirmDialogWatchTimeoutSeconds)
         {
-            Plugin.Log.Error("[CALLBACK] SelectYesno addon is not visible");
-            
-            // Retry after a short delay - the addon might not be visible yet
-            System.Threading.Tasks.Task.Delay(200).ContinueWith(_ => {
-                try
-                {
-                    Plugin.Log.Information("[CALLBACK] Retrying SelectYesno visibility check...");
-                    TriggerConfirmDialogUnsafe();
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Log.Error($"[GameHelpers] ContinueWith exception in TriggerConfirmDialogUnsafe (retry 2): {ex.Message}");
-                }
-            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
+            Plugin.Log.Warning("[CALLBACK] Timed out waiting for decipher confirmation dialog; leaving further handling to state ticks");
+            ResetPendingConfirmDialogWatch();
             return;
         }
 
-        Plugin.Log.Information($"[CALLBACK] Addon is visible, clicking Yes...");
+        if ((now - _lastConfirmDialogLogTime).TotalSeconds >= ConfirmDialogLogIntervalSeconds)
+        {
+            Plugin.Log.Information($"[CALLBACK] Waiting for decipher confirmation dialog... ({elapsed:F1}/{ConfirmDialogWatchTimeoutSeconds:F1}s)");
+            _lastConfirmDialogLogTime = now;
+        }
+    }
 
-        // Use AddonMaster to click Yes - same pattern as FrenRider
-        new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
-        Plugin.Log.Information($"[CALLBACK] Successfully clicked Yes on decipher confirmation");
+    private static void ResetPendingConfirmDialogWatch()
+    {
+        _waitingForConfirmDialog = false;
+        _confirmDialogStartTime = DateTime.MinValue;
+        _confirmDialogReadyAt = DateTime.MinValue;
+        _lastConfirmDialogLogTime = DateTime.MinValue;
     }
 
     /// <summary>
@@ -516,6 +517,7 @@ public static class GameHelpers
                 return false;
 
             new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
+            ResetPendingConfirmDialogWatch();
             Plugin.Log.Information("[YES/NO] Clicked Yes on SelectYesno dialog");
             return true;
         }
