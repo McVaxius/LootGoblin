@@ -81,6 +81,9 @@ public class StateManager : IDisposable
     private DateTime chestDisappearedTime = DateTime.MinValue; // Track when chest first disappeared for grace period
     private DateTime chestApproachStart = DateTime.MinValue; // When we started approaching chest (stuck detection)
     private float chestApproachLastDist = 0f; // Distance when we started approaching (stuck detection)
+    private bool openingChestCombatInterrupted; // Combat started while recovering an overworld chest
+    private bool openingChestRecoveryDigIssued; // One-shot dig retry after combat interruption
+    private bool openingChestReturningToFlag; // One-shot path back to the flag after combat displacement
     private HashSet<uint> attemptedCoffers = new HashSet<uint>(); // Track which coffers we've tried to interact with
     private DateTime cofferNavigationStart = DateTime.MinValue; // When we started navigating to current coffer
     private uint currentCofferId = 0; // Track which chest we're currently working on (preserved during combat)
@@ -987,6 +990,7 @@ public class StateManager : IDisposable
                 // Enable BMR AI and dig immediately
                 CommandHelper.SendCommand("/bmrai on");
                 CommandHelper.SendCommand("/gaction dig");
+                lastDigTime = DateTime.Now;
                 _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
                 
                 // Wait 2 seconds for chest to spawn before looking for it
@@ -1078,6 +1082,7 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("Enabled BMR AI after dismount");
             
             CommandHelper.SendCommand("/gaction dig");
+            lastDigTime = DateTime.Now;
             _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
             
             // Wait 2 seconds for chest to spawn before looking for it
@@ -1282,17 +1287,119 @@ public class StateManager : IDisposable
         
         // No portal yet - keep working on chest
         var chest = _plugin.ChestDetectionService.FindNearestCoffer();
+        var now = DateTime.Now;
+        bool inCombat = Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat];
+        var hasFlagRecoveryTarget = TryGetCurrentFlagRecoveryTarget(out var flagRecoveryTarget, out var distToFlag);
+        var nearFlagForRecovery = hasFlagRecoveryTarget && distToFlag <= 30f;
+        var shouldReturnToFlag = hasFlagRecoveryTarget && distToFlag > 30f;
 
         if (chest == null)
         {
+            if (openingChestCombatInterrupted)
+            {
+                if (inCombat)
+                {
+                    chestDisappearedTime = DateTime.MinValue;
+                    StateDetail = hasFlagRecoveryTarget
+                        ? $"In combat - waiting to recover chest ({distToFlag:F1}y from flag)..."
+                        : "In combat - waiting to recover chest...";
+                    return;
+                }
+
+                var sinceCombatEnd = lastCombatEndTime == DateTime.MinValue
+                    ? double.MaxValue
+                    : (now - lastCombatEndTime).TotalSeconds;
+
+                if (sinceCombatEnd < 2.0)
+                {
+                    chestDisappearedTime = DateTime.MinValue;
+                    StateDetail = $"Combat ended - waiting for chest recovery... ({sinceCombatEnd:F1}/2.0s)";
+                    return;
+                }
+
+                if (shouldReturnToFlag)
+                {
+                    if (!openingChestReturningToFlag)
+                    {
+                        _plugin.AddDebugLog($"[OpeningChest] Combat recovery: no chest visible and {distToFlag:F1}y from flag - moving back to flag");
+                        openingChestReturningToFlag = true;
+                    }
+
+                    _plugin.NavigationService.MoveToPosition(flagRecoveryTarget);
+                    autoMoveActive = true;
+                    chestDisappearedTime = DateTime.MinValue;
+                    StateDetail = $"Returning to flag after combat ({distToFlag:F1}y)...";
+                    return;
+                }
+
+                if (openingChestReturningToFlag)
+                {
+                    _plugin.AddDebugLog($"[OpeningChest] Combat recovery: back near flag ({distToFlag:F1}y) - rechecking chest and dig");
+                    if (autoMoveActive)
+                    {
+                        _plugin.NavigationService.StopNavigation();
+                        autoMoveActive = false;
+                    }
+                    openingChestReturningToFlag = false;
+                    chestDisappearedTime = DateTime.MinValue;
+                }
+
+                if (!openingChestRecoveryDigIssued && nearFlagForRecovery)
+                {
+                    var sinceDig = (now - lastDigTime).TotalSeconds;
+                    if (sinceDig < 3.0)
+                    {
+                        StateDetail = $"Combat ended - waiting to retry dig... ({sinceDig:F1}/3.0s)";
+                        return;
+                    }
+
+                    _plugin.AddDebugLog($"[OpeningChest] Combat recovery: no chest visible near flag ({distToFlag:F1}y) - retrying dig");
+                    CommandHelper.SendCommand("/gaction dig");
+                    lastDigTime = now;
+                    openingChestRecoveryDigIssued = true;
+                    chestDisappearedTime = now;
+                    StateDetail = $"Retrying dig after combat ({distToFlag:F1}y from flag)...";
+                    return;
+                }
+
+                if (chestDisappearedTime == DateTime.MinValue)
+                {
+                    chestDisappearedTime = now;
+                    _plugin.AddDebugLog(openingChestRecoveryDigIssued
+                        ? "[OpeningChest] Waiting for chest after combat recovery dig"
+                        : hasFlagRecoveryTarget
+                            ? $"[OpeningChest] Combat recovery: no chest visible after combat ({distToFlag:F1}y from flag) - waiting briefly before portal check"
+                            : "[OpeningChest] Combat recovery: no chest visible after combat - waiting briefly before portal check");
+                }
+
+                var recoveryGrace = (now - chestDisappearedTime).TotalSeconds;
+                if (recoveryGrace < 5.0)
+                {
+                    StateDetail = openingChestRecoveryDigIssued
+                        ? $"Waiting for chest after combat dig... ({recoveryGrace:F1}/5.0s)"
+                        : $"Waiting for chest after combat... ({recoveryGrace:F1}/5.0s)";
+                    return;
+                }
+
+                _plugin.AddDebugLog(openingChestRecoveryDigIssued
+                    ? "[OpeningChest] No chest found after combat recovery dig - checking for portal"
+                    : "[OpeningChest] No chest found after combat recovery window - checking for portal");
+                openingChestCombatInterrupted = false;
+                openingChestRecoveryDigIssued = false;
+                openingChestReturningToFlag = false;
+                chestDisappearedTime = DateTime.MinValue;
+                CheckForPortalAfterChest();
+                return;
+            }
+
             // Start grace period timer if not already started
             if (chestDisappearedTime == DateTime.MinValue)
             {
-                chestDisappearedTime = DateTime.Now;
+                chestDisappearedTime = now;
                 _plugin.AddDebugLog("[OpeningChest] Chest disappeared - starting 5s grace period");
             }
             
-            var gracePeriod = (DateTime.Now - chestDisappearedTime).TotalSeconds;
+            var gracePeriod = (now - chestDisappearedTime).TotalSeconds;
             
             // Wait 5 seconds before declaring run complete (prevents FATE interference)
             if (gracePeriod < 5.0)
@@ -1315,11 +1422,22 @@ public class StateManager : IDisposable
         var dist = _plugin.ChestDetectionService.NearestCofferDistance;
         var range = _plugin.Configuration.ChestInteractionRange;
         var chestName = chest.Name.TextValue;
-        var now = DateTime.Now;
 
-        // Check if in combat
-        bool inCombat = Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat];
-        
+        if (openingChestCombatInterrupted && !inCombat)
+        {
+            if (openingChestReturningToFlag && autoMoveActive)
+            {
+                _plugin.NavigationService.StopNavigation();
+                autoMoveActive = false;
+            }
+
+            _plugin.AddDebugLog($"[OpeningChest] Chest reacquired after combat at {dist:F1}y - resuming approach");
+            openingChestCombatInterrupted = false;
+            openingChestRecoveryDigIssued = false;
+            openingChestReturningToFlag = false;
+            chestApproachStart = DateTime.MinValue;
+        }
+
         if (inCombat)
         {
             // In combat - stop movement and clear target so we're not chained to chest
@@ -1439,6 +1557,15 @@ public class StateManager : IDisposable
     private void OnCombatStart()
     {
         lastCombatEndTime = DateTime.MinValue; // Reset combat end time
+
+        if (State == BotState.OpeningChest)
+        {
+            openingChestCombatInterrupted = true;
+            openingChestRecoveryDigIssued = false;
+            openingChestReturningToFlag = false;
+            chestDisappearedTime = DateTime.MinValue;
+            _plugin.AddDebugLog("[OpeningChest] Combat interrupted chest recovery - will retry after combat");
+        }
         
         // Clear all failed objects when combat starts
         if (failedObjects.Count > 0)
@@ -1457,6 +1584,9 @@ public class StateManager : IDisposable
         // ALWAYS reset to chest priority after combat
         currentObjective = DungeonObjective.ClearingChests;
         dungeonLoadWaitStart = DateTime.MinValue;
+
+        if (State == BotState.OpeningChest && openingChestCombatInterrupted)
+            _plugin.AddDebugLog("[OpeningChest] Combat ended - rechecking chest recovery");
         
         _plugin.AddDebugLog("[Combat] Combat ended - will clear processed objects in 5s");
     }
@@ -3365,12 +3495,22 @@ public class StateManager : IDisposable
         dismountAttemptStart = DateTime.MinValue;
         descentInProgress = false;
         lastLandingPartyWaitSignature = string.Empty;
+        openingChestCombatInterrupted = false;
+        openingChestRecoveryDigIssued = false;
+        openingChestReturningToFlag = false;
 
         // Stop navigation if it was active
         if (autoMoveActive)
         {
             _plugin.NavigationService.StopNavigation();
             autoMoveActive = false;
+        }
+
+        if (newState == BotState.OpeningChest && Plugin.Condition[ConditionFlag.InCombat])
+        {
+            openingChestCombatInterrupted = true;
+            chestDisappearedTime = DateTime.MinValue;
+            _plugin.AddDebugLog("[OpeningChest] Entered chest recovery while already in combat - will retry after combat");
         }
 
         // Unpause YesAlready when bot reaches terminal states
@@ -4282,6 +4422,23 @@ public class StateManager : IDisposable
     {
         CurrentLocation = location;
         _plugin.AddDebugLog($"Location set: {location.ZoneName} ({location.X:F1}, {location.Y:F1}, {location.Z:F1})");
+    }
+
+    private bool TryGetCurrentFlagRecoveryTarget(out Vector3 flagPosition, out float distToFlag)
+    {
+        flagPosition = Vector3.Zero;
+        distToFlag = float.MaxValue;
+
+        if (CurrentLocation == null || CurrentLocation.TerritoryId != Plugin.ClientState.TerritoryType)
+            return false;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            return false;
+
+        flagPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+        distToFlag = Vector3.Distance(player.Position, flagPosition);
+        return true;
     }
 
     private (Vector3 NavigationTarget, Vector3 LandingTarget, string Basis, string DestinationText, string ZoneName, bool UseNavStateForLanding)
