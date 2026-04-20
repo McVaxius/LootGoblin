@@ -28,10 +28,12 @@ public static class GameHelpers
 {
     // Static fields for delayed callback handling
     private static int _pendingMenuIndex = -1;
-    private static DateTime _callbackStartTime = DateTime.MinValue;
+    private static DateTime _callbackReadyAt = DateTime.MinValue;
+    private static DateTime _callbackTimeoutAt = DateTime.MinValue;
     private static bool _waitingForSecondCallback = false;
     private static uint _pendingItemId = 0;
-    private static DateTime _mapLookupStartTime = DateTime.MinValue;
+    private static DateTime _mapLookupNextAttemptAt = DateTime.MinValue;
+    private static DateTime _mapLookupTimeoutAt = DateTime.MinValue;
     private static bool _waitingForMapLookup = false;
     private static bool _waitingForConfirmDialog = false;
     private static DateTime _confirmDialogStartTime = DateTime.MinValue;
@@ -42,6 +44,11 @@ public static class GameHelpers
     private static object[]? _pendingSequenceSecondArgs;
     private static DateTime _pendingSequenceSecondReadyAt = DateTime.MinValue;
     private static bool _pendingSequenceWaitingForSecond = false;
+    private const double MapLookupInitialDelaySeconds = 0.5;
+    private const double MapLookupRetryIntervalSeconds = 0.25;
+    private const double MapLookupTimeoutSeconds = 4.0;
+    private const double MapSelectionDelaySeconds = 0.2;
+    private const double MapSelectionTimeoutSeconds = 2.0;
     private const double ConfirmDialogWatchTimeoutSeconds = 5.0;
     private const double ConfirmDialogLogIntervalSeconds = 1.0;
     /// <summary>
@@ -50,61 +57,49 @@ public static class GameHelpers
     /// </summary>
     public static void UpdateDelayedCallbacks()
     {
+        var now = DateTime.Now;
+
         // Handle map lookup delay
         if (_waitingForMapLookup && _pendingItemId > 0)
         {
-            var elapsed = (DateTime.Now - _mapLookupStartTime).TotalSeconds;
-            if (elapsed >= 0.5) // 500ms delay for map lookup
+            if (now >= _mapLookupTimeoutAt)
             {
-                Plugin.Log.Information($"[MAP_LOOKUP] Looking for real menu index for map {_pendingItemId}...");
+                Plugin.Log.Warning($"[MAP_LOOKUP] Timed out finding menu entry for map {_pendingItemId}");
+                ResetPendingMapLookup();
+            }
+            else if (now >= _mapLookupNextAttemptAt)
+            {
                 var realMenuIndex = FindMapIndexInMenu(_pendingItemId);
                 if (realMenuIndex >= 0)
                 {
-                    // Use 0-based index directly (no conversion needed)
-                    Plugin.Log.Information($"[MAP_LOOKUP] Found real menu index {realMenuIndex}, firing single callback");
-                    Plugin.Log.Information($"[CALLBACK] About to fire: SelectIconString True {realMenuIndex}");
-                    // Store the menu index for the delayed callback
                     _pendingMenuIndex = realMenuIndex;
-                    _callbackStartTime = DateTime.Now;
+                    _callbackReadyAt = now.AddSeconds(MapSelectionDelaySeconds);
+                    _callbackTimeoutAt = now.AddSeconds(MapSelectionTimeoutSeconds);
                     _waitingForSecondCallback = true;
-                    Plugin.Log.Information($"[CALLBACK] Set up delayed callback for index {realMenuIndex}");
+                    Plugin.Log.Information($"[MAP_LOOKUP] Resolved map {_pendingItemId} to menu index {realMenuIndex}");
+                    ResetPendingMapLookup();
                 }
                 else
                 {
-                    Plugin.Log.Error($"[MAP_LOOKUP] Could not find map in menu, retrying with longer delay...");
-                    // Retry with longer delay for SelectIconString to populate
-                    _mapLookupStartTime = DateTime.Now; // Reset start time for retry
-                    // Don't change state, will retry after additional time
+                    _mapLookupNextAttemptAt = now.AddSeconds(MapLookupRetryIntervalSeconds);
                 }
-                
-                // Reset map lookup state
-                _pendingItemId = 0;
-                _mapLookupStartTime = DateTime.MinValue;
-                _waitingForMapLookup = false;
             }
         }
         
         // Handle single callback delay (renamed from "second callback")
         if (_waitingForSecondCallback && _pendingMenuIndex >= 0)
         {
-            var elapsed = (DateTime.Now - _callbackStartTime).TotalSeconds;
-            Plugin.Log.Information($"[CALLBACK] Checking callback: elapsed={elapsed:F3}s, target=0.5s, index={_pendingMenuIndex}");
-            if (elapsed >= 0.5) // 500ms delay
+            if (now >= _callbackTimeoutAt)
             {
-                Plugin.Log.Information($"[CALLBACK] About to fire: SelectIconString True {_pendingMenuIndex}");
-                Plugin.Log.Information($"[CALLBACK] Checking if SelectIconString addon is visible before firing...");
-                var isVisible = IsAddonVisible("SelectIconString");
-                Plugin.Log.Information($"[CALLBACK] SelectIconString visible: {isVisible}");
-                
-                Plugin.Log.Information($"[DELAYED] Firing SelectIconString callback with index {_pendingMenuIndex}");
+                Plugin.Log.Warning($"[CALLBACK] Timed out waiting to fire SelectIconString selection for index {_pendingMenuIndex}");
+                ResetPendingMapSelection();
+            }
+            else if (now >= _callbackReadyAt && IsAddonVisible("SelectIconString"))
+            {
                 FireAddonCallback("SelectIconString", true, _pendingMenuIndex);
-                Plugin.Log.Information($"[CALLBACK] Fired: SelectIconString True {_pendingMenuIndex}");
-                
-                // Reset state
-                _pendingMenuIndex = -1;
-                _callbackStartTime = DateTime.MinValue;
-                _waitingForSecondCallback = false;
-                Plugin.Log.Information($"[CALLBACK] Reset state after callback");
+                Plugin.Log.Information($"[CALLBACK] Fired SelectIconString selection for index {_pendingMenuIndex}");
+                TriggerConfirmDialog();
+                ResetPendingMapSelection();
             }
         }
 
@@ -199,36 +194,9 @@ public static class GameHelpers
 
             // Use /gaction decipher to open the map selection menu
             CommandHelper.SendCommand("/gaction decipher");
-            Plugin.Log.Information($"UseItem({itemId}): Opened decipher menu for {count} maps");
-            
-            // Check if there's only one map type in inventory
             var allMaps = inventoryService.ScanForMaps();
-            if (allMaps.Count == 1)
-            {
-                // Single map type - use AddonMaster.SelectIconString to click the first entry (index 0)
-                Plugin.Log.Information($"UseItem({itemId}): Only 1 map type detected, using AddonMaster.SelectIconString");
-                System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => {
-                    try
-                    {
-                        Plugin.Log.Information($"UseItem({itemId}): Looking for SelectIconString addon...");
-                        TriggerSelectIconStringClick();
-                    }
-                    catch (Exception ex)
-                    {
-                        Plugin.Log.Error($"[GameHelpers] ContinueWith exception in TriggerSelectIconStringClick: {ex.Message}");
-                    }
-                }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
-            }
-            else
-            {
-                // Multiple map types - use the corrected approach: Find real menu index first, then callback
-                Plugin.Log.Information($"UseItem({itemId}): {allMaps.Count} map types detected, using corrected menu index approach");
-                
-                // Start delayed map lookup using state-based timing
-                _pendingItemId = itemId;
-                _mapLookupStartTime = DateTime.Now;
-                _waitingForMapLookup = true;
-            }
+            Plugin.Log.Information($"UseItem({itemId}): Opened decipher menu for {count} map(s) across {allMaps.Count} map type(s)");
+            QueueMapMenuLookup(itemId);
             
             return true;
         }
@@ -326,49 +294,6 @@ public static class GameHelpers
     {
         // Check against known treasure map data
         return LootGoblin.Models.TreasureMapData.KnownMaps.ContainsKey(itemId);
-    }
-
-    /// <summary>
-    /// Use controller mode to activate single map: numpad2 then numpad0 twice.
-    /// Used when there's only 1 map type in inventory for reliable activation.
-    /// </summary>
-    private static async void TriggerSelectIconStringClick()
-    {
-        Plugin.Log.Information($"[SELECTICON] Starting controller mode for single map");
-        
-        try
-        {
-            // Wait a bit for the addon to be ready
-            Plugin.Log.Information($"[SELECTICON] Waiting 100ms for SelectIconString addon...");
-            await System.Threading.Tasks.Task.Delay(100);
-            Plugin.Log.Information($"[SELECTICON] Wait complete, using controller mode");
-
-            // Controller mode sequence: numpad2, then numpad0 twice
-            Plugin.Log.Information($"[SELECTICON] Pressing numpad2 (switch to controller mode)...");
-            KeyPress(VirtualKey.NUMPAD2);
-            
-            await System.Threading.Tasks.Task.Delay(200);
-            
-            Plugin.Log.Information($"[SELECTICON] Pressing numpad0 (first time)...");
-            KeyPress(VirtualKey.NUMPAD0);
-            
-            await System.Threading.Tasks.Task.Delay(200);
-            
-            Plugin.Log.Information($"[SELECTICON] Pressing numpad0 (second time)...");
-            KeyPress(VirtualKey.NUMPAD0);
-            
-            Plugin.Log.Information("[SELECTICON] Controller mode sequence completed");
-            
-            // Wait for the confirmation dialog, then click OK
-            Plugin.Log.Information("[SELECTICON] Waiting 1000ms for confirmation dialog...");
-            await System.Threading.Tasks.Task.Delay(1000);
-            Plugin.Log.Information("[SELECTICON] Triggering confirmation dialog callback");
-            TriggerConfirmDialog();
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Error($"[SELECTICON] Controller mode failed: {ex.Message}");
-        }
     }
 
     /// <summary>
@@ -474,6 +399,33 @@ public static class GameHelpers
     {
         Plugin.Log.Information("[CALLBACK] Starting confirmation dialog callback");
         QueueConfirmDialogWatch("decipher confirmation");
+    }
+
+    private static void QueueMapMenuLookup(uint itemId)
+    {
+        ResetPendingMapLookup();
+        ResetPendingMapSelection();
+        _pendingItemId = itemId;
+        _mapLookupNextAttemptAt = DateTime.Now.AddSeconds(MapLookupInitialDelaySeconds);
+        _mapLookupTimeoutAt = DateTime.Now.AddSeconds(MapLookupTimeoutSeconds);
+        _waitingForMapLookup = true;
+        Plugin.Log.Information($"[MAP_LOOKUP] Queued SelectIconString lookup for map {itemId}");
+    }
+
+    private static void ResetPendingMapLookup()
+    {
+        _pendingItemId = 0;
+        _mapLookupNextAttemptAt = DateTime.MinValue;
+        _mapLookupTimeoutAt = DateTime.MinValue;
+        _waitingForMapLookup = false;
+    }
+
+    private static void ResetPendingMapSelection()
+    {
+        _pendingMenuIndex = -1;
+        _callbackReadyAt = DateTime.MinValue;
+        _callbackTimeoutAt = DateTime.MinValue;
+        _waitingForSecondCallback = false;
     }
 
     private static void QueueConfirmDialogWatch(string reason)
