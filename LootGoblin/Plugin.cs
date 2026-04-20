@@ -51,6 +51,7 @@ public sealed class Plugin : IDalamudPlugin
     public SpecialNavigationDatabase SpecialNavigationDatabase { get; init; }
     public AetherytePositionDatabase AetherytePositionDatabase { get; init; }
     public AutoDutyDetectionService AutoDutyDetectionService { get; init; }
+    public AdsStatusService AdsStatusService { get; init; }
 
     // IPC
     public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
@@ -148,6 +149,8 @@ public sealed class Plugin : IDalamudPlugin
             AddDebugLog($"[Plugin] AetherytePositionDatabase has {AetherytePositionDatabase.Count} positions loaded");
         }
 
+        AdsStatusService = new AdsStatusService(this, PluginInterface, Log);
+
         // Auto-update community data on login
         ClientState.Login += OnLogin;
 
@@ -223,6 +226,7 @@ public sealed class Plugin : IDalamudPlugin
         GlobeTrotterIPC.Dispose();
         MapDetectionService.Dispose();
         InventoryService.Dispose();
+        AdsStatusService.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
         CommandManager.RemoveHandler(CommandAlias);

@@ -44,6 +44,7 @@ public class AutoDutyWarningWindow : Window
         ImGui.Text("AutoDuty is enabled and may cause issues:");
         ImGui.Text("• Force respawn at entrance");
         ImGui.Text("• Leave instances at random times");
+        ImGui.Text("• Disband from the party to do a repair operation");
         ImGui.Text("• Interfere with LootGoblin automation");
         ImGui.Spacing();
         

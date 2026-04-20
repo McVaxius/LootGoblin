@@ -121,6 +121,11 @@ public class StateManager : IDisposable
     private bool adsDutyHandoffActive; // True while ADS owns the dungeon phase for the current map
     private DateTime adsDutyHandoffStarted = DateTime.MinValue;
     private DateTime adsDutyEntryConfirmedAt = DateTime.MinValue;
+    private bool adsOwnershipObserved;
+    private DateTime adsInsideSentAt = DateTime.MinValue;
+    private bool adsInsideRetrySent;
+    private bool adsLeaveIssued;
+    private bool adsUnreadableStatusLogged;
     private bool mountedRotationSuppressed;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
@@ -266,6 +271,9 @@ public class StateManager : IDisposable
             TransitionTo(BotState.Error, "Lost connection - not logged in.");
             return;
         }
+
+        if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
+            _plugin.AdsStatusService.Refresh();
 
         CheckStateTimeout();
         Tick();
@@ -452,9 +460,7 @@ public class StateManager : IDisposable
         RetryCount = 0;
         portalRetryStart = DateTime.MinValue;
         dungeonEntryProcessed = false;
-        adsDutyHandoffActive = false;
-        adsDutyHandoffStarted = DateTime.MinValue;
-        adsDutyEntryConfirmedAt = DateTime.MinValue;
+        ResetAdsHandoffTracking(resetStatus: true);
         currentLandingMode = OverworldLandingMode.MountToggle;
         RestoreMountedRotationLifecycle("bot stop");
         ClearWarning();
@@ -469,9 +475,7 @@ public class StateManager : IDisposable
         CurrentLocation = null;
         SelectedMapItemId = 0;
         portalRetryStart = DateTime.MinValue;
-        adsDutyHandoffActive = false;
-        adsDutyHandoffStarted = DateTime.MinValue;
-        adsDutyEntryConfirmedAt = DateTime.MinValue;
+        ResetAdsHandoffTracking(resetStatus: true);
         currentLandingMode = OverworldLandingMode.MountToggle;
         RestoreMountedRotationLifecycle("full reset");
         KrangleService.ClearCache();
@@ -2744,22 +2748,12 @@ public class StateManager : IDisposable
 
     private void TickCompleted()
     {
+        if (TryHandleAdsCompletedHandoff())
+            return;
+
         if (adsDutyHandoffActive)
         {
-            bool adsStillInDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
-                                  Plugin.Condition[ConditionFlag.BoundByDuty56];
-            if (adsStillInDuty)
-            {
-                var elapsed = adsDutyHandoffStarted == DateTime.MinValue
-                    ? 0.0
-                    : (DateTime.Now - adsDutyHandoffStarted).TotalSeconds;
-                StateDetail = $"ADS handoff active - waiting for duty exit... ({elapsed:F0}s)";
-                return;
-            }
-
-            adsDutyHandoffActive = false;
-            adsDutyHandoffStarted = DateTime.MinValue;
-            _plugin.AddDebugLog("[ADS] Duty exit detected after ADS handoff - resuming normal completion flow.");
+            return;
         }
 
         // If portalRetryStart is set, we're searching for a portal before finishing
@@ -2830,12 +2824,10 @@ public class StateManager : IDisposable
 
                         portalRetryStart = DateTime.MinValue;
                         QueueDungeonMapFlagClear("[Portal][ADS]");
+                        ResetAdsHandoffTracking(resetStatus: true);
                         adsDutyHandoffActive = true;
                         adsDutyHandoffStarted = DateTime.Now;
-                        adsDutyEntryConfirmedAt = DateTime.MinValue;
-                        CommandHelper.SendCommand("/bmrai on");
-                        CommandHelper.SendCommand("/vbmai on");
-                        CommandHelper.SendCommand("/ads inside");
+                        SendAdsInsideCommand("[Portal][ADS] Sent initial /ads inside after duty entry settled.", includeAssistCommands: true);
                         TransitionTo(BotState.Completed, "ADS handoff active - waiting for dungeon to finish...");
                         return;
                     }
@@ -3151,6 +3143,113 @@ public class StateManager : IDisposable
     }
 
     // ─── Dungeon Helpers ─────────────────────────────────────────────────────
+
+    private bool TryHandleAdsCompletedHandoff()
+    {
+        if (!adsDutyHandoffActive)
+            return false;
+
+        var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                     Plugin.Condition[ConditionFlag.BoundByDuty56];
+        var elapsed = adsDutyHandoffStarted == DateTime.MinValue
+            ? 0.0
+            : (DateTime.Now - adsDutyHandoffStarted).TotalSeconds;
+
+        if (!inDuty)
+        {
+            ResetAdsHandoffTracking();
+            _plugin.AddDebugLog("[ADS] Duty exit detected after ADS handoff - resuming normal completion flow.");
+            return false;
+        }
+
+        var adsStatus = _plugin.AdsStatusService.Refresh();
+        if (adsStatus.IsOwned)
+        {
+            if (!adsOwnershipObserved)
+            {
+                adsOwnershipObserved = true;
+                adsUnreadableStatusLogged = false;
+                _plugin.AddDebugLog($"[ADS] Ownership confirmed via status: {adsStatus.OwnershipMode}/{adsStatus.ExecutionPhase}.");
+            }
+
+            StateDetail = $"ADS owns the duty - waiting for completion... ({elapsed:F0}s, {adsStatus.ExecutionPhase})";
+            return true;
+        }
+
+        if (!adsOwnershipObserved)
+        {
+            if (!adsStatus.StatusReadable && !adsUnreadableStatusLogged)
+            {
+                adsUnreadableStatusLogged = true;
+                _plugin.AddDebugLog("[ADS] Handoff pending, but ADS status is unreadable - waiting for ownership before retrying /ads inside.");
+            }
+
+            if (!adsInsideRetrySent
+                && adsInsideSentAt != DateTime.MinValue
+                && (DateTime.Now - adsInsideSentAt).TotalSeconds >= 5.0)
+            {
+                adsInsideRetrySent = true;
+                SendAdsInsideCommand("[ADS] Ownership was not confirmed after the initial handoff - sending one bounded /ads inside retry.", includeAssistCommands: false);
+            }
+
+            StateDetail = adsStatus.StatusReadable
+                ? $"ADS handoff pending - waiting for ownership... ({elapsed:F0}s, {adsStatus.OwnershipMode}/{adsStatus.ExecutionPhase})"
+                : $"ADS handoff pending - waiting for ownership... ({elapsed:F0}s, status unavailable)";
+            return true;
+        }
+
+        if (!adsStatus.StatusReadable)
+        {
+            if (!adsUnreadableStatusLogged)
+            {
+                adsUnreadableStatusLogged = true;
+                _plugin.AddDebugLog("[ADS] Ownership was seen earlier, but ADS status is currently unreadable - waiting for readable status before issuing /ads leave.");
+            }
+
+            StateDetail = $"ADS ownership was seen - waiting for readable status... ({elapsed:F0}s)";
+            return true;
+        }
+
+        if (!adsLeaveIssued)
+        {
+            adsLeaveIssued = true;
+            CommandHelper.SendCommand("/ads leave");
+            _plugin.AddDebugLog($"[ADS] ADS no longer owns the duty ({adsStatus.OwnershipMode}/{adsStatus.ExecutionPhase}) - sending /ads leave.");
+            StateDetail = "ADS released ownership - leaving duty...";
+            return true;
+        }
+
+        StateDetail = $"ADS leave requested - waiting for duty exit... ({elapsed:F0}s, {adsStatus.ExecutionPhase})";
+        return true;
+    }
+
+    private void ResetAdsHandoffTracking(bool resetStatus = false)
+    {
+        adsDutyHandoffActive = false;
+        adsDutyHandoffStarted = DateTime.MinValue;
+        adsDutyEntryConfirmedAt = DateTime.MinValue;
+        adsOwnershipObserved = false;
+        adsInsideSentAt = DateTime.MinValue;
+        adsInsideRetrySent = false;
+        adsLeaveIssued = false;
+        adsUnreadableStatusLogged = false;
+        if (resetStatus)
+            _plugin.AdsStatusService.Reset();
+    }
+
+    private void SendAdsInsideCommand(string logMessage, bool includeAssistCommands)
+    {
+        if (includeAssistCommands)
+        {
+            CommandHelper.SendCommand("/bmrai on");
+            CommandHelper.SendCommand("/vbmai on");
+        }
+
+        adsInsideSentAt = DateTime.Now;
+        adsUnreadableStatusLogged = false;
+        CommandHelper.SendCommand("/ads inside");
+        _plugin.AddDebugLog(logMessage);
+    }
 
     private bool IsDungeonState() =>
         State == BotState.InDungeon || State == BotState.DungeonCombat ||
