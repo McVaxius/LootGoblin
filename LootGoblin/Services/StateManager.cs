@@ -2814,11 +2814,12 @@ public class StateManager : IDisposable
                 bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                                Plugin.Condition[ConditionFlag.BetweenAreas51];
                 
-                // Only transition to InDungeon if:
+                // Only transition to the inside-duty branch if:
                 // 1. We're bound by duty AND
-                // 2. Portal no longer exists in ObjectTable (we've actually entered) OR we're loading
+                // 2. Portal no longer exists in ObjectTable, we're still loading,
+                //    or we've already started the inside-duty ADS settle seam.
                 var portalCheck = FindNearestPortal();
-                if (inDuty && (portalCheck == null || loading))
+                if (inDuty && (portalCheck == null || loading || adsDutyEntryConfirmedAt != DateTime.MinValue))
                 {
                     if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
                     {
