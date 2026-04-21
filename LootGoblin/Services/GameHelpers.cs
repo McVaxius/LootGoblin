@@ -591,6 +591,47 @@ public static class GameHelpers
         return true;
     }
 
+    public static bool CanAutoDiscardNow(out string reason)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+        {
+            reason = "player unavailable";
+            return false;
+        }
+
+        if (!Plugin.Condition[ConditionFlag.Mounted])
+        {
+            reason = "not mounted";
+            return false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            reason = "in combat";
+            return false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51])
+        {
+            reason = "between areas";
+            return false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.OccupiedInQuestEvent] ||
+            Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent] ||
+            Plugin.Condition[ConditionFlag.Occupied33] ||
+            Plugin.Condition[ConditionFlag.Occupied39] ||
+            Plugin.Condition[ConditionFlag.WatchingCutscene])
+        {
+            reason = "busy or in cutscene";
+            return false;
+        }
+
+        reason = "ready";
+        return true;
+    }
+
     // ─── Companion / Gysahl Greens ─────────────────────────────────────────────
 
     public const uint GysahlGreensItemId = 4868;

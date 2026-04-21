@@ -13,5 +13,12 @@
     "bot",
     "loot"
   ],
-  "AssemblyVersion": "0.0.4.13"
+  "Dependencies": [
+    {
+      "InternalName": "Teleporter",
+      "Required": true,
+      "Reason": "LootGoblin uses Teleporter for /tp aetheryte travel."
+    }
+  ],
+  "AssemblyVersion": "0.0.4.14"
 }

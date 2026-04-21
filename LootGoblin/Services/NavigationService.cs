@@ -67,6 +67,13 @@ public class NavigationService : IDisposable
             return;
         }
 
+        if (!_plugin.IsTeleporterAvailable)
+        {
+            SetState(NavigationState.Error, "Teleporter not available.");
+            _plugin.ShowTeleporterMissingToast();
+            return;
+        }
+
         var aetheryteSheet = _dataManager.GetExcelSheet<Aetheryte>();
         var aetheryte = aetheryteSheet?.GetRow(aetheryteId);
         var name = aetheryte?.PlaceName.ValueNullable?.Name.ToString() ?? $"Aetheryte {aetheryteId}";

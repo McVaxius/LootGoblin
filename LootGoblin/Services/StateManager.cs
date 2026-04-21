@@ -134,6 +134,8 @@ public class StateManager : IDisposable
     private bool doorTransitionReadyWaitLogged; // One-shot log while waiting for transition readiness
     private readonly MountService _mountService;
     private DateTime lastDiscardTime = DateTime.MinValue; // Auto-discard timer
+    private DateTime lastDiscardDeferredLogTime = DateTime.MinValue;
+    private string lastDiscardDeferredReason = string.Empty;
     private DateTime lastCompanionCheckTime = DateTime.MinValue; // Companion summoning timer
     private DateTime companionStanceDeferred = DateTime.MinValue; // Deferred stance set after summon
     private bool adsDutyHandoffActive; // True while ADS owns the dungeon phase for the current map
@@ -215,12 +217,18 @@ public class StateManager : IDisposable
             var now = DateTime.Now;
             if ((now - lastDiscardTime).TotalSeconds >= 30.0)
             {
-                var inCombat = Plugin.Condition[ConditionFlag.InCombat];
-                var betweenAreas = Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51];
-                if (!inCombat && !betweenAreas)
+                if (GameHelpers.CanAutoDiscardNow(out var discardReason))
                 {
                     CommandHelper.SendCommand("/ays discard");
                     lastDiscardTime = now;
+                    lastDiscardDeferredReason = string.Empty;
+                }
+                else if (discardReason != lastDiscardDeferredReason ||
+                         (now - lastDiscardDeferredLogTime).TotalSeconds >= 5.0)
+                {
+                    lastDiscardDeferredReason = discardReason;
+                    lastDiscardDeferredLogTime = now;
+                    _plugin.AddDebugLog($"[AutoDiscard] Deferred: {discardReason}.");
                 }
             }
         }

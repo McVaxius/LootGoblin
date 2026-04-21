@@ -190,7 +190,7 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Runs /ays discard every 30s while not in combat.\nRequires AutoRetainer plugin.");
+            ImGui.SetTooltip("Runs /ays discard every 30s during a mounted safe idle window.\nDefers while in combat, loading, or cutscene-like states.\nRequires AutoRetainer plugin.");
 
         var summonChocobo = configuration.SummonChocobo;
         if (ImGui.Checkbox("Summon Chocobo", ref summonChocobo))

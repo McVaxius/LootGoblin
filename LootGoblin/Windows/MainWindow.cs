@@ -901,9 +901,15 @@ private void DrawDependencySection()
             ImGui.Spacing();
 
             DrawPluginStatus("  vnavmesh", plugin.VNavIPC.IsAvailable, true);
+            DrawPluginStatus("  Teleporter", plugin.IsTeleporterAvailable, true);
             DrawPluginStatus("  GlobeTrotter", plugin.GlobeTrotterIPC.IsAvailable, false);
             DrawPluginStatus("  TextAdvance", plugin.IsTextAdvanceAvailable, false);
             DrawPluginStatus("  ADS", plugin.IsAdsAvailable, plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver);
+
+            if (!plugin.IsTeleporterAvailable)
+            {
+                ImGui.TextColored(ColorRed, "  Teleporter missing. LootGoblin cannot issue /tp travel without it.");
+            }
 
             if (plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
             {

@@ -63,50 +63,19 @@ public sealed class Plugin : IDalamudPlugin
     public RotationPluginIPC RotationPluginIPC { get; init; }
 
     // TextAdvance dependency check
-    public bool IsTextAdvanceAvailable
-    {
-        get
-        {
-            try
-            {
-                foreach (var p in PluginInterface.InstalledPlugins)
-                {
-                    if (string.Equals(p.InternalName, "TextAdvance", StringComparison.OrdinalIgnoreCase) && p.IsLoaded)
-                        return true;
-                }
-            }
-            catch { }
-            return false;
-        }
-    }
+    public bool IsTextAdvanceAvailable => IsPluginLoaded("TextAdvance");
+    public bool IsTeleporterAvailable => IsPluginLoaded("Teleporter");
 
     public List<string> DebugLog { get; } = new();
     private const int MaxDebugLogLines = 200;
     private DateTime lastAdsMissingToastAt = DateTime.MinValue;
+    private DateTime lastTeleporterMissingToastAt = DateTime.MinValue;
 
     public bool IsAdsAvailable
     {
         get
         {
-            try
-            {
-                foreach (var p in PluginInterface.InstalledPlugins)
-                {
-                    if (!p.IsLoaded)
-                        continue;
-
-                    if (string.Equals(p.InternalName, "ADS", StringComparison.OrdinalIgnoreCase) ||
-                        p.Name.Contains("ADS", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                }
-            }
-            catch
-            {
-            }
-
-            return false;
+            return IsPluginLoaded("ADS", "ADS");
         }
     }
 
@@ -329,6 +298,32 @@ public sealed class Plugin : IDalamudPlugin
         ChatGui.Print($"[LootGoblin] {message}");
     }
 
+    private bool IsPluginLoaded(string internalName, string? nameFragment = null)
+    {
+        try
+        {
+            foreach (var p in PluginInterface.InstalledPlugins)
+            {
+                if (!p.IsLoaded)
+                    continue;
+
+                if (string.Equals(p.InternalName, internalName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                if (!string.IsNullOrWhiteSpace(nameFragment) &&
+                    p.Name.Contains(nameFragment, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
+    }
+
     public void ShowAdsMissingToast()
     {
         if ((DateTime.Now - lastAdsMissingToastAt).TotalSeconds < 10.0)
@@ -340,6 +335,19 @@ public sealed class Plugin : IDalamudPlugin
         ToastGui.ShowError(message);
         PrintChat(message);
         AddDebugLog($"[ADS] {message}");
+    }
+
+    public void ShowTeleporterMissingToast()
+    {
+        if ((DateTime.Now - lastTeleporterMissingToastAt).TotalSeconds < 10.0)
+            return;
+
+        lastTeleporterMissingToastAt = DateTime.Now;
+
+        const string message = "Teleporter is not installed or loaded. LootGoblin uses Teleporter for /tp travel, so install Teleporter before running map travel.";
+        ToastGui.ShowError(message);
+        PrintChat(message);
+        AddDebugLog($"[Teleporter] {message}");
     }
 
     public void AddDebugLog(string message)
