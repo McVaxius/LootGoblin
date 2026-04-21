@@ -80,6 +80,7 @@ public class StateManager : IDisposable
     private const double TickIntervalSeconds = 0.5;
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
 
     // Dungeon state tracking (Phase 8)
     private int dungeonFloor;
@@ -88,6 +89,7 @@ public class StateManager : IDisposable
     private DateTime doorStuckStart = DateTime.MinValue; // When we started trying current door
     private Vector3? lastDoorOpenedPosition = null; // Position of door that just opened (walk through it)
     private DateTime doorWalkThroughStart = DateTime.MinValue; // When we started walking through opened door
+    private DateTime doorWalkThroughReadySince = DateTime.MinValue; // When character first looked ready after a door cutscene
     private DateTime lastDungeonLogTime = DateTime.MinValue; // Throttle object logging
     private uint lastTerritoryId; // Track territory changes for floor transitions
     private DateTime forwardMovementStart = DateTime.MinValue; // When we started moving forward after territory change
@@ -126,7 +128,10 @@ public class StateManager : IDisposable
     private bool previouslyInCombat = false; // Proper combat edge detection
     private bool dungeonStartNavigating; // True while navigating to dungeon start position
     private bool doorTransitionNavigating; // True while navigating through a door transition point
+    private DateTime doorTransitionReadySince = DateTime.MinValue; // Ready settle timer after territory/door cutscenes
     private bool dungeonStartChecked; // True once we've evaluated dungeon start on first entry
+    private bool doorWalkThroughBlockedLogged; // One-shot log while a fake-out cutscene still owns the player
+    private bool doorTransitionReadyWaitLogged; // One-shot log while waiting for transition readiness
     private readonly MountService _mountService;
     private DateTime lastDiscardTime = DateTime.MinValue; // Auto-discard timer
     private DateTime lastCompanionCheckTime = DateTime.MinValue; // Companion summoning timer
@@ -1679,6 +1684,7 @@ public class StateManager : IDisposable
             doorStuckStart = DateTime.MinValue;
             lastDoorOpenedPosition = null;
             doorWalkThroughStart = DateTime.MinValue;
+            ResetDoorTransitionReadiness();
             forwardMovementStart = DateTime.MinValue; // Reset forward movement timer
         }
         lastTerritoryId = currentTerritory;
@@ -1691,6 +1697,7 @@ public class StateManager : IDisposable
             dungeonStartChecked = false;
             dungeonStartNavigating = false;
             doorTransitionNavigating = false;
+            ResetDoorTransitionReadiness();
             attemptedCoffers.Clear();
             failedSpheres.Clear(); // Clear failed spheres on new dungeon entry
             sphereInteractionTimes.Clear(); // Reset sphere interaction tracking
@@ -1716,6 +1723,7 @@ public class StateManager : IDisposable
             cofferNavigationStart = DateTime.MinValue;
             dungeonStartNavigating = false;
             doorTransitionNavigating = false;
+            ResetDoorTransitionReadiness();
             if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
             TransitionTo(BotState.DungeonCombat, $"Combat detected on floor {dungeonFloor}...");
             return;
@@ -1737,6 +1745,7 @@ public class StateManager : IDisposable
                     _plugin.AddDebugLog($"[Dungeon] Arcane Sphere detected on entry - transitioning to DungeonLooting (sweep chests first)");
                     dungeonStartNavigating = false;
                     doorTransitionNavigating = false;
+                    ResetDoorTransitionReadiness();
                     dungeonStartChecked = true;
                     TransitionTo(BotState.DungeonLooting, $"Looting floor {dungeonFloor} (sweep then progression)...");
                     return;
@@ -1759,6 +1768,7 @@ public class StateManager : IDisposable
                     _plugin.AddDebugLog($"[Dungeon] Known dungeon start for territory {currentTerritory}: '{startPoint.Label}' - navigating via vnavmesh");
                     dungeonStartNavigating = true;
                     doorTransitionNavigating = false;
+                    ResetDoorTransitionReadiness();
                 }
             }
             else if (territoryChanged && DungeonLocationData.HasDungeonData(currentTerritory))
@@ -1773,6 +1783,7 @@ public class StateManager : IDisposable
                         _plugin.AddDebugLog($"[Dungeon] Near door transition '{doorPoint.Label}' - will navigate after ready");
                         doorTransitionNavigating = true;
                         dungeonStartNavigating = false;
+                        ResetDoorTransitionReadiness();
                     }
                     else
                     {
@@ -1835,7 +1846,33 @@ public class StateManager : IDisposable
         {
             if (!IsCharacterReady())
             {
-                StateDetail = $"Waiting for character ready (door transition)...";
+                doorTransitionReadySince = DateTime.MinValue;
+                if (!doorTransitionReadyWaitLogged)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Door transition navigation waiting for character ready. Blockers: {DescribeCharacterReadyBlockers()}");
+                    doorTransitionReadyWaitLogged = true;
+                }
+
+                StateDetail = $"Waiting for door transition cutscene/loading to clear...";
+                return;
+            }
+
+            if (doorTransitionReadySince == DateTime.MinValue)
+            {
+                doorTransitionReadySince = DateTime.Now;
+                if (doorTransitionReadyWaitLogged)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Door transition ready detected - waiting {DoorTransitionReadyStabilization.TotalSeconds:F1}s for settle.");
+                    doorTransitionReadyWaitLogged = false;
+                }
+
+                StateDetail = $"Door transition ready - settling briefly...";
+                return;
+            }
+
+            if ((DateTime.Now - doorTransitionReadySince) < DoorTransitionReadyStabilization)
+            {
+                StateDetail = $"Door transition ready - settling briefly...";
                 return;
             }
 
@@ -1862,6 +1899,7 @@ public class StateManager : IDisposable
                         _plugin.AddDebugLog($"[Dungeon] Reached door transition '{doorPoint.Label}'");
                         if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
                         doorTransitionNavigating = false;
+                        ResetDoorTransitionReadiness();
                     }
                 }
                 else
@@ -1869,6 +1907,7 @@ public class StateManager : IDisposable
                     _plugin.AddDebugLog($"[Dungeon] Door transition point no longer in range - done");
                     if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
                     doorTransitionNavigating = false;
+                    ResetDoorTransitionReadiness();
                 }
             }
         }
@@ -2379,6 +2418,7 @@ public class StateManager : IDisposable
             doorStuckStart = DateTime.MinValue;
             lastDoorOpenedPosition = null;
             doorWalkThroughStart = DateTime.MinValue;
+            ResetDoorTransitionReadiness();
             currentObjective = DungeonObjective.ClearingChests;
             dungeonLoadWaitStart = DateTime.MinValue;
             if (autoMoveActive) { GameHelpers.StopAutoMove(); autoMoveActive = false; }
@@ -2599,6 +2639,7 @@ public class StateManager : IDisposable
             doorStuckStart = DateTime.MinValue;
             lastDoorOpenedPosition = null;
             doorWalkThroughStart = DateTime.MinValue;
+            ResetDoorTransitionReadiness();
             if (autoMoveActive)
             {
                 CommandHelper.SendCommand("/automove off");
@@ -2651,8 +2692,43 @@ public class StateManager : IDisposable
             var player = Plugin.ObjectTable.LocalPlayer;
             if (player == null) return;
 
+            if (!IsCharacterReady())
+            {
+                doorWalkThroughReadySince = DateTime.MinValue;
+                if (!doorWalkThroughBlockedLogged)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Door walk-through is armed but character is still not ready. Blockers: {DescribeCharacterReadyBlockers()}");
+                    doorWalkThroughBlockedLogged = true;
+                }
+
+                StateDetail = $"Waiting for door cutscene/loading to clear...";
+                return;
+            }
+
+            if (doorWalkThroughReadySince == DateTime.MinValue)
+            {
+                doorWalkThroughReadySince = DateTime.Now;
+                if (doorWalkThroughBlockedLogged)
+                {
+                    _plugin.AddDebugLog($"[Dungeon] Door walk-through ready detected - waiting {DoorTransitionReadyStabilization.TotalSeconds:F1}s before moving.");
+                    doorWalkThroughBlockedLogged = false;
+                }
+
+                StateDetail = $"Door opened - settling before walk-through...";
+                return;
+            }
+
+            if ((DateTime.Now - doorWalkThroughReadySince) < DoorTransitionReadyStabilization)
+            {
+                StateDetail = $"Door opened - settling before walk-through...";
+                return;
+            }
+
             if (doorWalkThroughStart == DateTime.MinValue)
+            {
                 doorWalkThroughStart = DateTime.Now;
+                _plugin.AddDebugLog("[Dungeon] Starting door walk-through after cutscene/loading settled.");
+            }
 
             var walkElapsed = (DateTime.Now - doorWalkThroughStart).TotalSeconds;
 
@@ -2663,6 +2739,7 @@ public class StateManager : IDisposable
                 if (autoMoveActive) { _plugin.NavigationService.StopNavigation(); autoMoveActive = false; }
                 lastDoorOpenedPosition = null;
                 doorWalkThroughStart = DateTime.MinValue;
+                ResetDoorTransitionReadiness();
                 TransitionTo(BotState.InDungeon, $"Rescanning floor {dungeonFloor}...");
                 return;
             }
@@ -2709,17 +2786,18 @@ public class StateManager : IDisposable
                     var doorTransition = DungeonLocationData.FindNearestDoorTransition(currentTerritory, player.Position, 50f);
                     if (doorTransition != null)
                     {
-                        _plugin.AddDebugLog($"[Dungeon] Door opened! Walking to transition '{doorTransition.Label}' at {Vector3.Distance(player.Position, doorTransition.Position):F1}y");
+                        _plugin.AddDebugLog($"[Dungeon] Door opened! Armed walk-through to transition '{doorTransition.Label}' at {Vector3.Distance(player.Position, doorTransition.Position):F1}y. Ready={IsCharacterReady()} Blockers={(IsCharacterReady() ? "None" : DescribeCharacterReadyBlockers())}");
                         lastDoorOpenedPosition = doorTransition.Position;
                     }
                     else
                     {
-                        _plugin.AddDebugLog($"[Dungeon] Door opened but no known transition point - using automove forward");
+                        _plugin.AddDebugLog($"[Dungeon] Door opened but no known transition point - using forward fallback. Ready={IsCharacterReady()} Blockers={(IsCharacterReady() ? "None" : DescribeCharacterReadyBlockers())}");
                         // Fallback: move forward from current position for 10s
                         lastDoorOpenedPosition = player.Position + new Vector3(0, 0, -10f); // Forward approximation
                     }
                     doorStuckStart = DateTime.MinValue;
                     doorWalkThroughStart = DateTime.MinValue; // Will be set next tick
+                    ResetDoorTransitionReadiness();
                     return;
                 }
             }
@@ -2742,6 +2820,7 @@ public class StateManager : IDisposable
         // Reset walk-through state when we have a valid target
         lastDoorOpenedPosition = null;
         doorWalkThroughStart = DateTime.MinValue;
+        ResetDoorTransitionReadiness();
 
         var target = progressionObjects[0]; // Nearest progression object
         {
@@ -2877,6 +2956,7 @@ public class StateManager : IDisposable
                     doorStuckStart = DateTime.MinValue;
                     lastDoorOpenedPosition = null;
                     doorWalkThroughStart = DateTime.MinValue;
+                    ResetDoorTransitionReadiness();
                     
                     // Reset objective tracking for new dungeon
                     currentObjective = DungeonObjective.ClearingChests;
@@ -3346,6 +3426,35 @@ public class StateManager : IDisposable
     private static bool IsThiefMap(uint mapItemId)
     {
         return mapItemId == ThiefMapItemId;
+    }
+
+    private void ResetDoorTransitionReadiness()
+    {
+        doorWalkThroughReadySince = DateTime.MinValue;
+        doorTransitionReadySince = DateTime.MinValue;
+        doorWalkThroughBlockedLogged = false;
+        doorTransitionReadyWaitLogged = false;
+    }
+
+    private string DescribeCharacterReadyBlockers()
+    {
+        var blockers = new List<string>();
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            blockers.Add("PlayerNull");
+        else if (player.IsCasting)
+            blockers.Add("Casting");
+
+        if (Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent])
+            blockers.Add("OccupiedInCutSceneEvent");
+        if (Plugin.Condition[ConditionFlag.Occupied33])
+            blockers.Add("Occupied33");
+        if (Plugin.Condition[ConditionFlag.BetweenAreas])
+            blockers.Add("BetweenAreas");
+        if (Plugin.Condition[ConditionFlag.BetweenAreas51])
+            blockers.Add("BetweenAreas51");
+
+        return blockers.Count == 0 ? "Unknown" : string.Join(", ", blockers);
     }
 
     private bool IsCharacterReady()
