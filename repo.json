@@ -21,7 +21,7 @@
       }
     ],
     "RepoUrl": "https://github.com/McVaxius/LootGoblin",
-    "AssemblyVersion": "0.0.4.14",
+    "AssemblyVersion": "0.0.4.15",
     "DalamudApiLevel": 14,
     "DownloadLinkInstall": "https://github.com/McVaxius/LootGoblin/releases/latest/download/latest.zip",
     "DownloadLinkUpdate": "https://github.com/McVaxius/LootGoblin/releases/latest/download/latest.zip",

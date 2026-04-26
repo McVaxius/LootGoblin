@@ -64,7 +64,7 @@ public sealed class Plugin : IDalamudPlugin
 
     // TextAdvance dependency check
     public bool IsTextAdvanceAvailable => IsPluginLoaded("TextAdvance");
-    public bool IsTeleporterAvailable => IsPluginLoaded("Teleporter");
+    public bool IsTeleporterAvailable => IsPluginLoaded("TeleporterPlugin");
 
     public List<string> DebugLog { get; } = new();
     private const int MaxDebugLogLines = 200;
