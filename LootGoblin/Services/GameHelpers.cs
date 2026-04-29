@@ -357,9 +357,9 @@ public static class GameHelpers
             // First parameter: bool (true = confirm selection)
             // Second parameter: int (0-based index of the item to select)
             var atkValues = stackalloc AtkValue[2];
-            atkValues[0].Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Bool;
+            atkValues[0].Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Bool;
             atkValues[0].Byte = 1; // true = confirm selection
-            atkValues[1].Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int;
+            atkValues[1].Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Int;
             atkValues[1].Int = mapIndex; // 0-based index
             
             Plugin.Log.Information($"[CALLBACK] Calling FireCallback with Bool=true, Int={mapIndex} (0-based)");
@@ -980,10 +980,10 @@ public static class GameHelpers
             {
                 atkValues[i] = args[i] switch
                 {
-                    int intVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int, Int = intVal },
-                    uint uintVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.UInt, UInt = uintVal },
-                    bool boolVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Bool, Byte = (byte)(boolVal ? 1 : 0) },
-                    _ => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int, Int = Convert.ToInt32(args[i]) },
+                    int intVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Int, Int = intVal },
+                    uint uintVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.UInt, UInt = uintVal },
+                    bool boolVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Bool, Byte = (byte)(boolVal ? 1 : 0) },
+                    _ => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Int, Int = Convert.ToInt32(args[i]) },
                 };
             }
 

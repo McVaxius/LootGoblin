@@ -1,7 +1,7 @@
 {
   "Author": "DhogGPT",
   "Name": "Loot Goblin",
-  "DalamudApiLevel": 14,
+  "DalamudApiLevel": 15,
   "InternalName": "LootGoblin",
   "Punchline": "Automated treasure map hunting bot with party coordination.",
   "Description": "LootGoblin automates treasure map hunting by opening maps, detecting locations via GlobeTrotter, teleporting to the nearest aetheryte, coordinating with party members, and flying to the treasure location. Use /lootgoblin or /lg to open.",
@@ -20,5 +20,5 @@
       "Reason": "LootGoblin uses Teleporter for /tp aetheryte travel."
     }
   ],
-  "AssemblyVersion": "0.0.4.16"
+  "AssemblyVersion": "0.0.4.17"
 }
