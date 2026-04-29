@@ -3693,7 +3693,7 @@ public class StateManager : IDisposable
             .Where(obj => obj != null &&
                    !string.IsNullOrEmpty(obj.Name.ToString()) &&
                    Vector3.Distance(player.Position, obj.Position) <= 50f &&
-                   obj.ObjectKind != ObjectKind.Player &&
+                   obj.ObjectKind != ObjectKind.Pc &&
                    obj.ObjectKind != ObjectKind.Companion)
             .OrderBy(obj => Vector3.Distance(player.Position, obj.Position))
             .ToList();
