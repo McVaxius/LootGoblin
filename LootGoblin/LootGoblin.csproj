@@ -2,9 +2,9 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Version>0.0.4.19</Version>
-    <FileVersion>0.0.4.19</FileVersion>
-    <AssemblyVersion>0.0.4.19</AssemblyVersion>
+    <Version>0.0.4.20</Version>
+    <FileVersion>0.0.4.20</FileVersion>
+    <AssemblyVersion>0.0.4.20</AssemblyVersion>
     <PackageProjectUrl>https://github.com/McVaxius/LootGoblin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
