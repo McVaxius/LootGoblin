@@ -44,7 +44,7 @@ public class GlobeTrotterIPC : IDisposable
         return location;
     }
 
-    public void CheckAvailability()
+    public void CheckAvailability(bool logStatus = true)
     {
         try
         {
@@ -56,12 +56,13 @@ public class GlobeTrotterIPC : IDisposable
                 if (string.Equals(p.InternalName, "GlobeTrotter", StringComparison.OrdinalIgnoreCase) && p.IsLoaded)
                 {
                     IsAvailable = true;
-                    _plugin.AddDebugLog($"GlobeTrotter: Available (matched '{p.InternalName}')");
+                    if (logStatus)
+                        _plugin.AddDebugLog($"GlobeTrotter: Available (matched '{p.InternalName}')");
                     break;
                 }
             }
 
-            if (!IsAvailable)
+            if (!IsAvailable && logStatus)
             {
                 if (_plugin.Configuration.DebugMode)
                     _plugin.AddDebugLog("GlobeTrotter: Not found (looking for 'GlobeTrotter')");

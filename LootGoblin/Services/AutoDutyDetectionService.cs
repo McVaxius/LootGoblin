@@ -63,28 +63,29 @@ public class AutoDutyDetectionService : IDisposable
                 if (autodutyPlugin != null)
                 {
                     autoDutyInstalled = true;
-                    autoDutyEnabled = autodutyPlugin.IsLoaded; // Check if actually loaded/enabled
+                    autoDutyEnabled |= autodutyPlugin.IsLoaded; // Check if actually loaded/enabled
                     
-                    if (autoDutyEnabled)
+                    if (autodutyPlugin.IsLoaded)
                     {
                         log.Information("[LootGoblin.AutoDutyDetection] AutoDuty plugin is enabled and running");
                     }
                     else
                     {
                         log.Information("[LootGoblin.AutoDutyDetection] AutoDuty plugin is installed but disabled");
-						if (ReActionPlugin != null)
-						{
-							autoDutyInstalled = true;
-							autoDutyEnabled = ReActionPlugin.IsLoaded; // Check if actually loaded/enabled
-						if (autoDutyEnabled)
-						{
-							log.Information("[LootGoblin.AutoDutyDetection] ReAction plugin is enabled and running");
-						}
-						else
-						{
-							log.Information("[LootGoblin.AutoDutyDetection] ReAction plugin is installed but disabled");
-						}
-						}
+                    }
+                }
+
+                if (ReActionPlugin != null)
+                {
+                    autoDutyInstalled = true;
+                    autoDutyEnabled |= ReActionPlugin.IsLoaded;
+                    if (ReActionPlugin.IsLoaded)
+                    {
+                        log.Information("[LootGoblin.AutoDutyDetection] ReAction plugin is enabled and running");
+                    }
+                    else
+                    {
+                        log.Information("[LootGoblin.AutoDutyDetection] ReAction plugin is installed but disabled");
                     }
                 }
             }

@@ -1,10 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Lumina.Excel.Sheets;
 
 namespace LootGoblin.Services;
+
+public class MapSourceCount
+{
+    public int Inventory { get; set; }
+    public int Saddlebag { get; set; }
+    public int PremiumSaddlebag { get; set; }
+    public int Total => Inventory + Saddlebag + PremiumSaddlebag;
+    public int SaddlebagTotal => Saddlebag + PremiumSaddlebag;
+}
 
 public class InventoryService : IDisposable
 {
@@ -12,6 +22,18 @@ public class InventoryService : IDisposable
     private readonly Plugin _plugin;
     private readonly IDataManager _dataManager;
     private static int scanCounter = 0; // Static counter for reducing log spam across all instances
+
+    private readonly struct ContainerSpec
+    {
+        public ContainerSpec(InventoryType type, Action<MapSourceCount, int> addQuantity)
+        {
+            Type = type;
+            AddQuantity = addQuantity;
+        }
+
+        public InventoryType Type { get; }
+        public Action<MapSourceCount, int> AddQuantity { get; }
+    }
 
     public InventoryService(Plugin plugin, IDataManager dataManager, IPluginLog log)
     {
@@ -22,9 +44,16 @@ public class InventoryService : IDisposable
 
     public void Dispose() { }
 
-    public unsafe Dictionary<uint, int> ScanForMaps()
+    public Dictionary<uint, int> ScanForMaps()
     {
-        var results = new Dictionary<uint, int>();
+        return ScanForMapSources(includeSaddlebags: false)
+            .Where(kvp => kvp.Value.Inventory > 0)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Inventory);
+    }
+
+    public unsafe Dictionary<uint, MapSourceCount> ScanForMapSources(bool includeSaddlebags = true)
+    {
+        var results = new Dictionary<uint, MapSourceCount>();
 
         try
         {
@@ -42,18 +71,13 @@ public class InventoryService : IDisposable
                 return results;
             }
 
-            var containers = new[]
-            {
-                InventoryType.Inventory1,
-                InventoryType.Inventory2,
-                InventoryType.Inventory3,
-                InventoryType.Inventory4,
-            };
+            var containers = GetContainerSpecs(includeSaddlebags);
 
-            foreach (var containerType in containers)
+            foreach (var spec in containers)
             {
-                var container = manager->GetInventoryContainer(containerType);
+                var container = manager->GetInventoryContainer(spec.Type);
                 if (container == null) continue;
+                if (!container->IsLoaded) continue;
 
                 for (int i = 0; i < container->Size; i++)
                 {
@@ -70,10 +94,13 @@ public class InventoryService : IDisposable
                         var itemId = slot->ItemId;
                         var quantity = (int)slot->Quantity;
 
-                        if (results.ContainsKey(itemId))
-                            results[itemId] += quantity;
-                        else
-                            results[itemId] = quantity;
+                        if (!results.TryGetValue(itemId, out var sourceCount))
+                        {
+                            sourceCount = new MapSourceCount();
+                            results[itemId] = sourceCount;
+                        }
+
+                        spec.AddQuantity(sourceCount, quantity);
                     }
                 }
             }
@@ -98,7 +125,10 @@ public class InventoryService : IDisposable
                         var item = itemSheet.GetRow(kvp.Key);
                         var name = item.Name.ToString();
                         if (string.IsNullOrEmpty(name)) name = "Unknown";
-                        _plugin.AddDebugLog($"  Found {kvp.Value}x {name} (ID: {kvp.Key})");
+                        var counts = kvp.Value;
+                        _plugin.AddDebugLog(
+                            $"  Found {counts.Total}x {name} (ID: {kvp.Key}) " +
+                            $"[inventory={counts.Inventory}, saddlebag={counts.Saddlebag}, premium={counts.PremiumSaddlebag}]");
                     }
                 }
             }
@@ -118,12 +148,134 @@ public class InventoryService : IDisposable
         {
             var manager = InventoryManager.Instance();
             if (manager == null) return 0;
-            return manager->GetInventoryItemCount(itemId);
+            var total = 0;
+            foreach (var spec in GetInventoryContainerSpecs())
+            {
+                var container = manager->GetInventoryContainer(spec.Type);
+                if (container == null || !container->IsLoaded) continue;
+
+                for (int i = 0; i < container->Size; i++)
+                {
+                    var slot = container->GetInventorySlot(i);
+                    if (slot != null && slot->ItemId == itemId)
+                        total += (int)slot->Quantity;
+                }
+            }
+
+            return total;
         }
         catch (Exception ex)
         {
             _log.Error($"Failed to get map count for {itemId}: {ex.Message}");
             return 0;
         }
+    }
+
+    public unsafe bool TryMoveMapFromSaddlebagsToInventory(uint itemId, out string detail)
+    {
+        detail = "";
+
+        try
+        {
+            var manager = InventoryManager.Instance();
+            if (manager == null)
+            {
+                detail = "InventoryManager is null";
+                return false;
+            }
+
+            InventoryType sourceType = default;
+            int sourceSlot = -1;
+            foreach (var spec in GetSaddlebagContainerSpecs())
+            {
+                var container = manager->GetInventoryContainer(spec.Type);
+                if (container == null || !container->IsLoaded) continue;
+
+                for (int i = 0; i < container->Size; i++)
+                {
+                    var slot = container->GetInventorySlot(i);
+                    if (slot == null || slot->ItemId != itemId) continue;
+
+                    sourceType = spec.Type;
+                    sourceSlot = i;
+                    break;
+                }
+
+                if (sourceSlot >= 0)
+                    break;
+            }
+
+            if (sourceSlot < 0)
+            {
+                detail = "Selected map was not found in loaded saddlebags. Open saddlebags once this session and retry.";
+                return false;
+            }
+
+            InventoryType destinationType = default;
+            int destinationSlot = -1;
+            foreach (var spec in GetInventoryContainerSpecs())
+            {
+                var container = manager->GetInventoryContainer(spec.Type);
+                if (container == null || !container->IsLoaded) continue;
+
+                for (int i = 0; i < container->Size; i++)
+                {
+                    var slot = container->GetInventorySlot(i);
+                    if (slot == null || slot->ItemId != 0) continue;
+
+                    destinationType = spec.Type;
+                    destinationSlot = i;
+                    break;
+                }
+
+                if (destinationSlot >= 0)
+                    break;
+            }
+
+            if (destinationSlot < 0)
+            {
+                detail = "No empty inventory slot is available for saddlebag retrieval.";
+                return false;
+            }
+
+            manager->MoveItemSlot(sourceType, (ushort)sourceSlot, destinationType, (ushort)destinationSlot, true);
+            detail = $"Moved map {itemId} from {sourceType}[{sourceSlot}] to {destinationType}[{destinationSlot}]";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            detail = ex.Message;
+            _log.Error($"Failed to move map {itemId} from saddlebags: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static IReadOnlyList<ContainerSpec> GetContainerSpecs(bool includeSaddlebags)
+    {
+        return includeSaddlebags
+            ? GetInventoryContainerSpecs().Concat(GetSaddlebagContainerSpecs()).ToList()
+            : GetInventoryContainerSpecs();
+    }
+
+    private static IReadOnlyList<ContainerSpec> GetInventoryContainerSpecs()
+    {
+        return new[]
+        {
+            new ContainerSpec(InventoryType.Inventory1, (count, quantity) => count.Inventory += quantity),
+            new ContainerSpec(InventoryType.Inventory2, (count, quantity) => count.Inventory += quantity),
+            new ContainerSpec(InventoryType.Inventory3, (count, quantity) => count.Inventory += quantity),
+            new ContainerSpec(InventoryType.Inventory4, (count, quantity) => count.Inventory += quantity),
+        };
+    }
+
+    private static IReadOnlyList<ContainerSpec> GetSaddlebagContainerSpecs()
+    {
+        return new[]
+        {
+            new ContainerSpec(InventoryType.SaddleBag1, (count, quantity) => count.Saddlebag += quantity),
+            new ContainerSpec(InventoryType.SaddleBag2, (count, quantity) => count.Saddlebag += quantity),
+            new ContainerSpec(InventoryType.PremiumSaddleBag1, (count, quantity) => count.PremiumSaddlebag += quantity),
+            new ContainerSpec(InventoryType.PremiumSaddleBag2, (count, quantity) => count.PremiumSaddlebag += quantity),
+        };
     }
 }

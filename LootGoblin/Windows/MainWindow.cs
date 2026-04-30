@@ -35,6 +35,7 @@ public class MainWindow : Window, IDisposable
 
     private readonly Plugin plugin;
     private Dictionary<uint, int> cachedMaps = new();
+    private Dictionary<uint, MapSourceCount> cachedMapSources = new();
     private DateTime lastScanTime = DateTime.MinValue;
     private const double ScanCooldownSeconds = 2.0;
 
@@ -229,13 +230,16 @@ public class MainWindow : Window, IDisposable
                 var now = DateTime.Now;
                 if ((now - lastScanTime).TotalSeconds >= ScanCooldownSeconds)
                 {
-                    cachedMaps = plugin.InventoryService.ScanForMaps();
+                    cachedMapSources = plugin.InventoryService.ScanForMapSources();
+                    cachedMaps = cachedMapSources
+                        .Where(kvp => kvp.Value.Inventory > 0)
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Inventory);
                     lastScanTime = now;
                 }
 
-                if (cachedMaps.Count == 0)
+                if (cachedMapSources.Count == 0)
                 {
-                    ImGui.TextColored(ColorGrey, "  No treasure maps found in inventory.");
+                    ImGui.TextColored(ColorGrey, "  No treasure maps found in inventory or loaded saddlebags.");
                 }
                 else
                 {
@@ -243,14 +247,14 @@ public class MainWindow : Window, IDisposable
                     var enabledTypes = plugin.Configuration.EnabledMapTypes;
 
                     // Show warning if multiple map types detected
-                    if (cachedMaps.Count > 1)
+                    if (cachedMapSources.Count > 1)
                     {
                         ImGui.TextColored(ColorGrey, "  Multiple map types detected - use checkboxes to select which to run");
                         ImGui.Spacing();
                     }
 
                     // Sort entries lowest MinLevel first (matches StateManager selection order)
-                    var sortedMaps = cachedMaps
+                    var sortedMaps = cachedMapSources
                         .OrderBy(kvp => LootGoblin.Models.TreasureMapData.KnownMaps.TryGetValue(kvp.Key, out var i) ? i.MinLevel : 999)
                         .ToList();
 
@@ -260,7 +264,7 @@ public class MainWindow : Window, IDisposable
                     foreach (var kvp in sortedMaps)
                     {
                         var itemId = kvp.Key;
-                        var quantity = kvp.Value;
+                        var quantity = kvp.Value.Total;
                         
                         var item = itemSheet?.GetRow(itemId);
                         var itemName = item?.Name.ToString();
@@ -280,6 +284,8 @@ public class MainWindow : Window, IDisposable
                         }
                         ImGui.SameLine();
                         ImGui.Text($"{itemName} x{quantity}");
+                        ImGui.SameLine();
+                        ImGui.TextColored(ColorGrey, $"  [Inv {kvp.Value.Inventory} | Saddle {kvp.Value.Saddlebag} | Prem {kvp.Value.PremiumSaddlebag}]");
                         if (mapTier > 0)
                         {
                             ImGui.SameLine();
@@ -296,7 +302,10 @@ public class MainWindow : Window, IDisposable
                 ImGui.Spacing();
                 if (ImGui.Button("Refresh Maps"))
                 {
-                    cachedMaps = plugin.InventoryService.ScanForMaps();
+                    cachedMapSources = plugin.InventoryService.ScanForMapSources();
+                    cachedMaps = cachedMapSources
+                        .Where(kvp => kvp.Value.Inventory > 0)
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Inventory);
                     lastScanTime = DateTime.Now;
                     plugin.AddDebugLog("Manual map inventory refresh.");
                 }

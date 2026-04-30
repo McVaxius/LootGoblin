@@ -63,14 +63,14 @@ public class RotationPluginIPC : IDisposable
 
     public void Dispose() { }
 
-    public void CheckAvailability()
+    public void CheckAvailability(bool logStatus = true)
     {
         try
         {
             var installedPlugins = _pluginInterface.InstalledPlugins;
 
             // Debug: Log all installed plugin InternalNames
-            if (_plugin.Configuration.DebugMode)
+            if (logStatus && _plugin.Configuration.DebugMode)
             {
                 _plugin.AddDebugLog("=== Installed Plugins ===");
                 foreach (var p in installedPlugins)
@@ -88,12 +88,13 @@ public class RotationPluginIPC : IDisposable
                     if (string.Equals(p.InternalName, rp.InternalName, StringComparison.OrdinalIgnoreCase) && p.IsLoaded)
                     {
                         rp.IsAvailable = true;
-                        _plugin.AddDebugLog($"{rp.DisplayName}: Available (matched '{p.InternalName}')");
+                        if (logStatus)
+                            _plugin.AddDebugLog($"{rp.DisplayName}: Available (matched '{p.InternalName}')");
                         break;
                     }
                 }
 
-                if (!rp.IsAvailable && _plugin.Configuration.DebugMode)
+                if (!rp.IsAvailable && logStatus && _plugin.Configuration.DebugMode)
                 {
                     _plugin.AddDebugLog($"{rp.DisplayName}: Not found (looking for '{rp.InternalName}')");
                 }

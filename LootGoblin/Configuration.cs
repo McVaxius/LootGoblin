@@ -43,6 +43,21 @@ public class Configuration : IPluginConfiguration
     public bool EnableAutoDiscard { get; set; } = false;
     public bool SummonChocobo { get; set; } = false;
     public string CompanionStance { get; set; } = "Free Stance";
+    public List<string> LandingOrDutyCommandTriggers { get; set; } = new()
+    {
+        "/rotation Auto",
+        "/bmrai on",
+        "/vbmai on",
+        "/echo wheee",
+    };
+
+    public List<string> FinishCommandTriggers { get; set; } = new()
+    {
+        "/li fc",
+        "/rotation cancel",
+        "/bmrai off",
+        "/vbmai off",
+    };
 
     // Mount Settings
     public string SelectedMount { get; set; } = "Company Chocobo";

@@ -149,6 +149,9 @@ public class StateManager : IDisposable
     private bool mountedRotationSuppressed;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
+    private bool landingCommandsRanThisMap;
+    private bool dutyEntryCommandsRanThisMap;
+    private bool finishCommandsRanThisRun;
 
     // Cycling mode state
     private List<(uint Id, string Name, uint TerritoryId)> cycleAetheryteQueue = new();
@@ -408,8 +411,10 @@ public class StateManager : IDisposable
         }
 
         ClearWarning();
+        ResetRunCommandTriggers();
 
         // Check for AutoDuty when starting LootGoblin
+        _plugin.RefreshDependencyStatus(logStatus: true);
         _plugin.AddDebugLog("[Start] Checking for AutoDuty before starting...");
         _plugin.AutoDutyDetectionService.ForceCheck();
         
@@ -459,6 +464,9 @@ public class StateManager : IDisposable
             return;
         }
 
+        if (TryStartFromExistingMapFlag("[Start]"))
+            return;
+
         RetryCount = 0;
         CurrentLocation = null;
         SelectedMapItemId = 0;
@@ -488,6 +496,7 @@ public class StateManager : IDisposable
         dungeonEntryProcessed = false;
         ResetAdsHandoffTracking(resetStatus: true);
         currentLandingMode = OverworldLandingMode.MountToggle;
+        ResetRunCommandTriggers();
         RestoreMountedRotationLifecycle("bot stop");
         ClearWarning();
         TransitionTo(BotState.Idle, "Stopped by user.");
@@ -503,6 +512,7 @@ public class StateManager : IDisposable
         portalRetryStart = DateTime.MinValue;
         ResetAdsHandoffTracking(resetStatus: true);
         currentLandingMode = OverworldLandingMode.MountToggle;
+        ResetRunCommandTriggers();
         RestoreMountedRotationLifecycle("full reset");
         KrangleService.ClearCache();
         ClearWarning();
@@ -526,6 +536,141 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog("Bot resumed.");
     }
 
+    private bool TryStartFromExistingMapFlag(string source)
+    {
+        var existingFlag = _plugin.GlobeTrotterIPC.TryGetMapLocation();
+        if (existingFlag == null)
+            return false;
+
+        RetryCount = 0;
+        CurrentLocation = null;
+        SelectedMapItemId = 0;
+        currentLandingMode = OverworldLandingMode.MountToggle;
+        initialMapCount = 0;
+        mapCountChecked = true;
+        mapOpeningRetried = false;
+        ResetPerMapCommandTriggers();
+        SetWarning("A deciphered map flag is already set. LootGoblin is proceeding from the existing flag instead of opening another map.");
+        _plugin.AddDebugLog($"{source} Existing deciphered map flag detected - skipping map opening.");
+        TransitionTo(BotState.DetectingLocation, "Using existing map flag already set in the world map...");
+        return true;
+    }
+
+    private List<uint> GetEnabledMapCandidates(
+        Dictionary<uint, MapSourceCount> mapSources,
+        bool includeInventory,
+        bool includeSaddlebags)
+    {
+        var enabled = _plugin.Configuration.EnabledMapTypes;
+
+        return mapSources
+            .Where(kvp =>
+            {
+                if (enabled.Count > 0 && !enabled.Contains(kvp.Key))
+                    return false;
+
+                var count = 0;
+                if (includeInventory)
+                    count += kvp.Value.Inventory;
+                if (includeSaddlebags)
+                    count += kvp.Value.SaddlebagTotal;
+
+                return count > 0;
+            })
+            .Select(kvp => kvp.Key)
+            .ToList();
+    }
+
+    private void TryRetrieveSaddlebagMap(uint mapItemId)
+    {
+        var mapName = TreasureMapData.KnownMaps.TryGetValue(mapItemId, out var info)
+            ? info.Name
+            : $"ID {mapItemId}";
+
+        if (_plugin.InventoryService.TryMoveMapFromSaddlebagsToInventory(mapItemId, out var detail))
+        {
+            _plugin.AddDebugLog($"[Saddlebag] Retrieved {mapName}: {detail}");
+            StateDetail = $"Retrieved {mapName} from saddlebag. Rechecking inventory...";
+            lastMapScanTime = DateTime.MinValue;
+            return;
+        }
+
+        HandleError($"Could not retrieve {mapName} from saddlebag: {detail}");
+    }
+
+    private void ResetRunCommandTriggers()
+    {
+        ResetPerMapCommandTriggers();
+        finishCommandsRanThisRun = false;
+    }
+
+    private void ResetPerMapCommandTriggers()
+    {
+        landingCommandsRanThisMap = false;
+        dutyEntryCommandsRanThisMap = false;
+    }
+
+    private void RunLandingCommandsOnce(string reason)
+    {
+        if (landingCommandsRanThisMap)
+            return;
+
+        landingCommandsRanThisMap = true;
+        RunConfiguredCommands(_plugin.Configuration.LandingOrDutyCommandTriggers, reason);
+    }
+
+    private void RunDutyEntryCommandsOnce(string reason)
+    {
+        if (dutyEntryCommandsRanThisMap)
+            return;
+
+        dutyEntryCommandsRanThisMap = true;
+        RunConfiguredCommands(_plugin.Configuration.LandingOrDutyCommandTriggers, reason);
+    }
+
+    private void RunFinishCommandsOnce(string reason)
+    {
+        if (finishCommandsRanThisRun)
+            return;
+
+        finishCommandsRanThisRun = true;
+        RunConfiguredCommands(_plugin.Configuration.FinishCommandTriggers, reason);
+    }
+
+    private void RunConfiguredCommands(List<string>? commands, string reason)
+    {
+        if (commands == null || commands.Count == 0)
+            return;
+
+        var sent = 0;
+        foreach (var command in commands)
+        {
+            var trimmed = command?.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
+                continue;
+
+            CommandHelper.SendCommand(trimmed);
+            sent++;
+        }
+
+        if (sent > 0)
+            _plugin.AddDebugLog($"[CommandTrigger] Sent {sent} command(s) for {reason}.");
+    }
+
+    private void TryDigWhileDiving(string reason)
+    {
+        if (!Plugin.Condition[ConditionFlag.Diving])
+            return;
+
+        if ((DateTime.Now - lastDigTime).TotalSeconds < 3.0)
+            return;
+
+        RunLandingCommandsOnce(reason);
+        CommandHelper.SendCommand("/gaction dig");
+        lastDigTime = DateTime.Now;
+        _plugin.AddDebugLog($"{reason}: issued /gaction dig while diving.");
+    }
+
     // ─── State Ticks ─────────────────────────────────────────────────────────
 
     private void TickSelectingMap()
@@ -537,7 +682,10 @@ public class StateManager : IDisposable
         }
         lastMapScanTime = DateTime.Now;
 
-        var maps = _plugin.InventoryService.ScanForMaps();
+        var mapSources = _plugin.InventoryService.ScanForMapSources();
+        var maps = mapSources
+            .Where(kvp => kvp.Value.Inventory > 0)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Inventory);
         mapScanCounter++;
         
         // Only log every 5 scans to reduce spam
@@ -548,16 +696,10 @@ public class StateManager : IDisposable
         
         if (maps.Count == 0)
         {
-            var existingFlag = _plugin.GlobeTrotterIPC.TryGetMapLocation();
-            if (existingFlag != null)
+            var saddlebagCandidates = GetEnabledMapCandidates(mapSources, includeInventory: false, includeSaddlebags: true);
+            if (saddlebagCandidates.Count > 0)
             {
-                SelectedMapItemId = 0;
-                currentLandingMode = OverworldLandingMode.MountToggle;
-                initialMapCount = 0;
-                mapCountChecked = true;
-                mapOpeningRetried = false;
-                SetWarning("No maps are left in inventory, but a deciphered map flag is already set. LootGoblin is proceeding from the existing flag.");
-                TransitionTo(BotState.DetectingLocation, "Using existing map flag already set in the world map...");
+                TryRetrieveSaddlebagMap(saddlebagCandidates[0]);
                 return;
             }
 
@@ -576,6 +718,13 @@ public class StateManager : IDisposable
 
         if (candidates.Count == 0)
         {
+            var saddlebagCandidates = GetEnabledMapCandidates(mapSources, includeInventory: false, includeSaddlebags: true);
+            if (saddlebagCandidates.Count > 0)
+            {
+                TryRetrieveSaddlebagMap(saddlebagCandidates[0]);
+                return;
+            }
+
             HandleError("No enabled maps in inventory. Check map selection in UI.");
             return;
         }
@@ -591,6 +740,7 @@ public class StateManager : IDisposable
         initialMapCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
         mapCountChecked = false;
         mapOpeningRetried = false;
+        ResetPerMapCommandTriggers();
         _plugin.AddDebugLog($"[SelectingMap] Initial map count: {initialMapCount}");
         
         // Clear any existing flag to prevent conflicts with new map run
@@ -942,6 +1092,12 @@ public class StateManager : IDisposable
         bool isDiving = Plugin.Condition[ConditionFlag.Diving];
         if (isDiving && !wasDiving)
         {
+            if (CurrentLocation == null)
+            {
+                HandleError("No location data for underwater navigation.");
+                return;
+            }
+
             // Just entered diving state - switch to underwater navigation
             _plugin.AddDebugLog("[Underwater] Diving state detected - switching to underwater navigation");
             wasDiving = true;
@@ -989,6 +1145,8 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("[Underwater] Exited diving state");
             wasDiving = false;
         }
+
+        TryDigWhileDiving("[Underwater] flying");
         
         // Rate limit diving checks to every 2 seconds
         if ((DateTime.Now - lastDivingCheck).TotalSeconds < 2.0) return;
@@ -1028,8 +1186,7 @@ public class StateManager : IDisposable
                         _mountService.Dismount();
                     }
 
-                    // Enable BMR AI and dig immediately
-                    CommandHelper.SendCommand("/bmrai on");
+                    RunLandingCommandsOnce("[Flying] immediate landing");
                     CommandHelper.SendCommand("/gaction dig");
                     lastDigTime = DateTime.Now;
                     _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
@@ -1120,8 +1277,7 @@ public class StateManager : IDisposable
                 }
             }
             
-            CommandHelper.SendCommand("/bmrai on");
-            _plugin.AddDebugLog("Enabled BMR AI after dismount");
+            RunLandingCommandsOnce("[Flying] dismounted landing");
             
             CommandHelper.SendCommand("/gaction dig");
             lastDigTime = DateTime.Now;
@@ -1275,6 +1431,12 @@ public class StateManager : IDisposable
         bool isDiving = Plugin.Condition[ConditionFlag.Diving];
         if (isDiving && !wasDiving)
         {
+            if (CurrentLocation == null)
+            {
+                HandleError("No location data for underwater chest navigation.");
+                return;
+            }
+
             // Get current map entry for destination info
             var currentEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
             int destinationIndex = currentEntry?.Index > 0 ? currentEntry.Index : -1;
@@ -1314,6 +1476,8 @@ public class StateManager : IDisposable
             }
             return;
         }
+
+        TryDigWhileDiving("[Underwater] chest phase");
         
         // Click Yes on any dialog (Open the treasure coffer? etc)
         GameHelpers.ClickYesIfVisible();
@@ -1562,9 +1726,27 @@ public class StateManager : IDisposable
 
     private void CheckForPortalAfterChest()
     {
+        if (ShouldSkipPortalWaitForSelectedMap())
+        {
+            portalRetryStart = DateTime.MinValue;
+            _plugin.AddDebugLog("[Portal] Selected map is known outdoor/no-dungeon - skipping portal search.");
+            TransitionTo(BotState.Completed, "Outdoor map complete - skipping portal search...");
+            return;
+        }
+
         // Transition to a portal-searching state that retries every 2s for 10s
         portalRetryStart = DateTime.Now;
         TransitionTo(BotState.Completed, "Searching for portal...");
+    }
+
+    private bool ShouldSkipPortalWaitForSelectedMap()
+    {
+        if (SelectedMapItemId == 0)
+            return false;
+
+        return TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var mapInfo)
+            && !mapInfo.HasDungeon
+            && mapInfo.Category == MapCategory.Outdoor;
     }
     
     private IGameObject? FindNearestPortal()
@@ -2954,6 +3136,7 @@ public class StateManager : IDisposable
                         _plugin.AddDebugLog("[Portal][ADS] ADS handoff requested, but ADS is not installed/loaded. Falling back to legacy dungeon solver.");
                     }
 
+                    RunDutyEntryCommandsOnce("[Portal] legacy dungeon entry");
                     _plugin.AddDebugLog("[Portal] BoundByDuty detected and portal gone/loading - entering dungeon!");
                     portalRetryStart = DateTime.MinValue;
                     QueueDungeonMapFlagClear("[Portal]");
@@ -3032,7 +3215,7 @@ public class StateManager : IDisposable
                     // Try to dig every 3 seconds (rate limited)
                     if ((DateTime.Now - lastDigTime).TotalSeconds >= 3.0)
                     {
-                        CommandHelper.SendCommand("/dig");
+                        CommandHelper.SendCommand("/gaction dig");
                         lastDigTime = DateTime.Now;
                     }
                     
@@ -3080,20 +3263,23 @@ public class StateManager : IDisposable
         if (_plugin.Configuration.AutoStartNextMap)
         {
             _plugin.AddDebugLog("[Completed] AutoStartNextMap enabled - scanning for maps");
-            var maps = _plugin.InventoryService.ScanForMaps();
-            _plugin.AddDebugLog($"[Completed] Found {maps.Count} map(s) in inventory");
+            var mapSources = _plugin.InventoryService.ScanForMapSources();
+            var maps = GetEnabledMapCandidates(mapSources, includeInventory: true, includeSaddlebags: true);
+            _plugin.AddDebugLog($"[Completed] Found {maps.Count} runnable map type(s) in inventory/saddlebags");
             
             if (maps.Count > 0)
             {
                 RetryCount = 0;
                 CurrentLocation = null;
+                ResetPerMapCommandTriggers();
                 TransitionTo(BotState.SelectingMap, "Auto-starting next map...");
                 return;
             }
 
-            _plugin.AddDebugLog("[Completed] No more maps in inventory.");
+            _plugin.AddDebugLog("[Completed] No more runnable maps in inventory or loaded saddlebags.");
         }
 
+        RunFinishCommandsOnce("[Completed] run complete");
         RetryCount = 0;
         TransitionTo(BotState.Idle, "Run complete.");
     }
@@ -3360,8 +3546,7 @@ public class StateManager : IDisposable
     {
         if (includeAssistCommands)
         {
-            CommandHelper.SendCommand("/bmrai on");
-            CommandHelper.SendCommand("/vbmai on");
+            RunDutyEntryCommandsOnce("[ADS] duty handoff");
         }
 
         adsInsideSentAt = DateTime.Now;

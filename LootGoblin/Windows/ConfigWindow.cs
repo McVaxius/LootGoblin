@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
@@ -217,6 +218,27 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
+        ImGui.Text("Command Triggers");
+        ImGui.Spacing();
+
+        configuration.LandingOrDutyCommandTriggers ??= new List<string>();
+        configuration.FinishCommandTriggers ??= new List<string>();
+
+        DrawCommandTriggerList(
+            "Landing / Duty Entry",
+            configuration.LandingOrDutyCommandTriggers,
+            new[] { "/rotation Auto", "/bmrai on", "/vbmai on", "/echo wheee" });
+
+        ImGui.Spacing();
+
+        DrawCommandTriggerList(
+            "Finish",
+            configuration.FinishCommandTriggers,
+            new[] { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off" });
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
         ImGui.Text("Chest Interaction");
         ImGui.Spacing();
 
@@ -282,6 +304,44 @@ public class ConfigWindow : Window, IDisposable
             }
             ImGui.EndChild();
             ImGui.EndCombo();
+        }
+    }
+
+    private void DrawCommandTriggerList(string label, List<string> commands, string[] defaults)
+    {
+        EnsureCommandTriggerSlots(commands, defaults);
+
+        ImGui.Text(label);
+        ImGui.SameLine();
+        if (ImGui.SmallButton($"Defaults##{label}"))
+        {
+            commands.Clear();
+            commands.AddRange(defaults);
+            configuration.Save();
+        }
+
+        for (var i = 0; i < 4; i++)
+        {
+            var command = commands[i];
+            ImGui.SetNextItemWidth(300);
+            if (ImGui.InputText($"##{label}_{i}", ref command, 128))
+            {
+                commands[i] = command;
+                configuration.Save();
+            }
+        }
+    }
+
+    private static void EnsureCommandTriggerSlots(List<string> commands, string[] defaults)
+    {
+        while (commands.Count < 4)
+        {
+            commands.Add(commands.Count < defaults.Length ? defaults[commands.Count] : string.Empty);
+        }
+
+        while (commands.Count > 4)
+        {
+            commands.RemoveAt(commands.Count - 1);
         }
     }
 }

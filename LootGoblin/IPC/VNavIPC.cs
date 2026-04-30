@@ -27,7 +27,7 @@ public class VNavIPC : IDisposable
 
     public void Dispose() { }
 
-    public void CheckAvailability()
+    public void CheckAvailability(bool logStatus = true)
     {
         try
         {
@@ -43,13 +43,14 @@ public class VNavIPC : IDisposable
                     }
                     else
                     {
-                        _plugin.AddDebugLog($"[VNavIPC] vnavmesh found but not loaded");
+                        if (logStatus)
+                            _plugin.AddDebugLog($"[VNavIPC] vnavmesh found but not loaded");
                     }
                     break;
                 }
             }
 
-            if (!IsAvailable)
+            if (!IsAvailable && logStatus)
             {
                 _plugin.AddDebugLog($"[VNavIPC] vnavmesh not available");
             }

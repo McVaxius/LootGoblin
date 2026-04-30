@@ -70,6 +70,8 @@ public sealed class Plugin : IDalamudPlugin
     private const int MaxDebugLogLines = 200;
     private DateTime lastAdsMissingToastAt = DateTime.MinValue;
     private DateTime lastTeleporterMissingToastAt = DateTime.MinValue;
+    private DateTime lastDependencyRefreshAt = DateTime.MinValue;
+    private static readonly TimeSpan DependencyRefreshInterval = TimeSpan.FromSeconds(10);
 
     public bool IsAdsAvailable
     {
@@ -152,6 +154,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
         PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
+        Framework.Update += OnFrameworkUpdate;
 
         // Load mount names from game data
         LoadMountNames();
@@ -176,6 +179,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw -= WindowSystem.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
+        Framework.Update -= OnFrameworkUpdate;
 
         StateManager?.Dispose();
         NavigationService?.Dispose();
@@ -223,6 +227,23 @@ public sealed class Plugin : IDalamudPlugin
             AddDebugLog("[MapLocDB] Auto-updating community data on login...");
             _ = MapLocationDatabase.DownloadCommunityDataAsync();
         }
+    }
+
+    private void OnFrameworkUpdate(IFramework framework)
+    {
+        var now = DateTime.Now;
+        if (now - lastDependencyRefreshAt < DependencyRefreshInterval)
+            return;
+
+        lastDependencyRefreshAt = now;
+        RefreshDependencyStatus(logStatus: false);
+    }
+
+    public void RefreshDependencyStatus(bool logStatus = false)
+    {
+        VNavIPC.CheckAvailability(logStatus);
+        GlobeTrotterIPC.CheckAvailability(logStatus);
+        RotationPluginIPC.CheckAvailability(logStatus);
     }
 
     private void OnCommand(string command, string args)
