@@ -732,6 +732,15 @@ public class MainWindow : Window, IDisposable
                 ImGui.TextColored(ColorCyan, mapName);
             }
 
+            var retainer = plugin.RetainerMapRetrievalService;
+            if (retainer.IsRunning || !string.IsNullOrWhiteSpace(retainer.LastError))
+            {
+                ImGui.Text("  Retainer: ");
+                ImGui.SameLine();
+                var color = string.IsNullOrWhiteSpace(retainer.LastError) ? ColorCyan : ColorRed;
+                ImGui.TextColored(color, retainer.StatusText);
+            }
+
             // Location info
             if (sm.CurrentLocation != null)
             {
@@ -910,14 +919,14 @@ private void DrawDependencySection()
             ImGui.Spacing();
 
             DrawPluginStatus("  vnavmesh", plugin.VNavIPC.IsAvailable, true);
-            DrawPluginStatus("  Teleporter", plugin.IsTeleporterAvailable, true);
+            DrawPluginStatus("  Lifestream", plugin.IsLifestreamAvailable, true);
             DrawPluginStatus("  GlobeTrotter", plugin.GlobeTrotterIPC.IsAvailable, false);
             DrawPluginStatus("  TextAdvance", plugin.IsTextAdvanceAvailable, false);
             DrawPluginStatus("  ADS", plugin.IsAdsAvailable, plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver);
 
-            if (!plugin.IsTeleporterAvailable)
+            if (!plugin.IsLifestreamAvailable)
             {
-                ImGui.TextColored(ColorRed, "  Teleporter missing. LootGoblin cannot issue /tp travel without it.");
+                ImGui.TextColored(ColorRed, "  Lifestream missing. LootGoblin cannot issue /li travel without it.");
             }
 
             if (plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)

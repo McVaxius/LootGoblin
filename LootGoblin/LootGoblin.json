@@ -15,9 +15,9 @@
   ],
   "Dependencies": [
     {
-      "InternalName": "Teleporter",
+      "InternalName": "Lifestream",
       "Required": true,
-      "Reason": "LootGoblin uses Teleporter for /tp aetheryte travel."
+      "Reason": "LootGoblin uses Lifestream for /li aetheryte travel."
     }
   ],
   "AssemblyVersion": "0.0.4.20"

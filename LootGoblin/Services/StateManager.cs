@@ -141,6 +141,7 @@ public class StateManager : IDisposable
     private bool adsDutyHandoffActive; // True while ADS owns the dungeon phase for the current map
     private DateTime adsDutyHandoffStarted = DateTime.MinValue;
     private DateTime adsDutyEntryConfirmedAt = DateTime.MinValue;
+    private DateTime adsDutyReadySince = DateTime.MinValue;
     private bool adsOwnershipObserved;
     private DateTime adsInsideSentAt = DateTime.MinValue;
     private bool adsInsideRetrySent;
@@ -495,6 +496,7 @@ public class StateManager : IDisposable
         portalRetryStart = DateTime.MinValue;
         dungeonEntryProcessed = false;
         ResetAdsHandoffTracking(resetStatus: true);
+        _plugin.RetainerMapRetrievalService.Reset();
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         RestoreMountedRotationLifecycle("bot stop");
@@ -511,6 +513,7 @@ public class StateManager : IDisposable
         SelectedMapItemId = 0;
         portalRetryStart = DateTime.MinValue;
         ResetAdsHandoffTracking(resetStatus: true);
+        _plugin.RetainerMapRetrievalService.Reset();
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         RestoreMountedRotationLifecycle("full reset");
@@ -596,6 +599,39 @@ public class StateManager : IDisposable
         }
 
         HandleError($"Could not retrieve {mapName} from saddlebag: {detail}");
+    }
+
+    private bool TryRetrieveRetainerMap(IReadOnlyCollection<uint> enabledMapIds, string emptyInventoryError)
+    {
+        if (!_plugin.Configuration.EnableRetainerMapRetrieval)
+        {
+            HandleError(emptyInventoryError);
+            return true;
+        }
+
+        var result = _plugin.RetainerMapRetrievalService.StartOrTick(enabledMapIds);
+        switch (result)
+        {
+            case RetainerMapRetrievalResult.Running:
+                StateDetail = _plugin.RetainerMapRetrievalService.StatusText;
+                lastMapScanTime = DateTime.MinValue;
+                return true;
+
+            case RetainerMapRetrievalResult.Retrieved:
+                StateDetail = "Retainer map retrieved. Rechecking inventory...";
+                lastMapScanTime = DateTime.MinValue;
+                return true;
+
+            case RetainerMapRetrievalResult.Error:
+                HandleError($"Could not retrieve retainer map: {_plugin.RetainerMapRetrievalService.LastError}");
+                return true;
+
+            case RetainerMapRetrievalResult.NotAvailable:
+                HandleError(emptyInventoryError);
+                return true;
+        }
+
+        return false;
     }
 
     private void ResetRunCommandTriggers()
@@ -703,7 +739,12 @@ public class StateManager : IDisposable
                 return;
             }
 
-            HandleError("No maps found in inventory.");
+            var enabledForRetainers = _plugin.Configuration.EnabledMapTypes.Count > 0
+                ? _plugin.Configuration.EnabledMapTypes.ToList()
+                : TreasureMapData.KnownMaps.Keys.ToList();
+            if (TryRetrieveRetainerMap(enabledForRetainers, "No maps found in inventory, saddlebags, or retainers."))
+                return;
+
             return;
         }
 
@@ -725,7 +766,10 @@ public class StateManager : IDisposable
                 return;
             }
 
-            HandleError("No enabled maps in inventory. Check map selection in UI.");
+            if (TryRetrieveRetainerMap(enabled.Count > 0 ? enabled.ToList() : TreasureMapData.KnownMaps.Keys.ToList(),
+                    "No enabled maps in inventory, saddlebags, or retainers. Check map selection in UI."))
+                return;
+
             return;
         }
 
@@ -3107,9 +3151,23 @@ public class StateManager : IDisposable
                             return;
                         }
 
-                        if ((DateTime.Now - adsDutyEntryConfirmedAt).TotalSeconds < 2.0 || !IsCharacterReady())
+                        if (!IsCharacterReady())
                         {
-                            StateDetail = "Duty entered - waiting for ADS-safe handoff seam...";
+                            adsDutyReadySince = DateTime.MinValue;
+                            StateDetail = $"Duty entered - waiting for ADS-safe handoff seam... ({DescribeCharacterReadyBlockers()})";
+                            return;
+                        }
+
+                        if (adsDutyReadySince == DateTime.MinValue)
+                        {
+                            adsDutyReadySince = DateTime.Now;
+                            StateDetail = "Duty entered - waiting for ADS-safe handoff settle...";
+                            return;
+                        }
+
+                        if ((DateTime.Now - adsDutyReadySince).TotalSeconds < 2.0)
+                        {
+                            StateDetail = "Duty entered - waiting for ADS-safe handoff settle...";
                             return;
                         }
 
@@ -3533,6 +3591,7 @@ public class StateManager : IDisposable
         adsDutyHandoffActive = false;
         adsDutyHandoffStarted = DateTime.MinValue;
         adsDutyEntryConfirmedAt = DateTime.MinValue;
+        adsDutyReadySince = DateTime.MinValue;
         adsOwnershipObserved = false;
         adsInsideSentAt = DateTime.MinValue;
         adsInsideRetrySent = false;
@@ -3642,6 +3701,12 @@ public class StateManager : IDisposable
             blockers.Add("OccupiedInCutSceneEvent");
         if (Plugin.Condition[ConditionFlag.Occupied33])
             blockers.Add("Occupied33");
+        if (Plugin.Condition[ConditionFlag.WatchingCutscene])
+            blockers.Add("WatchingCutscene");
+        if (Plugin.Condition[ConditionFlag.OccupiedInQuestEvent])
+            blockers.Add("OccupiedInQuestEvent");
+        if (Plugin.Condition[ConditionFlag.Occupied39])
+            blockers.Add("Occupied39");
         if (Plugin.Condition[ConditionFlag.BetweenAreas])
             blockers.Add("BetweenAreas");
         if (Plugin.Condition[ConditionFlag.BetweenAreas51])
@@ -3658,6 +3723,9 @@ public class StateManager : IDisposable
         if (player.IsCasting) return false;
         if (Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent]) return false;
         if (Plugin.Condition[ConditionFlag.Occupied33]) return false;
+        if (Plugin.Condition[ConditionFlag.WatchingCutscene]) return false;
+        if (Plugin.Condition[ConditionFlag.OccupiedInQuestEvent]) return false;
+        if (Plugin.Condition[ConditionFlag.Occupied39]) return false;
         if (Plugin.Condition[ConditionFlag.BetweenAreas]) return false;
         if (Plugin.Condition[ConditionFlag.BetweenAreas51]) return false;
         return true;

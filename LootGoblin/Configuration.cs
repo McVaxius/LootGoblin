@@ -32,6 +32,7 @@ public class Configuration : IPluginConfiguration
     public bool AutoStartNextMap { get; set; } = false;
     public bool EnableStateLogging { get; set; } = true;
     public bool UseAdsInsteadOfLegacyDungeonSolver { get; set; } = true;
+    public bool EnableRetainerMapRetrieval { get; set; } = true;
 
     // Phase 6: Map Selection + Chest Interaction
     public List<uint> EnabledMapTypes { get; set; } = new();

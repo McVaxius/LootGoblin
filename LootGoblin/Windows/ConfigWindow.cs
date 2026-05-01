@@ -184,6 +184,15 @@ public class ConfigWindow : Window, IDisposable
             ImGui.TextColored(ColorRed, "ADS is not loaded. Install ADS or disable this setting.");
         }
 
+        var retainerMapRetrieval = configuration.EnableRetainerMapRetrieval;
+        if (ImGui.Checkbox("Fetch maps from retainers", ref retainerMapRetrieval))
+        {
+            configuration.EnableRetainerMapRetrieval = retainerMapRetrieval;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("When no enabled map is in inventory or loaded saddlebags, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell.");
+
         var autoDiscard = configuration.EnableAutoDiscard;
         if (ImGui.Checkbox("Auto Discard (/ays discard)", ref autoDiscard))
         {

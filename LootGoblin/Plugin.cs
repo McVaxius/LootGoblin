@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -8,6 +9,7 @@ using Dalamud.Plugin.Services;
 using ECommons;
 using ECommons.Automation;
 using LootGoblin.IPC;
+using LootGoblin.Models;
 using LootGoblin.Services;
 using LootGoblin.Windows;
 
@@ -52,6 +54,7 @@ public sealed class Plugin : IDalamudPlugin
     public AetherytePositionDatabase AetherytePositionDatabase { get; init; }
     public AutoDutyDetectionService AutoDutyDetectionService { get; init; }
     public AdsStatusService AdsStatusService { get; init; }
+    public RetainerMapRetrievalService RetainerMapRetrievalService { get; init; }
 
     // IPC
     public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
@@ -64,12 +67,12 @@ public sealed class Plugin : IDalamudPlugin
 
     // TextAdvance dependency check
     public bool IsTextAdvanceAvailable => IsPluginLoaded("TextAdvance");
-    public bool IsTeleporterAvailable => IsPluginLoaded("TeleporterPlugin");
+    public bool IsLifestreamAvailable => IsPluginLoaded("Lifestream", "Lifestream");
 
     public List<string> DebugLog { get; } = new();
     private const int MaxDebugLogLines = 200;
     private DateTime lastAdsMissingToastAt = DateTime.MinValue;
-    private DateTime lastTeleporterMissingToastAt = DateTime.MinValue;
+    private DateTime lastLifestreamMissingToastAt = DateTime.MinValue;
     private DateTime lastDependencyRefreshAt = DateTime.MinValue;
     private static readonly TimeSpan DependencyRefreshInterval = TimeSpan.FromSeconds(10);
 
@@ -121,6 +124,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         AdsStatusService = new AdsStatusService(this, PluginInterface, Log);
+        RetainerMapRetrievalService = new RetainerMapRetrievalService(this, Log);
 
         // Auto-update community data on login
         ClientState.Login += OnLogin;
@@ -200,6 +204,7 @@ public sealed class Plugin : IDalamudPlugin
         MapDetectionService.Dispose();
         InventoryService.Dispose();
         AdsStatusService.Dispose();
+        RetainerMapRetrievalService.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
         CommandManager.RemoveHandler(CommandAlias);
@@ -232,6 +237,15 @@ public sealed class Plugin : IDalamudPlugin
     private void OnFrameworkUpdate(IFramework framework)
     {
         var now = DateTime.Now;
+
+        if (RetainerMapRetrievalService.IsRunning)
+        {
+            var enabledMaps = Configuration.EnabledMapTypes.Count > 0
+                ? Configuration.EnabledMapTypes
+                : TreasureMapData.KnownMaps.Keys.ToList();
+            RetainerMapRetrievalService.StartOrTick(enabledMaps);
+        }
+
         if (now - lastDependencyRefreshAt < DependencyRefreshInterval)
             return;
 
@@ -308,6 +322,19 @@ public sealed class Plugin : IDalamudPlugin
                 PrintChat("AutoDuty detection state reset");
                 break;
 
+            case "fetchretainer":
+                if (RetainerMapRetrievalService.StartManualFetch())
+                {
+                    PrintChat("Retainer map retrieval started.");
+                    AddDebugLog("[RetainerMap] Manual fetch requested.");
+                }
+                else
+                {
+                    PrintChat($"Retainer map retrieval not started: {RetainerMapRetrievalService.StatusText}");
+                    AddDebugLog($"[RetainerMap] Manual fetch not started: {RetainerMapRetrievalService.StatusText}");
+                }
+                break;
+
             default:
                 MainWindow.Toggle();
                 break;
@@ -332,7 +359,8 @@ public sealed class Plugin : IDalamudPlugin
                     return true;
 
                 if (!string.IsNullOrWhiteSpace(nameFragment) &&
-                    p.Name.Contains(nameFragment, StringComparison.OrdinalIgnoreCase))
+                    (p.Name.Contains(nameFragment, StringComparison.OrdinalIgnoreCase) ||
+                     p.InternalName.Contains(nameFragment, StringComparison.OrdinalIgnoreCase)))
                 {
                     return true;
                 }
@@ -358,17 +386,17 @@ public sealed class Plugin : IDalamudPlugin
         AddDebugLog($"[ADS] {message}");
     }
 
-    public void ShowTeleporterMissingToast()
+    public void ShowLifestreamMissingToast()
     {
-        if ((DateTime.Now - lastTeleporterMissingToastAt).TotalSeconds < 10.0)
+        if ((DateTime.Now - lastLifestreamMissingToastAt).TotalSeconds < 10.0)
             return;
 
-        lastTeleporterMissingToastAt = DateTime.Now;
+        lastLifestreamMissingToastAt = DateTime.Now;
 
-        const string message = "Teleporter is not installed or loaded. LootGoblin uses Teleporter for /tp travel, so install Teleporter before running map travel.";
+        const string message = "Lifestream is not installed or loaded. LootGoblin uses Lifestream for /li travel, so install Lifestream before running map travel.";
         ToastGui.ShowError(message);
         PrintChat(message);
-        AddDebugLog($"[Teleporter] {message}");
+        AddDebugLog($"[Lifestream] {message}");
     }
 
     public void AddDebugLog(string message)

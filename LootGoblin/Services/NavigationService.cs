@@ -67,10 +67,10 @@ public class NavigationService : IDisposable
             return;
         }
 
-        if (!_plugin.IsTeleporterAvailable)
+        if (!_plugin.IsLifestreamAvailable)
         {
-            SetState(NavigationState.Error, "Teleporter not available.");
-            _plugin.ShowTeleporterMissingToast();
+            SetState(NavigationState.Error, "Lifestream not available.");
+            _plugin.ShowLifestreamMissingToast();
             return;
         }
 
@@ -79,7 +79,7 @@ public class NavigationService : IDisposable
         var name = aetheryte?.PlaceName.ValueNullable?.Name.ToString() ?? $"Aetheryte {aetheryteId}";
 
         _plugin.AddDebugLog($"Teleporting to {name} (ID: {aetheryteId})...");
-        CommandHelper.SendCommand($"/tp {name}");
+        CommandHelper.SendCommand($"/li {name}");
 
         SetState(NavigationState.Teleporting, $"Teleporting to {name}...");
     }
