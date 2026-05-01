@@ -6,10 +6,12 @@ using System.Text.Json;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Memory;
 using Dalamud.Plugin.Services;
 using ECommons.Automation;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using LootGoblin.Models;
 using Lumina.Excel.Sheets;
 
@@ -41,8 +43,18 @@ public sealed class RetainerMapRetrievalService : IDisposable
     }
 
     private sealed record RetainerMapCandidate(uint ItemId, string ItemName, string RetainerName, int RetainerIndex, int Quantity);
+    private sealed record RetainerListEntry(int Index, string Name);
+    private sealed record XaItemRow(
+        string Character,
+        string World,
+        string ContainerName,
+        string ItemName,
+        uint ItemId,
+        int Quantity,
+        bool IsHq);
 
     private const uint RevenantsTollTerritoryId = 156;
+    private static readonly Vector3 RevenantsTollBellApproachPosition = new(12.188f, 29.000f, -735.430f);
     private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan LongStepTimeout = TimeSpan.FromSeconds(90);
 
@@ -57,7 +69,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
     private bool bellInteracted;
     private bool retainerSelected;
     private bool inventoryOpened;
-    private bool retrieveClicked;
+    private bool retainerMoveIssued;
     private bool closeIssued;
 
     public string StatusText { get; private set; } = "Idle.";
@@ -109,7 +121,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
             _plugin.AddDebugLog($"[RetainerMap] Found {candidate.ItemName} on retainer {candidate.RetainerName} via XA Database.");
             SuppressAutoRetainer();
 
-            if (TryFindNearestBell(out var bell))
+            if (TryFindNearestBell(out _))
                 EnterStep(RetrievalStep.MovingToBell, $"Moving to retainer bell for {candidate.ItemName}...");
             else
                 EnterStep(RetrievalStep.TravelingToBell, "No nearby retainer bell found. Traveling to Revenant's Toll...");
@@ -125,6 +137,86 @@ public sealed class RetainerMapRetrievalService : IDisposable
         var enabled = GetConfiguredMapIds();
         var result = StartOrTick(enabled);
         return result == RetainerMapRetrievalResult.Running || result == RetainerMapRetrievalResult.Retrieved;
+    }
+
+    public bool HasRetainerMapCandidate(IReadOnlyCollection<uint> enabledMapIds)
+    {
+        var previousStatus = StatusText;
+        var previousError = LastError;
+        var candidate = FindRetainerMapCandidate(enabledMapIds);
+        StatusText = previousStatus;
+        LastError = previousError;
+        return candidate != null;
+    }
+
+    public Dictionary<uint, int> GetRetainerMapCounts(IReadOnlyCollection<uint> mapIds, bool refreshFirst)
+    {
+        var counts = new Dictionary<uint, int>();
+        LastError = string.Empty;
+
+        if (!IsXaDatabaseReady())
+            return counts;
+
+        if (refreshFirst)
+            TryRefreshXaDatabase();
+
+        var allowed = mapIds.Count > 0 ? mapIds.ToHashSet() : GetConfiguredMapIds().ToHashSet();
+        var itemSheet = Plugin.DataManager.GetExcelSheet<Item>();
+        if (itemSheet == null)
+        {
+            LastError = "Item sheet unavailable.";
+            StatusText = LastError;
+            return counts;
+        }
+
+        var totalRows = 0;
+        var currentCharacterRows = 0;
+        var retainerRows = 0;
+
+        foreach (var itemId in allowed)
+        {
+            var item = itemSheet.GetRow(itemId);
+            var itemName = item.Name.ToString();
+            if (string.IsNullOrWhiteSpace(itemName))
+                continue;
+
+            foreach (var response in SearchXaDatabase(itemName))
+            {
+                foreach (var row in ParseXaSearchRows(response))
+                {
+                    totalRows++;
+                    if (!IsCurrentCharacterRow(row))
+                    {
+                        _plugin.AddDebugLog($"[RetainerMap] Rejected XA row for other character/world: {row.Character}@{row.World} {row.ItemName} {row.ContainerName}");
+                        continue;
+                    }
+
+                    currentCharacterRows++;
+                    if (!IsRetainerContainerName(row.ContainerName))
+                    {
+                        _plugin.AddDebugLog($"[RetainerMap] Rejected XA row with non-retainer container: {row.ContainerName} ({row.ItemName}).");
+                        continue;
+                    }
+
+                    retainerRows++;
+                    if (row.ItemId != itemId || row.Quantity <= 0)
+                        continue;
+
+                    counts[itemId] = counts.TryGetValue(itemId, out var existing)
+                        ? existing + row.Quantity
+                        : row.Quantity;
+                }
+            }
+        }
+
+        _plugin.AddDebugLog(
+            $"[RetainerMap] XA count refresh: rows={totalRows}, current-character={currentCharacterRows}, retainer={retainerRows}, map-types={counts.Count}.");
+        if (totalRows > 0 && currentCharacterRows == 0)
+            LastError = "XADB returned rows, but none matched current character/world.";
+        else if (currentCharacterRows > 0 && retainerRows == 0)
+            LastError = "XADB returned current-character rows, but none were retainer containers.";
+
+        return counts;
     }
 
     private void TickActiveStep()
@@ -194,6 +286,20 @@ public sealed class RetainerMapRetrievalService : IDisposable
             return;
         }
 
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+        {
+            StatusText = "Waiting for player before moving to Revenant's Toll bell approach...";
+            nextActionAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        if (!IsNearBellApproach(player.Position))
+        {
+            EnterStep(RetrievalStep.MovingToBell, "Moving to Revenant's Toll retainer bell approach...");
+            return;
+        }
+
         if (!TryFindNearestBell(out _))
         {
             StatusText = "Arrived. Waiting for retainer bell object...";
@@ -206,16 +312,32 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
     private void TickMovingToBell()
     {
-        if (!TryFindNearestBell(out var bell))
-        {
-            EnterStep(RetrievalStep.TravelingToBell, "No reachable retainer bell nearby. Traveling to Revenant's Toll...");
-            return;
-        }
-
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null)
         {
             StatusText = "Waiting for player before moving to retainer bell...";
+            nextActionAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        if (Plugin.ClientState.TerritoryType != RevenantsTollTerritoryId)
+        {
+            EnterStep(RetrievalStep.TravelingToBell, "Traveling to Revenant's Toll retainer bell...");
+            return;
+        }
+
+        var approachDistance = Vector3.Distance(player.Position, RevenantsTollBellApproachPosition);
+        if (approachDistance > 3f)
+        {
+            _plugin.NavigationService.MoveToPosition(RevenantsTollBellApproachPosition);
+            StatusText = $"Moving to Revenant's Toll bell approach... ({approachDistance:F1}y)";
+            nextActionAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        if (!TryFindNearestBell(out var bell))
+        {
+            StatusText = "At bell approach. Waiting for Summoning Bell object...";
             nextActionAt = DateTime.Now.AddSeconds(1);
             return;
         }
@@ -275,8 +397,16 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
         if (GameHelpers.IsAddonVisible("RetainerList") && !retainerSelected)
         {
-            var index = Math.Max(target?.RetainerIndex ?? 0, 0);
-            GameHelpers.FireAddonCallback("RetainerList", true, 2, index);
+            var targetName = target?.RetainerName ?? string.Empty;
+            if (!TryFindRetainerListIndex(targetName, out var index, out var visibleNames))
+            {
+                var visible = visibleNames.Count == 0 ? "none parsed" : string.Join(", ", visibleNames);
+                Fail($"Retainer list is visible but target retainer '{targetName}' was not found by confirmed name. Visible retainers/text: {visible}.");
+                return;
+            }
+
+            _plugin.AddDebugLog($"[RetainerMap] RetainerList target '{targetName}' matched row {index}.");
+            GameHelpers.FireAddonCallback("RetainerList", true, 2, index, 0, 0);
             retainerSelected = true;
             nextActionAt = DateTime.Now.AddSeconds(2);
             return;
@@ -294,8 +424,9 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
     private void TickOpeningRetainerInventory()
     {
-        if (IsRetainerInventoryVisible())
+        if (TryGetActiveRetainerInventoryAddonName(out var addonName))
         {
+            _plugin.AddDebugLog($"[RetainerMap] {addonName} detected as active retainer inventory.");
             EnterStep(RetrievalStep.RetrievingMap, $"Retrieving {target?.ItemName}...");
             return;
         }
@@ -337,16 +468,30 @@ public sealed class RetainerMapRetrievalService : IDisposable
             return;
         }
 
-        if (!retrieveClicked && TryOpenRetainerItemContext(target.ItemName))
+        if (!TryGetActiveRetainerInventoryAddonName(out var addonName))
         {
-            retrieveClicked = true;
+            StatusText = "Waiting for active retainer inventory...";
             nextActionAt = DateTime.Now.AddSeconds(1);
             return;
         }
 
-        if (retrieveClicked && GameHelpers.IsAddonVisible("ContextMenu"))
+        if (!retainerMoveIssued)
         {
-            GameHelpers.FireAddonCallback("ContextMenu", true, 0, 0, 0);
+            if (!_plugin.InventoryService.TryPlanRetainerMapMove(target.ItemId, out var plan, out var planDetail))
+            {
+                Fail($"Could not plan retainer map retrieval from {addonName}: {planDetail}");
+                return;
+            }
+
+            _plugin.AddDebugLog($"[RetainerMap] {planDetail}.");
+            if (!_plugin.InventoryService.TryMovePlannedRetainerMap(plan, out var moveDetail))
+            {
+                Fail($"Could not move retainer map from {addonName}: {moveDetail}");
+                return;
+            }
+
+            _plugin.AddDebugLog($"[RetainerMap] {moveDetail}.");
+            retainerMoveIssued = true;
             nextActionAt = DateTime.Now.AddSeconds(1);
             return;
         }
@@ -409,9 +554,9 @@ public sealed class RetainerMapRetrievalService : IDisposable
             if (string.IsNullOrWhiteSpace(itemName))
                 continue;
 
-            foreach (var json in SearchXaDatabase(itemName))
+            foreach (var response in SearchXaDatabase(itemName))
             {
-                var candidate = TryParseCandidate(json, itemId, itemName);
+                var candidate = TryParseCandidate(response, itemId, itemName);
                 if (candidate != null)
                     return candidate;
             }
@@ -464,34 +609,133 @@ public sealed class RetainerMapRetrievalService : IDisposable
         return results;
     }
 
-    private RetainerMapCandidate? TryParseCandidate(string json, uint itemId, string itemName)
+    private bool TryRefreshXaDatabase()
     {
         try
         {
-            using var doc = JsonDocument.Parse(json);
-            foreach (var element in EnumerateObjects(doc.RootElement))
-            {
-                if (!IsCurrentCharacterResult(element))
-                    continue;
-
-                var location = GetString(element, "Location", "LocationType", "Container", "InventoryType", "Source");
-                if (!string.IsNullOrWhiteSpace(location) &&
-                    !location.Contains("retainer", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var retainerName = GetString(element, "RetainerName", "OwnerName", "Name") ?? "unknown retainer";
-                var quantity = GetInt(element, "Quantity", "Count", "ItemCount") ?? 1;
-                var index = GetInt(element, "RetainerIndex", "RetainerSlot", "Index") ?? 0;
-                return new RetainerMapCandidate(itemId, itemName, retainerName, index, quantity);
-            }
+            var subscriber = Plugin.PluginInterface.GetIpcSubscriber<object>("XA.Database.Refresh");
+            subscriber.InvokeAction();
+            _plugin.AddDebugLog("[RetainerMap] Requested XA Database refresh before retainer count scan.");
+            return true;
         }
         catch (Exception ex)
         {
-            LastError = $"Could not parse XA Database SearchItems response: {ex.Message}";
+            LastError = $"XA Database Refresh IPC failed: {ex.Message}";
             _log.Warning(LastError);
+            return false;
+        }
+    }
+
+    private RetainerMapCandidate? TryParseCandidate(string response, uint itemId, string itemName)
+    {
+        var sawRows = false;
+        var sawCurrentCharacterRows = false;
+        var sawRetainerRows = false;
+
+        foreach (var row in ParseXaSearchRows(response))
+        {
+            sawRows = true;
+            if (!IsCurrentCharacterRow(row))
+                continue;
+
+            sawCurrentCharacterRows = true;
+            if (!IsRetainerContainerName(row.ContainerName))
+                continue;
+
+            sawRetainerRows = true;
+            if (row.ItemId != itemId || row.Quantity <= 0)
+                continue;
+
+            var retainerName = ExtractRetainerName(row.ContainerName);
+            _plugin.AddDebugLog(
+                $"[RetainerMap] XA row matched: {row.ItemName} x{row.Quantity} on {retainerName} ({row.ContainerName}).");
+            return new RetainerMapCandidate(itemId, itemName, retainerName, -1, row.Quantity);
         }
 
+        if (!sawRows)
+            LastError = $"XA Database SearchItems response for {itemName} had no parseable pipe rows.";
+        else if (!sawCurrentCharacterRows)
+            LastError = $"XA Database SearchItems found {itemName}, but not for current character/world.";
+        else if (!sawRetainerRows)
+            LastError = $"XA Database SearchItems found {itemName}, but not in retainer containers.";
+
         return null;
+    }
+
+    private IEnumerable<XaItemRow> ParseXaSearchRows(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+            yield break;
+
+        foreach (var rawLine in response.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0)
+                continue;
+
+            var parts = line.Split('|');
+            if (parts.Length < 7)
+            {
+                _plugin.AddDebugLog($"[RetainerMap] Skipping XA row with {parts.Length} columns: {line}");
+                continue;
+            }
+
+            if (!uint.TryParse(parts[4].Trim(), out var parsedItemId))
+            {
+                if (!parts[4].Trim().Equals("ItemId", StringComparison.OrdinalIgnoreCase))
+                    _plugin.AddDebugLog($"[RetainerMap] Skipping XA row with invalid ItemId: {line}");
+                continue;
+            }
+
+            var quantity = 0;
+            if (!int.TryParse(parts[5].Trim(), out quantity))
+                quantity = 0;
+
+            var isHq = bool.TryParse(parts[6].Trim(), out var parsedIsHq) && parsedIsHq;
+            yield return new XaItemRow(
+                parts[0].Trim(),
+                parts[1].Trim(),
+                parts[2].Trim(),
+                parts[3].Trim(),
+                parsedItemId,
+                quantity,
+                isHq);
+        }
+    }
+
+    private bool IsCurrentCharacterRow(XaItemRow row)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var currentCharacter = player?.Name.TextValue ?? string.Empty;
+        var currentWorld = player?.HomeWorld.Value.Name.ToString() ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(currentCharacter) &&
+            !string.Equals(row.Character, currentCharacter, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(currentWorld) &&
+            !string.Equals(row.World, currentWorld, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
+    }
+
+    private static bool IsRetainerContainerName(string containerName)
+    {
+        return !string.IsNullOrWhiteSpace(containerName) &&
+               containerName.Contains("retainer", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ExtractRetainerName(string containerName)
+    {
+        var cleaned = containerName.Trim();
+        foreach (var prefix in new[] { "Retainer:", "Retainer -", "Retainer", "Retainer Inventory:" })
+        {
+            if (cleaned.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return cleaned[prefix.Length..].Trim(' ', '-', ':');
+        }
+
+        return cleaned;
     }
 
     private static IEnumerable<JsonElement> EnumerateObjects(JsonElement element)
@@ -626,6 +870,9 @@ public sealed class RetainerMapRetrievalService : IDisposable
         return bell != null;
     }
 
+    private static bool IsNearBellApproach(Vector3 position)
+        => Vector3.Distance(position, RevenantsTollBellApproachPosition) <= 3f;
+
     private static bool IsLoading()
     {
         return Plugin.Condition[ConditionFlag.BetweenAreas] ||
@@ -634,8 +881,31 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
     private static bool IsRetainerInventoryVisible()
     {
-        return GameHelpers.IsAddonVisible("InventoryRetainer") ||
-               GameHelpers.IsAddonVisible("RetainerItemTransferList");
+        return TryGetActiveRetainerInventoryAddonName(out _, includeTransferList: true);
+    }
+
+    private static bool TryGetActiveRetainerInventoryAddonName(out string addonName, bool includeTransferList = false)
+    {
+        if (GameHelpers.IsAddonVisible("InventoryRetainerLarge"))
+        {
+            addonName = "InventoryRetainerLarge";
+            return true;
+        }
+
+        if (GameHelpers.IsAddonVisible("InventoryRetainer"))
+        {
+            addonName = "InventoryRetainer";
+            return true;
+        }
+
+        if (includeTransferList && GameHelpers.IsAddonVisible("RetainerItemTransferList"))
+        {
+            addonName = "RetainerItemTransferList";
+            return true;
+        }
+
+        addonName = string.Empty;
+        return false;
     }
 
     private static unsafe int FindSelectStringIndex(params string[] needles)
@@ -666,16 +936,129 @@ public sealed class RetainerMapRetrievalService : IDisposable
         return -1;
     }
 
-    private static bool TryOpenRetainerItemContext(string itemName)
+    private static unsafe bool TryFindRetainerListIndex(string targetName, out int index, out List<string> visibleNames)
     {
-        // Retainer inventory row discovery is patch-sensitive. Prefer a known addon callback,
-        // then let the following ContextMenu/YesNo steps finish the withdrawal if the game opens it.
-        if (!IsRetainerInventoryVisible())
+        index = -1;
+        visibleNames = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(targetName))
             return false;
 
-        GameHelpers.FireAddonCallback("InventoryRetainer", true, 0, 0, 0);
-        return true;
+        try
+        {
+            nint addonPtr = Plugin.GameGui.GetAddonByName("RetainerList", 1);
+            if (addonPtr == 0)
+                return false;
+
+            var addon = (AtkUnitBase*)addonPtr;
+            if (!addon->IsVisible)
+                return false;
+
+            var entries = ReadRetainerListEntries(addon);
+            visibleNames = entries
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
+                .Select(entry => entry.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var normalizedTarget = NormalizeRetainerName(targetName);
+            var match = entries.FirstOrDefault(entry => NormalizeRetainerName(entry.Name) == normalizedTarget);
+            if (match == null)
+                return false;
+
+            index = match.Index;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
+
+    private static unsafe List<RetainerListEntry> ReadRetainerListEntries(AtkUnitBase* addon)
+    {
+        var reader = new RetainerListReader(addon);
+        return reader.Retainers
+            .Where(entry => entry.IsActive && IsPlausibleRetainerName(entry.Name))
+            .Select(entry => new RetainerListEntry(entry.Index, entry.Name.Trim()))
+            .ToList();
+    }
+
+    private sealed unsafe class RetainerListReader(AtkUnitBase* addon)
+    {
+        public List<RetainerEntryReader> Retainers => Loop(3, 10, 10);
+
+        private List<RetainerEntryReader> Loop(int offset, int size, int maxLength)
+        {
+            var entries = new List<RetainerEntryReader>();
+            for (var i = 0; i < maxLength; i++)
+            {
+                var entry = new RetainerEntryReader(addon, offset + i * size, i);
+                if (entry.IsNull)
+                    break;
+
+                entries.Add(entry);
+            }
+
+            return entries;
+        }
+    }
+
+    private sealed unsafe class RetainerEntryReader(AtkUnitBase* addon, int beginOffset, int index)
+    {
+        public int Index => index;
+        public bool IsNull => addon->AtkValuesCount == 0 || ReadValue(0)->Type == 0;
+        public string Name => ReadString(0);
+        public bool IsActive => ReadBool(8) ?? false;
+
+        private AtkValue* ReadValue(int offset)
+        {
+            var valueIndex = beginOffset + offset;
+            if (valueIndex < 0 || valueIndex >= addon->AtkValuesCount)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return &addon->AtkValues[valueIndex];
+        }
+
+        private string ReadString(int offset)
+        {
+            var value = ReadValue(offset);
+            if (value->Type == 0)
+                return string.Empty;
+
+            if (value->Type is not (AtkValueType.String or AtkValueType.ManagedString or AtkValueType.String8 or AtkValueType.WideString))
+                return string.Empty;
+
+            return value->String.Value == null
+                ? string.Empty
+                : MemoryHelper.ReadStringNullTerminated((nint)value->String.Value);
+        }
+
+        private bool? ReadBool(int offset)
+        {
+            var value = ReadValue(offset);
+            if (value->Type == 0)
+                return null;
+
+            if (value->Type != AtkValueType.Bool)
+                return null;
+
+            return value->Byte != 0;
+        }
+    }
+
+    private static bool IsPlausibleRetainerName(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || text.Length is < 2 or > 24)
+            return false;
+
+        if (text.Contains(' ') || text.Any(char.IsDigit))
+            return false;
+
+        return text.All(c => char.IsLetter(c) || c == '\'' || c == '-');
+    }
+
+    private static string NormalizeRetainerName(string name)
+        => new(name.Where(c => char.IsLetterOrDigit(c) || c == '\'' || c == '-').Select(char.ToLowerInvariant).ToArray());
 
     private void SuppressAutoRetainer()
     {
@@ -712,7 +1095,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
         bellInteracted = false;
         retainerSelected = false;
         inventoryOpened = false;
-        retrieveClicked = false;
+        retainerMoveIssued = false;
         closeIssued = false;
     }
 

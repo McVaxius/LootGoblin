@@ -68,6 +68,8 @@ public sealed class Plugin : IDalamudPlugin
     // TextAdvance dependency check
     public bool IsTextAdvanceAvailable => IsPluginLoaded("TextAdvance");
     public bool IsLifestreamAvailable => IsPluginLoaded("Lifestream", "Lifestream");
+    public bool IsXaDatabaseAvailable => IsPluginLoaded("xadb", "XADatabase") || IsPluginLoaded("xadb", "XA Database");
+    public bool IsXaSlaveAvailable => IsPluginLoaded("xaslave", "XASlave") || IsPluginLoaded("xaslave", "XA Slave");
 
     public List<string> DebugLog { get; } = new();
     private const int MaxDebugLogLines = 200;

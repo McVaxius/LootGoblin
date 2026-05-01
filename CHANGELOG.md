@@ -6,17 +6,22 @@ All notable changes to LootGoblin will be documented in this file.
 
 ### Fixed
 - **Existing deciphered-map flow** - When no maps remain in inventory but a treasure-map flag is already set, LootGoblin now proceeds from the existing flag instead of failing immediately
+- **Saddlebag retrieval logout risk** - Replaced direct backend saddlebag `MoveItemSlot` use during map selection with a paced `/saddlebag` UI flow. X: log evidence showed logout immediately after direct move (`13:56:00.911 [Saddlebag] ... MoveItemSlot` then `13:56:01.090 Logout Type 2 Code 90002`).
+- **Retainer map lookup parsing** - `XA.Database.SearchItems` now parses newline pipe rows (`Character|World|ContainerName|ItemName|ItemId|Quantity|IsHq`) instead of JSON, filters to current character/world retainer containers, and fails visibly when target retainer selection cannot be confirmed.
 
 ### Changed
 - **Dungeon object handling cadence** - Dungeon interaction retries now run on a 1-second cadence to match the faster proven chest/portal handling rhythm
 - **Dungeon object scan overhead** - `FindDungeonObjects()` no longer target-swaps every candidate just to validate ordinary dungeon loot/progression objects, reducing per-scan overhead while preserving the dedicated ghost-object checks where they still matter
 - **UI warning surface** - The main window now shows a red warning when LootGoblin is continuing from an already-set map flag without maps left in inventory
+- **Saddlebag map move safety** - Saddlebag retrieval now opens `InventoryBuddy`, waits for the addon to become visible and stable, rescans loaded containers, revalidates source/destination slots, issues one move, waits for inventory/saddlebag count confirmation, then closes the UI before returning to normal map selection.
 
 ### Validation
 - Built `Debug x64` successfully from `z:\LootGoblin\LootGoblin.sln`
 - Build result: `0 errors`
 - Build produced `z:\LootGoblin\LootGoblin\bin\x64\Debug\LootGoblin.dll`
 - Existing warnings remain in the project and were not introduced by this pass
+- Runtime test steps for user: keep no enabled maps in inventory, place one enabled map only in saddlebag, start LootGoblin, confirm debug order `/saddlebag` -> `InventoryBuddy visible` -> `Move issued` -> `Count confirmed` -> normal decipher/open-map flow, with no logout `90002`.
+- Retainer test steps for user: place an enabled map in XADB retainer rows, run `/lg fetchretainer`, confirm target map/retainer match or explicit parse/filter/selection error, with no blind retainer callback spam.
 
 ## [0.0.1.70] - 2026-03-05
 

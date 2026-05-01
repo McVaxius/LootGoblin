@@ -18,7 +18,17 @@
       "InternalName": "Lifestream",
       "Required": true,
       "Reason": "LootGoblin uses Lifestream for /li aetheryte travel."
+    },
+    {
+      "InternalName": "xadb",
+      "Required": false,
+      "Reason": "Needed if you want retainer and saddlebag retrieval."
+    },
+    {
+      "InternalName": "xaslave",
+      "Required": false,
+      "Reason": "Needed if you want retainer and saddlebag retrieval."
     }
   ],
-  "AssemblyVersion": "0.0.4.20"
+  "AssemblyVersion": "0.1.0.0"
 }

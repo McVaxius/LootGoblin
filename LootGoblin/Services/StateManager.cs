@@ -12,6 +12,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 using ECommons.Automation;
 using LootGoblin.Models;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 
@@ -28,6 +29,16 @@ public enum OverworldLandingMode
 {
     MountToggle,
     UnderwaterBounce,
+}
+
+internal enum SaddlebagRetrievalStep
+{
+    Idle,
+    Opening,
+    WaitingForAddon,
+    WaitingStable,
+    Moving,
+    Confirming,
 }
 
 public class StateManager : IDisposable
@@ -81,6 +92,16 @@ public class StateManager : IDisposable
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
+    private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
+    private static readonly TimeSpan SaddlebagStepTimeout = TimeSpan.FromSeconds(20);
+    private SaddlebagRetrievalStep saddlebagRetrievalStep = SaddlebagRetrievalStep.Idle;
+    private DateTime saddlebagStepStartedAt = DateTime.MinValue;
+    private DateTime saddlebagNextActionAt = DateTime.MinValue;
+    private DateTime saddlebagAddonVisibleSince = DateTime.MinValue;
+    private uint saddlebagTargetItemId;
+    private int saddlebagInitialInventoryCount;
+    private int saddlebagInitialSaddlebagCount;
+    private SaddlebagMovePlan? saddlebagMovePlan;
 
     // Dungeon state tracking (Phase 8)
     private int dungeonFloor;
@@ -413,6 +434,7 @@ public class StateManager : IDisposable
 
         ClearWarning();
         ResetRunCommandTriggers();
+        ResetSaddlebagRetrieval();
 
         // Check for AutoDuty when starting LootGoblin
         _plugin.RefreshDependencyStatus(logStatus: true);
@@ -465,7 +487,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (TryStartFromExistingMapFlag("[Start]"))
+        if (!ShouldIgnoreExistingMapFlagForRetainerOnlyWork("[Start]") && TryStartFromExistingMapFlag("[Start]"))
             return;
 
         RetryCount = 0;
@@ -497,6 +519,7 @@ public class StateManager : IDisposable
         dungeonEntryProcessed = false;
         ResetAdsHandoffTracking(resetStatus: true);
         _plugin.RetainerMapRetrievalService.Reset();
+        ResetSaddlebagRetrieval();
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         RestoreMountedRotationLifecycle("bot stop");
@@ -514,6 +537,7 @@ public class StateManager : IDisposable
         portalRetryStart = DateTime.MinValue;
         ResetAdsHandoffTracking(resetStatus: true);
         _plugin.RetainerMapRetrievalService.Reset();
+        ResetSaddlebagRetrieval();
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         RestoreMountedRotationLifecycle("full reset");
@@ -559,6 +583,30 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private bool ShouldIgnoreExistingMapFlagForRetainerOnlyWork(string source)
+    {
+        if (_plugin.GlobeTrotterIPC.TryGetMapLocation() == null)
+            return false;
+
+        if (!_plugin.Configuration.EnableRetainerMapRetrieval)
+            return false;
+
+        var mapSources = _plugin.InventoryService.ScanForMapSources();
+        if (GetEnabledMapCandidates(mapSources, includeInventory: true, includeSaddlebags: true).Count > 0)
+            return false;
+
+        var enabledForRetainers = _plugin.Configuration.EnabledMapTypes.Count > 0
+            ? _plugin.Configuration.EnabledMapTypes.ToList()
+            : TreasureMapData.KnownMaps.Keys.ToList();
+
+        if (!_plugin.RetainerMapRetrievalService.HasRetainerMapCandidate(enabledForRetainers))
+            return false;
+
+        _plugin.AddDebugLog($"{source} Existing deciphered map flag ignored because selected work exists only on a retainer.");
+        ClearWarning();
+        return true;
+    }
+
     private List<uint> GetEnabledMapCandidates(
         Dictionary<uint, MapSourceCount> mapSources,
         bool includeInventory,
@@ -586,53 +634,326 @@ public class StateManager : IDisposable
 
     private void TryRetrieveSaddlebagMap(uint mapItemId)
     {
+        if (saddlebagRetrievalStep != SaddlebagRetrievalStep.Idle)
+            return;
+
         var mapName = TreasureMapData.KnownMaps.TryGetValue(mapItemId, out var info)
             ? info.Name
             : $"ID {mapItemId}";
 
-        if (_plugin.InventoryService.TryMoveMapFromSaddlebagsToInventory(mapItemId, out var detail))
+        saddlebagTargetItemId = mapItemId;
+        saddlebagMovePlan = null;
+        saddlebagInitialInventoryCount = _plugin.InventoryService.GetMapCount(mapItemId);
+        saddlebagInitialSaddlebagCount = _plugin.InventoryService.GetSaddlebagMapCount(mapItemId);
+        saddlebagAddonVisibleSince = DateTime.MinValue;
+        _plugin.AddDebugLog(
+            $"[Saddlebag] Starting UI retrieval for {mapName}: inventory={saddlebagInitialInventoryCount}, saddlebag={saddlebagInitialSaddlebagCount}");
+        EnterSaddlebagStep(SaddlebagRetrievalStep.Opening, $"Opening saddlebag for {mapName}...");
+    }
+
+    private void TickSaddlebagMapRetrieval()
+    {
+        if (saddlebagRetrievalStep == SaddlebagRetrievalStep.Idle)
+            return;
+
+        if (DateTime.Now < saddlebagNextActionAt)
+            return;
+
+        var mapName = TreasureMapData.KnownMaps.TryGetValue(saddlebagTargetItemId, out var info)
+            ? info.Name
+            : $"ID {saddlebagTargetItemId}";
+
+        if (DateTime.Now - saddlebagStepStartedAt > SaddlebagStepTimeout)
         {
-            _plugin.AddDebugLog($"[Saddlebag] Retrieved {mapName}: {detail}");
-            StateDetail = $"Retrieved {mapName} from saddlebag. Rechecking inventory...";
-            lastMapScanTime = DateTime.MinValue;
+            FailSaddlebagRetrieval($"{saddlebagRetrievalStep} timed out for {mapName}.");
             return;
         }
 
+        switch (saddlebagRetrievalStep)
+        {
+            case SaddlebagRetrievalStep.Opening:
+                TickOpeningSaddlebag(mapName);
+                break;
+            case SaddlebagRetrievalStep.WaitingForAddon:
+                TickWaitingForSaddlebagAddon(mapName);
+                break;
+            case SaddlebagRetrievalStep.WaitingStable:
+                TickWaitingForStableSaddlebag(mapName);
+                break;
+            case SaddlebagRetrievalStep.Moving:
+                TickMovingSaddlebagMap(mapName);
+                break;
+            case SaddlebagRetrievalStep.Confirming:
+                TickConfirmingSaddlebagMove(mapName);
+                break;
+        }
+    }
+
+    private void TickOpeningSaddlebag(string mapName)
+    {
+        if (!CanRunSaddlebagAction(out var reason))
+        {
+            StateDetail = $"Waiting to open saddlebag: {reason}";
+            saddlebagNextActionAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        if (GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            saddlebagAddonVisibleSince = DateTime.Now;
+            _plugin.AddDebugLog("[Saddlebag] InventoryBuddy already visible.");
+            EnterSaddlebagStep(SaddlebagRetrievalStep.WaitingStable, $"Waiting for saddlebag UI to stabilize for {mapName}...");
+            return;
+        }
+
+        CommandHelper.SendCommand("/saddlebag");
+        _plugin.AddDebugLog("[Saddlebag] Open requested with /saddlebag.");
+        EnterSaddlebagStep(SaddlebagRetrievalStep.WaitingForAddon, $"Waiting for saddlebag UI for {mapName}...");
+        saddlebagNextActionAt = DateTime.Now.AddSeconds(1);
+    }
+
+    private void TickWaitingForSaddlebagAddon(string mapName)
+    {
+        if (!CanRunSaddlebagAction(out var reason))
+        {
+            StateDetail = $"Waiting for saddlebag UI: {reason}";
+            saddlebagNextActionAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        if (GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            saddlebagAddonVisibleSince = DateTime.Now;
+            _plugin.AddDebugLog("[Saddlebag] InventoryBuddy visible.");
+            EnterSaddlebagStep(SaddlebagRetrievalStep.WaitingStable, $"Waiting for saddlebag UI to stabilize for {mapName}...");
+            return;
+        }
+
+        StateDetail = $"Waiting for saddlebag UI for {mapName}...";
+        saddlebagNextActionAt = DateTime.Now.AddMilliseconds(500);
+    }
+
+    private void TickWaitingForStableSaddlebag(string mapName)
+    {
+        if (!CanRunSaddlebagAction(out var reason))
+        {
+            StateDetail = $"Waiting for stable saddlebag UI: {reason}";
+            saddlebagNextActionAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        if (!GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            _plugin.AddDebugLog("[Saddlebag] InventoryBuddy hidden while waiting; reopening.");
+            EnterSaddlebagStep(SaddlebagRetrievalStep.Opening, $"Reopening saddlebag for {mapName}...");
+            saddlebagNextActionAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        if (DateTime.Now - saddlebagAddonVisibleSince < SaddlebagAddonStableDelay)
+        {
+            StateDetail = $"Waiting for saddlebag UI to stabilize for {mapName}...";
+            saddlebagNextActionAt = DateTime.Now.AddMilliseconds(250);
+            return;
+        }
+
+        _plugin.InventoryService.ScanForMapSources();
+
+        if (!_plugin.InventoryService.TryPlanSaddlebagMapMove(saddlebagTargetItemId, out var plan, out var detail))
+        {
+            if (detail.Contains("No empty inventory slot", StringComparison.OrdinalIgnoreCase))
+            {
+                FailSaddlebagRetrieval(detail);
+                return;
+            }
+
+            StateDetail = $"Waiting for loaded saddlebag source for {mapName}...";
+            _plugin.AddDebugLog($"[Saddlebag] Waiting for source/destination: {detail}");
+            saddlebagNextActionAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        saddlebagMovePlan = plan;
+        _plugin.AddDebugLog($"[Saddlebag] Source/destination chosen for {mapName}: {detail}");
+        EnterSaddlebagStep(SaddlebagRetrievalStep.Moving, $"Moving {mapName} from saddlebag...");
+        saddlebagNextActionAt = DateTime.Now.AddMilliseconds(500);
+    }
+
+    private void TickMovingSaddlebagMap(string mapName)
+    {
+        if (saddlebagMovePlan == null)
+        {
+            FailSaddlebagRetrieval("No saddlebag move plan.");
+            return;
+        }
+
+        if (!CanRunSaddlebagAction(out var reason))
+        {
+            StateDetail = $"Waiting to move saddlebag map: {reason}";
+            saddlebagNextActionAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        if (!GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            FailSaddlebagRetrieval("InventoryBuddy hidden before saddlebag move.");
+            return;
+        }
+
+        if (!_plugin.InventoryService.TryMovePlannedSaddlebagMap(saddlebagMovePlan, out var detail))
+        {
+            FailSaddlebagRetrieval(detail);
+            return;
+        }
+
+        _plugin.AddDebugLog($"[Saddlebag] Move issued for {mapName}: {detail}");
+        EnterSaddlebagStep(SaddlebagRetrievalStep.Confirming, $"Confirming {mapName} moved from saddlebag...");
+        saddlebagNextActionAt = DateTime.Now.AddSeconds(1);
+    }
+
+    private void TickConfirmingSaddlebagMove(string mapName)
+    {
+        var inventoryCount = _plugin.InventoryService.GetMapCount(saddlebagTargetItemId);
+        var saddlebagCount = _plugin.InventoryService.GetSaddlebagMapCount(saddlebagTargetItemId);
+
+        if (inventoryCount > saddlebagInitialInventoryCount && saddlebagCount < saddlebagInitialSaddlebagCount)
+        {
+            _plugin.AddDebugLog(
+                $"[Saddlebag] Count confirmed for {mapName}: inventory {saddlebagInitialInventoryCount}->{inventoryCount}, saddlebag {saddlebagInitialSaddlebagCount}->{saddlebagCount}");
+            if (GameHelpers.IsAddonVisible("InventoryBuddy"))
+                GameHelpers.CloseCurrentAddon();
+
+            StateDetail = $"Retrieved {mapName} from saddlebag. Rechecking inventory...";
+            lastMapScanTime = DateTime.MinValue;
+            ResetSaddlebagRetrieval();
+            return;
+        }
+
+        StateDetail = $"Waiting for {mapName} saddlebag move confirmation...";
+        saddlebagNextActionAt = DateTime.Now.AddMilliseconds(500);
+    }
+
+    private bool CanRunSaddlebagAction(out string reason)
+    {
+        if (!Plugin.ClientState.IsLoggedIn)
+        {
+            reason = "not logged in";
+            return false;
+        }
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+        {
+            reason = "player unavailable";
+            return false;
+        }
+
+        if (player.IsCasting || Plugin.Condition[ConditionFlag.Casting])
+        {
+            reason = "casting";
+            return false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51])
+        {
+            reason = "loading";
+            return false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.Occupied] ||
+            Plugin.Condition[ConditionFlag.OccupiedInQuestEvent] ||
+            Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent] ||
+            Plugin.Condition[ConditionFlag.Occupied33] ||
+            Plugin.Condition[ConditionFlag.Occupied39] ||
+            Plugin.Condition[ConditionFlag.WatchingCutscene])
+        {
+            reason = "occupied";
+            return false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            reason = "in combat";
+            return false;
+        }
+
+        reason = "ready";
+        return true;
+    }
+
+    private void EnterSaddlebagStep(SaddlebagRetrievalStep nextStep, string detail)
+    {
+        saddlebagRetrievalStep = nextStep;
+        saddlebagStepStartedAt = DateTime.Now;
+        saddlebagNextActionAt = DateTime.Now;
+        StateDetail = detail;
+        _plugin.AddDebugLog($"[Saddlebag] {detail}");
+    }
+
+    private void FailSaddlebagRetrieval(string detail)
+    {
+        var mapName = TreasureMapData.KnownMaps.TryGetValue(saddlebagTargetItemId, out var info)
+            ? info.Name
+            : $"ID {saddlebagTargetItemId}";
+
+        _plugin.AddDebugLog($"[Saddlebag] ERROR: {detail}");
+        ResetSaddlebagRetrieval();
         HandleError($"Could not retrieve {mapName} from saddlebag: {detail}");
+    }
+
+    private void ResetSaddlebagRetrieval()
+    {
+        saddlebagRetrievalStep = SaddlebagRetrievalStep.Idle;
+        saddlebagStepStartedAt = DateTime.MinValue;
+        saddlebagNextActionAt = DateTime.MinValue;
+        saddlebagAddonVisibleSince = DateTime.MinValue;
+        saddlebagTargetItemId = 0;
+        saddlebagInitialInventoryCount = 0;
+        saddlebagInitialSaddlebagCount = 0;
+        saddlebagMovePlan = null;
     }
 
     private bool TryRetrieveRetainerMap(IReadOnlyCollection<uint> enabledMapIds, string emptyInventoryError)
     {
         if (!_plugin.Configuration.EnableRetainerMapRetrieval)
         {
+            _plugin.AddDebugLog($"[RetainerMap] Retrieval disabled. {emptyInventoryError}");
             HandleError(emptyInventoryError);
             return true;
         }
 
+        _plugin.AddDebugLog($"[RetainerMap] Checking XA Database for enabled map IDs: {FormatMapIds(enabledMapIds)}");
         var result = _plugin.RetainerMapRetrievalService.StartOrTick(enabledMapIds);
         switch (result)
         {
             case RetainerMapRetrievalResult.Running:
+                _plugin.AddDebugLog($"[RetainerMap] Retrieval running: {_plugin.RetainerMapRetrievalService.StatusText}");
                 StateDetail = _plugin.RetainerMapRetrievalService.StatusText;
                 lastMapScanTime = DateTime.MinValue;
                 return true;
 
             case RetainerMapRetrievalResult.Retrieved:
+                _plugin.AddDebugLog("[RetainerMap] Retrieval complete. Rechecking inventory.");
                 StateDetail = "Retainer map retrieved. Rechecking inventory...";
                 lastMapScanTime = DateTime.MinValue;
                 return true;
 
             case RetainerMapRetrievalResult.Error:
-                HandleError($"Could not retrieve retainer map: {_plugin.RetainerMapRetrievalService.LastError}");
+                _plugin.AddDebugLog($"[RetainerMap] Retrieval error: {_plugin.RetainerMapRetrievalService.LastError}");
+                StopOnRetainerRetrievalError($"Could not retrieve retainer map: {_plugin.RetainerMapRetrievalService.LastError}");
                 return true;
 
             case RetainerMapRetrievalResult.NotAvailable:
+                _plugin.AddDebugLog($"[RetainerMap] No enabled retainer map available. {emptyInventoryError}");
                 HandleError(emptyInventoryError);
                 return true;
         }
 
         return false;
     }
+
+    private static string FormatMapIds(IReadOnlyCollection<uint> mapIds)
+        => mapIds.Count == 0 ? "all configured maps" : string.Join(", ", mapIds);
 
     private void ResetRunCommandTriggers()
     {
@@ -711,6 +1032,12 @@ public class StateManager : IDisposable
 
     private void TickSelectingMap()
     {
+        if (saddlebagRetrievalStep != SaddlebagRetrievalStep.Idle)
+        {
+            TickSaddlebagMapRetrieval();
+            return;
+        }
+
         // Only scan every 3 seconds to reduce log spam
         if ((DateTime.Now - lastMapScanTime).TotalSeconds < 3)
         {
@@ -735,6 +1062,7 @@ public class StateManager : IDisposable
             var saddlebagCandidates = GetEnabledMapCandidates(mapSources, includeInventory: false, includeSaddlebags: true);
             if (saddlebagCandidates.Count > 0)
             {
+                _plugin.AddDebugLog($"[SelectingMap] No inventory maps. Retrieving enabled saddlebag map ID {saddlebagCandidates[0]}.");
                 TryRetrieveSaddlebagMap(saddlebagCandidates[0]);
                 return;
             }
@@ -742,6 +1070,7 @@ public class StateManager : IDisposable
             var enabledForRetainers = _plugin.Configuration.EnabledMapTypes.Count > 0
                 ? _plugin.Configuration.EnabledMapTypes.ToList()
                 : TreasureMapData.KnownMaps.Keys.ToList();
+            _plugin.AddDebugLog($"[SelectingMap] No inventory/saddlebag maps. Checking retainer maps via XADB for {FormatMapIds(enabledForRetainers)}.");
             if (TryRetrieveRetainerMap(enabledForRetainers, "No maps found in inventory, saddlebags, or retainers."))
                 return;
 
@@ -759,13 +1088,17 @@ public class StateManager : IDisposable
 
         if (candidates.Count == 0)
         {
+            _plugin.AddDebugLog(
+                $"[SelectingMap] No enabled local maps. Enabled={FormatMapIds(enabled.Count > 0 ? enabled.ToList() : TreasureMapData.KnownMaps.Keys.ToList())}; local map types={maps.Count}.");
             var saddlebagCandidates = GetEnabledMapCandidates(mapSources, includeInventory: false, includeSaddlebags: true);
             if (saddlebagCandidates.Count > 0)
             {
+                _plugin.AddDebugLog($"[SelectingMap] Retrieving enabled saddlebag map ID {saddlebagCandidates[0]}.");
                 TryRetrieveSaddlebagMap(saddlebagCandidates[0]);
                 return;
             }
 
+            _plugin.AddDebugLog("[SelectingMap] No enabled saddlebag maps. Checking enabled retainer maps via XADB.");
             if (TryRetrieveRetainerMap(enabled.Count > 0 ? enabled.ToList() : TreasureMapData.KnownMaps.Keys.ToList(),
                     "No enabled maps in inventory, saddlebags, or retainers. Check map selection in UI."))
                 return;
@@ -3334,7 +3667,37 @@ public class StateManager : IDisposable
                 return;
             }
 
-            _plugin.AddDebugLog("[Completed] No more runnable maps in inventory or loaded saddlebags.");
+            _plugin.AddDebugLog("[Completed] No runnable maps in inventory or loaded saddlebags. Checking retainers via XADB.");
+            if (_plugin.Configuration.EnableRetainerMapRetrieval)
+            {
+                var enabledForRetainers = _plugin.Configuration.EnabledMapTypes.Count > 0
+                    ? _plugin.Configuration.EnabledMapTypes.ToList()
+                    : TreasureMapData.KnownMaps.Keys.ToList();
+                var retainerResult = _plugin.RetainerMapRetrievalService.StartOrTick(enabledForRetainers);
+                switch (retainerResult)
+                {
+                    case RetainerMapRetrievalResult.Running:
+                    case RetainerMapRetrievalResult.Retrieved:
+                        RetryCount = 0;
+                        CurrentLocation = null;
+                        ResetPerMapCommandTriggers();
+                        TransitionTo(BotState.SelectingMap, "Auto-starting next retainer map...");
+                        return;
+
+                    case RetainerMapRetrievalResult.Error:
+                        _plugin.AddDebugLog($"[Completed] Retainer map retrieval error: {_plugin.RetainerMapRetrievalService.LastError}");
+                        StopOnRetainerRetrievalError($"Could not retrieve retainer map: {_plugin.RetainerMapRetrievalService.LastError}");
+                        return;
+
+                    case RetainerMapRetrievalResult.NotAvailable:
+                        _plugin.AddDebugLog("[Completed] No enabled retainer maps found via XADB.");
+                        break;
+                }
+            }
+            else
+            {
+                _plugin.AddDebugLog("[Completed] Retainer map retrieval disabled.");
+            }
         }
 
         RunFinishCommandsOnce("[Completed] run complete");
@@ -4033,6 +4396,15 @@ public class StateManager : IDisposable
         
         // Not in duty - safe to retry from SelectingMap
         TransitionTo(BotState.SelectingMap, $"Error #{RetryCount}: {message}");
+    }
+
+    private void StopOnRetainerRetrievalError(string message)
+    {
+        RetryCount++;
+        _plugin.AddDebugLog($"[RetainerMap] Fatal error #{RetryCount}: {message}");
+        _plugin.NavigationService.StopNavigation();
+        _plugin.RetainerMapRetrievalService.Reset();
+        TransitionTo(BotState.Error, message);
     }
 
     // ─── Transition ───────────────────────────────────────────────────────────

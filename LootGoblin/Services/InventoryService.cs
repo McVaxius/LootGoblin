@@ -12,9 +12,27 @@ public class MapSourceCount
     public int Inventory { get; set; }
     public int Saddlebag { get; set; }
     public int PremiumSaddlebag { get; set; }
-    public int Total => Inventory + Saddlebag + PremiumSaddlebag;
+    public int Retainer { get; set; }
+    public int Total => Inventory + Saddlebag + PremiumSaddlebag + Retainer;
+    public int LoadedTotal => Inventory + Saddlebag + PremiumSaddlebag;
     public int SaddlebagTotal => Saddlebag + PremiumSaddlebag;
 }
+
+public sealed record SaddlebagMovePlan(
+    uint ItemId,
+    InventoryType SourceType,
+    int SourceSlot,
+    InventoryType DestinationType,
+    int DestinationSlot,
+    int SourceQuantity);
+
+public sealed record RetainerMapMovePlan(
+    uint ItemId,
+    InventoryType SourceType,
+    int SourceSlot,
+    InventoryType DestinationType,
+    int DestinationSlot,
+    int SourceQuantity);
 
 public class InventoryService : IDisposable
 {
@@ -148,21 +166,7 @@ public class InventoryService : IDisposable
         {
             var manager = InventoryManager.Instance();
             if (manager == null) return 0;
-            var total = 0;
-            foreach (var spec in GetInventoryContainerSpecs())
-            {
-                var container = manager->GetInventoryContainer(spec.Type);
-                if (container == null || !container->IsLoaded) continue;
-
-                for (int i = 0; i < container->Size; i++)
-                {
-                    var slot = container->GetInventorySlot(i);
-                    if (slot != null && slot->ItemId == itemId)
-                        total += (int)slot->Quantity;
-                }
-            }
-
-            return total;
+            return GetMapCount(manager, itemId, GetInventoryContainerSpecs());
         }
         catch (Exception ex)
         {
@@ -171,7 +175,77 @@ public class InventoryService : IDisposable
         }
     }
 
+    public unsafe int GetSaddlebagMapCount(uint itemId)
+    {
+        try
+        {
+            var manager = InventoryManager.Instance();
+            if (manager == null) return 0;
+            return GetMapCount(manager, itemId, GetSaddlebagContainerSpecs());
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Failed to get saddlebag map count for {itemId}: {ex.Message}");
+            return 0;
+        }
+    }
+
     public unsafe bool TryMoveMapFromSaddlebagsToInventory(uint itemId, out string detail)
+    {
+        detail = "";
+
+        try
+        {
+            return TryPlanSaddlebagMapMove(itemId, out var plan, out detail) &&
+                   TryMovePlannedSaddlebagMap(plan, out detail);
+        }
+        catch (Exception ex)
+        {
+            detail = ex.Message;
+            _log.Error($"Failed to move map {itemId} from saddlebags: {ex.Message}");
+            return false;
+        }
+    }
+
+    public unsafe bool TryPlanSaddlebagMapMove(uint itemId, out SaddlebagMovePlan plan, out string detail)
+    {
+        plan = null!;
+        detail = "";
+
+        try
+        {
+            var manager = InventoryManager.Instance();
+            if (manager == null)
+            {
+                detail = "InventoryManager is null";
+                return false;
+            }
+
+            if (!TryFindSaddlebagSource(manager, itemId, out var sourceType, out var sourceSlot, out var sourceQuantity))
+            {
+                detail = "Selected map was not found in loaded saddlebags. Open saddlebags once this session and retry.";
+                return false;
+            }
+
+            if (!TryFindEmptyInventorySlot(manager, out var destinationType, out var destinationSlot))
+            {
+                detail = "No empty inventory slot is available for saddlebag retrieval.";
+                return false;
+            }
+
+            plan = new SaddlebagMovePlan(itemId, sourceType, sourceSlot, destinationType, destinationSlot, sourceQuantity);
+            detail = $"Selected {sourceType}[{sourceSlot}] -> {destinationType}[{destinationSlot}]";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            detail = ex.Message;
+            _log.Error($"Failed to plan map {itemId} saddlebag move: {ex.Message}");
+            return false;
+        }
+    }
+
+    public unsafe bool TryMovePlannedSaddlebagMap(SaddlebagMovePlan plan, out string detail)
     {
         detail = "";
 
@@ -184,70 +258,328 @@ public class InventoryService : IDisposable
                 return false;
             }
 
-            InventoryType sourceType = default;
-            int sourceSlot = -1;
-            foreach (var spec in GetSaddlebagContainerSpecs())
+            var sourceContainer = manager->GetInventoryContainer(plan.SourceType);
+            if (sourceContainer == null || !sourceContainer->IsLoaded)
             {
-                var container = manager->GetInventoryContainer(spec.Type);
-                if (container == null || !container->IsLoaded) continue;
-
-                for (int i = 0; i < container->Size; i++)
-                {
-                    var slot = container->GetInventorySlot(i);
-                    if (slot == null || slot->ItemId != itemId) continue;
-
-                    sourceType = spec.Type;
-                    sourceSlot = i;
-                    break;
-                }
-
-                if (sourceSlot >= 0)
-                    break;
-            }
-
-            if (sourceSlot < 0)
-            {
-                detail = "Selected map was not found in loaded saddlebags. Open saddlebags once this session and retry.";
+                detail = $"Source container {plan.SourceType} is not loaded.";
                 return false;
             }
 
-            InventoryType destinationType = default;
-            int destinationSlot = -1;
-            foreach (var spec in GetInventoryContainerSpecs())
+            var destinationContainer = manager->GetInventoryContainer(plan.DestinationType);
+            if (destinationContainer == null || !destinationContainer->IsLoaded)
             {
-                var container = manager->GetInventoryContainer(spec.Type);
-                if (container == null || !container->IsLoaded) continue;
-
-                for (int i = 0; i < container->Size; i++)
-                {
-                    var slot = container->GetInventorySlot(i);
-                    if (slot == null || slot->ItemId != 0) continue;
-
-                    destinationType = spec.Type;
-                    destinationSlot = i;
-                    break;
-                }
-
-                if (destinationSlot >= 0)
-                    break;
-            }
-
-            if (destinationSlot < 0)
-            {
-                detail = "No empty inventory slot is available for saddlebag retrieval.";
+                detail = $"Destination container {plan.DestinationType} is not loaded.";
                 return false;
             }
 
-            manager->MoveItemSlot(sourceType, (ushort)sourceSlot, destinationType, (ushort)destinationSlot, true);
-            detail = $"Moved map {itemId} from {sourceType}[{sourceSlot}] to {destinationType}[{destinationSlot}]";
+            if (plan.SourceSlot < 0 || plan.SourceSlot >= sourceContainer->Size)
+            {
+                detail = $"Source slot {plan.SourceSlot} is out of range for {plan.SourceType}.";
+                return false;
+            }
+
+            if (plan.DestinationSlot < 0 || plan.DestinationSlot >= destinationContainer->Size)
+            {
+                detail = $"Destination slot {plan.DestinationSlot} is out of range for {plan.DestinationType}.";
+                return false;
+            }
+
+            var sourceSlot = sourceContainer->GetInventorySlot(plan.SourceSlot);
+            if (sourceSlot == null || sourceSlot->ItemId != plan.ItemId)
+            {
+                detail = $"Source slot changed before move. Expected {plan.ItemId} in {plan.SourceType}[{plan.SourceSlot}].";
+                return false;
+            }
+
+            var destinationSlot = destinationContainer->GetInventorySlot(plan.DestinationSlot);
+            if (destinationSlot == null || destinationSlot->ItemId != 0)
+            {
+                detail = $"Destination slot changed before move. {plan.DestinationType}[{plan.DestinationSlot}] is no longer empty.";
+                return false;
+            }
+
+            manager->MoveItemSlot(plan.SourceType, (ushort)plan.SourceSlot, plan.DestinationType, (ushort)plan.DestinationSlot, true);
+            detail = $"Moved map {plan.ItemId} from {plan.SourceType}[{plan.SourceSlot}] to {plan.DestinationType}[{plan.DestinationSlot}]";
             return true;
         }
         catch (Exception ex)
         {
             detail = ex.Message;
-            _log.Error($"Failed to move map {itemId} from saddlebags: {ex.Message}");
+            _log.Error($"Failed to execute map {plan.ItemId} saddlebag move: {ex.Message}");
             return false;
         }
+    }
+
+    public unsafe bool TryMoveMapFromRetainerToInventory(uint itemId, out string detail)
+    {
+        detail = "";
+
+        try
+        {
+            return TryPlanRetainerMapMove(itemId, out var plan, out detail) &&
+                   TryMovePlannedRetainerMap(plan, out detail);
+        }
+        catch (Exception ex)
+        {
+            detail = ex.Message;
+            _log.Error($"Failed to move map {itemId} from retainer: {ex.Message}");
+            return false;
+        }
+    }
+
+    public unsafe bool TryPlanRetainerMapMove(uint itemId, out RetainerMapMovePlan plan, out string detail)
+    {
+        plan = null!;
+        detail = "";
+
+        try
+        {
+            var manager = InventoryManager.Instance();
+            if (manager == null)
+            {
+                detail = "InventoryManager is null";
+                return false;
+            }
+
+            var sourceFound = TryScanRetainerSource(
+                manager,
+                itemId,
+                out var sourceType,
+                out var sourceSlot,
+                out var sourceQuantity,
+                out var loadedPages,
+                out var unloadedPages,
+                out var scannedSlots,
+                out var matchedQuantity);
+
+            _plugin.AddDebugLog(
+                $"[RetainerMap] Retainer inventory scan for item {itemId}: loaded={loadedPages}; " +
+                $"unloaded={unloadedPages}; scannedSlots={scannedSlots}; matchedQuantity={matchedQuantity}.");
+
+            if (unloadedPages != "none")
+            {
+                detail = $"Retainer inventory containers are not loaded: {unloadedPages}.";
+                return false;
+            }
+
+            if (!sourceFound)
+            {
+                detail = $"Selected map {itemId} was not found in loaded retainer inventory. " +
+                         $"Scanned {loadedPages} ({scannedSlots} slots, matched quantity {matchedQuantity}).";
+                return false;
+            }
+
+            if (!TryFindEmptyInventorySlot(manager, out var destinationType, out var destinationSlot))
+            {
+                detail = "No empty player inventory slot is available for retainer retrieval.";
+                return false;
+            }
+
+            plan = new RetainerMapMovePlan(itemId, sourceType, sourceSlot, destinationType, destinationSlot, sourceQuantity);
+            detail = $"Selected retainer map move {sourceType}[{sourceSlot}] -> {destinationType}[{destinationSlot}]";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            detail = ex.Message;
+            _log.Error($"Failed to plan map {itemId} retainer move: {ex.Message}");
+            return false;
+        }
+    }
+
+    public unsafe bool TryMovePlannedRetainerMap(RetainerMapMovePlan plan, out string detail)
+    {
+        detail = "";
+
+        try
+        {
+            var manager = InventoryManager.Instance();
+            if (manager == null)
+            {
+                detail = "InventoryManager is null";
+                return false;
+            }
+
+            var sourceContainer = manager->GetInventoryContainer(plan.SourceType);
+            if (sourceContainer == null || !sourceContainer->IsLoaded)
+            {
+                detail = $"Source retainer container {plan.SourceType} is not loaded.";
+                return false;
+            }
+
+            var destinationContainer = manager->GetInventoryContainer(plan.DestinationType);
+            if (destinationContainer == null || !destinationContainer->IsLoaded)
+            {
+                detail = $"Destination container {plan.DestinationType} is not loaded.";
+                return false;
+            }
+
+            if (plan.SourceSlot < 0 || plan.SourceSlot >= sourceContainer->Size)
+            {
+                detail = $"Source slot {plan.SourceSlot} is out of range for {plan.SourceType}.";
+                return false;
+            }
+
+            if (plan.DestinationSlot < 0 || plan.DestinationSlot >= destinationContainer->Size)
+            {
+                detail = $"Destination slot {plan.DestinationSlot} is out of range for {plan.DestinationType}.";
+                return false;
+            }
+
+            var sourceSlot = sourceContainer->GetInventorySlot(plan.SourceSlot);
+            if (sourceSlot == null || sourceSlot->ItemId != plan.ItemId)
+            {
+                detail = $"Source slot changed before move. Expected {plan.ItemId} in {plan.SourceType}[{plan.SourceSlot}].";
+                return false;
+            }
+
+            var destinationSlot = destinationContainer->GetInventorySlot(plan.DestinationSlot);
+            if (destinationSlot == null || destinationSlot->ItemId != 0)
+            {
+                detail = $"Destination slot changed before move. {plan.DestinationType}[{plan.DestinationSlot}] is no longer empty.";
+                return false;
+            }
+
+            manager->MoveItemSlot(plan.SourceType, (ushort)plan.SourceSlot, plan.DestinationType, (ushort)plan.DestinationSlot, true);
+            detail = $"Moved retainer map {plan.ItemId} from {plan.SourceType}[{plan.SourceSlot}] to {plan.DestinationType}[{plan.DestinationSlot}]";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            detail = ex.Message;
+            _log.Error($"Failed to execute map {plan.ItemId} retainer move: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static unsafe int GetMapCount(
+        InventoryManager* manager,
+        uint itemId,
+        IReadOnlyList<ContainerSpec> containerSpecs)
+    {
+        var total = 0;
+        foreach (var spec in containerSpecs)
+        {
+            var container = manager->GetInventoryContainer(spec.Type);
+            if (container == null || !container->IsLoaded) continue;
+
+            for (int i = 0; i < container->Size; i++)
+            {
+                var slot = container->GetInventorySlot(i);
+                if (slot != null && slot->ItemId == itemId)
+                    total += (int)slot->Quantity;
+            }
+        }
+
+        return total;
+    }
+
+    private static unsafe bool TryFindSaddlebagSource(
+        InventoryManager* manager,
+        uint itemId,
+        out InventoryType sourceType,
+        out int sourceSlot,
+        out int sourceQuantity)
+    {
+        sourceType = default;
+        sourceSlot = -1;
+        sourceQuantity = 0;
+
+        foreach (var spec in GetSaddlebagContainerSpecs())
+        {
+            var container = manager->GetInventoryContainer(spec.Type);
+            if (container == null || !container->IsLoaded) continue;
+
+            for (int i = 0; i < container->Size; i++)
+            {
+                var slot = container->GetInventorySlot(i);
+                if (slot == null || slot->ItemId != itemId) continue;
+
+                sourceType = spec.Type;
+                sourceSlot = i;
+                sourceQuantity = (int)slot->Quantity;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static unsafe bool TryScanRetainerSource(
+        InventoryManager* manager,
+        uint itemId,
+        out InventoryType sourceType,
+        out int sourceSlot,
+        out int sourceQuantity,
+        out string loadedPages,
+        out string unloadedPages,
+        out int scannedSlots,
+        out int matchedQuantity)
+    {
+        sourceType = default;
+        sourceSlot = -1;
+        sourceQuantity = 0;
+        scannedSlots = 0;
+        matchedQuantity = 0;
+        var loaded = new List<string>();
+        var unloaded = new List<string>();
+
+        foreach (var spec in GetRetainerContainerSpecs())
+        {
+            var container = manager->GetInventoryContainer(spec.Type);
+            if (container == null || !container->IsLoaded)
+            {
+                unloaded.Add(spec.Type.ToString());
+                continue;
+            }
+
+            loaded.Add($"{spec.Type}[{container->Size}]");
+            scannedSlots += container->Size;
+
+            for (int i = 0; i < container->Size; i++)
+            {
+                var slot = container->GetInventorySlot(i);
+                if (slot == null || slot->ItemId != itemId) continue;
+
+                matchedQuantity += (int)slot->Quantity;
+                if (sourceSlot >= 0) continue;
+
+                sourceType = spec.Type;
+                sourceSlot = i;
+                sourceQuantity = (int)slot->Quantity;
+            }
+        }
+
+        loadedPages = loaded.Count == 0 ? "none" : string.Join(", ", loaded);
+        unloadedPages = unloaded.Count == 0 ? "none" : string.Join(", ", unloaded);
+        return sourceSlot >= 0;
+    }
+
+    private static unsafe bool TryFindEmptyInventorySlot(
+        InventoryManager* manager,
+        out InventoryType destinationType,
+        out int destinationSlot)
+    {
+        destinationType = default;
+        destinationSlot = -1;
+
+        foreach (var spec in GetInventoryContainerSpecs())
+        {
+            var container = manager->GetInventoryContainer(spec.Type);
+            if (container == null || !container->IsLoaded) continue;
+
+            for (int i = 0; i < container->Size; i++)
+            {
+                var slot = container->GetInventorySlot(i);
+                if (slot == null || slot->ItemId != 0) continue;
+
+                destinationType = spec.Type;
+                destinationSlot = i;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static IReadOnlyList<ContainerSpec> GetContainerSpecs(bool includeSaddlebags)
@@ -276,6 +608,20 @@ public class InventoryService : IDisposable
             new ContainerSpec(InventoryType.SaddleBag2, (count, quantity) => count.Saddlebag += quantity),
             new ContainerSpec(InventoryType.PremiumSaddleBag1, (count, quantity) => count.PremiumSaddlebag += quantity),
             new ContainerSpec(InventoryType.PremiumSaddleBag2, (count, quantity) => count.PremiumSaddlebag += quantity),
+        };
+    }
+
+    private static IReadOnlyList<ContainerSpec> GetRetainerContainerSpecs()
+    {
+        return new[]
+        {
+            new ContainerSpec(InventoryType.RetainerPage1, (count, quantity) => count.Retainer += quantity),
+            new ContainerSpec(InventoryType.RetainerPage2, (count, quantity) => count.Retainer += quantity),
+            new ContainerSpec(InventoryType.RetainerPage3, (count, quantity) => count.Retainer += quantity),
+            new ContainerSpec(InventoryType.RetainerPage4, (count, quantity) => count.Retainer += quantity),
+            new ContainerSpec(InventoryType.RetainerPage5, (count, quantity) => count.Retainer += quantity),
+            new ContainerSpec(InventoryType.RetainerPage6, (count, quantity) => count.Retainer += quantity),
+            new ContainerSpec(InventoryType.RetainerPage7, (count, quantity) => count.Retainer += quantity),
         };
     }
 }

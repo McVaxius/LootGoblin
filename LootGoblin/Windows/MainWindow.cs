@@ -38,6 +38,11 @@ public class MainWindow : Window, IDisposable
     private Dictionary<uint, MapSourceCount> cachedMapSources = new();
     private DateTime lastScanTime = DateTime.MinValue;
     private const double ScanCooldownSeconds = 2.0;
+    private static readonly TimeSpan ManualMapRefreshSaddlebagTimeout = TimeSpan.FromSeconds(6);
+    private bool manualMapRefreshPending;
+    private bool manualMapRefreshOpenedSaddlebag;
+    private DateTime manualMapRefreshStartedAt = DateTime.MinValue;
+    private string manualMapRefreshStatus = string.Empty;
 
     public MainWindow(Plugin plugin)
         : base("Loot Goblin##MainWindow")
@@ -227,14 +232,12 @@ public class MainWindow : Window, IDisposable
         {
             if (Plugin.ClientState.IsLoggedIn)
             {
+                TickManualMapRefresh();
+
                 var now = DateTime.Now;
-                if ((now - lastScanTime).TotalSeconds >= ScanCooldownSeconds)
+                if (!manualMapRefreshPending && (now - lastScanTime).TotalSeconds >= ScanCooldownSeconds)
                 {
-                    cachedMapSources = plugin.InventoryService.ScanForMapSources();
-                    cachedMaps = cachedMapSources
-                        .Where(kvp => kvp.Value.Inventory > 0)
-                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Inventory);
-                    lastScanTime = now;
+                    RefreshMapSourceCache(includeRetainers: false, refreshXaDatabase: false);
                 }
 
                 if (cachedMapSources.Count == 0)
@@ -285,7 +288,7 @@ public class MainWindow : Window, IDisposable
                         ImGui.SameLine();
                         ImGui.Text($"{itemName} x{quantity}");
                         ImGui.SameLine();
-                        ImGui.TextColored(ColorGrey, $"  [Inv {kvp.Value.Inventory} | Saddle {kvp.Value.Saddlebag} | Prem {kvp.Value.PremiumSaddlebag}]");
+                        ImGui.TextColored(ColorGrey, $"  [Inv {kvp.Value.Inventory} | Saddle {kvp.Value.Saddlebag} | Prem {kvp.Value.PremiumSaddlebag} | Retainer {kvp.Value.Retainer}]");
                         if (mapTier > 0)
                         {
                             ImGui.SameLine();
@@ -300,14 +303,18 @@ public class MainWindow : Window, IDisposable
                 }
 
                 ImGui.Spacing();
+                if (manualMapRefreshPending)
+                    ImGui.BeginDisabled();
                 if (ImGui.Button("Refresh Maps"))
                 {
-                    cachedMapSources = plugin.InventoryService.ScanForMapSources();
-                    cachedMaps = cachedMapSources
-                        .Where(kvp => kvp.Value.Inventory > 0)
-                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Inventory);
-                    lastScanTime = DateTime.Now;
-                    plugin.AddDebugLog("Manual map inventory refresh.");
+                    StartManualMapRefresh();
+                }
+                if (manualMapRefreshPending)
+                    ImGui.EndDisabled();
+                if (!string.IsNullOrWhiteSpace(manualMapRefreshStatus))
+                {
+                    ImGui.SameLine();
+                    ImGui.TextColored(ColorGrey, manualMapRefreshStatus);
                 }
                 
                 // Debug button to read decipher menu indices
@@ -329,6 +336,104 @@ public class MainWindow : Window, IDisposable
                 ImGui.TextColored(ColorGrey, "  Log in to scan inventory.");
             }
         }
+    }
+
+    private void RefreshMapSourceCache(bool includeRetainers, bool refreshXaDatabase)
+    {
+        var previousRetainerCounts = cachedMapSources
+            .Where(kvp => kvp.Value.Retainer > 0)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Retainer);
+
+        cachedMapSources = plugin.InventoryService.ScanForMapSources();
+
+        if (!includeRetainers)
+        {
+            foreach (var kvp in previousRetainerCounts)
+            {
+                if (!cachedMapSources.TryGetValue(kvp.Key, out var count))
+                {
+                    count = new MapSourceCount();
+                    cachedMapSources[kvp.Key] = count;
+                }
+
+                count.Retainer = kvp.Value;
+            }
+        }
+        else
+        {
+            var mapIds = TreasureMapData.KnownMaps.Keys.ToList();
+            var retainerCounts = plugin.RetainerMapRetrievalService.GetRetainerMapCounts(mapIds, refreshXaDatabase);
+            foreach (var kvp in retainerCounts)
+            {
+                if (!cachedMapSources.TryGetValue(kvp.Key, out var count))
+                {
+                    count = new MapSourceCount();
+                    cachedMapSources[kvp.Key] = count;
+                }
+
+                count.Retainer = kvp.Value;
+            }
+        }
+
+        cachedMaps = cachedMapSources
+            .Where(kvp => kvp.Value.Inventory > 0)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Inventory);
+        lastScanTime = DateTime.Now;
+    }
+
+    private void StartManualMapRefresh()
+    {
+        if (manualMapRefreshPending)
+            return;
+
+        manualMapRefreshPending = true;
+        manualMapRefreshOpenedSaddlebag = false;
+        manualMapRefreshStartedAt = DateTime.Now;
+        manualMapRefreshStatus = "refreshing...";
+
+        if (GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            CompleteManualMapRefresh(closeSaddlebagAfterScan: false, "Manual map refresh with saddlebag already open.");
+            return;
+        }
+
+        CommandHelper.SendCommand("/saddlebag");
+        manualMapRefreshOpenedSaddlebag = true;
+        plugin.AddDebugLog("[MapRefresh] Opened saddlebag for manual map refresh.");
+    }
+
+    private void TickManualMapRefresh()
+    {
+        if (!manualMapRefreshPending)
+            return;
+
+        if (GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            CompleteManualMapRefresh(closeSaddlebagAfterScan: manualMapRefreshOpenedSaddlebag, "Manual map refresh after saddlebag opened.");
+            return;
+        }
+
+        if (DateTime.Now - manualMapRefreshStartedAt < ManualMapRefreshSaddlebagTimeout)
+            return;
+
+        plugin.AddDebugLog("[MapRefresh] Saddlebag did not become visible before timeout; scanning loaded containers anyway.");
+        CompleteManualMapRefresh(closeSaddlebagAfterScan: false, "Manual map refresh after saddlebag timeout.");
+    }
+
+    private void CompleteManualMapRefresh(bool closeSaddlebagAfterScan, string logMessage)
+    {
+        RefreshMapSourceCache(includeRetainers: true, refreshXaDatabase: true);
+
+        if (closeSaddlebagAfterScan && GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            GameHelpers.CloseCurrentAddon();
+            plugin.AddDebugLog("[MapRefresh] Closed saddlebag after manual refresh.");
+        }
+
+        manualMapRefreshPending = false;
+        manualMapRefreshOpenedSaddlebag = false;
+        manualMapRefreshStatus = "refreshed";
+        plugin.AddDebugLog(logMessage);
     }
 
     private void DrawMapCompletionSection()
@@ -933,6 +1038,17 @@ private void DrawDependencySection()
             {
                 ImGui.TextColored(ColorRed, "  ADS dungeon handoff is enabled. Install ADS or disable it in settings.");
             }
+
+            ImGui.Spacing();
+            ImGui.Text("Optional (Retainer/Saddlebag Retrieval):");
+            ImGui.Spacing();
+
+            DrawPluginStatus("  xadb", plugin.IsXaDatabaseAvailable, false);
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, "needed for retainer map lookup");
+            DrawPluginStatus("  xaslave", plugin.IsXaSlaveAvailable, false);
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, "needed for assisted retainer/saddlebag retrieval");
 
             ImGui.Spacing();
             ImGui.Text("Optional (Combat/Rotation):");

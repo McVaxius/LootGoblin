@@ -18,13 +18,23 @@
         "InternalName": "Lifestream",
         "Required": true,
         "Reason": "LootGoblin uses Lifestream for /li aetheryte travel."
+      },
+      {
+        "InternalName": "xadb",
+        "Required": false,
+        "Reason": "Needed if you want retainer and saddlebag retrieval."
+      },
+      {
+        "InternalName": "xaslave",
+        "Required": false,
+        "Reason": "Needed if you want retainer and saddlebag retrieval."
       }
     ],
     "RepoUrl": "https://github.com/McVaxius/LootGoblin",
-    "AssemblyVersion": "0.0.4.20",
+    "AssemblyVersion": "0.1.0.0",
     "DalamudApiLevel": 15,
-    "DownloadLinkInstall": "https://github.com/McVaxius/LootGoblin/releases/download/v0.0.4.20/latest.zip",
-    "DownloadLinkUpdate": "https://github.com/McVaxius/LootGoblin/releases/download/v0.0.4.20/latest.zip",
+    "DownloadLinkInstall": "https://github.com/McVaxius/LootGoblin/releases/download/v0.1.0.0/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/McVaxius/LootGoblin/releases/download/v0.1.0.0/latest.zip",
     "DownloadLinkTesting": "https://github.com/McVaxius/LootGoblin/releases/latest/download/latest.zip",
     "IsHide": false,
     "IsTestingExclusive": false,
