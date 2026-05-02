@@ -76,8 +76,9 @@ public class StateManager : IDisposable
     private DateTime portalRetryStart = DateTime.MinValue; // Portal interaction retry timer
     private bool portalMapFlagCleared; // Clear old map/vnav flag once before portal interaction
     private Vector3? portalApproachPosition; // Exact portal XYZ captured for this portal window
-    private DateTime lastPortalApproachCommandTime = DateTime.MinValue; // Throttle portal FlyToPosition calls
     private DateTime lastPortalMountCommandTime = DateTime.MinValue; // Throttle portal mount attempts before fly pathing
+    private DateTime portalLandingStartedAt = DateTime.MinValue; // Tracks portal <=3y landing/dismount handoff
+    private DateTime lastPortalDismountCommandTime = DateTime.MinValue; // Throttle portal dismount attempts
     private DateTime portalApproachStartedAt = DateTime.MinValue; // Tracks progress for portal FlyToPosition
     private float portalApproachStartDistance = float.MaxValue; // Distance when current portal approach started
     private DateTime lastPortalRepathTime = DateTime.MinValue; // Rate-limit portal stop + repath recovery
@@ -99,8 +100,8 @@ public class StateManager : IDisposable
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float PortalInteractionRange = 3.0f;
     private const float PortalRunawayDistanceIncrease = 2.0f;
-    private static readonly TimeSpan PortalApproachCommandInterval = TimeSpan.FromSeconds(1.5);
     private static readonly TimeSpan PortalMountCommandInterval = TimeSpan.FromSeconds(3.0);
+    private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
@@ -1060,8 +1061,9 @@ public class StateManager : IDisposable
     {
         portalMapFlagCleared = false;
         portalApproachPosition = null;
-        lastPortalApproachCommandTime = DateTime.MinValue;
         lastPortalMountCommandTime = DateTime.MinValue;
+        portalLandingStartedAt = DateTime.MinValue;
+        lastPortalDismountCommandTime = DateTime.MinValue;
         portalApproachStartedAt = DateTime.MinValue;
         portalApproachStartDistance = float.MaxValue;
         lastPortalRepathTime = DateTime.MinValue;
@@ -1156,20 +1158,66 @@ public class StateManager : IDisposable
             force = true;
         }
 
-        if (!force && now - lastPortalApproachCommandTime < PortalApproachCommandInterval)
+        if (!force && portalApproachStartedAt != DateTime.MinValue)
             return true;
 
-        if (portalApproachStartedAt == DateTime.MinValue || force)
-        {
-            portalApproachStartedAt = now;
-            portalApproachStartDistance = distance;
-        }
-
+        portalApproachStartedAt = now;
+        portalApproachStartDistance = distance;
         _plugin.NavigationService.FlyToPosition(position);
         autoMoveActive = true;
-        lastPortalApproachCommandTime = now;
         _plugin.AddDebugLog($"[Portal] Flying to captured portal XYZ {FormatVectorCompact(position)} ({distance:F1}y).");
         return true;
+    }
+
+    private void HandlePortalInInteractionRange(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
+    {
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+        {
+            _plugin.NavigationService.StopNavigation();
+            autoMoveActive = false;
+            _plugin.AddDebugLog($"[Portal] Within {PortalInteractionRange:F1}y - stopped vnav before portal interaction handoff.");
+        }
+
+        if (_plugin.NavigationService.IsMounted() || _plugin.NavigationService.IsFlying() || Plugin.Condition[ConditionFlag.Mounting71])
+        {
+            if (portalLandingStartedAt == DateTime.MinValue)
+            {
+                portalLandingStartedAt = now;
+                _plugin.AddDebugLog($"[Portal] Within {PortalInteractionRange:F1}y - landing/dismounting before interaction.");
+            }
+
+            if (!Plugin.Condition[ConditionFlag.Mounting71] && now - lastPortalDismountCommandTime >= PortalDismountCommandInterval)
+            {
+                lastPortalDismountCommandTime = now;
+                _mountService.Dismount();
+            }
+
+            StateDetail = $"Landing at portal ({portalDist:F1}y)...";
+            return;
+        }
+
+        if (portalLandingStartedAt != DateTime.MinValue)
+        {
+            _plugin.AddDebugLog($"[Portal] Dismounted at portal after {(now - portalLandingStartedAt).TotalSeconds:F1}s.");
+            portalLandingStartedAt = DateTime.MinValue;
+        }
+
+        if (!IsCharacterReady())
+        {
+            StateDetail = $"Waiting to interact with portal ({DescribeCharacterReadyBlockers()})...";
+            return;
+        }
+
+        if ((now - lastInteractionTime).TotalSeconds >= 1.0)
+        {
+            EnsurePortalMapFlagCleared();
+            Plugin.TargetManager.Target = portal;
+            lastInteractionTime = now;
+            _plugin.AddDebugLog($"[Portal] Interacting with '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}...");
+            GameHelpers.InteractWithObject(portal);
+        }
+
+        StateDetail = $"Interacting with portal ({portalDist:F1}y)...";
     }
 
     private void EnsurePortalMapFlagCleared()
@@ -3650,22 +3698,7 @@ public class StateManager : IDisposable
                         return;
                     }
 
-                    if (_plugin.NavigationService.State != NavigationState.Idle)
-                    {
-                        _plugin.NavigationService.StopNavigation();
-                        autoMoveActive = false;
-                    }
-
-                    // Continually interact every ~1 second once close enough.
-                    if ((now - lastInteractionTime).TotalSeconds >= 1.0)
-                    {
-                        EnsurePortalMapFlagCleared();
-                        lastInteractionTime = now;
-                        _plugin.AddDebugLog($"[Portal] Interacting with '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}...");
-                        GameHelpers.InteractWithObject(portal);
-                    }
-
-                    StateDetail = $"Interacting with portal ({portalDist:F1}y)...";
+                    HandlePortalInInteractionRange(portal, approachPosition, portalDist, now);
                     return;
                 }
 
