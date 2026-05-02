@@ -83,6 +83,7 @@ public class StateManager : IDisposable
     private float portalApproachStartDistance = float.MaxValue; // Distance when current portal approach started
     private DateTime lastPortalRepathTime = DateTime.MinValue; // Rate-limit portal stop + repath recovery
     private Vector3 portalStuckCheckPosition; // Player XYZ at last portal approach progress check
+    private float portalStuckCheckDistance = float.MaxValue; // Portal distance at last portal approach progress check
     private DateTime portalStuckCheckTime = DateTime.MinValue; // Time of last portal approach progress check
     private bool portalAutoMoveFallbackActive; // True when portal approach has fallen back to lockon+automove
     private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
@@ -107,8 +108,11 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan PortalSearchTimeout = TimeSpan.FromSeconds(15.0);
+    private static readonly TimeSpan PortalActiveApproachTimeout = TimeSpan.FromSeconds(60.0);
     private static readonly TimeSpan PortalStuckCheckInterval = TimeSpan.FromSeconds(10.0);
     private const float PortalStuckMovementThreshold = 0.5f;
+    private const float PortalStuckProgressThreshold = 0.5f;
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
@@ -1081,6 +1085,7 @@ public class StateManager : IDisposable
     private void ResetPortalStuckTracking()
     {
         portalStuckCheckPosition = Vector3.Zero;
+        portalStuckCheckDistance = float.MaxValue;
         portalStuckCheckTime = DateTime.MinValue;
         portalAutoMoveFallbackActive = false;
     }
@@ -1225,6 +1230,7 @@ public class StateManager : IDisposable
         if (portalStuckCheckTime == DateTime.MinValue)
         {
             portalStuckCheckPosition = playerPosition;
+            portalStuckCheckDistance = distance;
             portalStuckCheckTime = now;
             return false;
         }
@@ -1234,7 +1240,8 @@ public class StateManager : IDisposable
             return false;
 
         var moved = Vector3.Distance(playerPosition, portalStuckCheckPosition);
-        if (moved < PortalStuckMovementThreshold)
+        var distanceImprovement = portalStuckCheckDistance - distance;
+        if (moved < PortalStuckMovementThreshold || distanceImprovement < PortalStuckProgressThreshold)
         {
             _plugin.NavigationService.StopNavigation();
             Plugin.TargetManager.Target = portal;
@@ -1243,11 +1250,12 @@ public class StateManager : IDisposable
             portalAutoMoveFallbackActive = true;
             StateDetail = $"Portal vnav stalled - lockon+automove ({distance:F1}y)...";
             _plugin.AddDebugLog(
-                $"[Portal] VNav approach stuck (moved {moved:F2}y in {elapsed.TotalSeconds:F1}s) - switching to lockon+automove. current={FormatVectorCompact(playerPosition)}; portal={FormatVectorCompact(approachPosition)}; dist={distance:F1}y.");
+                $"[Portal] VNav approach stuck (moved {moved:F2}y, dist {portalStuckCheckDistance:F1}->{distance:F1}y, progress {distanceImprovement:F2}y in {elapsed.TotalSeconds:F1}s) - switching to lockon+automove. current={FormatVectorCompact(playerPosition)}; portal={FormatVectorCompact(approachPosition)}; dist={distance:F1}y.");
             return true;
         }
 
         portalStuckCheckPosition = playerPosition;
+        portalStuckCheckDistance = distance;
         portalStuckCheckTime = now;
         return false;
     }
@@ -3723,8 +3731,8 @@ public class StateManager : IDisposable
         // If portalRetryStart is set, we're searching for a portal before finishing
         if (portalRetryStart != DateTime.MinValue)
         {
-            var sinceStart = (DateTime.Now - portalRetryStart).TotalSeconds;
             var now = DateTime.Now;
+            var sinceStart = now - portalRetryStart;
             bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                            Plugin.Condition[ConditionFlag.BetweenAreas51];
 
@@ -3739,8 +3747,11 @@ public class StateManager : IDisposable
             if (TryHandleConfirmedDutyEntry("[Portal]"))
                 return;
 
-            // Try to find and interact with portal for up to 15 seconds
-            if (sinceStart <= 15.0)
+            // Search briefly for a portal, but keep a captured targetable portal alive longer for approach fallback.
+            var portalWindowTimeout = portalApproachPosition.HasValue
+                ? PortalActiveApproachTimeout
+                : PortalSearchTimeout;
+            if (sinceStart <= portalWindowTimeout)
             {
                 // Click Yes on any visible dialog (portal confirmation from previous tick)
                 if (GameHelpers.ClickYesIfVisible())
@@ -3757,7 +3768,7 @@ public class StateManager : IDisposable
                 }
 
                 var portal = FindNearestPortal(keepActivePortalWindow: true);
-                if (TryHandleConfirmedDutyEntry("[Portal]", portal != null))
+                if (TryHandleConfirmedDutyEntry("[Portal]", portal != null || portalApproachPosition.HasValue))
                     return;
 
                 if (portal != null)
@@ -3799,15 +3810,25 @@ public class StateManager : IDisposable
                     return;
                 }
 
-                StateDetail = $"Searching for portal... ({sinceStart:F0}/15s)";
+                StateDetail = portalApproachPosition.HasValue
+                    ? $"Waiting for captured portal approach... ({sinceStart.TotalSeconds:F0}/{portalWindowTimeout.TotalSeconds:F0}s)"
+                    : $"Searching for portal... ({sinceStart.TotalSeconds:F0}/{portalWindowTimeout.TotalSeconds:F0}s)";
                 return;
             }
 
-            if (TryHandleConfirmedDutyEntry("[Portal]", portalAvailable: false))
+            if (TryHandleConfirmedDutyEntry("[Portal]", portalAvailable: portalApproachPosition.HasValue))
                 return;
 
-            // Time elapsed, no portal found - map is complete (no dungeon)
-            _plugin.AddDebugLog("[Portal] No portal found after 15s - map complete (no dungeon)");
+            // Time elapsed, no usable portal entry - map is complete (no dungeon)
+            if (portalApproachPosition.HasValue)
+            {
+                _plugin.AddDebugLog(
+                    $"[Portal] Captured portal approach timed out after {PortalActiveApproachTimeout.TotalSeconds:F0}s at XYZ {FormatVectorCompact(portalApproachPosition.Value)} - map complete (no dungeon).");
+            }
+            else
+            {
+                _plugin.AddDebugLog($"[Portal] No portal found after {PortalSearchTimeout.TotalSeconds:F0}s - map complete (no dungeon)");
+            }
             if (autoMoveActive)
             {
                 _plugin.NavigationService.StopNavigation();
