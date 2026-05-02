@@ -74,6 +74,9 @@ public class StateManager : IDisposable
     private Vector3 lastStuckCheckPos; // Position at last stuck check
     private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
     private DateTime portalRetryStart = DateTime.MinValue; // Portal interaction retry timer
+    private bool portalMapFlagCleared; // Clear old map/vnav flag once before portal interaction
+    private Vector3? portalApproachPosition; // Exact portal XYZ captured for this portal window
+    private DateTime lastPortalApproachCommandTime = DateTime.MinValue; // Throttle portal MoveToPosition calls
     private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
     private bool descentInProgress = false; // Whether Ctrl+Space descent is currently running
     private DateTime descentStartTime = DateTime.MinValue; // When Ctrl+Space descent started
@@ -90,6 +93,8 @@ public class StateManager : IDisposable
     private bool mapOpeningRetried = false;
     private const double TickIntervalSeconds = 0.5;
     private const double DungeonInteractionIntervalSeconds = 1.0;
+    private const float PortalInteractionRange = 3.0f;
+    private static readonly TimeSpan PortalApproachCommandInterval = TimeSpan.FromSeconds(1.5);
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
@@ -163,6 +168,7 @@ public class StateManager : IDisposable
     private DateTime adsDutyHandoffStarted = DateTime.MinValue;
     private DateTime adsDutyEntryConfirmedAt = DateTime.MinValue;
     private DateTime adsDutyReadySince = DateTime.MinValue;
+    private DateTime lastMapDutyOutsideDungeonLog = DateTime.MinValue;
     private bool adsOwnershipObserved;
     private DateTime adsInsideSentAt = DateTime.MinValue;
     private bool adsInsideRetrySent;
@@ -515,7 +521,7 @@ public class StateManager : IDisposable
         }
         IsPaused = false;
         RetryCount = 0;
-        portalRetryStart = DateTime.MinValue;
+        EndPortalRetryWindow();
         dungeonEntryProcessed = false;
         ResetAdsHandoffTracking(resetStatus: true);
         _plugin.RetainerMapRetrievalService.Reset();
@@ -534,7 +540,7 @@ public class StateManager : IDisposable
         RetryCount = 0;
         CurrentLocation = null;
         SelectedMapItemId = 0;
-        portalRetryStart = DateTime.MinValue;
+        EndPortalRetryWindow();
         ResetAdsHandoffTracking(resetStatus: true);
         _plugin.RetainerMapRetrievalService.Reset();
         ResetSaddlebagRetrieval();
@@ -1029,6 +1035,86 @@ public class StateManager : IDisposable
     }
 
     // ─── State Ticks ─────────────────────────────────────────────────────────
+
+    private void StartPortalRetryWindow()
+    {
+        portalRetryStart = DateTime.Now;
+        ResetPortalWindowState();
+    }
+
+    private void EndPortalRetryWindow()
+    {
+        portalRetryStart = DateTime.MinValue;
+        ResetPortalWindowState();
+    }
+
+    private void ResetPortalWindowState()
+    {
+        portalMapFlagCleared = false;
+        portalApproachPosition = null;
+        lastPortalApproachCommandTime = DateTime.MinValue;
+    }
+
+    private Vector3 CapturePortalApproachPosition(IGameObject portal)
+    {
+        if (portalApproachPosition.HasValue)
+            return portalApproachPosition.Value;
+
+        portalApproachPosition = portal.Position;
+        _plugin.AddDebugLog($"[Portal] Captured targetable portal XYZ {FormatVectorCompact(portalApproachPosition.Value)}");
+        StopPortalConflictingMovement();
+        MoveToPortalApproachPosition(portalApproachPosition.Value, force: true);
+        return portalApproachPosition.Value;
+    }
+
+    private void StopPortalConflictingMovement()
+    {
+        var hadMovement = autoMoveActive
+            || descentInProgress
+            || underwaterTargetPosition != Vector3.Zero
+            || _plugin.NavigationService.State != NavigationState.Idle;
+        if (!hadMovement)
+            return;
+
+        if (autoMoveActive)
+        {
+            GameHelpers.StopAutoMove();
+            autoMoveActive = false;
+        }
+
+        if (descentInProgress)
+        {
+            GameHelpers.KeyRelease(VirtualKey.CONTROL);
+            GameHelpers.KeyRelease(VirtualKey.SPACE);
+        }
+
+        descentMode = false;
+        descentInProgress = false;
+        underwaterTargetPosition = Vector3.Zero;
+        _plugin.NavigationService.StopNavigation();
+        _plugin.AddDebugLog("[Portal] Stopped previous navigation before portal XYZ approach.");
+    }
+
+    private void MoveToPortalApproachPosition(Vector3 position, bool force = false)
+    {
+        var now = DateTime.Now;
+        if (!force && now - lastPortalApproachCommandTime < PortalApproachCommandInterval)
+            return;
+
+        _plugin.NavigationService.MoveToPosition(position);
+        autoMoveActive = true;
+        lastPortalApproachCommandTime = now;
+    }
+
+    private void EnsurePortalMapFlagCleared()
+    {
+        if (portalMapFlagCleared)
+            return;
+
+        GameHelpers.SetMapFlag(0, 0, 0);
+        portalMapFlagCleared = true;
+        _plugin.AddDebugLog("[Portal] Cleared map flag before first portal interaction.");
+    }
 
     private void TickSelectingMap()
     {
@@ -1854,8 +1940,6 @@ public class StateManager : IDisposable
             return;
         }
 
-        TryDigWhileDiving("[Underwater] chest phase");
-        
         // Click Yes on any dialog (Open the treasure coffer? etc)
         GameHelpers.ClickYesIfVisible();
         
@@ -1864,14 +1948,12 @@ public class StateManager : IDisposable
         if (portal != null)
         {
             _plugin.AddDebugLog("[OpeningChest] Portal detected - transitioning to portal interaction...");
-            if (autoMoveActive)
-            {
-                _plugin.NavigationService.StopNavigation();
-                autoMoveActive = false;
-            }
+            StopPortalConflictingMovement();
             CheckForPortalAfterChest();
             return;
         }
+
+        TryDigWhileDiving("[Underwater] chest phase");
         
         // No portal yet - keep working on chest
         var chest = _plugin.ChestDetectionService.FindNearestCoffer();
@@ -2105,14 +2187,14 @@ public class StateManager : IDisposable
     {
         if (ShouldSkipPortalWaitForSelectedMap())
         {
-            portalRetryStart = DateTime.MinValue;
+            EndPortalRetryWindow();
             _plugin.AddDebugLog("[Portal] Selected map is known outdoor/no-dungeon - skipping portal search.");
             TransitionTo(BotState.Completed, "Outdoor map complete - skipping portal search...");
             return;
         }
 
         // Transition to a portal-searching state that retries every 2s for 10s
-        portalRetryStart = DateTime.Now;
+        StartPortalRetryWindow();
         TransitionTo(BotState.Completed, "Searching for portal...");
     }
 
@@ -2138,7 +2220,7 @@ public class StateManager : IDisposable
             if (player != null)
             {
                 var dist = Vector3.Distance(player.Position, portalObj.Position);
-                _plugin.AddDebugLog($"[Portal] Found portal at {dist:F1}y distance");
+                _plugin.AddDebugLog($"[Portal] Found portal at {dist:F1}y distance, XYZ {FormatVectorCompact(portalObj.Position)}");
                 
                 if (dist > 30f)
                 {
@@ -2223,7 +2305,7 @@ public class StateManager : IDisposable
         if (portal != null)
         {
             _plugin.AddDebugLog("[InDungeon] Teleportation Portal detected - still outside, transitioning back to Completed");
-            portalRetryStart = DateTime.Now;
+            StartPortalRetryWindow();
             TransitionTo(BotState.Completed, "Portal found - searching for portal...");
             return;
         }
@@ -3435,7 +3517,20 @@ public class StateManager : IDisposable
         {
             var sinceStart = (DateTime.Now - portalRetryStart).TotalSeconds;
             var now = DateTime.Now;
-            
+            bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                           Plugin.Condition[ConditionFlag.BetweenAreas51];
+
+            if (loading)
+            {
+                adsDutyEntryConfirmedAt = DateTime.MinValue;
+                adsDutyReadySince = DateTime.MinValue;
+                StateDetail = "Portal accepted - waiting for loading to finish...";
+                return;
+            }
+
+            if (TryHandleConfirmedDutyEntry("[Portal]"))
+                return;
+
             // Try to find and interact with portal for up to 15 seconds
             if (sinceStart <= 15.0)
             {
@@ -3448,112 +3543,14 @@ public class StateManager : IDisposable
                         _plugin.NavigationService.StopNavigation();
                         autoMoveActive = false;
                     }
-                    // Don't transition to InDungeon yet - wait for BoundByDuty flag
-                    // Portal interaction will trigger loading screen, then BoundByDuty will be set
-                    StateDetail = "Portal accepted - waiting for dungeon entry...";
-                    return;
-                }
-                
-                // Check if we're now in a duty (portal was accepted and loading finished)
-                bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
-                              Plugin.Condition[ConditionFlag.BoundByDuty56];
-                bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
-                               Plugin.Condition[ConditionFlag.BetweenAreas51];
-                
-                // Only transition to the inside-duty branch if:
-                // 1. We're bound by duty AND
-                // 2. Portal no longer exists in ObjectTable, we're still loading,
-                //    or we've already started the inside-duty ADS settle seam.
-                var portalCheck = FindNearestPortal();
-                if (inDuty && (portalCheck == null || loading || adsDutyEntryConfirmedAt != DateTime.MinValue))
-                {
-                    if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
-                    {
-                        if (loading)
-                        {
-                            adsDutyEntryConfirmedAt = DateTime.MinValue;
-                            StateDetail = "Duty entered - waiting for loading to finish before ADS handoff...";
-                            return;
-                        }
-
-                        if (adsDutyEntryConfirmedAt == DateTime.MinValue)
-                        {
-                            adsDutyEntryConfirmedAt = DateTime.Now;
-                            StateDetail = "Duty entered - waiting for ADS-safe handoff seam...";
-                            _plugin.AddDebugLog("[Portal][ADS] BoundByDuty detected; waiting for loading to finish and the duty context to settle before sending /ads inside.");
-                            return;
-                        }
-
-                        if (!IsCharacterReady())
-                        {
-                            adsDutyReadySince = DateTime.MinValue;
-                            StateDetail = $"Duty entered - waiting for ADS-safe handoff seam... ({DescribeCharacterReadyBlockers()})";
-                            return;
-                        }
-
-                        if (adsDutyReadySince == DateTime.MinValue)
-                        {
-                            adsDutyReadySince = DateTime.Now;
-                            StateDetail = "Duty entered - waiting for ADS-safe handoff settle...";
-                            return;
-                        }
-
-                        if ((DateTime.Now - adsDutyReadySince).TotalSeconds < 2.0)
-                        {
-                            StateDetail = "Duty entered - waiting for ADS-safe handoff settle...";
-                            return;
-                        }
-
-                        _plugin.AddDebugLog("[Portal][ADS] Duty entry settled - handing dungeon phase to ADS.");
-                        if (autoMoveActive)
-                        {
-                            _plugin.NavigationService.StopNavigation();
-                            autoMoveActive = false;
-                        }
-
-                        portalRetryStart = DateTime.MinValue;
-                        QueueDungeonMapFlagClear("[Portal][ADS]");
-                        ResetAdsHandoffTracking(resetStatus: true);
-                        adsDutyHandoffActive = true;
-                        adsDutyHandoffStarted = DateTime.Now;
-                        SendAdsInsideCommand("[Portal][ADS] Sent initial /ads inside after duty entry settled.", includeAssistCommands: true);
-                        TransitionTo(BotState.Completed, "ADS handoff active - waiting for dungeon to finish...");
-                        return;
-                    }
-
-                    if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !_plugin.IsAdsAvailable)
-                    {
-                        _plugin.ShowAdsMissingToast();
-                        _plugin.AddDebugLog("[Portal][ADS] ADS handoff requested, but ADS is not installed/loaded. Falling back to legacy dungeon solver.");
-                    }
-
-                    RunDutyEntryCommandsOnce("[Portal] legacy dungeon entry");
-                    _plugin.AddDebugLog("[Portal] BoundByDuty detected and portal gone/loading - entering dungeon!");
-                    portalRetryStart = DateTime.MinValue;
-                    QueueDungeonMapFlagClear("[Portal]");
-                    adsDutyEntryConfirmedAt = DateTime.MinValue;
-                    dungeonEntryProcessed = false;
-                    dungeonFloor = 0;
-                    excludedDoorEntityId = null;
-                    doorStuckStart = DateTime.MinValue;
-                    lastDoorOpenedPosition = null;
-                    doorWalkThroughStart = DateTime.MinValue;
-                    ResetDoorTransitionReadiness();
-                    
-                    // Reset objective tracking for new dungeon
-                    currentObjective = DungeonObjective.ClearingChests;
-                    dungeonLoadWaitStart = DateTime.MinValue;
-                    processedChests.Clear();
-                    processedSpheres.Clear();
-                    failedObjects.Clear();
-                    sphereInteractionTimes.Clear();
-                    _plugin.AddDebugLog("[Objective] New dungeon entry - all objectives reset");
-                    
-                    TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
+                    // Don't transition to InDungeon yet - maps can set BoundByDuty before the player leaves the overworld.
+                    StateDetail = "Portal accepted - waiting for treasure dungeon territory...";
                     return;
                 }
 
                 var portal = FindNearestPortal();
+                if (TryHandleConfirmedDutyEntry("[Portal]", portal != null))
+                    return;
 
                 if (portal != null)
                 {
@@ -3563,69 +3560,49 @@ public class StateManager : IDisposable
                         _plugin.AddDebugLog($"[Portal] Portal became untargetable - waiting...");
                         return;
                     }
-                    
-                    // Target the portal
+
                     Plugin.TargetManager.Target = portal;
-                    
-                    // Use lockon+automove to approach portal
+
+                    var approachPosition = CapturePortalApproachPosition(portal);
                     var player = Plugin.ObjectTable.LocalPlayer;
-                    if (player != null)
+                    var portalDist = player == null
+                        ? float.MaxValue
+                        : Vector3.Distance(player.Position, approachPosition);
+
+                    if (portalDist > PortalInteractionRange)
                     {
-                        var portalDist = Vector3.Distance(player.Position, portal.Position);
-                        if (portalDist > 3f && !autoMoveActive)
-                        {
-                            _plugin.AddDebugLog($"[Portal] Portal at {portalDist:F1}y - lockon+automove");
-                            GameHelpers.LockOnAndAutoMove();
-                            autoMoveActive = true;
-                        }
-                        else if (portalDist <= 3f && autoMoveActive)
-                        {
-                            GameHelpers.StopAutoMove();
-                            autoMoveActive = false;
-                        }
+                        MoveToPortalApproachPosition(approachPosition);
+                        StateDetail = $"Approaching portal XYZ {FormatVectorCompact(approachPosition)} ({portalDist:F1}y)...";
+                        return;
                     }
 
-                    // /gaction jump for 0.5s bursts to get Y-axis range for underwater portals
-                    // Only jump if we're diving (Condition 81)
-                    if ((int)(sinceStart * 2) % 2 == 0 && (int)sinceStart > 0 && Plugin.Condition[ConditionFlag.Diving])
+                    if (autoMoveActive)
                     {
-                        CommandHelper.SendCommand("/gaction jump");
+                        GameHelpers.StopAutoMove();
+                        _plugin.NavigationService.StopNavigation();
+                        autoMoveActive = false;
                     }
 
-                // Continually interact every ~1 second
-                if ((now - lastInteractionTime).TotalSeconds >= 1.0)
-                {
-                    lastInteractionTime = now;
-                    _plugin.AddDebugLog($"[Portal] Interacting with '{portal.Name.TextValue}'...");
-                    GameHelpers.InteractWithObject(portal);
-                }
-                
-                // If diving, continually try to dig and target portal
-                if (Plugin.Condition[ConditionFlag.Diving])
-                {
-                    // Try to dig every 3 seconds (rate limited)
-                    if ((DateTime.Now - lastDigTime).TotalSeconds >= 3.0)
+                    // Continually interact every ~1 second once close enough.
+                    if ((now - lastInteractionTime).TotalSeconds >= 1.0)
                     {
-                        CommandHelper.SendCommand("/gaction dig");
-                        lastDigTime = DateTime.Now;
+                        EnsurePortalMapFlagCleared();
+                        lastInteractionTime = now;
+                        _plugin.AddDebugLog($"[Portal] Interacting with '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}...");
+                        GameHelpers.InteractWithObject(portal);
                     }
-                    
-                    // Try to target portal periodically
-                    if ((DateTime.Now - lastTargetTime).TotalSeconds >= 2.0)
-                    {
-                        Plugin.TargetManager.Target = portal;
-                        lastTargetTime = DateTime.Now;
-                    }
+
+                    StateDetail = $"Interacting with portal ({portalDist:F1}y)...";
+                    return;
                 }
-                    
-                    // Continuously pathfind to portal location to counter BMR AI interference
-                    _plugin.NavigationService.MoveToPosition(portal.Position);
-                }
-                                
+
                 StateDetail = $"Searching for portal... ({sinceStart:F0}/15s)";
                 return;
             }
-            
+
+            if (TryHandleConfirmedDutyEntry("[Portal]", portalAvailable: false))
+                return;
+
             // Time elapsed, no portal found - map is complete (no dungeon)
             _plugin.AddDebugLog("[Portal] No portal found after 15s - map complete (no dungeon)");
             if (autoMoveActive)
@@ -3633,7 +3610,7 @@ public class StateManager : IDisposable
                 _plugin.NavigationService.StopNavigation();
                 autoMoveActive = false;
             }
-            portalRetryStart = DateTime.MinValue;
+            EndPortalRetryWindow();
             adsDutyEntryConfirmedAt = DateTime.MinValue;
         }
         
@@ -3644,6 +3621,20 @@ public class StateManager : IDisposable
                            Plugin.Condition[ConditionFlag.BoundByDuty56];
         if (stillInDuty)
         {
+            var currentTerritory = Plugin.ClientState.TerritoryType;
+            if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver
+                && _plugin.IsAdsAvailable
+                && IsTreasureDungeonTerritory(currentTerritory))
+            {
+                _plugin.AddDebugLog($"[Completed][ADS] Still in confirmed treasure dungeon territory {currentTerritory}; recovering by starting ADS handoff.");
+                if (TryHandleConfirmedDutyEntry("[Completed][Recovery]"))
+                    return;
+            }
+            else if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
+            {
+                _plugin.AddDebugLog($"[Completed][ADS] Still in map-duty state in territory {currentTerritory}; not starting ADS outside a treasure dungeon.");
+            }
+
             _plugin.AddDebugLog("[Completed] ERROR: Still in dungeon (BoundByDuty) - cannot start next map!");
             TransitionTo(BotState.Error, "Still in dungeon - cannot start next map. Manual intervention required.");
             return;
@@ -3703,6 +3694,151 @@ public class StateManager : IDisposable
         RunFinishCommandsOnce("[Completed] run complete");
         RetryCount = 0;
         TransitionTo(BotState.Idle, "Run complete.");
+    }
+
+    private bool TryHandleConfirmedDutyEntry(string source, bool? portalAvailable = null)
+    {
+        bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                      Plugin.Condition[ConditionFlag.BoundByDuty56];
+        if (!inDuty)
+            return false;
+
+        bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                       Plugin.Condition[ConditionFlag.BetweenAreas51];
+        var currentTerritory = Plugin.ClientState.TerritoryType;
+
+        if (!IsTreasureDungeonTerritory(currentTerritory))
+        {
+            adsDutyEntryConfirmedAt = DateTime.MinValue;
+            adsDutyReadySince = DateTime.MinValue;
+
+            if (loading)
+            {
+                StateDetail = $"Portal accepted - loading treasure dungeon territory from {currentTerritory}...";
+                return true;
+            }
+
+            if (portalAvailable == false)
+            {
+                LogMapDutyOutsideDungeon(source, currentTerritory);
+                StateDetail = $"Map duty active in territory {currentTerritory} - waiting for treasure dungeon territory...";
+                return true;
+            }
+
+            if (portalAvailable == true)
+            {
+                StateDetail = $"Map duty active in territory {currentTerritory} - continuing portal interaction...";
+            }
+
+            return false;
+        }
+
+        if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
+        {
+            if (loading)
+            {
+                adsDutyEntryConfirmedAt = DateTime.MinValue;
+                StateDetail = $"Treasure dungeon territory {currentTerritory} detected - waiting for loading to finish before ADS handoff...";
+                return true;
+            }
+
+            if (adsDutyEntryConfirmedAt == DateTime.MinValue)
+            {
+                adsDutyEntryConfirmedAt = DateTime.Now;
+                StateDetail = $"Treasure dungeon territory {currentTerritory} detected - waiting for ADS-safe handoff seam...";
+                _plugin.AddDebugLog($"{source}[ADS] Treasure dungeon territory {currentTerritory} confirmed; waiting for ADS-safe handoff.");
+                return true;
+            }
+
+            if (!IsCharacterReady())
+            {
+                adsDutyReadySince = DateTime.MinValue;
+                StateDetail = $"Treasure dungeon territory {currentTerritory} detected - waiting for ADS-safe handoff seam... ({DescribeCharacterReadyBlockers()})";
+                return true;
+            }
+
+            if (adsDutyReadySince == DateTime.MinValue)
+            {
+                adsDutyReadySince = DateTime.Now;
+                StateDetail = $"Treasure dungeon territory {currentTerritory} detected - waiting for ADS-safe handoff settle...";
+                return true;
+            }
+
+            if ((DateTime.Now - adsDutyReadySince).TotalSeconds < 2.0)
+            {
+                StateDetail = $"Treasure dungeon territory {currentTerritory} detected - waiting for ADS-safe handoff settle...";
+                return true;
+            }
+
+            _plugin.AddDebugLog($"{source}[ADS] Treasure dungeon territory {currentTerritory} settled - handing dungeon phase to ADS.");
+            if (autoMoveActive)
+            {
+                _plugin.NavigationService.StopNavigation();
+                autoMoveActive = false;
+            }
+
+            EndPortalRetryWindow();
+            QueueDungeonMapFlagClear($"{source}[ADS]");
+            ResetAdsHandoffTracking(resetStatus: true);
+            adsDutyHandoffActive = true;
+            adsDutyHandoffStarted = DateTime.Now;
+            SendAdsInsideCommand($"{source}[ADS] Sent initial /ads inside after duty entry settled.", includeAssistCommands: true);
+            TransitionTo(BotState.Completed, "ADS handoff active - waiting for dungeon to finish...");
+            return true;
+        }
+
+        if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !_plugin.IsAdsAvailable)
+        {
+            _plugin.ShowAdsMissingToast();
+            _plugin.AddDebugLog($"{source}[ADS] ADS handoff requested, but ADS is not installed/loaded. Falling back to legacy dungeon solver.");
+        }
+
+        RunDutyEntryCommandsOnce($"{source} legacy dungeon entry");
+        _plugin.AddDebugLog($"{source} Treasure dungeon territory {currentTerritory} confirmed - entering dungeon.");
+        EndPortalRetryWindow();
+        QueueDungeonMapFlagClear(source);
+        adsDutyEntryConfirmedAt = DateTime.MinValue;
+        dungeonEntryProcessed = false;
+        dungeonFloor = 0;
+        excludedDoorEntityId = null;
+        doorStuckStart = DateTime.MinValue;
+        lastDoorOpenedPosition = null;
+        doorWalkThroughStart = DateTime.MinValue;
+        ResetDoorTransitionReadiness();
+
+        currentObjective = DungeonObjective.ClearingChests;
+        dungeonLoadWaitStart = DateTime.MinValue;
+        processedChests.Clear();
+        processedSpheres.Clear();
+        failedObjects.Clear();
+        sphereInteractionTimes.Clear();
+        _plugin.AddDebugLog("[Objective] New dungeon entry - all objectives reset");
+
+        TransitionTo(BotState.InDungeon, "Entering dungeon instance...");
+        return true;
+    }
+
+    private static bool IsTreasureDungeonTerritory(uint territoryId)
+    {
+        if (territoryId == 0)
+            return false;
+
+        if (territoryId == 794)
+            return true; // The Shifting Altars of Uznair: roulette-style treasure dungeon.
+
+        return DungeonLocationData.HasDungeonData(territoryId)
+            || TreasureMapData.KnownMaps.Values.Any(map => map.HasDungeon
+                && (map.DungeonTerritoryId == territoryId || map.SecondTerritoryId == territoryId));
+    }
+
+    private void LogMapDutyOutsideDungeon(string source, uint territoryId)
+    {
+        var now = DateTime.Now;
+        if ((now - lastMapDutyOutsideDungeonLog).TotalSeconds < 5.0)
+            return;
+
+        lastMapDutyOutsideDungeonLog = now;
+        _plugin.AddDebugLog($"{source} BoundByDuty active in territory {territoryId}, but this is not a known treasure dungeon territory. Waiting; no map flag clear and no ADS handoff.");
     }
 
     // ─── Room Sweep Methods (brute-force object interaction) ─────────────────
@@ -5054,7 +5190,6 @@ public class StateManager : IDisposable
     private DateTime lastDivingCheck = DateTime.MinValue;
     private Vector3 underwaterTargetPosition = Vector3.Zero;
     private static DateTime lastDigTime = DateTime.MinValue;
-    private static DateTime lastTargetTime = DateTime.MinValue;
 
     /// <summary>
     /// Start the Alexandrite farming loop: buy Mysterious Map from Auriana, run it, repeat.
