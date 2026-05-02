@@ -105,7 +105,11 @@ public class StateManager : IDisposable
     private const double TickIntervalSeconds = 0.5;
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float PortalInteractionRange = 3.0f;
+    private const float UnderwaterBounceTriggerXZRange = 10.0f;
+    private const float UnderwaterFlagApproachArrivalXZRange = 5.0f;
     private const float PortalRunawayDistanceIncrease = 2.0f;
+    private static readonly TimeSpan UnderwaterBounceDescentInterval = TimeSpan.FromSeconds(1.25);
+    private static readonly TimeSpan UnderwaterFlagApproachReissueInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan PortalMountCommandInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
@@ -200,6 +204,13 @@ public class StateManager : IDisposable
     private bool landingCommandsRanThisMap;
     private bool dutyEntryCommandsRanThisMap;
     private bool finishCommandsRanThisRun;
+    private DateTime lastUnderwaterBounceDescentStart = DateTime.MinValue;
+    private bool underwaterBounceHoldLogged;
+    private bool underwaterBounceSuppressedVnavLogged;
+    private bool underwaterBounceReenterLogged;
+    private bool underwaterFlagApproachIssued;
+    private bool underwaterFlagApproachLogged;
+    private DateTime lastUnderwaterFlagApproachTime = DateTime.MinValue;
 
     // Cycling mode state
     private List<(uint Id, string Name, uint TerritoryId)> cycleAetheryteQueue = new();
@@ -993,6 +1004,15 @@ public class StateManager : IDisposable
     {
         landingCommandsRanThisMap = false;
         dutyEntryCommandsRanThisMap = false;
+        lastUnderwaterBounceDescentStart = DateTime.MinValue;
+        underwaterBounceHoldLogged = false;
+        underwaterBounceSuppressedVnavLogged = false;
+        underwaterBounceReenterLogged = false;
+        underwaterFlagApproachIssued = false;
+        underwaterFlagApproachLogged = false;
+        lastUnderwaterFlagApproachTime = DateTime.MinValue;
+        underwaterTargetPosition = Vector3.Zero;
+        wasDiving = false;
     }
 
     private void RunLandingCommandsOnce(string reason)
@@ -1054,6 +1074,272 @@ public class StateManager : IDisposable
         CommandHelper.SendCommand("/gaction dig");
         lastDigTime = DateTime.Now;
         _plugin.AddDebugLog($"{reason}: issued /gaction dig while diving.");
+    }
+
+    private bool ShouldAssumeThiefMapFromDiving()
+    {
+        return Plugin.Condition[ConditionFlag.Diving]
+            && (SelectedMapItemId == 0 || IsThiefMap(SelectedMapItemId))
+            && (State == BotState.Flying || State == BotState.OpeningChest);
+    }
+
+    private bool IsUnderwaterBounceTriggerFlow(bool includeNearTarget = true)
+    {
+        if (State != BotState.Flying && State != BotState.OpeningChest)
+            return false;
+
+        if (currentLandingMode != OverworldLandingMode.UnderwaterBounce)
+        {
+            if (!ShouldAssumeThiefMapFromDiving())
+                return false;
+
+            currentLandingMode = OverworldLandingMode.UnderwaterBounce;
+            _plugin.AddDebugLog("[Underwater] Diving detected with unknown map type - assuming thief-map trigger flow");
+        }
+
+        if (Plugin.Condition[ConditionFlag.Diving]
+            || descentInProgress
+            || descentMode
+            || underwaterTargetPosition != Vector3.Zero
+            || dismountAttemptStart != DateTime.MinValue)
+        {
+            return true;
+        }
+
+        if (!includeNearTarget || CurrentLocation == null)
+            return false;
+
+        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        if (playerPos == Vector3.Zero)
+            return false;
+
+        var targets = ResolveOverworldNavigationTargets();
+        return targets.LandingTarget != Vector3.Zero
+            && CalculateXZDistance(playerPos, targets.LandingTarget) <= UnderwaterBounceTriggerXZRange;
+    }
+
+    private Vector3 ResolveUnderwaterTargetPosition(MapLocationEntry? currentEntry, int destinationIndex, out string basis)
+    {
+        basis = "standard navigation";
+
+        if (CurrentLocation == null)
+            return Vector3.Zero;
+
+        if (currentEntry != null && destinationIndex > 0)
+        {
+            var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
+            if (specialNav != null)
+            {
+                basis = "special navigation";
+                return new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
+            }
+        }
+
+        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+        {
+            var targets = ResolveOverworldNavigationTargets();
+            if (targets.LandingTarget != Vector3.Zero)
+            {
+                basis = targets.Basis;
+                return targets.LandingTarget;
+            }
+        }
+
+        return new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+    }
+
+    private Vector3 ResolveUnderwaterTargetPosition(out string destinationText, out string zoneName, out string basis)
+    {
+        destinationText = "Unknown";
+        zoneName = "Unknown";
+        basis = "standard navigation";
+
+        if (CurrentLocation == null)
+            return Vector3.Zero;
+
+        var currentEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
+        var destinationIndex = currentEntry?.Index > 0 ? currentEntry.Index : -1;
+        destinationText = destinationIndex > 0 ? $"Destination #{destinationIndex}" : "Unknown";
+        zoneName = currentEntry?.ZoneName ?? CurrentLocation.ZoneName ?? "Unknown";
+
+        return ResolveUnderwaterTargetPosition(currentEntry, destinationIndex, out basis);
+    }
+
+    private Vector3 ResolveUnderwaterFlagApproachTarget(Vector3 currentPos, out string basis, out string destinationText, out string zoneName)
+    {
+        var targets = ResolveOverworldNavigationTargets();
+        basis = targets.Basis;
+        destinationText = targets.DestinationText;
+        zoneName = targets.ZoneName;
+
+        if (targets.LandingTarget == Vector3.Zero || currentPos == Vector3.Zero)
+            return Vector3.Zero;
+
+        return new Vector3(targets.LandingTarget.X, currentPos.Y, targets.LandingTarget.Z);
+    }
+
+    private bool ShouldReissueUnderwaterFlagApproach(DateTime now)
+    {
+        if (!underwaterFlagApproachIssued)
+            return true;
+
+        var navState = _plugin.NavigationService.State;
+        return (navState == NavigationState.Idle || navState == NavigationState.Error)
+            && now - lastUnderwaterFlagApproachTime >= UnderwaterFlagApproachReissueInterval;
+    }
+
+    private void SuppressUnderwaterBounceVnav()
+    {
+        if (_plugin.NavigationService.State == NavigationState.Idle)
+            return;
+
+        _plugin.NavigationService.StopNavigation();
+        autoMoveActive = false;
+
+        if (!underwaterBounceSuppressedVnavLogged)
+        {
+            underwaterBounceSuppressedVnavLogged = true;
+            _plugin.AddDebugLog("[Underwater] Suppressed upward vnav during thief-map trigger");
+        }
+    }
+
+    private void EnsureUnderwaterBounceDescent(DateTime now, Vector3 currentPos)
+    {
+        descentMode = true;
+
+        if (dismountAttemptStart == DateTime.MinValue)
+        {
+            dismountAttemptStart = now;
+            descentStartTime = now;
+            descentStartY = currentPos.Y;
+        }
+
+        if (!underwaterBounceHoldLogged)
+        {
+            underwaterBounceHoldLogged = true;
+            _plugin.AddDebugLog("[Underwater] Holding descent for thief-map trigger");
+        }
+
+        if (descentInProgress || now - lastUnderwaterBounceDescentStart < UnderwaterBounceDescentInterval)
+            return;
+
+        lastUnderwaterBounceDescentStart = now;
+        descentInProgress = true;
+        System.Threading.Tasks.Task.Run(async () =>
+        {
+            await GameHelpers.PerformDescentAsync();
+            descentInProgress = false;
+        });
+    }
+
+    private bool TryHandleUnderwaterBounceTriggerFlow(bool isDiving, bool includeNearTarget = true)
+    {
+        if (!IsUnderwaterBounceTriggerFlow(includeNearTarget))
+            return false;
+
+        if (TryHandleConfirmedDutyEntry("[Underwater]"))
+            return true;
+
+        var portal = FindNearestPortal();
+        if (portal != null)
+        {
+            _plugin.AddDebugLog("[Underwater] Portal detected during thief-map trigger - switching to portal interaction.");
+            CheckForPortalAfterChest();
+            return true;
+        }
+
+        var chest = _plugin.ChestDetectionService.FindNearestCoffer();
+        if (chest != null)
+        {
+            if (State == BotState.OpeningChest)
+                return false;
+
+            _plugin.AddDebugLog("[Underwater] Coffer detected during thief-map trigger - transitioning to chest flow.");
+            TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+            return true;
+        }
+
+        var now = DateTime.Now;
+        var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+
+        if (isDiving)
+        {
+            if (!wasDiving)
+            {
+                _plugin.AddDebugLog("[Underwater] Diving state detected - swimming to flag X/Z before thief-map trigger descent");
+                wasDiving = true;
+            }
+
+            if (underwaterTargetPosition == Vector3.Zero)
+            {
+                underwaterTargetPosition = ResolveUnderwaterFlagApproachTarget(
+                    currentPos,
+                    out var basis,
+                    out var destinationText,
+                    out var zoneName);
+
+                if (underwaterTargetPosition != Vector3.Zero && !underwaterFlagApproachLogged)
+                {
+                    underwaterFlagApproachLogged = true;
+                    _plugin.AddDebugLog(
+                        $"[Underwater] Approaching thief-map flag X/Z at dive altitude via {basis} for {destinationText} - {zoneName}; " +
+                        $"target={FormatVectorCompact(underwaterTargetPosition)}");
+                }
+            }
+
+            if (underwaterTargetPosition == Vector3.Zero)
+            {
+                StateDetail = "Waiting for underwater thief-map flag target...";
+                return true;
+            }
+
+            var approachXZ = CalculateXZDistance(currentPos, underwaterTargetPosition);
+            if (approachXZ > UnderwaterFlagApproachArrivalXZRange)
+            {
+                if (descentInProgress)
+                {
+                    GameHelpers.KeyRelease(VirtualKey.CONTROL);
+                    GameHelpers.KeyRelease(VirtualKey.SPACE);
+                    descentInProgress = false;
+                    lastUnderwaterBounceDescentStart = DateTime.MinValue;
+                    _plugin.AddDebugLog("[Underwater] Paused thief-map descent until flag X/Z arrival.");
+                }
+
+                if (ShouldReissueUnderwaterFlagApproach(now))
+                {
+                    _plugin.NavigationService.FlyToPosition(underwaterTargetPosition);
+                    underwaterFlagApproachIssued = true;
+                    lastUnderwaterFlagApproachTime = now;
+                    _plugin.AddDebugLog(
+                        $"[Underwater] Flying horizontally to thief-map flag X/Z at current dive Y; " +
+                        $"xzDistance={approachXZ:F1}y; target={FormatVectorCompact(underwaterTargetPosition)}");
+                }
+
+                StateDetail = $"Swimming to underwater flag X/Z... ({approachXZ:F1}y)";
+                return true;
+            }
+
+            SuppressUnderwaterBounceVnav();
+            TryDigWhileDiving("[Underwater] thief-map trigger");
+        }
+        else if (wasDiving)
+        {
+            wasDiving = false;
+            if (!underwaterBounceReenterLogged)
+            {
+                underwaterBounceReenterLogged = true;
+                _plugin.AddDebugLog("[Underwater] Re-entering descent after leaving Diving before trigger");
+            }
+        }
+
+        if (!isDiving)
+            SuppressUnderwaterBounceVnav();
+
+        EnsureUnderwaterBounceDescent(now, currentPos);
+        StateDetail = isDiving
+            ? "Holding underwater thief-map trigger..."
+            : "Descending for underwater thief-map trigger...";
+        return true;
     }
 
     // ─── State Ticks ─────────────────────────────────────────────────────────
@@ -1817,6 +2103,9 @@ public class StateManager : IDisposable
     {
         // Check for diving state change (Condition 81)
         bool isDiving = Plugin.Condition[ConditionFlag.Diving];
+        if (TryHandleUnderwaterBounceTriggerFlow(isDiving, includeNearTarget: false))
+            return;
+
         if (isDiving && !wasDiving)
         {
             if (CurrentLocation == null)
@@ -1835,28 +2124,10 @@ public class StateManager : IDisposable
             string destinationText = destinationIndex > 0 ? $"Destination #{destinationIndex}" : "Unknown";
             string zoneName = currentEntry?.ZoneName ?? "Unknown";
             
-            // Check for special navigation entry
-            if (currentEntry != null && destinationIndex > 0)
-            {
-                var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
-                if (specialNav != null)
-                {
-                    // Use special navigation underwater coordinates
-                    underwaterTargetPosition = new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
-                    _plugin.AddDebugLog($"[Underwater] Using special navigation for {destinationText} - {zoneName}");
-                }
-                else
-                {
-                    // Use standard navigation
-                    underwaterTargetPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
-                    _plugin.AddDebugLog($"[Underwater] Using standard navigation for {destinationText} - {zoneName}");
-                }
-            }
-            else
-            {
-                underwaterTargetPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
-            }
-            
+            // Resolve underwater target; thief maps use stored landing XYZ when no special nav exists.
+            underwaterTargetPosition = ResolveUnderwaterTargetPosition(currentEntry, destinationIndex, out var underwaterTargetBasis);
+            _plugin.AddDebugLog($"[Underwater] Using {underwaterTargetBasis} for {destinationText} - {zoneName}");
+
             // Stop current navigation and fly directly to target
             _plugin.NavigationService.StopNavigation();
             if (underwaterTargetPosition != Vector3.Zero)
@@ -1902,6 +2173,8 @@ public class StateManager : IDisposable
                         $"[Flying] Already within {xzDist2:F1}y of landing target ({initialNavTargets.Basis}) - " +
                         "dive landing mode active, skipping immediate dismount/dig");
                     stateActionIssued = true;
+                    if (TryHandleUnderwaterBounceTriggerFlow(isDiving))
+                        return;
                 }
                 else
                 {
@@ -1957,6 +2230,14 @@ public class StateManager : IDisposable
         var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         var activeNavTargets = ResolveOverworldNavigationTargets();
         var distanceFromTarget = Vector3.Distance(currentPos, activeNavTargets.NavigationTarget);
+        var xzDist = CalculateXZDistance(currentPos, activeNavTargets.LandingTarget);
+
+        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            && xzDist <= UnderwaterBounceTriggerXZRange
+            && TryHandleUnderwaterBounceTriggerFlow(isDiving))
+        {
+            return;
+        }
         
         // Stuck detection: only re-pathfind if stuck (10+ seconds without moving 5+ yalms)
         var sinceStuckCheck = (DateTime.Now - lastStuckCheckTime).TotalSeconds;
@@ -1978,8 +2259,6 @@ public class StateManager : IDisposable
         }
 
         // Check if we're close enough to X,Z coordinates (within 5 yalms) — uses ground target, not elevated
-        var xzDist = CalculateXZDistance(currentPos, activeNavTargets.LandingTarget);
-        
         // If we're not mounted, we've already dismounted - proceed with dig regardless of nav state
         if (!_plugin.NavigationService.IsMounted() && dismountAttemptStart != DateTime.MinValue)
         {
@@ -2156,7 +2435,21 @@ public class StateManager : IDisposable
     {
         // Check for diving state change - if we just entered diving, go to underwater navigation
         bool isDiving = Plugin.Condition[ConditionFlag.Diving];
-        if (isDiving && !wasDiving)
+        if (TryHandleUnderwaterBounceTriggerFlow(isDiving, includeNearTarget: false))
+            return;
+
+        if (isDiving && currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+        {
+            if (!wasDiving)
+            {
+                underwaterTargetPosition = ResolveUnderwaterTargetPosition(out var destinationText, out var zoneName, out var underwaterTargetBasis);
+                _plugin.AddDebugLog($"[Underwater] Diving detected during chest phase - holding thief-map trigger at {destinationText} - {zoneName} ({underwaterTargetBasis})");
+                wasDiving = true;
+            }
+
+            SuppressUnderwaterBounceVnav();
+        }
+        else if (isDiving && !wasDiving)
         {
             if (CurrentLocation == null)
             {
@@ -2172,29 +2465,11 @@ public class StateManager : IDisposable
             
             _plugin.AddDebugLog($"[Underwater] Diving detected during chest phase - {destinationText} - {zoneName}");
             wasDiving = true;
-            
-            // Check for special navigation entry
-            if (currentEntry != null && destinationIndex > 0)
-            {
-                var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
-                if (specialNav != null)
-                {
-                    // Use special navigation underwater coordinates
-                    underwaterTargetPosition = new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
-                    _plugin.AddDebugLog($"[Underwater] Using special navigation for {destinationText} - {zoneName}");
-                }
-                else
-                {
-                    // Use standard navigation
-                    underwaterTargetPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
-                    _plugin.AddDebugLog($"[Underwater] Using standard navigation for {destinationText} - {zoneName}");
-                }
-            }
-            else
-            {
-                underwaterTargetPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
-            }
-            
+
+            // Resolve underwater target; thief maps use stored landing XYZ when no special nav exists.
+            underwaterTargetPosition = ResolveUnderwaterTargetPosition(currentEntry, destinationIndex, out var underwaterTargetBasis);
+            _plugin.AddDebugLog($"[Underwater] Using {underwaterTargetBasis} for {destinationText} - {zoneName}");
+
             // Stop current navigation and fly directly to target
             _plugin.NavigationService.StopNavigation();
             if (underwaterTargetPosition != Vector3.Zero)
