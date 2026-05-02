@@ -3720,7 +3720,11 @@ public class StateManager : IDisposable
             adsDutyEntryConfirmedAt = DateTime.MinValue;
         }
         
-        _plugin.AddDebugLog("[Completed] Map run complete.");
+        if (!stateActionIssued)
+        {
+            _plugin.AddDebugLog("[Completed] Map run complete.");
+            stateActionIssued = true;
+        }
         
         // CRITICAL: Do NOT start next map if still in a dungeon
         bool stillInDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
@@ -3750,6 +3754,9 @@ public class StateManager : IDisposable
 
         if (_plugin.Configuration.AutoStartNextMap)
         {
+            if (!CanStartNextMapAfterPartyWait())
+                return;
+
             _plugin.AddDebugLog("[Completed] AutoStartNextMap enabled - scanning for maps");
             var mapSources = _plugin.InventoryService.ScanForMapSources();
             var maps = GetEnabledMapCandidates(mapSources, includeInventory: true, includeSaddlebags: true);
@@ -3800,6 +3807,45 @@ public class StateManager : IDisposable
         RunFinishCommandsOnce("[Completed] run complete");
         RetryCount = 0;
         TransitionTo(BotState.Idle, "Run complete.");
+    }
+
+    private bool CanStartNextMapAfterPartyWait()
+    {
+        var party = _plugin.PartyService;
+        party.UpdatePartyStatus();
+
+        if (party.PartyMembers.Count <= 1)
+        {
+            LogLandingPartyWaitOnce(
+                "CompletedNextMap:solo",
+                "[PartyWait][CompletedNextMap] Solo or no party members - next map allowed");
+            return true;
+        }
+
+        var outOfZoneNames = party.PartyMembers
+            .Where(member => !member.IsInSameZone)
+            .Select(member => member.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+
+        if (outOfZoneNames.Count == 0)
+        {
+            LogLandingPartyWaitOnce(
+                $"CompletedNextMap:clear:{party.PartyMembers.Count}",
+                "[PartyWait][CompletedNextMap] All party members loaded in same zone - next map allowed");
+            return true;
+        }
+
+        var loadedCount = party.PartyMembers.Count - outOfZoneNames.Count;
+        var missingText = string.Join(", ", outOfZoneNames);
+        StateDetail =
+            $"Waiting for party to load after dungeon ({loadedCount}/{party.PartyMembers.Count} in zone; missing: {missingText})...";
+
+        LogLandingPartyWaitOnce(
+            $"CompletedNextMap:block:{string.Join("|", outOfZoneNames)}",
+            $"[PartyWait][CompletedNextMap] Blocking next map; out-of-zone members: {missingText}");
+
+        return false;
     }
 
     private bool TryHandleConfirmedDutyEntry(string source, bool? portalAvailable = null)
