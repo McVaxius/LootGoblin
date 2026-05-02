@@ -77,6 +77,9 @@ public class StateManager : IDisposable
     private bool portalMapFlagCleared; // Clear old map/vnav flag once before portal interaction
     private Vector3? portalApproachPosition; // Exact portal XYZ captured for this portal window
     private DateTime lastPortalApproachCommandTime = DateTime.MinValue; // Throttle portal MoveToPosition calls
+    private DateTime portalApproachStartedAt = DateTime.MinValue; // Tracks progress for portal MoveToPosition
+    private float portalApproachStartDistance = float.MaxValue; // Distance when current portal approach started
+    private DateTime lastPortalRepathTime = DateTime.MinValue; // Rate-limit portal stop + repath recovery
     private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
     private bool descentInProgress = false; // Whether Ctrl+Space descent is currently running
     private DateTime descentStartTime = DateTime.MinValue; // When Ctrl+Space descent started
@@ -94,7 +97,10 @@ public class StateManager : IDisposable
     private const double TickIntervalSeconds = 0.5;
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float PortalInteractionRange = 3.0f;
+    private const float PortalRunawayDistanceIncrease = 2.0f;
     private static readonly TimeSpan PortalApproachCommandInterval = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
@@ -1053,6 +1059,9 @@ public class StateManager : IDisposable
         portalMapFlagCleared = false;
         portalApproachPosition = null;
         lastPortalApproachCommandTime = DateTime.MinValue;
+        portalApproachStartedAt = DateTime.MinValue;
+        portalApproachStartDistance = float.MaxValue;
+        lastPortalRepathTime = DateTime.MinValue;
     }
 
     private Vector3 CapturePortalApproachPosition(IGameObject portal)
@@ -1063,7 +1072,6 @@ public class StateManager : IDisposable
         portalApproachPosition = portal.Position;
         _plugin.AddDebugLog($"[Portal] Captured targetable portal XYZ {FormatVectorCompact(portalApproachPosition.Value)}");
         StopPortalConflictingMovement();
-        MoveToPortalApproachPosition(portalApproachPosition.Value, force: true);
         return portalApproachPosition.Value;
     }
 
@@ -1078,7 +1086,7 @@ public class StateManager : IDisposable
 
         if (autoMoveActive)
         {
-            GameHelpers.StopAutoMove();
+            CommandHelper.SendCommand("/automove off");
             autoMoveActive = false;
         }
 
@@ -1095,9 +1103,28 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog("[Portal] Stopped previous navigation before portal XYZ approach.");
     }
 
-    private void MoveToPortalApproachPosition(Vector3 position, bool force = false)
+    private void MoveToPortalApproachPosition(Vector3 position, float distance, bool force = false)
     {
         var now = DateTime.Now;
+        if (portalApproachStartedAt == DateTime.MinValue || force)
+        {
+            portalApproachStartedAt = now;
+            portalApproachStartDistance = distance;
+        }
+        else if (now - portalApproachStartedAt >= PortalRunawayCheckDelay
+                 && distance >= portalApproachStartDistance + PortalRunawayDistanceIncrease
+                 && now - lastPortalRepathTime >= PortalRepathInterval)
+        {
+            _plugin.AddDebugLog(
+                $"[Portal] Approach distance increased from {portalApproachStartDistance:F1}y to {distance:F1}y after {(now - portalApproachStartedAt).TotalSeconds:F1}s - stopping vnav and retrying portal path.");
+            _plugin.NavigationService.StopNavigation();
+            autoMoveActive = false;
+            portalApproachStartedAt = now;
+            portalApproachStartDistance = distance;
+            lastPortalRepathTime = now;
+            force = true;
+        }
+
         if (!force && now - lastPortalApproachCommandTime < PortalApproachCommandInterval)
             return;
 
@@ -2208,7 +2235,7 @@ public class StateManager : IDisposable
             && mapInfo.Category == MapCategory.Outdoor;
     }
     
-    private IGameObject? FindNearestPortal()
+    private IGameObject? FindNearestPortal(bool keepActivePortalWindow = false)
     {
         // FrenRider-style: simple exact name match
         var portalObj = Plugin.ObjectTable.FirstOrDefault(obj => 
@@ -2222,10 +2249,18 @@ public class StateManager : IDisposable
                 var dist = Vector3.Distance(player.Position, portalObj.Position);
                 _plugin.AddDebugLog($"[Portal] Found portal at {dist:F1}y distance, XYZ {FormatVectorCompact(portalObj.Position)}");
                 
-                if (dist > 30f)
+                var keepCapturedPortal = keepActivePortalWindow
+                    && portalApproachPosition.HasValue
+                    && Vector3.Distance(portalObj.Position, portalApproachPosition.Value) <= 5f;
+
+                if (dist > 30f && !keepCapturedPortal)
                 {
                     _plugin.AddDebugLog($"[Portal] Portal too far ({dist:F1}y > 30y)");
                     return null;
+                }
+                else if (dist > 30f)
+                {
+                    _plugin.AddDebugLog($"[Portal] Keeping active portal window despite distance {dist:F1}y; captured XYZ {FormatVectorCompact(portalApproachPosition!.Value)}");
                 }
                 
                 // Verify portal is targetable (not a ghost object)
@@ -3548,7 +3583,7 @@ public class StateManager : IDisposable
                     return;
                 }
 
-                var portal = FindNearestPortal();
+                var portal = FindNearestPortal(keepActivePortalWindow: true);
                 if (TryHandleConfirmedDutyEntry("[Portal]", portal != null))
                     return;
 
@@ -3571,16 +3606,20 @@ public class StateManager : IDisposable
 
                     if (portalDist > PortalInteractionRange)
                     {
-                        MoveToPortalApproachPosition(approachPosition);
+                        MoveToPortalApproachPosition(approachPosition, portalDist);
                         StateDetail = $"Approaching portal XYZ {FormatVectorCompact(approachPosition)} ({portalDist:F1}y)...";
                         return;
                     }
 
                     if (autoMoveActive)
                     {
-                        GameHelpers.StopAutoMove();
-                        _plugin.NavigationService.StopNavigation();
+                        CommandHelper.SendCommand("/automove off");
                         autoMoveActive = false;
+                    }
+
+                    if (_plugin.NavigationService.State != NavigationState.Idle)
+                    {
+                        _plugin.NavigationService.StopNavigation();
                     }
 
                     // Continually interact every ~1 second once close enough.
