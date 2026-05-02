@@ -82,6 +82,9 @@ public class StateManager : IDisposable
     private DateTime portalApproachStartedAt = DateTime.MinValue; // Tracks progress for portal FlyToPosition
     private float portalApproachStartDistance = float.MaxValue; // Distance when current portal approach started
     private DateTime lastPortalRepathTime = DateTime.MinValue; // Rate-limit portal stop + repath recovery
+    private Vector3 portalStuckCheckPosition; // Player XYZ at last portal approach progress check
+    private DateTime portalStuckCheckTime = DateTime.MinValue; // Time of last portal approach progress check
+    private bool portalAutoMoveFallbackActive; // True when portal approach has fallen back to lockon+automove
     private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
     private bool descentInProgress = false; // Whether Ctrl+Space descent is currently running
     private DateTime descentStartTime = DateTime.MinValue; // When Ctrl+Space descent started
@@ -104,6 +107,8 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan PortalStuckCheckInterval = TimeSpan.FromSeconds(10.0);
+    private const float PortalStuckMovementThreshold = 0.5f;
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
@@ -371,6 +376,7 @@ public class StateManager : IDisposable
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51];
         if (loading)
         {
+            ResetPortalStuckTrackingForAreaChange();
             stateStartTime = DateTime.Now; // Don't timeout while loading
             return;
         }
@@ -382,6 +388,7 @@ public class StateManager : IDisposable
         var currentTerritory = Plugin.ClientState.TerritoryType;
         if (lastGlobalTerritoryId != 0 && lastGlobalTerritoryId != currentTerritory)
         {
+            ResetPortalStuckTrackingForAreaChange();
             _plugin.AddDebugLog($"[Territory] Territory changed: {lastGlobalTerritoryId} -> {currentTerritory} - refreshing maps");
             _plugin.InventoryService.ScanForMaps();
         }
@@ -1053,6 +1060,7 @@ public class StateManager : IDisposable
 
     private void EndPortalRetryWindow()
     {
+        StopPortalFallbackAutoMoveIfActive("when portal retry window ended");
         portalRetryStart = DateTime.MinValue;
         ResetPortalWindowState();
     }
@@ -1067,6 +1075,35 @@ public class StateManager : IDisposable
         portalApproachStartedAt = DateTime.MinValue;
         portalApproachStartDistance = float.MaxValue;
         lastPortalRepathTime = DateTime.MinValue;
+        ResetPortalStuckTracking();
+    }
+
+    private void ResetPortalStuckTracking()
+    {
+        portalStuckCheckPosition = Vector3.Zero;
+        portalStuckCheckTime = DateTime.MinValue;
+        portalAutoMoveFallbackActive = false;
+    }
+
+    private void ResetPortalStuckTrackingForAreaChange()
+    {
+        if (portalAutoMoveFallbackActive)
+            autoMoveActive = false;
+
+        ResetPortalStuckTracking();
+    }
+
+    private void StopPortalFallbackAutoMoveIfActive(string reason)
+    {
+        if (!portalAutoMoveFallbackActive)
+            return;
+
+        if (autoMoveActive)
+        {
+            GameHelpers.StopAutoMove();
+            autoMoveActive = false;
+            _plugin.AddDebugLog($"[Portal] Stopped lockon+automove fallback {reason}.");
+        }
     }
 
     private Vector3 CapturePortalApproachPosition(IGameObject portal)
@@ -1075,6 +1112,7 @@ public class StateManager : IDisposable
             return portalApproachPosition.Value;
 
         portalApproachPosition = portal.Position;
+        ResetPortalStuckTracking();
         _plugin.AddDebugLog($"[Portal] Captured targetable portal XYZ {FormatVectorCompact(portalApproachPosition.Value)}");
         StopPortalConflictingMovement();
         return portalApproachPosition.Value;
@@ -1169,8 +1207,56 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private void ContinuePortalAutoMoveFallback(IGameObject portal, float distance)
+    {
+        Plugin.TargetManager.Target = portal;
+
+        if (!autoMoveActive)
+        {
+            GameHelpers.LockOnAndAutoMove();
+            autoMoveActive = true;
+        }
+
+        StateDetail = $"Portal fallback lockon+automove ({distance:F1}y)...";
+    }
+
+    private bool TryStartPortalAutoMoveFallback(IGameObject portal, Vector3 approachPosition, Vector3 playerPosition, float distance, DateTime now)
+    {
+        if (portalStuckCheckTime == DateTime.MinValue)
+        {
+            portalStuckCheckPosition = playerPosition;
+            portalStuckCheckTime = now;
+            return false;
+        }
+
+        var elapsed = now - portalStuckCheckTime;
+        if (elapsed < PortalStuckCheckInterval)
+            return false;
+
+        var moved = Vector3.Distance(playerPosition, portalStuckCheckPosition);
+        if (moved < PortalStuckMovementThreshold)
+        {
+            _plugin.NavigationService.StopNavigation();
+            Plugin.TargetManager.Target = portal;
+            GameHelpers.LockOnAndAutoMove();
+            autoMoveActive = true;
+            portalAutoMoveFallbackActive = true;
+            StateDetail = $"Portal vnav stalled - lockon+automove ({distance:F1}y)...";
+            _plugin.AddDebugLog(
+                $"[Portal] VNav approach stuck (moved {moved:F2}y in {elapsed.TotalSeconds:F1}s) - switching to lockon+automove. current={FormatVectorCompact(playerPosition)}; portal={FormatVectorCompact(approachPosition)}; dist={distance:F1}y.");
+            return true;
+        }
+
+        portalStuckCheckPosition = playerPosition;
+        portalStuckCheckTime = now;
+        return false;
+    }
+
     private void HandlePortalInInteractionRange(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
     {
+        StopPortalFallbackAutoMoveIfActive("before portal interaction handoff");
+        ResetPortalStuckTracking();
+
         if (_plugin.NavigationService.State != NavigationState.Idle)
         {
             _plugin.NavigationService.StopNavigation();
@@ -3693,8 +3779,19 @@ public class StateManager : IDisposable
 
                     if (portalDist > PortalInteractionRange)
                     {
+                        if (portalAutoMoveFallbackActive)
+                        {
+                            ContinuePortalAutoMoveFallback(portal, portalDist);
+                            return;
+                        }
+
                         if (FlyToPortalApproachPosition(approachPosition, portalDist))
+                        {
+                            if (player != null && TryStartPortalAutoMoveFallback(portal, approachPosition, player.Position, portalDist, now))
+                                return;
+
                             StateDetail = $"Approaching portal XYZ {FormatVectorCompact(approachPosition)} ({portalDist:F1}y)...";
+                        }
                         return;
                     }
 
@@ -3866,12 +3963,14 @@ public class StateManager : IDisposable
 
             if (loading)
             {
+                ResetPortalStuckTrackingForAreaChange();
                 StateDetail = $"Portal accepted - loading treasure dungeon territory from {currentTerritory}...";
                 return true;
             }
 
             if (portalAvailable == false)
             {
+                ResetPortalStuckTrackingForAreaChange();
                 LogMapDutyOutsideDungeon(source, currentTerritory);
                 StateDetail = $"Map duty active in territory {currentTerritory} - waiting for treasure dungeon territory...";
                 return true;
@@ -3889,6 +3988,7 @@ public class StateManager : IDisposable
         {
             if (loading)
             {
+                ResetPortalStuckTrackingForAreaChange();
                 adsDutyEntryConfirmedAt = DateTime.MinValue;
                 StateDetail = $"Treasure dungeon territory {currentTerritory} detected - waiting for loading to finish before ADS handoff...";
                 return true;
@@ -4711,6 +4811,12 @@ public class StateManager : IDisposable
         treasureHighLowHandledThisOpen = false;
         openingChestRecoveryDigIssued = false;
         openingChestReturningToFlag = false;
+
+        if (prev == BotState.Completed && newState != BotState.Completed)
+        {
+            StopPortalFallbackAutoMoveIfActive("during state transition away from Completed");
+            ResetPortalStuckTracking();
+        }
 
         // Stop navigation if it was active
         if (autoMoveActive)
