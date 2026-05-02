@@ -774,6 +774,54 @@ public static class GameHelpers
     // ─── Map Flag ──────────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Clear the current map flag from both vnavmesh and the game's AgentMap marker state.
+    /// </summary>
+    public static unsafe bool ClearMapFlag(Func<LootGoblin.Models.MapLocation?>? tryReadFlag = null)
+    {
+        CommandHelper.SendCommand("/vnav clearflag");
+
+        try
+        {
+            var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                          Plugin.Condition[ConditionFlag.BetweenAreas51];
+            if (loading)
+            {
+                Plugin.Log.Warning("[MapFlag] Clear requested during loading - vnav cleared, AgentMap clear skipped");
+                return false;
+            }
+
+            var agentMap = AgentMap.Instance();
+            if (agentMap == null)
+            {
+                Plugin.Log.Warning("[MapFlag] AgentMap is null during clear");
+                return tryReadFlag != null && tryReadFlag() == null;
+            }
+
+            var beforeCount = agentMap->FlagMarkerCount;
+            var beforeTerritory = beforeCount > 0 ? agentMap->FlagMapMarkers[0].TerritoryId : 0;
+
+            agentMap->FlagMarkerCount = 0;
+            agentMap->FlagMapMarkers[0] = default;
+
+            var afterCount = agentMap->FlagMarkerCount;
+            var afterTerritory = agentMap->FlagMapMarkers[0].TerritoryId;
+            var cleared = tryReadFlag != null
+                ? tryReadFlag() == null
+                : afterCount == 0 && afterTerritory == 0;
+
+            Plugin.Log.Information(
+                $"[MapFlag] Clear AgentMap: count {beforeCount}->{afterCount}, first territory {beforeTerritory}->{afterTerritory}, verified={cleared}");
+
+            return cleared;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[MapFlag] ClearMapFlag failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Place a flag marker on the map at the given world coordinates.
     /// Uses AgentMap.SetFlagMapMarker with Vector3 overload (handles coord conversion internally).
     /// </summary>
@@ -783,8 +831,7 @@ public static class GameHelpers
         {
             if (territoryId == 0)
             {
-                CommandHelper.SendCommand("/vnav clearflag");
-                Plugin.Log.Information("[MapFlag] Clear requested - skipped AgentMap.SetFlagMapMarker for territory 0");
+                ClearMapFlag();
                 return;
             }
 

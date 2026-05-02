@@ -44,6 +44,11 @@ public class GlobeTrotterIPC : IDisposable
         return location;
     }
 
+    public MapLocation? TryReadFlag()
+    {
+        return _flagReader?.TryReadFlag();
+    }
+
     public void CheckAvailability(bool logStatus = true)
     {
         try
