@@ -1614,7 +1614,13 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[Portal] Within {PortalInteractionRange:F1}y - stopped vnav before portal interaction handoff.");
         }
 
-        if (_plugin.NavigationService.IsMounted() || _plugin.NavigationService.IsFlying() || Plugin.Condition[ConditionFlag.Mounting71])
+        var isMountedOrFlying = _plugin.NavigationService.IsMounted()
+            || _plugin.NavigationService.IsFlying()
+            || Plugin.Condition[ConditionFlag.Mounting71];
+        var isDivingPortalInteraction = currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            && (Plugin.Condition[ConditionFlag.Diving] || portalDivingLockonApproachActive);
+
+        if (isMountedOrFlying && !isDivingPortalInteraction)
         {
             if (portalLandingStartedAt == DateTime.MinValue)
             {
