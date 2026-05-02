@@ -86,6 +86,8 @@ public class StateManager : IDisposable
     private float portalStuckCheckDistance = float.MaxValue; // Portal distance at last portal approach progress check
     private DateTime portalStuckCheckTime = DateTime.MinValue; // Time of last portal approach progress check
     private bool portalAutoMoveFallbackActive; // True when portal approach has fallen back to lockon+automove
+    private bool portalDivingLockonApproachActive; // True when underwater portal approach uses lockon+automove
+    private bool portalRegularVnavPathLogged; // One-shot log for non-diving portal approach path
     private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
     private bool descentInProgress = false; // Whether Ctrl+Space descent is currently running
     private DateTime descentStartTime = DateTime.MinValue; // When Ctrl+Space descent started
@@ -1079,6 +1081,7 @@ public class StateManager : IDisposable
         portalApproachStartedAt = DateTime.MinValue;
         portalApproachStartDistance = float.MaxValue;
         lastPortalRepathTime = DateTime.MinValue;
+        portalRegularVnavPathLogged = false;
         ResetPortalStuckTracking();
     }
 
@@ -1088,11 +1091,12 @@ public class StateManager : IDisposable
         portalStuckCheckDistance = float.MaxValue;
         portalStuckCheckTime = DateTime.MinValue;
         portalAutoMoveFallbackActive = false;
+        portalDivingLockonApproachActive = false;
     }
 
     private void ResetPortalStuckTrackingForAreaChange()
     {
-        if (portalAutoMoveFallbackActive)
+        if (portalAutoMoveFallbackActive || portalDivingLockonApproachActive)
             autoMoveActive = false;
 
         ResetPortalStuckTracking();
@@ -1100,14 +1104,17 @@ public class StateManager : IDisposable
 
     private void StopPortalFallbackAutoMoveIfActive(string reason)
     {
-        if (!portalAutoMoveFallbackActive)
+        if (!portalAutoMoveFallbackActive && !portalDivingLockonApproachActive)
             return;
 
         if (autoMoveActive)
         {
             GameHelpers.StopAutoMove();
             autoMoveActive = false;
-            _plugin.AddDebugLog($"[Portal] Stopped lockon+automove fallback {reason}.");
+            var approachType = portalDivingLockonApproachActive
+                ? "diving lockon+automove approach"
+                : "lockon+automove fallback";
+            _plugin.AddDebugLog($"[Portal] Stopped {approachType} {reason}.");
         }
     }
 
@@ -1210,6 +1217,55 @@ public class StateManager : IDisposable
         autoMoveActive = true;
         _plugin.AddDebugLog($"[Portal] Flying to captured portal XYZ {FormatVectorCompact(position)} ({distance:F1}y).");
         return true;
+    }
+
+    private bool ShouldUseDivingPortalLockonApproach()
+    {
+        if (portalDivingLockonApproachActive)
+            return true;
+
+        return currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            && (Plugin.Condition[ConditionFlag.Diving]
+                || underwaterTargetPosition != Vector3.Zero
+                || descentInProgress
+                || descentMode);
+    }
+
+    private void StopDivingPortalConflictingMovement()
+    {
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+
+        if (descentInProgress || descentMode)
+        {
+            GameHelpers.KeyRelease(VirtualKey.CONTROL);
+            GameHelpers.KeyRelease(VirtualKey.SPACE);
+        }
+
+        underwaterTargetPosition = Vector3.Zero;
+        descentMode = false;
+        descentInProgress = false;
+    }
+
+    private void ContinueDivingPortalLockonApproach(IGameObject portal, float distance)
+    {
+        var starting = !portalDivingLockonApproachActive;
+        StopDivingPortalConflictingMovement();
+        Plugin.TargetManager.Target = portal;
+
+        if (starting)
+        {
+            _plugin.AddDebugLog("[Portal] Diving portal lockon path started - stopped vnav/descent and using lockon+automove.");
+        }
+
+        if (starting || !autoMoveActive)
+        {
+            GameHelpers.LockOnAndAutoMove();
+            autoMoveActive = true;
+        }
+
+        portalDivingLockonApproachActive = true;
+        StateDetail = $"Diving portal lockon+automove ({distance:F1}y)...";
     }
 
     private void ContinuePortalAutoMoveFallback(IGameObject portal, float distance)
@@ -3780,8 +3836,8 @@ public class StateManager : IDisposable
                         return;
                     }
 
+                    var useDivingLockonApproach = ShouldUseDivingPortalLockonApproach();
                     Plugin.TargetManager.Target = portal;
-
                     var approachPosition = CapturePortalApproachPosition(portal);
                     var player = Plugin.ObjectTable.LocalPlayer;
                     var portalDist = player == null
@@ -3790,10 +3846,22 @@ public class StateManager : IDisposable
 
                     if (portalDist > PortalInteractionRange)
                     {
+                        if (useDivingLockonApproach)
+                        {
+                            ContinueDivingPortalLockonApproach(portal, portalDist);
+                            return;
+                        }
+
                         if (portalAutoMoveFallbackActive)
                         {
                             ContinuePortalAutoMoveFallback(portal, portalDist);
                             return;
+                        }
+
+                        if (!portalRegularVnavPathLogged)
+                        {
+                            portalRegularVnavPathLogged = true;
+                            _plugin.AddDebugLog("[Portal] Regular portal vnav path retained before stuck fallback.");
                         }
 
                         if (FlyToPortalApproachPosition(approachPosition, portalDist))
