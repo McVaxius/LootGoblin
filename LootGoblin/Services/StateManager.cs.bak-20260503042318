@@ -1508,7 +1508,6 @@ public class StateManager : IDisposable
         if (!force && portalApproachStartedAt != DateTime.MinValue)
             return true;
 
-        StopPortalMovementBeforeVnav();
         portalApproachStartedAt = now;
         portalApproachStartDistance = distance;
         _plugin.NavigationService.FlyToPosition(position);
@@ -1542,10 +1541,7 @@ public class StateManager : IDisposable
     private void StopDivingPortalConflictingMovement()
     {
         if (_plugin.NavigationService.State != NavigationState.Idle)
-        {
             _plugin.NavigationService.StopNavigation();
-            autoMoveActive = false;
-        }
 
         if (descentInProgress || descentMode)
         {
@@ -1556,51 +1552,6 @@ public class StateManager : IDisposable
         underwaterTargetPosition = Vector3.Zero;
         descentMode = false;
         descentInProgress = false;
-    }
-
-    private void StopPortalMovementBeforeVnav()
-    {
-        var stoppedMovement = false;
-
-        if (autoMoveActive || portalAutoMoveFallbackActive || portalDivingLockonApproachActive)
-        {
-            CommandHelper.SendCommand("/automove off");
-            autoMoveActive = false;
-            portalAutoMoveFallbackActive = false;
-            portalDivingLockonApproachActive = false;
-            ResetPortalFallbackProgressTracking();
-            stoppedMovement = true;
-        }
-
-        if (descentInProgress || descentMode)
-        {
-            GameHelpers.KeyRelease(VirtualKey.CONTROL);
-            GameHelpers.KeyRelease(VirtualKey.SPACE);
-            descentMode = false;
-            descentInProgress = false;
-            underwaterTargetPosition = Vector3.Zero;
-            stoppedMovement = true;
-        }
-
-        if (stoppedMovement)
-            _plugin.AddDebugLog("[Portal] Stopped automove/descent before portal vnav path.");
-    }
-
-    private void StopPortalVnavBeforeLockon(string reason)
-    {
-        if (_plugin.NavigationService.State == NavigationState.Idle)
-            return;
-
-        _plugin.NavigationService.StopNavigation();
-        autoMoveActive = false;
-        _plugin.AddDebugLog($"[Portal] Stopped vnav {reason}.");
-    }
-
-    private void StartPortalLockonAutoMove()
-    {
-        CommandHelper.SendCommand("/lockon");
-        CommandHelper.SendCommand("/automove on");
-        autoMoveActive = true;
     }
 
     private void ContinueDivingPortalLockonApproach(IGameObject portal, float distance)
@@ -1616,7 +1567,8 @@ public class StateManager : IDisposable
 
         if (starting || !autoMoveActive)
         {
-            StartPortalLockonAutoMove();
+            GameHelpers.LockOnAndAutoMove();
+            autoMoveActive = true;
         }
 
         portalDivingLockonApproachActive = true;
@@ -1631,11 +1583,11 @@ public class StateManager : IDisposable
     private void ContinuePortalAutoMoveFallback(IGameObject portal, float distance)
     {
         Plugin.TargetManager.Target = portal;
-        StopPortalVnavBeforeLockon("before portal fallback lockon+automove");
 
         if (!autoMoveActive)
         {
-            StartPortalLockonAutoMove();
+            GameHelpers.LockOnAndAutoMove();
+            autoMoveActive = true;
         }
 
         if (portalFallbackCheckTime == DateTime.MinValue)
@@ -1655,7 +1607,7 @@ public class StateManager : IDisposable
         }
 
         if (_plugin.NavigationService.State != NavigationState.Idle)
-            StopPortalVnavBeforeLockon("before portal vnav retry");
+            _plugin.NavigationService.StopNavigation();
 
         autoMoveActive = false;
         portalApproachStartedAt = DateTime.MinValue;
@@ -1767,9 +1719,10 @@ public class StateManager : IDisposable
                 return RefuseFarPortalAutoMoveFallback(approachPosition, distance, now, "VNav stuck recovery");
             }
 
-            StopPortalVnavBeforeLockon("before portal stuck lockon+automove");
+            _plugin.NavigationService.StopNavigation();
             Plugin.TargetManager.Target = portal;
-            StartPortalLockonAutoMove();
+            GameHelpers.LockOnAndAutoMove();
+            autoMoveActive = true;
             portalAutoMoveFallbackActive = true;
             portalFallbackCheckDistance = distance;
             portalFallbackCheckTime = now;

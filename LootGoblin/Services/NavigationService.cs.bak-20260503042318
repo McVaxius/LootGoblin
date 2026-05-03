@@ -22,15 +22,6 @@ public enum NavigationState
 
 public class NavigationService : IDisposable
 {
-    private enum PositionNavigationKind
-    {
-        None,
-        FlyTo,
-        MoveTo,
-    }
-
-    private const float PositionCommandReuseTolerance = 1.0f;
-
     private readonly Plugin _plugin;
     private readonly IPluginLog _log;
     private readonly ICondition _condition;
@@ -44,8 +35,6 @@ public class NavigationService : IDisposable
 
     private DateTime stateStartTime;
     private float timeoutSeconds = 30f;
-    private PositionNavigationKind activePositionNavigationKind = PositionNavigationKind.None;
-    private Vector3 activePositionNavigationTarget;
 
     public NavigationService(Plugin plugin, ICondition condition, IClientState clientState, IDataManager dataManager, IPluginLog log)
     {
@@ -97,9 +86,6 @@ public class NavigationService : IDisposable
 
     public void FlyToPosition(Vector3 position)
     {
-        if (IsActivePositionNavigation(PositionNavigationKind.FlyTo, position))
-            return;
-
         // Re-check availability in case vnavmesh loaded after LootGoblin startup
         _plugin.VNavIPC.CheckAvailability();
         
@@ -110,16 +96,12 @@ public class NavigationService : IDisposable
         }
 
         TargetPosition = position;
-        RememberActivePositionNavigation(PositionNavigationKind.FlyTo, position);
         _plugin.VNavIPC.FlyTo(position);
         SetState(NavigationState.Flying, $"Flying to {CommandHelper.FormatVector(position)}...");
     }
 
     public void MoveToPosition(Vector3 position)
     {
-        if (IsActivePositionNavigation(PositionNavigationKind.MoveTo, position))
-            return;
-
         // Re-check availability in case vnavmesh loaded after LootGoblin startup
         _plugin.VNavIPC.CheckAvailability();
         
@@ -130,14 +112,12 @@ public class NavigationService : IDisposable
         }
 
         TargetPosition = position;
-        RememberActivePositionNavigation(PositionNavigationKind.MoveTo, position);
         _plugin.VNavIPC.MoveTo(position);
         SetState(NavigationState.Flying, $"Moving to {CommandHelper.FormatVector(position)}...");
     }
 
     public void StopNavigation()
     {
-        ClearActivePositionNavigation();
         _plugin.VNavIPC.Stop();
         // Clear any active flag to prevent pathing to old flags
         CommandHelper.SendCommand("/vnav clearflag");
@@ -178,7 +158,6 @@ public class NavigationService : IDisposable
         }
 
         CommandHelper.SendCommand("/vnav flyflag");
-        ClearActivePositionNavigation();
         SetState(NavigationState.Flying, "Flying to map flag...");
         _plugin.AddDebugLog("Flying to flag via vnavmesh.");
     }
@@ -717,32 +696,9 @@ public class NavigationService : IDisposable
 
     private void SetState(NavigationState state, string detail)
     {
-        if (state != NavigationState.Flying)
-            ClearActivePositionNavigation();
-
         State = state;
         StateDetail = detail;
         stateStartTime = DateTime.Now;
         _plugin.AddDebugLog($"Nav state: {state} - {detail}");
-    }
-
-    private bool IsActivePositionNavigation(PositionNavigationKind kind, Vector3 position)
-    {
-        return State == NavigationState.Flying
-            && activePositionNavigationKind == kind
-            && Vector3.DistanceSquared(activePositionNavigationTarget, position)
-                <= PositionCommandReuseTolerance * PositionCommandReuseTolerance;
-    }
-
-    private void RememberActivePositionNavigation(PositionNavigationKind kind, Vector3 position)
-    {
-        activePositionNavigationKind = kind;
-        activePositionNavigationTarget = position;
-    }
-
-    private void ClearActivePositionNavigation()
-    {
-        activePositionNavigationKind = PositionNavigationKind.None;
-        activePositionNavigationTarget = default;
     }
 }
