@@ -135,12 +135,12 @@ public class NavigationService : IDisposable
         SetState(NavigationState.Flying, $"Moving to {CommandHelper.FormatVector(position)}...");
     }
 
-    public void StopNavigation()
+    public void StopNavigation(bool clearFlag = false)
     {
         ClearActivePositionNavigation();
         _plugin.VNavIPC.Stop();
-        // Clear any active flag to prevent pathing to old flags
-        CommandHelper.SendCommand("/vnav clearflag");
+        if (clearFlag)
+            CommandHelper.SendCommand("/vnav clearflag");
         SetState(NavigationState.Idle, "Navigation stopped.");
     }
 

@@ -112,6 +112,7 @@ public class StateManager : IDisposable
     private bool mapOpeningRetried = false;
     private const double TickIntervalSeconds = 0.5;
     private const double DungeonInteractionIntervalSeconds = 1.0;
+    private const float MapDigXZRange = 5.0f;
     private const float PortalInteractionRange = 3.0f;
     private const float OpeningChestCofferMountRecoveryDistance = 3.0f;
     private const float OpeningChestCofferMountRecoveryYDelta = 0.5f;
@@ -124,6 +125,7 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan OpeningChestCofferMountCommandInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan OpeningChestCofferDismountCommandInterval = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan KeyItemMapRecoveryTimeout = TimeSpan.FromSeconds(8.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalSearchTimeout = TimeSpan.FromSeconds(15.0);
@@ -216,6 +218,19 @@ public class StateManager : IDisposable
     private bool landingCommandsRanThisMap;
     private bool dutyEntryCommandsRanThisMap;
     private bool finishCommandsRanThisRun;
+    private bool digIssuedThisMap;
+    private DateTime digIssuedAt = DateTime.MinValue;
+    private bool chestConfirmedThisMap;
+    private bool portalConfirmedThisMap;
+    private bool dungeonConfirmedThisMap;
+    private DateTime keyItemMapRecoveryStartedAt = DateTime.MinValue;
+    private bool keyItemMapRecoveryTmapSent;
+    private uint activeKeyItemMapItemId;
+    private int activeKeyItemMapSlot = -1;
+    private DateTime lastKeyItemCompletionGuardLogAt = DateTime.MinValue;
+    private DateTime lastVnavPathFailureTime = DateTime.MinValue;
+    private string lastVnavPathFailureText = string.Empty;
+    private bool flyFlagFallbackUsedThisFlight;
     private DateTime lastUnderwaterBounceDescentStart = DateTime.MinValue;
     private bool underwaterBounceHoldLogged;
     private bool underwaterBounceSuppressedVnavLogged;
@@ -382,6 +397,12 @@ public class StateManager : IDisposable
     private void CheckStateTimeout()
     {
         if (!StateTimeouts.TryGetValue(State, out var timeout)) return;
+
+        if (State == BotState.DetectingLocation && _plugin.InventoryService.HasTreasureMapKeyItem())
+        {
+            stateStartTime = DateTime.Now;
+            return;
+        }
         
         // Don't timeout during combat - reset the timer so it starts fresh after combat ends
         bool inCombat = Plugin.Condition[ConditionFlag.InCombat];
@@ -538,6 +559,9 @@ public class StateManager : IDisposable
             return;
         }
 
+        if (TryRecoverActiveKeyItemMap("[Start]", transitionToDetectingOnActive: true))
+            return;
+
         if (!ShouldIgnoreExistingMapFlagForRetainerOnlyWork("[Start]") && TryStartFromExistingMapFlag("[Start]"))
             return;
 
@@ -558,7 +582,8 @@ public class StateManager : IDisposable
 
     public void Stop()
     {
-        _plugin.NavigationService.StopNavigation();
+        _plugin.NavigationService.StopNavigation(clearFlag: true);
+        ResetVnavFlyFlagFallbackState();
         if (IsDungeonState())
         {
             CommandHelper.SendCommand("/bmrai off");
@@ -580,7 +605,8 @@ public class StateManager : IDisposable
 
     public void ResetAll()
     {
-        _plugin.NavigationService.StopNavigation();
+        _plugin.NavigationService.StopNavigation(clearFlag: true);
+        ResetVnavFlyFlagFallbackState();
         IsPaused = false;
         RetryCount = 0;
         CurrentLocation = null;
@@ -632,6 +658,112 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog($"{source} Existing deciphered map flag detected - skipping map opening.");
         TransitionTo(BotState.DetectingLocation, "Using existing map flag already set in the world map...");
         return true;
+    }
+
+    private bool TryRecoverActiveKeyItemMap(string source, bool transitionToDetectingOnActive)
+    {
+        if (!_plugin.InventoryService.TryFindTreasureMapKeyItem(out var keyItem))
+        {
+            ResetKeyItemMapRecoveryState(clearActiveKey: true);
+            if (WarningMessage.Contains("key item", StringComparison.OrdinalIgnoreCase))
+                ClearWarning();
+            return false;
+        }
+
+        UpdateActiveKeyItemMap(keyItem, source);
+
+        var existingFlag = _plugin.GlobeTrotterIPC.TryGetMapLocation();
+        if (existingFlag != null)
+        {
+            mapCountChecked = true;
+            mapOpeningRetried = false;
+            initialMapCount = 0;
+            ResetKeyItemMapRecoveryState();
+            SetWarning($"Active deciphered map key item '{keyItem.DisplayName}' found. LootGoblin will finish it before opening another map.");
+
+            if (transitionToDetectingOnActive && State != BotState.DetectingLocation)
+            {
+                RetryCount = 0;
+                CurrentLocation = null;
+                TransitionTo(BotState.DetectingLocation, $"Recovered active map flag from {keyItem.DisplayName}...");
+                return true;
+            }
+
+            return false;
+        }
+
+        var now = DateTime.Now;
+        if (keyItemMapRecoveryStartedAt == DateTime.MinValue)
+        {
+            keyItemMapRecoveryStartedAt = now;
+            keyItemMapRecoveryTmapSent = false;
+            _plugin.AddDebugLog($"{source} Active key-item map found ({keyItem.DisplayName}) but AgentMap has no flag.");
+        }
+
+        _plugin.GlobeTrotterIPC.CheckAvailability(logStatus: false);
+        if (_plugin.GlobeTrotterIPC.IsAvailable && !keyItemMapRecoveryTmapSent)
+        {
+            CommandHelper.SendCommand("/tmap");
+            keyItemMapRecoveryTmapSent = true;
+            _plugin.AddDebugLog($"{source} Sent /tmap to recover active key-item map flag.");
+        }
+
+        var elapsed = now - keyItemMapRecoveryStartedAt;
+        if (transitionToDetectingOnActive && State != BotState.DetectingLocation)
+        {
+            TransitionTo(BotState.DetectingLocation, $"Recovering active map flag for {keyItem.DisplayName}...");
+            return true;
+        }
+
+        if (!_plugin.GlobeTrotterIPC.IsAvailable)
+        {
+            var message = $"Treasure map key item '{keyItem.DisplayName}' is active, but GlobeTrotter is not loaded. Load GlobeTrotter or open /tmap manually before selecting another map.";
+            SetWarning(message);
+            StateDetail = message;
+            stateStartTime = DateTime.Now;
+            return true;
+        }
+
+        if (elapsed < KeyItemMapRecoveryTimeout)
+        {
+            StateDetail = $"Recovering active map flag from /tmap... ({elapsed.TotalSeconds:F0}/{KeyItemMapRecoveryTimeout.TotalSeconds:F0}s)";
+            stateStartTime = DateTime.Now;
+            return true;
+        }
+
+        var blocked = $"Treasure map key item '{keyItem.DisplayName}' is active, but no map flag was recovered after /tmap. Finish or reset that map before opening another.";
+        SetWarning(blocked);
+        StateDetail = blocked;
+        stateStartTime = DateTime.Now;
+        return true;
+    }
+
+    private void UpdateActiveKeyItemMap(TreasureMapKeyItem keyItem, string source)
+    {
+        var changed = activeKeyItemMapItemId != keyItem.ItemId || activeKeyItemMapSlot != keyItem.Slot;
+        if (changed)
+        {
+            ResetKeyItemMapRecoveryState();
+            digIssuedThisMap = false;
+            digIssuedAt = DateTime.MinValue;
+            chestConfirmedThisMap = false;
+            portalConfirmedThisMap = false;
+            dungeonConfirmedThisMap = false;
+            activeKeyItemMapItemId = keyItem.ItemId;
+            activeKeyItemMapSlot = keyItem.Slot;
+            _plugin.AddDebugLog($"{source} Active treasure map key item: {keyItem.DisplayName} (item {keyItem.ItemId}, slot {keyItem.Slot}).");
+        }
+
+        if (keyItem.KnownMapItemId != 0 && SelectedMapItemId != keyItem.KnownMapItemId)
+        {
+            SelectedMapItemId = keyItem.KnownMapItemId;
+            currentLandingMode = ResolveLandingMode(SelectedMapItemId);
+            _plugin.AddDebugLog($"{source} Matched key item to known map ID {SelectedMapItemId}; landing mode {currentLandingMode}.");
+        }
+        else if (SelectedMapItemId == 0)
+        {
+            currentLandingMode = OverworldLandingMode.MountToggle;
+        }
     }
 
     private bool ShouldIgnoreExistingMapFlagForRetainerOnlyWork(string source)
@@ -1014,8 +1146,15 @@ public class StateManager : IDisposable
 
     private void ResetPerMapCommandTriggers()
     {
+        ResetVnavFlyFlagFallbackState();
         landingCommandsRanThisMap = false;
         dutyEntryCommandsRanThisMap = false;
+        digIssuedThisMap = false;
+        digIssuedAt = DateTime.MinValue;
+        chestConfirmedThisMap = false;
+        portalConfirmedThisMap = false;
+        dungeonConfirmedThisMap = false;
+        ResetKeyItemMapRecoveryState(clearActiveKey: true);
         lastUnderwaterBounceDescentStart = DateTime.MinValue;
         underwaterBounceHoldLogged = false;
         underwaterBounceSuppressedVnavLogged = false;
@@ -1025,6 +1164,60 @@ public class StateManager : IDisposable
         lastUnderwaterFlagApproachTime = DateTime.MinValue;
         underwaterTargetPosition = Vector3.Zero;
         wasDiving = false;
+    }
+
+    public void NotifyVnavPathFailure(string text)
+    {
+        if (State != BotState.Flying)
+            return;
+
+        lastVnavPathFailureTime = DateTime.Now;
+        lastVnavPathFailureText = text;
+        _plugin.AddDebugLog($"[Flying] Observed vnav path failure: {text}");
+    }
+
+    private void ResetVnavFlyFlagFallbackState()
+    {
+        lastVnavPathFailureTime = DateTime.MinValue;
+        lastVnavPathFailureText = string.Empty;
+        flyFlagFallbackUsedThisFlight = false;
+    }
+
+    private void ResetKeyItemMapRecoveryState(bool clearActiveKey = false)
+    {
+        keyItemMapRecoveryStartedAt = DateTime.MinValue;
+        keyItemMapRecoveryTmapSent = false;
+        if (!clearActiveKey)
+            return;
+
+        activeKeyItemMapItemId = 0;
+        activeKeyItemMapSlot = -1;
+        lastKeyItemCompletionGuardLogAt = DateTime.MinValue;
+    }
+
+    private bool TryFallbackToFlyFlagAfterVnavFailure(DateTime now)
+    {
+        if (flyFlagFallbackUsedThisFlight || lastVnavPathFailureTime == DateTime.MinValue)
+            return false;
+
+        if (CurrentLocation == null || !stateActionIssued)
+            return false;
+
+        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                      Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (loading)
+            return false;
+
+        flyFlagFallbackUsedThisFlight = true;
+        _plugin.AddDebugLog("[Flying] vnav flyto failed - falling back to /vnav flyflag");
+        if (!string.IsNullOrWhiteSpace(lastVnavPathFailureText))
+            _plugin.AddDebugLog($"[Flying] vnav failure text: {lastVnavPathFailureText}");
+
+        _plugin.NavigationService.FlyToFlag();
+        StateDetail = "Flying to map flag after vnav flyto failure...";
+        lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        lastStuckCheckTime = now;
+        return true;
     }
 
     private void RunLandingCommandsOnce(string reason)
@@ -1085,7 +1278,112 @@ public class StateManager : IDisposable
         RunLandingCommandsOnce(reason);
         CommandHelper.SendCommand("/gaction dig");
         lastDigTime = DateTime.Now;
+        digIssuedThisMap = true;
+        digIssuedAt = lastDigTime;
         _plugin.AddDebugLog($"{reason}: issued /gaction dig while diving.");
+    }
+
+    private bool TryHandleMapLandingAndDig(
+        string reason,
+        string landingBasis,
+        Vector3 currentPos,
+        Vector3 landingTarget,
+        double xzDist)
+    {
+        if (currentLandingMode != OverworldLandingMode.MountToggle)
+            return false;
+
+        var now = DateTime.Now;
+        if (_plugin.NavigationService.IsMounted())
+        {
+            var waitForPartyDismount = _plugin.Configuration.PartyWaitBeforeDismount;
+            _plugin.AddDebugLog(
+                $"[Dismount] PartyWaitBeforeDismount={waitForPartyDismount}, LandingMode={currentLandingMode}, BypassForDive=False");
+
+            if (waitForPartyDismount)
+            {
+                var partyWait = EvaluateOverworldLandingPartyWait(10.0);
+                if (!partyWait.CanProceed)
+                {
+                    StateDetail = BuildOverworldLandingPartyWaitDetail(partyWait, 10.0);
+                    return true;
+                }
+            }
+
+            if (dismountAttemptStart == DateTime.MinValue)
+            {
+                dismountAttemptStart = now;
+                stateActionIssued = true;
+                _plugin.NavigationService.StopNavigation();
+                _plugin.AddDebugLog(
+                    $"{reason}: landing phase ready via {landingBasis}; landingXZ={xzDist:F1}y; " +
+                    $"current={FormatVectorCompact(currentPos)}; landingTarget={FormatVectorCompact(landingTarget)}");
+            }
+
+            var dismountElapsed = (now - dismountAttemptStart).TotalSeconds;
+            _mountService.TryLandingToggle();
+            StateDetail = $"Landing by /mount toggle... ({dismountElapsed:F0}s)";
+            return true;
+        }
+
+        if (dismountAttemptStart == DateTime.MinValue)
+        {
+            dismountAttemptStart = now;
+            stateActionIssued = true;
+            _plugin.AddDebugLog(
+                $"{reason}: already unmounted at map location via {landingBasis}; landingXZ={xzDist:F1}y; " +
+                $"current={FormatVectorCompact(currentPos)}; landingTarget={FormatVectorCompact(landingTarget)}");
+        }
+
+        if (digIssuedThisMap)
+        {
+            var elapsed = digIssuedAt == DateTime.MinValue ? 0 : (now - digIssuedAt).TotalSeconds;
+            StateDetail = $"Waiting for treasure coffer after dig... ({elapsed:F1}s)";
+            return true;
+        }
+
+        RecordMapLandingPosition();
+        RunLandingCommandsOnce(reason);
+        CommandHelper.SendCommand("/gaction dig");
+        lastDigTime = now;
+        digIssuedThisMap = true;
+        digIssuedAt = now;
+        _plugin.AddDebugLog($"{reason}: issued /gaction dig after landing.");
+
+        System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
+            try
+            {
+                TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (dig handoff): {ex.Message}");
+            }
+        }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
+
+        return true;
+    }
+
+    private void RecordMapLandingPosition()
+    {
+        if (CurrentLocation == null)
+            return;
+
+        var realPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        if (realPos == Vector3.Zero)
+            return;
+
+        var mapItemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
+        var mapName = SelectedMapItemId > 0
+            ? (mapItemSheet?.GetRow(SelectedMapItemId).Name.ToString() ?? $"Map {SelectedMapItemId}")
+            : "Unknown Map";
+
+        _plugin.MapLocationDatabase.RecordLocation(
+            CurrentLocation.TerritoryId,
+            CurrentLocation.ZoneName,
+            mapName,
+            CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z,
+            realPos.X, realPos.Y, realPos.Z);
     }
 
     private bool ShouldAssumeThiefMapFromDiving()
@@ -2044,6 +2342,9 @@ public class StateManager : IDisposable
             return;
         }
 
+        if (TryRecoverActiveKeyItemMap("[SelectingMap]", transitionToDetectingOnActive: true))
+            return;
+
         // Only scan every 3 seconds to reduce log spam
         if ((DateTime.Now - lastMapScanTime).TotalSeconds < 3)
         {
@@ -2182,6 +2483,9 @@ public class StateManager : IDisposable
 
     private void TickDetectingLocation()
     {
+        if (TryRecoverActiveKeyItemMap("[DetectingLocation]", transitionToDetectingOnActive: false))
+            return;
+
         // Check if map opening failed by validating map count decreased
         if (!mapCountChecked)
         {
@@ -2273,6 +2577,14 @@ public class StateManager : IDisposable
 
                 _plugin.AddDebugLog($"[DetectingLocation] Already in zone: player {(usedXyz ? "XYZ" : "XZ")} dist={playerDist:F0}y, best aetheryte dist={bestAethDist:F0}y");
                 _plugin.AddDebugLog($"[DetectingLocation] Player pos: ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1}), Aetheryte ID: {aetheryteId}");
+
+                var playerXZDistToFlag = CalculateXZDistance(playerPos, flagPos);
+                if (playerXZDistToFlag <= MapDigXZRange)
+                {
+                    _plugin.AddDebugLog($"[DetectingLocation] Already within dig range ({playerXZDistToFlag:F1}y XZ) - landing/digging without teleport or mount setup.");
+                    TransitionTo(BotState.Flying, "Already at map location - landing and digging...");
+                    return;
+                }
 
                 if (aetheryteId != 0 && bestAethDist < playerDist && bestAethDist != double.MaxValue)
                 {
@@ -2535,7 +2847,7 @@ public class StateManager : IDisposable
             var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
             var initialNavTargets = ResolveOverworldNavigationTargets();
             var xzDist2 = CalculateXZDistance(playerPos, initialNavTargets.LandingTarget);
-            if (xzDist2 < 10.0f)
+            if (xzDist2 <= MapDigXZRange)
             {
                 if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
                 {
@@ -2548,31 +2860,13 @@ public class StateManager : IDisposable
                 }
                 else
                 {
-                    _plugin.AddDebugLog($"[Flying] Already within {xzDist2:F1}y of landing target ({initialNavTargets.Basis}) - immediate dismount and dig");
-
-                    // Immediate dismount if mounted
-                    if (_plugin.NavigationService.IsMounted())
-                    {
-                        _mountService.Dismount();
-                    }
-
-                    RunLandingCommandsOnce("[Flying] immediate landing");
-                    CommandHelper.SendCommand("/gaction dig");
-                    lastDigTime = DateTime.Now;
-                    _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
-
-                    // Wait 2 seconds for chest to spawn before looking for it
-                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
-                        try
-                        {
-                            TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
-                        }
-                        catch (Exception ex)
-                        {
-                            Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (overworld): {ex.Message}");
-                        }
-                    }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
-                    return;
+                    if (TryHandleMapLandingAndDig(
+                            "[Flying] immediate landing",
+                            initialNavTargets.Basis,
+                            playerPos,
+                            initialNavTargets.LandingTarget,
+                            xzDist2))
+                        return;
                 }
             }
             else
@@ -2597,6 +2891,10 @@ public class StateManager : IDisposable
             return;
         }
 
+        var now = DateTime.Now;
+        if (TryFallbackToFlyFlagAfterVnavFailure(now))
+            return;
+
         var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         var activeNavTargets = ResolveOverworldNavigationTargets();
         var distanceFromTarget = Vector3.Distance(currentPos, activeNavTargets.NavigationTarget);
@@ -2610,7 +2908,7 @@ public class StateManager : IDisposable
         }
         
         // Stuck detection: only re-pathfind if stuck (10+ seconds without moving 5+ yalms)
-        var sinceStuckCheck = (DateTime.Now - lastStuckCheckTime).TotalSeconds;
+        var sinceStuckCheck = (now - lastStuckCheckTime).TotalSeconds;
         if (sinceStuckCheck >= 10.0 && distanceFromTarget > 5.0f)
         {
             var movedDistance = Vector3.Distance(currentPos, lastStuckCheckPos);
@@ -2625,7 +2923,7 @@ public class StateManager : IDisposable
                     $"navTarget={FormatVectorCompact(activeNavTargets.NavigationTarget)}; landingTarget={FormatVectorCompact(activeNavTargets.LandingTarget)}");
             }
             lastStuckCheckPos = currentPos;
-            lastStuckCheckTime = DateTime.Now;
+            lastStuckCheckTime = now;
         }
 
         // Check if we're close enough to X,Z coordinates (within 5 yalms) — uses ground target, not elevated
@@ -2633,48 +2931,28 @@ public class StateManager : IDisposable
         if (!_plugin.NavigationService.IsMounted() && dismountAttemptStart != DateTime.MinValue)
         {
             _plugin.AddDebugLog("Successfully dismounted - proceeding with map content");
-
-            // Record this real landing position to MapLocationDatabase for future use
-            if (CurrentLocation != null)
-            {
-                var realPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-                if (realPos != Vector3.Zero)
-                {
-                    var mapItemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
-                    var mapName = SelectedMapItemId > 0
-                        ? (mapItemSheet?.GetRow(SelectedMapItemId).Name.ToString() ?? $"Map {SelectedMapItemId}")
-                        : "Unknown Map";
-                    _plugin.MapLocationDatabase.RecordLocation(
-                        CurrentLocation.TerritoryId,
-                        CurrentLocation.ZoneName,
-                        mapName,
-                        CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z,
-                        realPos.X, realPos.Y, realPos.Z);
-                }
-            }
-            
-            RunLandingCommandsOnce("[Flying] dismounted landing");
-            
-            CommandHelper.SendCommand("/gaction dig");
-            lastDigTime = DateTime.Now;
-            _plugin.AddDebugLog("Using /gaction dig to trigger map content...");
-            
-            // Wait 2 seconds for chest to spawn before looking for it
-            System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
-                try
-                {
-                    TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (dungeon): {ex.Message}");
-                }
-            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
-            return;
+            if (TryHandleMapLandingAndDig(
+                    "[Flying] dismounted landing",
+                    activeNavTargets.Basis,
+                    currentPos,
+                    activeNavTargets.LandingTarget,
+                    xzDist))
+                return;
         }
         
         if ((activeNavTargets.UseNavStateForLanding && (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle)) || xzDist < 5.0f)
         {
+            if (currentLandingMode == OverworldLandingMode.MountToggle &&
+                TryHandleMapLandingAndDig(
+                    "[Flying] landing",
+                    activeNavTargets.Basis,
+                    currentPos,
+                    activeNavTargets.LandingTarget,
+                    xzDist))
+            {
+                return;
+            }
+
             // We've arrived at the flag X,Z — now we need to dismount
             if (_plugin.NavigationService.IsMounted())
             {
@@ -2997,7 +3275,9 @@ public class StateManager : IDisposable
             CheckForPortalAfterChest();
             return;
         }
-        
+
+        chestConfirmedThisMap = true;
+
         // Chest exists - reset grace period timer
         chestDisappearedTime = DateTime.MinValue;
 
@@ -3173,7 +3453,8 @@ public class StateManager : IDisposable
                         : "live targetable portal";
                     _plugin.AddDebugLog($"[Portal] Keeping active portal window despite distance {dist:F1}y; {portalBasis}");
                 }
-                
+
+                portalConfirmedThisMap = true;
                 return portalObj;
             }
         }
@@ -4593,6 +4874,9 @@ public class StateManager : IDisposable
             }
 
             // Time elapsed, no usable portal entry - map is complete (no dungeon)
+            if (TryGuardMapCompletionWithActiveKeyItem("[PortalTimeout]"))
+                return;
+
             _plugin.AddDebugLog($"[Portal] No portal found after {PortalSearchTimeout.TotalSeconds:F0}s - map complete (no dungeon)");
             if (autoMoveActive)
             {
@@ -4602,6 +4886,9 @@ public class StateManager : IDisposable
             EndPortalRetryWindow();
             adsDutyEntryConfirmedAt = DateTime.MinValue;
         }
+
+        if (TryGuardMapCompletionWithActiveKeyItem("[Completed]"))
+            return;
         
         if (!stateActionIssued)
         {
@@ -4699,6 +4986,66 @@ public class StateManager : IDisposable
         TransitionTo(BotState.Idle, "Run complete.");
     }
 
+    private bool TryGuardMapCompletionWithActiveKeyItem(string source)
+    {
+        if (!_plugin.InventoryService.TryFindTreasureMapKeyItem(out var keyItem))
+        {
+            ResetKeyItemMapRecoveryState(clearActiveKey: true);
+            return false;
+        }
+
+        UpdateActiveKeyItemMap(keyItem, source);
+
+        if (chestConfirmedThisMap || portalConfirmedThisMap || dungeonConfirmedThisMap)
+            return false;
+
+        var now = DateTime.Now;
+        if (now - lastKeyItemCompletionGuardLogAt >= TimeSpan.FromSeconds(5.0))
+        {
+            lastKeyItemCompletionGuardLogAt = now;
+            _plugin.AddDebugLog(
+                $"{source} Active key-item map still exists ({keyItem.DisplayName}) and no chest/portal/dungeon was confirmed - refusing to complete.");
+        }
+
+        SetWarning($"Treasure map key item '{keyItem.DisplayName}' is still active. Retrying the map instead of marking it complete.");
+        EndPortalRetryWindow();
+
+        if (autoMoveActive)
+        {
+            _plugin.NavigationService.StopNavigation();
+            autoMoveActive = false;
+        }
+
+        mapCountChecked = true;
+        mapOpeningRetried = false;
+        digIssuedThisMap = false;
+        digIssuedAt = DateTime.MinValue;
+        chestDisappearedTime = DateTime.MinValue;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player != null && TryGetCurrentFlagRecoveryTarget(out var flagTarget, out _))
+        {
+            var xzDist = CalculateXZDistance(player.Position, flagTarget);
+            if (xzDist <= MapDigXZRange)
+            {
+                _plugin.AddDebugLog($"{source} Key item still active and player is {xzDist:F1}y XZ from flag - retrying dig.");
+                TransitionTo(BotState.Flying, "Treasure map key item still active - retrying dig...");
+                return true;
+            }
+
+            _plugin.AddDebugLog($"{source} Key item still active but player is {xzDist:F1}y XZ from flag - recovering flag and navigating again.");
+        }
+        else
+        {
+            _plugin.AddDebugLog($"{source} Key item still active but current flag/location is unavailable - recovering with /tmap.");
+        }
+
+        CurrentLocation = null;
+        ResetKeyItemMapRecoveryState();
+        TransitionTo(BotState.DetectingLocation, $"Recovering active map flag for {keyItem.DisplayName}...");
+        return true;
+    }
+
     private bool CanStartNextMapAfterPartyWait()
     {
         var party = _plugin.PartyService;
@@ -4776,6 +5123,8 @@ public class StateManager : IDisposable
 
             return false;
         }
+
+        dungeonConfirmedThisMap = true;
 
         if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
         {
@@ -5472,6 +5821,9 @@ public class StateManager : IDisposable
 
     private void SetWarning(string message)
     {
+        if (WarningMessage == message)
+            return;
+
         WarningMessage = message;
         _plugin.AddDebugLog($"[Warning] {message}");
     }
@@ -5560,13 +5912,14 @@ public class StateManager : IDisposable
     {
         RetryCount++;
         _plugin.AddDebugLog($"[Error #{RetryCount}] {message}");
-        
-        _plugin.NavigationService.StopNavigation();
-        
+
         // CRITICAL: If still in a duty (BoundByDuty), do NOT go to SelectingMap.
         // Go back to InDungeon to re-evaluate dungeon state instead of trying to start a new map.
         bool stillInDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                            Plugin.Condition[ConditionFlag.BoundByDuty56];
+
+        _plugin.NavigationService.StopNavigation(clearFlag: !stillInDuty);
+
         if (stillInDuty)
         {
             _plugin.AddDebugLog($"[Error #{RetryCount}] Still in duty (BoundByDuty=true) - recovering to InDungeon instead of SelectingMap");
@@ -5593,6 +5946,9 @@ public class StateManager : IDisposable
     private void TransitionTo(BotState newState, string detail)
     {
         var prev = State;
+        if (prev == BotState.Flying || newState == BotState.Flying)
+            ResetVnavFlyFlagFallbackState();
+
         State = newState;
         StateDetail = detail;
         stateStartTime = DateTime.Now;

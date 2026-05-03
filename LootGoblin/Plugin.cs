@@ -76,6 +76,7 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime lastAdsMissingToastAt = DateTime.MinValue;
     private DateTime lastLifestreamMissingToastAt = DateTime.MinValue;
     private DateTime lastDependencyRefreshAt = DateTime.MinValue;
+    private IChatGui.OnHandleableChatMessageDelegate? chatMessageObserver;
     private static readonly TimeSpan DependencyRefreshInterval = TimeSpan.FromSeconds(10);
 
     public bool IsAdsAvailable
@@ -133,6 +134,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // Initialize state machine
         StateManager = new StateManager(this, Framework, Log);
+        SubscribeChatObservers();
 
         // Initialize AutoDuty warning system
         AutoDutyWarningWindow = new AutoDutyWarningWindow(this, ChatGui, Log);
@@ -186,6 +188,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
         Framework.Update -= OnFrameworkUpdate;
+        UnsubscribeChatObservers();
 
         StateManager?.Dispose();
         NavigationService?.Dispose();
@@ -346,6 +349,32 @@ public sealed class Plugin : IDalamudPlugin
     public void PrintChat(string message)
     {
         ChatGui.Print($"[LootGoblin] {message}");
+    }
+
+    private void SubscribeChatObservers()
+    {
+        chatMessageObserver = message => ObserveChatMessage(message.Message.TextValue);
+        ChatGui.ChatMessage += chatMessageObserver;
+    }
+
+    private void UnsubscribeChatObservers()
+    {
+        if (chatMessageObserver == null)
+            return;
+
+        ChatGui.ChatMessage -= chatMessageObserver;
+        chatMessageObserver = null;
+    }
+
+    private void ObserveChatMessage(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        if (!text.Contains("Failed to find path", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        StateManager.NotifyVnavPathFailure(text);
     }
 
     private bool IsPluginLoaded(string internalName, string? nameFragment = null)

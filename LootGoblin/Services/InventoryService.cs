@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using LootGoblin.Models;
 using Lumina.Excel.Sheets;
 
 namespace LootGoblin.Services;
@@ -34,12 +35,23 @@ public sealed record RetainerMapMovePlan(
     int DestinationSlot,
     int SourceQuantity);
 
+public sealed record TreasureMapKeyItem(
+    uint ItemId,
+    uint KnownMapItemId,
+    int Slot,
+    string Name,
+    string Description)
+{
+    public string DisplayName => !string.IsNullOrWhiteSpace(Name) ? Name : $"Key item {ItemId}";
+}
+
 public class InventoryService : IDisposable
 {
     private readonly IPluginLog _log;
     private readonly Plugin _plugin;
     private readonly IDataManager _dataManager;
     private static int scanCounter = 0; // Static counter for reducing log spam across all instances
+    private const InventoryType KeyItemsInventoryType = (InventoryType)2004;
 
     private readonly struct ContainerSpec
     {
@@ -158,6 +170,62 @@ public class InventoryService : IDisposable
         }
 
         return results;
+    }
+
+    public bool HasTreasureMapKeyItem()
+        => TryFindTreasureMapKeyItem(out _);
+
+    public unsafe bool TryFindTreasureMapKeyItem(out TreasureMapKeyItem keyItem)
+    {
+        keyItem = null!;
+
+        try
+        {
+            var manager = InventoryManager.Instance();
+            if (manager == null)
+                return false;
+
+            var container = manager->GetInventoryContainer(KeyItemsInventoryType);
+            if (container == null || !container->IsLoaded)
+                return false;
+
+            var itemSheet = _dataManager.GetExcelSheet<Item>();
+
+            for (int i = 0; i < container->Size; i++)
+            {
+                var slot = container->GetInventorySlot(i);
+                if (slot == null || slot->ItemId == 0)
+                    continue;
+
+                var itemId = slot->ItemId;
+                var name = string.Empty;
+                var description = string.Empty;
+
+                try
+                {
+                    var item = itemSheet?.GetRow(itemId);
+                    name = item?.Name.ToString() ?? string.Empty;
+                    description = item?.Description.ToString() ?? string.Empty;
+                }
+                catch
+                {
+                    // Some key-item rows may not resolve through Item; ID matching still works below.
+                }
+
+                if (!TryMatchTreasureMapKeyItem(itemId, name, description, out var knownMapItemId))
+                    continue;
+
+                keyItem = new TreasureMapKeyItem(itemId, knownMapItemId, i, name, description);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Failed to scan key items for treasure map: {ex.Message}");
+            _plugin.AddDebugLog($"Key item scan error: {ex.Message}");
+        }
+
+        return false;
     }
 
     public unsafe int GetMapCount(uint itemId)
@@ -624,4 +692,50 @@ public class InventoryService : IDisposable
             new ContainerSpec(InventoryType.RetainerPage7, (count, quantity) => count.Retainer += quantity),
         };
     }
+
+    private static bool TryMatchTreasureMapKeyItem(
+        uint itemId,
+        string name,
+        string description,
+        out uint knownMapItemId)
+    {
+        if (TreasureMapData.KnownMaps.ContainsKey(itemId))
+        {
+            knownMapItemId = itemId;
+            return true;
+        }
+
+        foreach (var map in TreasureMapData.KnownMaps.Values)
+        {
+            if (ContainsIgnoreCase(name, map.Name) || ContainsIgnoreCase(description, map.Name))
+            {
+                knownMapItemId = map.ItemId;
+                return true;
+            }
+
+            var keyItemStem = map.Name
+                .Replace("Timeworn ", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace(" Map", string.Empty, StringComparison.OrdinalIgnoreCase);
+            if (ContainsIgnoreCase(name, "Treasure Map") && ContainsIgnoreCase(name, keyItemStem))
+            {
+                knownMapItemId = map.ItemId;
+                return true;
+            }
+        }
+
+        if (ContainsIgnoreCase(name, "Treasure Map") ||
+            ContainsIgnoreCase(description, "Treasure Map"))
+        {
+            knownMapItemId = 0;
+            return true;
+        }
+
+        knownMapItemId = 0;
+        return false;
+    }
+
+    private static bool ContainsIgnoreCase(string haystack, string needle)
+        => !string.IsNullOrWhiteSpace(haystack) &&
+           !string.IsNullOrWhiteSpace(needle) &&
+           haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
 }
