@@ -361,17 +361,25 @@ public class MainWindow : Window, IDisposable
         }
         else
         {
-            var mapIds = TreasureMapData.KnownMaps.Keys.ToList();
-            var retainerCounts = plugin.RetainerMapRetrievalService.GetRetainerMapCounts(mapIds, refreshXaDatabase);
-            foreach (var kvp in retainerCounts)
+            if (!plugin.IsXaDatabaseAvailable)
             {
-                if (!cachedMapSources.TryGetValue(kvp.Key, out var count))
+                plugin.RetainerMapRetrievalService.ClearUnavailableXaDatabaseState();
+                plugin.AddDebugLog("[MapRefresh] XADB unavailable; skipped retainer count refresh.");
+            }
+            else
+            {
+                var mapIds = TreasureMapData.KnownMaps.Keys.ToList();
+                var retainerCounts = plugin.RetainerMapRetrievalService.GetRetainerMapCounts(mapIds, refreshXaDatabase);
+                foreach (var kvp in retainerCounts)
                 {
-                    count = new MapSourceCount();
-                    cachedMapSources[kvp.Key] = count;
-                }
+                    if (!cachedMapSources.TryGetValue(kvp.Key, out var count))
+                    {
+                        count = new MapSourceCount();
+                        cachedMapSources[kvp.Key] = count;
+                    }
 
-                count.Retainer = kvp.Value;
+                    count.Retainer = kvp.Value;
+                }
             }
         }
 

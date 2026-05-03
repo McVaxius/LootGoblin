@@ -100,6 +100,16 @@ public sealed class RetainerMapRetrievalService : IDisposable
         ResetStepFlags();
     }
 
+    public void ClearUnavailableXaDatabaseState()
+    {
+        if (_plugin.IsXaDatabaseAvailable)
+            return;
+
+        LastError = string.Empty;
+        if (!IsRunning)
+            StatusText = "XA Database unavailable.";
+    }
+
     public RetainerMapRetrievalResult StartOrTick(IReadOnlyCollection<uint> enabledMapIds)
     {
         if (step == RetrievalStep.Complete)
@@ -533,8 +543,8 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
         if (!IsXaDatabaseReady())
         {
-            LastError = "XA Database is not ready.";
-            StatusText = LastError;
+            if (string.IsNullOrWhiteSpace(LastError))
+                StatusText = "XA Database unavailable.";
             return null;
         }
 
@@ -576,10 +586,19 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
     private bool IsXaDatabaseReady()
     {
+        if (!_plugin.IsXaDatabaseAvailable)
+        {
+            StatusText = "XA Database unavailable.";
+            return false;
+        }
+
         try
         {
             var subscriber = Plugin.PluginInterface.GetIpcSubscriber<bool>("XA.Database.IsReady");
-            return subscriber.InvokeFunc();
+            var isReady = subscriber.InvokeFunc();
+            if (!isReady)
+                StatusText = "XA Database not ready.";
+            return isReady;
         }
         catch (Exception ex)
         {
@@ -592,6 +611,9 @@ public sealed class RetainerMapRetrievalService : IDisposable
     private IEnumerable<string> SearchXaDatabase(string itemName)
     {
         var results = new List<string>();
+
+        if (!_plugin.IsXaDatabaseAvailable)
+            return results;
 
         try
         {
@@ -611,6 +633,9 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
     private bool TryRefreshXaDatabase()
     {
+        if (!_plugin.IsXaDatabaseAvailable)
+            return false;
+
         try
         {
             var subscriber = Plugin.PluginInterface.GetIpcSubscriber<object>("XA.Database.Refresh");
