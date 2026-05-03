@@ -87,14 +87,7 @@ public class StateManager : IDisposable
     private DateTime portalApproachStartedAt = DateTime.MinValue; // Tracks progress for portal FlyToPosition
     private float portalApproachStartDistance = float.MaxValue; // Distance when current portal approach started
     private DateTime lastPortalRepathTime = DateTime.MinValue; // Rate-limit portal stop + repath recovery
-    private Vector3 portalStuckCheckPosition; // Player XYZ at last portal approach progress check
-    private float portalStuckCheckDistance = float.MaxValue; // Portal distance at last portal approach progress check
-    private DateTime portalStuckCheckTime = DateTime.MinValue; // Time of last portal approach progress check
-    private float portalFallbackCheckDistance = float.MaxValue; // Portal distance at last fallback progress check
-    private DateTime portalFallbackCheckTime = DateTime.MinValue; // Time of last fallback progress check
-    private bool portalAutoMoveFallbackActive; // True when portal approach has fallen back to lockon+automove
-    private bool portalDivingLockonApproachActive; // True when underwater portal approach uses lockon+automove
-    private bool portalRegularVnavPathLogged; // One-shot log for non-diving portal approach path
+    private bool portalRegularVnavPathLogged; // One-shot log for portal vnav-only approach path
     private DateTime lastPortalTimeoutHoldLogTime = DateTime.MinValue; // Throttle timeout hold logs while portal/duty still active
     private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
     private bool descentInProgress = false; // Whether Ctrl+Space descent is currently running
@@ -130,9 +123,6 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalSearchTimeout = TimeSpan.FromSeconds(15.0);
     private static readonly TimeSpan PortalActiveApproachTimeout = TimeSpan.FromSeconds(60.0);
-    private static readonly TimeSpan PortalStuckCheckInterval = TimeSpan.FromSeconds(10.0);
-    private const float PortalStuckMovementThreshold = 0.5f;
-    private const float PortalStuckProgressThreshold = 0.5f;
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
@@ -426,7 +416,7 @@ public class StateManager : IDisposable
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51];
         if (loading)
         {
-            ResetPortalStuckTrackingForAreaChange();
+            ResetPortalApproachTrackingForAreaChange();
             stateStartTime = DateTime.Now; // Don't timeout while loading
             return;
         }
@@ -438,7 +428,7 @@ public class StateManager : IDisposable
         var currentTerritory = Plugin.ClientState.TerritoryType;
         if (lastGlobalTerritoryId != 0 && lastGlobalTerritoryId != currentTerritory)
         {
-            ResetPortalStuckTrackingForAreaChange();
+            ResetPortalApproachTrackingForAreaChange();
             _plugin.AddDebugLog($"[Territory] Territory changed: {lastGlobalTerritoryId} -> {currentTerritory} - refreshing maps");
             _plugin.InventoryService.ScanForMaps();
         }
@@ -1662,7 +1652,6 @@ public class StateManager : IDisposable
 
     private void EndPortalRetryWindow()
     {
-        StopPortalFallbackAutoMoveIfActive("when portal retry window ended");
         portalRetryStart = DateTime.MinValue;
         ResetPortalWindowState();
     }
@@ -1679,47 +1668,13 @@ public class StateManager : IDisposable
         lastPortalRepathTime = DateTime.MinValue;
         portalRegularVnavPathLogged = false;
         lastPortalTimeoutHoldLogTime = DateTime.MinValue;
-        ResetPortalStuckTracking();
     }
 
-    private void ResetPortalStuckTracking()
+    private void ResetPortalApproachTrackingForAreaChange()
     {
-        portalStuckCheckPosition = Vector3.Zero;
-        portalStuckCheckDistance = float.MaxValue;
-        portalStuckCheckTime = DateTime.MinValue;
-        ResetPortalFallbackProgressTracking();
-        portalAutoMoveFallbackActive = false;
-        portalDivingLockonApproachActive = false;
-    }
-
-    private void ResetPortalFallbackProgressTracking()
-    {
-        portalFallbackCheckDistance = float.MaxValue;
-        portalFallbackCheckTime = DateTime.MinValue;
-    }
-
-    private void ResetPortalStuckTrackingForAreaChange()
-    {
-        if (portalAutoMoveFallbackActive || portalDivingLockonApproachActive)
-            autoMoveActive = false;
-
-        ResetPortalStuckTracking();
-    }
-
-    private void StopPortalFallbackAutoMoveIfActive(string reason)
-    {
-        if (!portalAutoMoveFallbackActive && !portalDivingLockonApproachActive)
-            return;
-
-        if (autoMoveActive)
-        {
-            GameHelpers.StopAutoMove();
-            autoMoveActive = false;
-            var approachType = portalDivingLockonApproachActive
-                ? "diving lockon+automove approach"
-                : "lockon+automove fallback";
-            _plugin.AddDebugLog($"[Portal] Stopped {approachType} {reason}.");
-        }
+        portalApproachStartedAt = DateTime.MinValue;
+        portalApproachStartDistance = float.MaxValue;
+        lastPortalRepathTime = DateTime.MinValue;
     }
 
     private Vector3 CapturePortalApproachPosition(IGameObject portal)
@@ -1728,7 +1683,9 @@ public class StateManager : IDisposable
             return portalApproachPosition.Value;
 
         portalApproachPosition = portal.Position;
-        ResetPortalStuckTracking();
+        portalApproachStartedAt = DateTime.MinValue;
+        portalApproachStartDistance = float.MaxValue;
+        lastPortalRepathTime = DateTime.MinValue;
         _plugin.AddDebugLog($"[Portal] Captured targetable portal XYZ {FormatVectorCompact(portalApproachPosition.Value)}");
         StopPortalConflictingMovement();
         return portalApproachPosition.Value;
@@ -1738,16 +1695,12 @@ public class StateManager : IDisposable
     {
         var hadMovement = autoMoveActive
             || descentInProgress
+            || descentMode
             || underwaterTargetPosition != Vector3.Zero
             || _plugin.NavigationService.State != NavigationState.Idle;
-        if (!hadMovement)
-            return;
 
-        if (autoMoveActive)
-        {
-            CommandHelper.SendCommand("/automove off");
-            autoMoveActive = false;
-        }
+        CommandHelper.SendCommand("/automove off");
+        autoMoveActive = false;
 
         if (descentInProgress)
         {
@@ -1758,8 +1711,12 @@ public class StateManager : IDisposable
         descentMode = false;
         descentInProgress = false;
         underwaterTargetPosition = Vector3.Zero;
-        _plugin.NavigationService.StopNavigation();
-        _plugin.AddDebugLog("[Portal] Stopped previous navigation before portal XYZ approach.");
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+
+        _plugin.AddDebugLog(hadMovement
+            ? "[Portal] Stopped previous navigation before portal XYZ approach."
+            : "[Portal] Ensured automove is off before portal XYZ approach.");
     }
 
     private void ResetOpeningChestCofferMountRecovery(string? reason = null, bool stopNavigation = false)
@@ -1985,71 +1942,39 @@ public class StateManager : IDisposable
         }
 
         if (!force && portalApproachStartedAt != DateTime.MinValue)
-            return true;
+        {
+            var portalVnavInactive = _plugin.NavigationService.State != NavigationState.Flying
+                || !_plugin.VNavIPC.IsNavigating;
+            if (!portalVnavInactive)
+                return true;
+
+            _plugin.AddDebugLog("[Portal] Portal vnav approach became inactive before range - reissuing captured XYZ fly path.");
+            if (_plugin.NavigationService.State != NavigationState.Idle)
+                _plugin.NavigationService.StopNavigation();
+            portalApproachStartedAt = DateTime.MinValue;
+            portalApproachStartDistance = float.MaxValue;
+            force = true;
+        }
 
         StopPortalMovementBeforeVnav();
         portalApproachStartedAt = now;
         portalApproachStartDistance = distance;
+        lastPortalRepathTime = now;
         _plugin.NavigationService.FlyToPosition(position);
         autoMoveActive = true;
         _plugin.AddDebugLog($"[Portal] Flying to captured portal XYZ {FormatVectorCompact(position)} ({distance:F1}y).");
         return true;
     }
 
-    private bool ShouldUseDivingPortalLockonApproach()
-    {
-        if (portalDivingLockonApproachActive)
-            return true;
-
-        return currentLandingMode == OverworldLandingMode.UnderwaterBounce
-            && (Plugin.Condition[ConditionFlag.Diving]
-                || underwaterTargetPosition != Vector3.Zero
-                || descentInProgress
-                || descentMode);
-    }
-
-    private bool ShouldKeepDivingPortalLockonApproach()
-    {
-        return currentLandingMode == OverworldLandingMode.UnderwaterBounce
-            && (Plugin.Condition[ConditionFlag.Diving]
-                || Plugin.Condition[ConditionFlag.Mounted]
-                || Plugin.Condition[ConditionFlag.Mounting71]
-                || _plugin.NavigationService.IsMounted()
-                || _plugin.NavigationService.IsFlying());
-    }
-
-    private void StopDivingPortalConflictingMovement()
-    {
-        if (_plugin.NavigationService.State != NavigationState.Idle)
-        {
-            _plugin.NavigationService.StopNavigation();
-            autoMoveActive = false;
-        }
-
-        if (descentInProgress || descentMode)
-        {
-            GameHelpers.KeyRelease(VirtualKey.CONTROL);
-            GameHelpers.KeyRelease(VirtualKey.SPACE);
-        }
-
-        underwaterTargetPosition = Vector3.Zero;
-        descentMode = false;
-        descentInProgress = false;
-    }
-
     private void StopPortalMovementBeforeVnav()
     {
-        var stoppedMovement = false;
+        var stoppedMovement = autoMoveActive
+            || descentInProgress
+            || descentMode
+            || underwaterTargetPosition != Vector3.Zero;
 
-        if (autoMoveActive || portalAutoMoveFallbackActive || portalDivingLockonApproachActive)
-        {
-            CommandHelper.SendCommand("/automove off");
-            autoMoveActive = false;
-            portalAutoMoveFallbackActive = false;
-            portalDivingLockonApproachActive = false;
-            ResetPortalFallbackProgressTracking();
-            stoppedMovement = true;
-        }
+        CommandHelper.SendCommand("/automove off");
+        autoMoveActive = false;
 
         if (descentInProgress || descentMode)
         {
@@ -2061,228 +1986,31 @@ public class StateManager : IDisposable
             stoppedMovement = true;
         }
 
-        if (stoppedMovement)
-            _plugin.AddDebugLog("[Portal] Stopped automove/descent before portal vnav path.");
-    }
+        underwaterTargetPosition = Vector3.Zero;
 
-    private void StopPortalVnavBeforeLockon(string reason)
-    {
-        if (_plugin.NavigationService.State == NavigationState.Idle)
-            return;
-
-        _plugin.NavigationService.StopNavigation();
-        autoMoveActive = false;
-        _plugin.AddDebugLog($"[Portal] Stopped vnav {reason}.");
-    }
-
-    private void StartPortalLockonAutoMove()
-    {
-        CommandHelper.SendCommand("/lockon");
-        CommandHelper.SendCommand("/automove on");
-        autoMoveActive = true;
-    }
-
-    private void ContinueDivingPortalLockonApproach(IGameObject portal, float distance)
-    {
-        var starting = !portalDivingLockonApproachActive;
-        StopDivingPortalConflictingMovement();
-        Plugin.TargetManager.Target = portal;
-
-        if (starting)
-        {
-            _plugin.AddDebugLog("[Portal] Diving portal lockon path started - stopped vnav/descent and using lockon+automove.");
-        }
-
-        if (starting || !autoMoveActive)
-        {
-            StartPortalLockonAutoMove();
-        }
-
-        portalDivingLockonApproachActive = true;
-        if (portalFallbackCheckTime == DateTime.MinValue)
-        {
-            portalFallbackCheckDistance = distance;
-            portalFallbackCheckTime = DateTime.Now;
-        }
-        StateDetail = $"Diving portal lockon+automove ({distance:F1}y)...";
-    }
-
-    private void ContinuePortalAutoMoveFallback(IGameObject portal, float distance)
-    {
-        Plugin.TargetManager.Target = portal;
-        StopPortalVnavBeforeLockon("before portal fallback lockon+automove");
-
-        if (!autoMoveActive)
-        {
-            StartPortalLockonAutoMove();
-        }
-
-        if (portalFallbackCheckTime == DateTime.MinValue)
-        {
-            portalFallbackCheckDistance = distance;
-            portalFallbackCheckTime = DateTime.Now;
-        }
-        StateDetail = $"Portal fallback lockon+automove ({distance:F1}y)...";
-    }
-
-    private bool RetryPortalFlyApproach(Vector3 approachPosition, float distance, DateTime now, string reason)
-    {
-        if (now - lastPortalRepathTime < PortalRepathInterval)
-        {
-            StateDetail = $"Retrying portal fly approach soon ({distance:F1}y)...";
-            return true;
-        }
-
-        if (_plugin.NavigationService.State != NavigationState.Idle)
-            StopPortalVnavBeforeLockon("before portal vnav retry");
-
-        autoMoveActive = false;
-        portalApproachStartedAt = DateTime.MinValue;
-        portalApproachStartDistance = float.MaxValue;
-        portalStuckCheckTime = DateTime.MinValue;
-        lastPortalRepathTime = now;
-
-        _plugin.AddDebugLog($"{reason} Retrying portal fly path.");
-        if (FlyToPortalApproachPosition(approachPosition, distance, force: true))
-            StateDetail = $"Retrying portal XYZ approach ({distance:F1}y)...";
-
-        return true;
-    }
-
-    private bool RefuseFarPortalAutoMoveFallback(Vector3 approachPosition, float distance, DateTime now, string context)
-    {
-        StopPortalFallbackAutoMoveIfActive($"because portal is {distance:F1}y away");
-        portalAutoMoveFallbackActive = false;
-        ResetPortalFallbackProgressTracking();
-
-        return RetryPortalFlyApproach(
-            approachPosition,
-            distance,
-            now,
-            $"[Portal] {context} refused lockon+automove at {distance:F1}y (> {PortalInteractionRange:F1}y).");
-    }
-
-    private bool TryHandlePortalFallbackWatchdog(IGameObject portal, Vector3 approachPosition, float distance, DateTime now)
-    {
-        if (!portalAutoMoveFallbackActive && !portalDivingLockonApproachActive)
-            return false;
-
-        if (portalAutoMoveFallbackActive && distance > PortalInteractionRange)
-            return RefuseFarPortalAutoMoveFallback(approachPosition, distance, now, "Active regular fallback");
-
-        if (portalFallbackCheckTime == DateTime.MinValue)
-        {
-            portalFallbackCheckDistance = distance;
-            portalFallbackCheckTime = now;
-            return false;
-        }
-
-        var elapsed = now - portalFallbackCheckTime;
-        if (elapsed < PortalStuckCheckInterval)
-            return false;
-
-        var previousDistance = portalFallbackCheckDistance;
-        var distanceImprovement = previousDistance - distance;
-        if (distanceImprovement >= PortalStuckProgressThreshold)
-        {
-            portalFallbackCheckDistance = distance;
-            portalFallbackCheckTime = now;
-            return false;
-        }
-
-        var wasDivingApproach = portalDivingLockonApproachActive;
-        var keepDivingApproach = wasDivingApproach && ShouldKeepDivingPortalLockonApproach();
-
-        StopPortalFallbackAutoMoveIfActive(
-            $"after fallback watchdog saw no progress ({previousDistance:F1}->{distance:F1}y in {elapsed.TotalSeconds:F1}s)");
-        portalAutoMoveFallbackActive = false;
-        portalDivingLockonApproachActive = false;
-        ResetPortalFallbackProgressTracking();
-
-        if (wasDivingApproach && keepDivingApproach)
-        {
-            _plugin.AddDebugLog(
-                $"[Portal] Fallback watchdog saw no diving progress ({previousDistance:F1}->{distance:F1}y in {elapsed.TotalSeconds:F1}s); restarting diving lockon+automove because mounted/dive interaction is still active.");
-            ContinueDivingPortalLockonApproach(portal, distance);
-            return true;
-        }
-
-        if (distance > PortalInteractionRange)
-        {
-            return RetryPortalFlyApproach(
-                approachPosition,
-                distance,
-                now,
-                $"[Portal] Fallback watchdog escaped stalled approach ({previousDistance:F1}->{distance:F1}y in {elapsed.TotalSeconds:F1}s).");
-        }
-
-        _plugin.AddDebugLog(
-            $"[Portal] Fallback watchdog escaped stalled approach ({previousDistance:F1}->{distance:F1}y in {elapsed.TotalSeconds:F1}s); portal is within interaction range.");
-        return false;
-    }
-
-    private bool TryStartPortalAutoMoveFallback(IGameObject portal, Vector3 approachPosition, Vector3 playerPosition, float distance, DateTime now)
-    {
-        if (portalStuckCheckTime == DateTime.MinValue)
-        {
-            portalStuckCheckPosition = playerPosition;
-            portalStuckCheckDistance = distance;
-            portalStuckCheckTime = now;
-            return false;
-        }
-
-        var elapsed = now - portalStuckCheckTime;
-        if (elapsed < PortalStuckCheckInterval)
-            return false;
-
-        var moved = Vector3.Distance(playerPosition, portalStuckCheckPosition);
-        var distanceImprovement = portalStuckCheckDistance - distance;
-        if (moved < PortalStuckMovementThreshold || distanceImprovement < PortalStuckProgressThreshold)
-        {
-            if (distance > PortalInteractionRange)
-            {
-                _plugin.AddDebugLog(
-                    $"[Portal] VNav approach stuck (moved {moved:F2}y, dist {portalStuckCheckDistance:F1}->{distance:F1}y, progress {distanceImprovement:F2}y in {elapsed.TotalSeconds:F1}s) - refusing far-range lockon+automove. current={FormatVectorCompact(playerPosition)}; portal={FormatVectorCompact(approachPosition)}; dist={distance:F1}y.");
-                return RefuseFarPortalAutoMoveFallback(approachPosition, distance, now, "VNav stuck recovery");
-            }
-
-            StopPortalVnavBeforeLockon("before portal stuck lockon+automove");
-            Plugin.TargetManager.Target = portal;
-            StartPortalLockonAutoMove();
-            portalAutoMoveFallbackActive = true;
-            portalFallbackCheckDistance = distance;
-            portalFallbackCheckTime = now;
-            StateDetail = $"Portal vnav stalled - lockon+automove ({distance:F1}y)...";
-            _plugin.AddDebugLog(
-                $"[Portal] VNav approach stuck (moved {moved:F2}y, dist {portalStuckCheckDistance:F1}->{distance:F1}y, progress {distanceImprovement:F2}y in {elapsed.TotalSeconds:F1}s) - switching to lockon+automove. current={FormatVectorCompact(playerPosition)}; portal={FormatVectorCompact(approachPosition)}; dist={distance:F1}y.");
-            return true;
-        }
-
-        portalStuckCheckPosition = playerPosition;
-        portalStuckCheckDistance = distance;
-        portalStuckCheckTime = now;
-        return false;
+        _plugin.AddDebugLog(stoppedMovement
+            ? "[Portal] Stopped automove/descent before portal vnav path."
+            : "[Portal] Ensured automove is off before portal vnav path.");
     }
 
     private void HandlePortalInInteractionRange(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
     {
-        StopPortalFallbackAutoMoveIfActive("before portal interaction handoff");
-        ResetPortalStuckTracking();
+        CommandHelper.SendCommand("/automove off");
+        autoMoveActive = false;
+        portalApproachStartedAt = DateTime.MinValue;
+        portalApproachStartDistance = float.MaxValue;
 
         if (_plugin.NavigationService.State != NavigationState.Idle)
         {
             _plugin.NavigationService.StopNavigation();
-            autoMoveActive = false;
             _plugin.AddDebugLog($"[Portal] Within {PortalInteractionRange:F1}y - stopped vnav before portal interaction handoff.");
         }
 
         var isMountedOrFlying = _plugin.NavigationService.IsMounted()
             || _plugin.NavigationService.IsFlying()
             || Plugin.Condition[ConditionFlag.Mounting71];
-        var isDivingPortalInteraction = currentLandingMode == OverworldLandingMode.UnderwaterBounce
-            && (Plugin.Condition[ConditionFlag.Diving] || portalDivingLockonApproachActive);
 
-        if (isMountedOrFlying && !isDivingPortalInteraction)
+        if (isMountedOrFlying)
         {
             if (portalLandingStartedAt == DateTime.MinValue)
             {
@@ -4762,11 +4490,12 @@ public class StateManager : IDisposable
                 if (GameHelpers.ClickYesIfVisible())
                 {
                     _plugin.AddDebugLog("[Portal] Clicked Yes on portal dialog - waiting for loading screen...");
-                    if (autoMoveActive)
+                    CommandHelper.SendCommand("/automove off");
+                    if (_plugin.NavigationService.State != NavigationState.Idle)
                     {
                         _plugin.NavigationService.StopNavigation();
-                        autoMoveActive = false;
                     }
+                    autoMoveActive = false;
                     // Don't transition to InDungeon yet - maps can set BoundByDuty before the player leaves the overworld.
                     StateDetail = "Portal accepted - waiting for treasure dungeon territory...";
                     return;
@@ -4792,36 +4521,16 @@ public class StateManager : IDisposable
                         ? float.MaxValue
                         : Vector3.Distance(player.Position, approachPosition);
 
-                    if (TryHandlePortalFallbackWatchdog(portal, approachPosition, portalDist, now))
-                        return;
-
-                    var useDivingLockonApproach = ShouldUseDivingPortalLockonApproach();
-
                     if (portalDist > PortalInteractionRange)
                     {
-                        if (useDivingLockonApproach)
-                        {
-                            ContinueDivingPortalLockonApproach(portal, portalDist);
-                            return;
-                        }
-
-                        if (portalAutoMoveFallbackActive)
-                        {
-                            ContinuePortalAutoMoveFallback(portal, portalDist);
-                            return;
-                        }
-
                         if (!portalRegularVnavPathLogged)
                         {
                             portalRegularVnavPathLogged = true;
-                            _plugin.AddDebugLog("[Portal] Regular portal vnav path retained before stuck fallback.");
+                            _plugin.AddDebugLog("[Portal] Portal approach uses captured XYZ vnav only; lockon+automove disabled.");
                         }
 
                         if (FlyToPortalApproachPosition(approachPosition, portalDist))
                         {
-                            if (player != null && TryStartPortalAutoMoveFallback(portal, approachPosition, player.Position, portalDist, now))
-                                return;
-
                             StateDetail = $"Approaching portal XYZ {FormatVectorCompact(approachPosition)} ({portalDist:F1}y)...";
                         }
                         return;
@@ -5103,14 +4812,14 @@ public class StateManager : IDisposable
 
             if (loading)
             {
-                ResetPortalStuckTrackingForAreaChange();
+                ResetPortalApproachTrackingForAreaChange();
                 StateDetail = $"Portal accepted - loading treasure dungeon territory from {currentTerritory}...";
                 return true;
             }
 
             if (portalAvailable == false)
             {
-                ResetPortalStuckTrackingForAreaChange();
+                ResetPortalApproachTrackingForAreaChange();
                 LogMapDutyOutsideDungeon(source, currentTerritory);
                 StateDetail = $"Map duty active in territory {currentTerritory} - waiting for treasure dungeon territory...";
                 return true;
@@ -5130,7 +4839,7 @@ public class StateManager : IDisposable
         {
             if (loading)
             {
-                ResetPortalStuckTrackingForAreaChange();
+                ResetPortalApproachTrackingForAreaChange();
                 adsDutyEntryConfirmedAt = DateTime.MinValue;
                 StateDetail = $"Treasure dungeon territory {currentTerritory} detected - waiting for loading to finish before ADS handoff...";
                 return true;
@@ -5966,8 +5675,8 @@ public class StateManager : IDisposable
 
         if (prev == BotState.Completed && newState != BotState.Completed)
         {
-            StopPortalFallbackAutoMoveIfActive("during state transition away from Completed");
-            ResetPortalStuckTracking();
+            CommandHelper.SendCommand("/automove off");
+            ResetPortalApproachTrackingForAreaChange();
         }
 
         // Stop navigation if it was active
