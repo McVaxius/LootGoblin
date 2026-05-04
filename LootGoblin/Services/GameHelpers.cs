@@ -1070,4 +1070,45 @@ public static class GameHelpers
             return false;
         }
     }
+
+    /// <summary>
+    /// Use an active key item/event item directly.
+    /// Treasure-map key items use EventItem, not normal Item inventory rows.
+    /// </summary>
+    public static unsafe bool UseEventItem(uint eventItemId, string displayName)
+    {
+        try
+        {
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player == null) return false;
+            if (player.IsCasting) return false;
+
+            if (Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                Plugin.Condition[ConditionFlag.BetweenAreas51] ||
+                Plugin.Condition[ConditionFlag.OccupiedInQuestEvent] ||
+                Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent] ||
+                Plugin.Condition[ConditionFlag.Occupied33] ||
+                Plugin.Condition[ConditionFlag.Occupied39])
+                return false;
+
+            var am = ActionManager.Instance();
+            if (am == null) return false;
+
+            var status = am->GetActionStatus(ActionType.EventItem, eventItemId);
+            if (status != 0)
+            {
+                Plugin.Log.Warning($"UseEventItem({eventItemId}): action status {status} for {displayName}");
+                return false;
+            }
+
+            var result = am->UseAction(ActionType.EventItem, eventItemId, 0xE0000000, 65535, 0, 0, null);
+            Plugin.Log.Information($"UseEventItem({eventItemId}): {displayName}, ActionManager result = {result}");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"UseEventItem({eventItemId}) failed: {ex.Message}");
+            return false;
+        }
+    }
 }

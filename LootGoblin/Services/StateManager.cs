@@ -118,7 +118,8 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan OpeningChestCofferMountCommandInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan OpeningChestCofferDismountCommandInterval = TimeSpan.FromSeconds(2.0);
-    private static readonly TimeSpan KeyItemMapRecoveryTimeout = TimeSpan.FromSeconds(8.0);
+    private static readonly TimeSpan KeyItemMapRecoveryTimeout = TimeSpan.FromSeconds(30.0);
+    private static readonly TimeSpan KeyItemMapOpenRetryInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalSearchTimeout = TimeSpan.FromSeconds(15.0);
@@ -218,6 +219,8 @@ public class StateManager : IDisposable
     private bool portalConfirmedThisMap;
     private bool dungeonConfirmedThisMap;
     private DateTime keyItemMapRecoveryStartedAt = DateTime.MinValue;
+    private DateTime keyItemMapNextOpenAttemptAt = DateTime.MinValue;
+    private int keyItemMapOpenAttemptCount;
     private uint activeKeyItemMapItemId;
     private int activeKeyItemMapSlot = -1;
     private DateTime lastKeyItemCompletionGuardLogAt = DateTime.MinValue;
@@ -560,15 +563,16 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (TryRecoverActiveKeyItemMap("[Start]", transitionToDetectingOnActive: true))
-            return;
-
         RetryCount = 0;
         CurrentLocation = null;
         SelectedMapItemId = 0;
         currentLandingMode = OverworldLandingMode.MountToggle;
+        ResetKeyItemMapRecoveryState(clearActiveKey: true);
         _plugin.YesAlreadyIPC.Pause();
         _plugin.AddDebugLog($"[Start] YesAlready paused: {_plugin.YesAlreadyIPC.IsPaused}");
+
+        if (TryRecoverActiveKeyItemMap("[Start]", transitionToDetectingOnActive: true))
+            return;
 
         if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !_plugin.IsAdsAvailable)
         {
@@ -598,6 +602,7 @@ public class StateManager : IDisposable
         ResetStartMapRefresh();
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
+        ResetKeyItemMapRecoveryState(clearActiveKey: true);
         RestoreMountedRotationLifecycle("bot stop");
         ClearWarning();
         TransitionTo(BotState.Idle, "Stopped by user.");
@@ -657,27 +662,6 @@ public class StateManager : IDisposable
         initialMapCount = 0;
 
         var existingFlag = _plugin.MapFlagService.TryGetMapLocation();
-        if (keyItem.KnownMapItemId == 0 && existingFlag == null)
-        {
-            var unknownMapBlocked =
-                $"Treasure map key item '{keyItem.DisplayName}' is active, but LootGoblin does not know which map item it came from. Open the key item map or set the map flag before opening another.";
-            SetWarning(unknownMapBlocked);
-            _plugin.AddDebugLog($"{source} Blocking new map selection because active key item map type is unknown.");
-            ResetKeyItemMapRecoveryState();
-            SelectedMapItemId = 0;
-            currentLandingMode = OverworldLandingMode.MountToggle;
-
-            if (transitionToDetectingOnActive && State != BotState.Error)
-            {
-                TransitionTo(BotState.Error, unknownMapBlocked);
-                return true;
-            }
-
-            StateDetail = unknownMapBlocked;
-            stateStartTime = DateTime.Now;
-            return true;
-        }
-
         if (existingFlag != null)
         {
             ResetKeyItemMapRecoveryState();
@@ -710,18 +694,52 @@ public class StateManager : IDisposable
             return true;
         }
 
-        if (elapsed < KeyItemMapRecoveryTimeout)
+        if (elapsed >= KeyItemMapRecoveryTimeout)
         {
-            StateDetail = $"Waiting for active key-item map flag... ({elapsed.TotalSeconds:F0}/{KeyItemMapRecoveryTimeout.TotalSeconds:F0}s)";
-            stateStartTime = DateTime.Now;
+            var failed =
+                $"Treasure map key item '{keyItem.DisplayName}' is active, but no local map flag appeared after LootGoblin tried to open it. Open the key item manually or stop before opening another.";
+            SetWarning(failed);
+            TransitionTo(BotState.Error, failed);
             return true;
         }
 
-        var blocked = $"Treasure map key item '{keyItem.DisplayName}' is active, but no local map flag is set. Open the key item map or set the map flag before opening another.";
-        SetWarning(blocked);
-        StateDetail = blocked;
+        TryOpenActiveKeyItemMap(keyItem);
+        StateDetail = keyItemMapOpenAttemptCount > 0
+            ? $"Opening active key-item map '{keyItem.DisplayName}'... ({elapsed.TotalSeconds:F0}/{KeyItemMapRecoveryTimeout.TotalSeconds:F0}s)"
+            : $"Waiting to open active key-item map '{keyItem.DisplayName}'...";
         stateStartTime = DateTime.Now;
         return true;
+    }
+
+    private void TryOpenActiveKeyItemMap(TreasureMapKeyItem keyItem)
+    {
+        var now = DateTime.Now;
+        if (now < keyItemMapNextOpenAttemptAt)
+            return;
+
+        keyItemMapNextOpenAttemptAt = now.Add(KeyItemMapOpenRetryInterval);
+        keyItemMapOpenAttemptCount++;
+
+        if (!GameHelpers.IsPlayerAvailable())
+        {
+            _plugin.AddDebugLog($"[KeyItemMap] Player unavailable; deferring active key-item open for {keyItem.DisplayName}.");
+            return;
+        }
+
+        if (GameHelpers.UseEventItem(keyItem.ItemId, keyItem.DisplayName))
+        {
+            _plugin.AddDebugLog($"[KeyItemMap] Opened active treasure-map key item {keyItem.DisplayName} (attempt {keyItemMapOpenAttemptCount}).");
+        }
+        else
+        {
+            _plugin.AddDebugLog($"[KeyItemMap] Failed to open active treasure-map key item {keyItem.DisplayName} (attempt {keyItemMapOpenAttemptCount}); retrying.");
+        }
+
+        if (keyItemMapOpenAttemptCount == 1)
+        {
+            SetWarning($"Active treasure map key item '{keyItem.DisplayName}' found. LootGoblin is opening it to recover the map flag before opening another map.");
+            stateStartTime = DateTime.Now;
+        }
     }
 
     private void UpdateActiveKeyItemMap(TreasureMapKeyItem keyItem, string source)
@@ -1218,6 +1236,8 @@ public class StateManager : IDisposable
     private void ResetKeyItemMapRecoveryState(bool clearActiveKey = false)
     {
         keyItemMapRecoveryStartedAt = DateTime.MinValue;
+        keyItemMapNextOpenAttemptAt = DateTime.MinValue;
+        keyItemMapOpenAttemptCount = 0;
         if (!clearActiveKey)
             return;
 
@@ -4790,7 +4810,7 @@ public class StateManager : IDisposable
         }
         else
         {
-            _plugin.AddDebugLog($"{source} Key item still active but current flag/location is unavailable - recovering with /tmap.");
+            _plugin.AddDebugLog($"{source} Key item still active but current flag/location is unavailable - reopening the active key item.");
         }
 
         CurrentLocation = null;
