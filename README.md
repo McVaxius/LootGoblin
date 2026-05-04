@@ -21,7 +21,7 @@ A Dalamud plugin for FFXIV that automates treasure map hunting with party coordi
 ## Features
 
 - Automated treasure map detection and opening
-- GlobeTrotter integration for map location detection
+- Local map-flag detection for deciphered map locations
 - Teleport to nearest aetheryte
 - Party coordination (FrenRider-compliant)
 - vnavmesh navigation to treasure location
@@ -52,7 +52,7 @@ See [HOW_TO_IMPORT_PLUGINS.md](HOW_TO_IMPORT_PLUGINS.md) for detailed instructio
 ## Dependencies
 
 - **vnavmesh** - Required for navigation
-- **GlobeTrotter** - Recommended for map location detection
+- **Lifestream** - Required for aetheryte travel
 
 ## Building from Source
 

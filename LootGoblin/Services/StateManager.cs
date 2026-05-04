@@ -657,10 +657,33 @@ public class StateManager : IDisposable
         initialMapCount = 0;
 
         var existingFlag = _plugin.MapFlagService.TryGetMapLocation();
+        if (keyItem.KnownMapItemId == 0 && existingFlag == null)
+        {
+            var unknownMapBlocked =
+                $"Treasure map key item '{keyItem.DisplayName}' is active, but LootGoblin does not know which map item it came from. Open the key item map or set the map flag before opening another.";
+            SetWarning(unknownMapBlocked);
+            _plugin.AddDebugLog($"{source} Blocking new map selection because active key item map type is unknown.");
+            ResetKeyItemMapRecoveryState();
+            SelectedMapItemId = 0;
+            currentLandingMode = OverworldLandingMode.MountToggle;
+
+            if (transitionToDetectingOnActive && State != BotState.Error)
+            {
+                TransitionTo(BotState.Error, unknownMapBlocked);
+                return true;
+            }
+
+            StateDetail = unknownMapBlocked;
+            stateStartTime = DateTime.Now;
+            return true;
+        }
+
         if (existingFlag != null)
         {
             ResetKeyItemMapRecoveryState();
-            SetWarning($"Active deciphered map key item '{keyItem.DisplayName}' found. LootGoblin will finish it before opening another map.");
+            SetWarning(keyItem.KnownMapItemId == 0
+                ? $"Active treasure map key item '{keyItem.DisplayName}' found. Map type is unknown, but LootGoblin will use the existing map flag and will not open another map."
+                : $"Active deciphered map key item '{keyItem.DisplayName}' found. LootGoblin will finish it before opening another map.");
 
             if (transitionToDetectingOnActive && State != BotState.DetectingLocation)
             {

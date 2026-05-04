@@ -53,6 +53,20 @@ public class InventoryService : IDisposable
     private readonly IDataManager _dataManager;
     private static int scanCounter = 0; // Static counter for reducing log spam across all instances
     private const InventoryType KeyItemsInventoryType = (InventoryType)2004;
+    private static readonly Dictionary<string, uint> KeyItemNameAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "alexandrite", 7884 },
+        { "alexandrite map", 7884 },
+        { "leather buried", 8156 },
+        { "leather buried treasure", 8156 },
+        { "leather buried treasure map", 8156 },
+    };
+
+    private static readonly Dictionary<uint, uint> KeyItemIdAliases = new()
+    {
+        { 2001223, 7884 }, // Alexandrite Map -> Mysterious Map
+        { 2001352, 8156 }, // Leather Buried Treasure Map -> Unhidden Leather Map
+    };
 
     private readonly struct ContainerSpec
     {
@@ -191,6 +205,8 @@ public class InventoryService : IDisposable
                 return false;
 
             var itemSheet = _dataManager.GetExcelSheet<Item>();
+            var eventItemSheet = _dataManager.GetExcelSheet<EventItem>();
+            var eventItemHelpSheet = _dataManager.GetExcelSheet<EventItemHelp>();
 
             for (int i = 0; i < container->Size; i++)
             {
@@ -202,16 +218,7 @@ public class InventoryService : IDisposable
                 var name = string.Empty;
                 var description = string.Empty;
 
-                try
-                {
-                    var item = itemSheet?.GetRow(itemId);
-                    name = item?.Name.ToString() ?? string.Empty;
-                    description = item?.Description.ToString() ?? string.Empty;
-                }
-                catch
-                {
-                    // Some key-item rows may not resolve through Item; ID matching still works below.
-                }
+                ResolveKeyItemText(itemId, eventItemSheet, eventItemHelpSheet, itemSheet, out name, out description);
 
                 if (!TryMatchTreasureMapKeyItem(itemId, name, description, out var knownMapItemId))
                     continue;
@@ -700,11 +707,20 @@ public class InventoryService : IDisposable
         string description,
         out uint knownMapItemId)
     {
+        if (KeyItemIdAliases.TryGetValue(itemId, out knownMapItemId))
+            return true;
+
         if (TreasureMapData.KnownMaps.ContainsKey(itemId))
         {
             knownMapItemId = itemId;
             return true;
         }
+
+        var normalizedName = NormalizeTreasureMapText(name);
+        var normalizedDescription = NormalizeTreasureMapText(description);
+
+        if (TryMatchKeyItemAlias(normalizedName, normalizedDescription, out knownMapItemId))
+            return true;
 
         foreach (var map in TreasureMapData.KnownMaps.Values)
         {
@@ -715,8 +731,6 @@ public class InventoryService : IDisposable
             }
 
             var keyItemStem = NormalizeTreasureMapText(map.Name);
-            var normalizedName = NormalizeTreasureMapText(name);
-            var normalizedDescription = NormalizeTreasureMapText(description);
             if ((ContainsIgnoreCase(name, "Treasure Map") || ContainsIgnoreCase(description, "Treasure Map")) &&
                 (ContainsNormalizedMapStem(normalizedName, keyItemStem) ||
                  ContainsNormalizedMapStem(normalizedDescription, keyItemStem)))
@@ -736,6 +750,84 @@ public class InventoryService : IDisposable
         knownMapItemId = 0;
         return false;
     }
+
+    private static void ResolveKeyItemText(
+        uint itemId,
+        Lumina.Excel.ExcelSheet<EventItem>? eventItemSheet,
+        Lumina.Excel.ExcelSheet<EventItemHelp>? eventItemHelpSheet,
+        Lumina.Excel.ExcelSheet<Item>? itemSheet,
+        out string name,
+        out string description)
+    {
+        name = string.Empty;
+        description = string.Empty;
+
+        try
+        {
+            var eventItem = eventItemSheet?.GetRow(itemId);
+            if (eventItem != null)
+            {
+                name = FirstNonEmpty(
+                    eventItem.Value.Name.ToString(),
+                    eventItem.Value.Singular.ToString(),
+                    eventItem.Value.Plural.ToString());
+            }
+        }
+        catch
+        {
+            // EventItem may not contain every key-item-like row; Item fallback below still applies.
+        }
+
+        try
+        {
+            var eventItemHelp = eventItemHelpSheet?.GetRow(itemId);
+            if (eventItemHelp != null)
+                description = eventItemHelp.Value.Description.ToString();
+        }
+        catch
+        {
+            // EventItemHelp can be absent for rows with no help text.
+        }
+
+        if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(description))
+            return;
+
+        try
+        {
+            var item = itemSheet?.GetRow(itemId);
+            if (item != null)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                    name = item.Value.Name.ToString();
+                if (string.IsNullOrWhiteSpace(description))
+                    description = item.Value.Description.ToString();
+            }
+        }
+        catch
+        {
+            // Some key-item rows do not resolve through Item.
+        }
+    }
+
+    private static bool TryMatchKeyItemAlias(string normalizedName, string normalizedDescription, out uint knownMapItemId)
+    {
+        foreach (var alias in KeyItemNameAliases)
+        {
+            var normalizedAlias = NormalizeTreasureMapText(alias.Key);
+            if (ContainsNormalizedMapStem(normalizedName, normalizedAlias) ||
+                ContainsNormalizedMapStem(normalizedDescription, normalizedAlias))
+            {
+                knownMapItemId = alias.Value;
+                return true;
+            }
+        }
+
+        knownMapItemId = 0;
+        return false;
+    }
+
+    private static string FirstNonEmpty(params string[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 
     private static bool ContainsIgnoreCase(string haystack, string needle)
         => !string.IsNullOrWhiteSpace(haystack) &&

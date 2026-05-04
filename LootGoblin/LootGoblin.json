@@ -4,7 +4,7 @@
   "DalamudApiLevel": 15,
   "InternalName": "LootGoblin",
   "Punchline": "Automated treasure map hunting bot with party coordination.",
-  "Description": "LootGoblin automates treasure map hunting by opening maps, detecting locations via GlobeTrotter, teleporting to the nearest aetheryte, coordinating with party members, and flying to the treasure location. Use /lootgoblin or /lg to open.",
+  "Description": "LootGoblin automates treasure map hunting by opening maps, reading local map flags, teleporting to the nearest aetheryte, coordinating with party members, and flying to the treasure location. Use /lootgoblin or /lg to open.",
   "ApplicableVersion": "any",
   "Tags": [
     "treasure",
@@ -30,5 +30,5 @@
       "Reason": "Needed if you want retainer and saddlebag retrieval."
     }
   ],
-  "AssemblyVersion": "0.1.4.8"
+  "AssemblyVersion": "0.1.4.9"
 }
