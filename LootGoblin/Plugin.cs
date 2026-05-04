@@ -57,7 +57,7 @@ public sealed class Plugin : IDalamudPlugin
     public RetainerMapRetrievalService RetainerMapRetrievalService { get; init; }
 
     // IPC
-    public GlobeTrotterIPC GlobeTrotterIPC { get; init; }
+    public MapFlagService MapFlagService { get; init; }
     public VNavIPC VNavIPC { get; init; }
     public YesAlreadyIPC YesAlreadyIPC { get; init; }
 
@@ -96,7 +96,7 @@ public sealed class Plugin : IDalamudPlugin
         MapDetectionService = new MapDetectionService(this, GameGui, Log);
 
         // Initialize IPC
-        GlobeTrotterIPC = new GlobeTrotterIPC(this, PluginInterface, Log);
+        MapFlagService = new MapFlagService(this, Log);
         VNavIPC = new VNavIPC(this, PluginInterface, Log);
         RotationPluginIPC = new RotationPluginIPC(this, PluginInterface, Log);
         YesAlreadyIPC = new YesAlreadyIPC(this, Log);
@@ -205,7 +205,7 @@ public sealed class Plugin : IDalamudPlugin
         ChestDetectionService.Dispose();
         RotationPluginIPC.Dispose();
         VNavIPC.Dispose();
-        GlobeTrotterIPC.Dispose();
+        MapFlagService.Dispose();
         MapDetectionService.Dispose();
         InventoryService.Dispose();
         AdsStatusService.Dispose();
@@ -261,7 +261,7 @@ public sealed class Plugin : IDalamudPlugin
     public void RefreshDependencyStatus(bool logStatus = false)
     {
         VNavIPC.CheckAvailability(logStatus);
-        GlobeTrotterIPC.CheckAvailability(logStatus);
+        MapFlagService.CheckAvailability(logStatus);
         RotationPluginIPC.CheckAvailability(logStatus);
     }
 

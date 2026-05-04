@@ -140,7 +140,7 @@ public class NavigationService : IDisposable
         ClearActivePositionNavigation();
         _plugin.VNavIPC.Stop();
         if (clearFlag)
-            CommandHelper.SendCommand("/vnav clearflag");
+            _plugin.AddDebugLog("[Navigation] StopNavigation clearFlag ignored; map flags clear only at explicit map lifecycle points.");
         SetState(NavigationState.Idle, "Navigation stopped.");
     }
 

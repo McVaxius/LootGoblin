@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using LootGoblin.Models;
@@ -713,10 +714,12 @@ public class InventoryService : IDisposable
                 return true;
             }
 
-            var keyItemStem = map.Name
-                .Replace("Timeworn ", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Replace(" Map", string.Empty, StringComparison.OrdinalIgnoreCase);
-            if (ContainsIgnoreCase(name, "Treasure Map") && ContainsIgnoreCase(name, keyItemStem))
+            var keyItemStem = NormalizeTreasureMapText(map.Name);
+            var normalizedName = NormalizeTreasureMapText(name);
+            var normalizedDescription = NormalizeTreasureMapText(description);
+            if ((ContainsIgnoreCase(name, "Treasure Map") || ContainsIgnoreCase(description, "Treasure Map")) &&
+                (ContainsNormalizedMapStem(normalizedName, keyItemStem) ||
+                 ContainsNormalizedMapStem(normalizedDescription, keyItemStem)))
             {
                 knownMapItemId = map.ItemId;
                 return true;
@@ -738,4 +741,33 @@ public class InventoryService : IDisposable
         => !string.IsNullOrWhiteSpace(haystack) &&
            !string.IsNullOrWhiteSpace(needle) &&
            haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
+
+    private static bool ContainsNormalizedMapStem(string haystack, string needle)
+        => !string.IsNullOrWhiteSpace(haystack) &&
+           !string.IsNullOrWhiteSpace(needle) &&
+           haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeTreasureMapText(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var builder = new StringBuilder(value.Length);
+        foreach (var c in value)
+        {
+            if (char.IsLetterOrDigit(c) || char.IsWhiteSpace(c))
+                builder.Append(char.ToLowerInvariant(c));
+            else
+                builder.Append(' ');
+        }
+
+        var tokens = builder.ToString()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(token =>
+                !string.Equals(token, "timeworn", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(token, "treasure", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(token, "map", StringComparison.OrdinalIgnoreCase));
+
+        return string.Join(' ', tokens);
+    }
 }

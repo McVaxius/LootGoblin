@@ -1033,7 +1033,7 @@ private void DrawDependencySection()
 
             DrawPluginStatus("  vnavmesh", plugin.VNavIPC.IsAvailable, true);
             DrawPluginStatus("  Lifestream", plugin.IsLifestreamAvailable, true);
-            DrawPluginStatus("  GlobeTrotter", plugin.GlobeTrotterIPC.IsAvailable, false);
+            DrawPluginStatus("  Map Flag Reader", plugin.MapFlagService.IsAvailable, false);
             DrawPluginStatus("  TextAdvance", plugin.IsTextAdvanceAvailable, false);
             DrawPluginStatus("  ADS", plugin.IsAdsAvailable, plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver);
 
@@ -1076,7 +1076,7 @@ private void DrawDependencySection()
             if (ImGui.Button("Refresh Dependencies"))
             {
                 plugin.VNavIPC.CheckAvailability();
-                plugin.GlobeTrotterIPC.CheckAvailability();
+                plugin.MapFlagService.CheckAvailability();
                 plugin.RotationPluginIPC.CheckAvailability();
                 plugin.AddDebugLog("Dependency check refreshed.");
             }

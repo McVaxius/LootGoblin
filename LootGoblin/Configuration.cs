@@ -50,6 +50,7 @@ public class Configuration : IPluginConfiguration
         "/bmrai on",
         "/vbmai on",
         "/echo wheee",
+        string.Empty,
     };
 
     public List<string> FinishCommandTriggers { get; set; } = new()
@@ -58,6 +59,7 @@ public class Configuration : IPluginConfiguration
         "/rotation cancel",
         "/bmrai off",
         "/vbmai off",
+        string.Empty,
     };
 
     // Mount Settings

@@ -8,8 +8,11 @@ namespace LootGoblin.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
+    private const int CommandTriggerSlotCount = 5;
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
+    private static readonly string[] LandingOrDutyCommandDefaults = { "/rotation Auto", "/bmrai on", "/vbmai on", "/echo wheee", string.Empty };
+    private static readonly string[] FinishCommandDefaults = { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty };
     
     private readonly Configuration configuration;
     private readonly Plugin plugin;
@@ -236,14 +239,14 @@ public class ConfigWindow : Window, IDisposable
         DrawCommandTriggerList(
             "Landing / Duty Entry",
             configuration.LandingOrDutyCommandTriggers,
-            new[] { "/rotation Auto", "/bmrai on", "/vbmai on", "/echo wheee" });
+            LandingOrDutyCommandDefaults);
 
         ImGui.Spacing();
 
         DrawCommandTriggerList(
             "Finish",
             configuration.FinishCommandTriggers,
-            new[] { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off" });
+            FinishCommandDefaults);
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -318,7 +321,8 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawCommandTriggerList(string label, List<string> commands, string[] defaults)
     {
-        EnsureCommandTriggerSlots(commands, defaults);
+        if (EnsureCommandTriggerSlots(commands, defaults))
+            configuration.Save();
 
         ImGui.Text(label);
         ImGui.SameLine();
@@ -329,7 +333,7 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
-        for (var i = 0; i < 4; i++)
+        for (var i = 0; i < CommandTriggerSlotCount; i++)
         {
             var command = commands[i];
             ImGui.SetNextItemWidth(300);
@@ -341,16 +345,21 @@ public class ConfigWindow : Window, IDisposable
         }
     }
 
-    private static void EnsureCommandTriggerSlots(List<string> commands, string[] defaults)
+    private static bool EnsureCommandTriggerSlots(List<string> commands, string[] defaults)
     {
-        while (commands.Count < 4)
+        var changed = false;
+        while (commands.Count < CommandTriggerSlotCount)
         {
             commands.Add(commands.Count < defaults.Length ? defaults[commands.Count] : string.Empty);
+            changed = true;
         }
 
-        while (commands.Count > 4)
+        while (commands.Count > CommandTriggerSlotCount)
         {
             commands.RemoveAt(commands.Count - 1);
+            changed = true;
         }
+
+        return changed;
     }
 }

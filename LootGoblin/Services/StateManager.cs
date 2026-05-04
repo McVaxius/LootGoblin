@@ -135,6 +135,10 @@ public class StateManager : IDisposable
     private int saddlebagInitialInventoryCount;
     private int saddlebagInitialSaddlebagCount;
     private SaddlebagMovePlan? saddlebagMovePlan;
+    private static readonly TimeSpan StartMapRefreshSaddlebagTimeout = TimeSpan.FromSeconds(6.0);
+    private bool startMapRefreshPending;
+    private bool startMapRefreshOpenedSaddlebag;
+    private DateTime startMapRefreshStartedAt = DateTime.MinValue;
 
     // Dungeon state tracking (Phase 8)
     private int dungeonFloor;
@@ -214,7 +218,6 @@ public class StateManager : IDisposable
     private bool portalConfirmedThisMap;
     private bool dungeonConfirmedThisMap;
     private DateTime keyItemMapRecoveryStartedAt = DateTime.MinValue;
-    private bool keyItemMapRecoveryTmapSent;
     private uint activeKeyItemMapItemId;
     private int activeKeyItemMapSlot = -1;
     private DateTime lastKeyItemCompletionGuardLogAt = DateTime.MinValue;
@@ -494,9 +497,17 @@ public class StateManager : IDisposable
             return;
         }
 
+        if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)
+        {
+            SetWarning("Cannot start LootGoblin from Main Menu. Log in first.");
+            _plugin.AddDebugLog("[Start] Ignored start request because client is not logged in.");
+            return;
+        }
+
         ClearWarning();
         ResetRunCommandTriggers();
         ResetSaddlebagRetrieval();
+        ResetStartMapRefresh();
 
         // Check for AutoDuty when starting LootGoblin
         _plugin.RefreshDependencyStatus(logStatus: true);
@@ -552,9 +563,6 @@ public class StateManager : IDisposable
         if (TryRecoverActiveKeyItemMap("[Start]", transitionToDetectingOnActive: true))
             return;
 
-        if (!ShouldIgnoreExistingMapFlagForRetainerOnlyWork("[Start]") && TryStartFromExistingMapFlag("[Start]"))
-            return;
-
         RetryCount = 0;
         CurrentLocation = null;
         SelectedMapItemId = 0;
@@ -567,7 +575,8 @@ public class StateManager : IDisposable
             _plugin.ShowAdsMissingToast();
         }
 
-        TransitionTo(BotState.SelectingMap, "Starting map run...");
+        BeginStartMapRefresh();
+        TransitionTo(BotState.SelectingMap, "Starting map run - refreshing saddlebag maps...");
     }
 
     public void Stop()
@@ -586,6 +595,7 @@ public class StateManager : IDisposable
         ResetAdsHandoffTracking(resetStatus: true);
         _plugin.RetainerMapRetrievalService.Reset();
         ResetSaddlebagRetrieval();
+        ResetStartMapRefresh();
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         RestoreMountedRotationLifecycle("bot stop");
@@ -605,6 +615,7 @@ public class StateManager : IDisposable
         ResetAdsHandoffTracking(resetStatus: true);
         _plugin.RetainerMapRetrievalService.Reset();
         ResetSaddlebagRetrieval();
+        ResetStartMapRefresh();
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         RestoreMountedRotationLifecycle("full reset");
@@ -630,26 +641,6 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog("Bot resumed.");
     }
 
-    private bool TryStartFromExistingMapFlag(string source)
-    {
-        var existingFlag = _plugin.GlobeTrotterIPC.TryGetMapLocation();
-        if (existingFlag == null)
-            return false;
-
-        RetryCount = 0;
-        CurrentLocation = null;
-        SelectedMapItemId = 0;
-        currentLandingMode = OverworldLandingMode.MountToggle;
-        initialMapCount = 0;
-        mapCountChecked = true;
-        mapOpeningRetried = false;
-        ResetPerMapCommandTriggers();
-        SetWarning("A deciphered map flag is already set. LootGoblin is proceeding from the existing flag instead of opening another map.");
-        _plugin.AddDebugLog($"{source} Existing deciphered map flag detected - skipping map opening.");
-        TransitionTo(BotState.DetectingLocation, "Using existing map flag already set in the world map...");
-        return true;
-    }
-
     private bool TryRecoverActiveKeyItemMap(string source, bool transitionToDetectingOnActive)
     {
         if (!_plugin.InventoryService.TryFindTreasureMapKeyItem(out var keyItem))
@@ -661,13 +652,13 @@ public class StateManager : IDisposable
         }
 
         UpdateActiveKeyItemMap(keyItem, source);
+        mapCountChecked = true;
+        mapOpeningRetried = false;
+        initialMapCount = 0;
 
-        var existingFlag = _plugin.GlobeTrotterIPC.TryGetMapLocation();
+        var existingFlag = _plugin.MapFlagService.TryGetMapLocation();
         if (existingFlag != null)
         {
-            mapCountChecked = true;
-            mapOpeningRetried = false;
-            initialMapCount = 0;
             ResetKeyItemMapRecoveryState();
             SetWarning($"Active deciphered map key item '{keyItem.DisplayName}' found. LootGoblin will finish it before opening another map.");
 
@@ -686,16 +677,7 @@ public class StateManager : IDisposable
         if (keyItemMapRecoveryStartedAt == DateTime.MinValue)
         {
             keyItemMapRecoveryStartedAt = now;
-            keyItemMapRecoveryTmapSent = false;
             _plugin.AddDebugLog($"{source} Active key-item map found ({keyItem.DisplayName}) but AgentMap has no flag.");
-        }
-
-        _plugin.GlobeTrotterIPC.CheckAvailability(logStatus: false);
-        if (_plugin.GlobeTrotterIPC.IsAvailable && !keyItemMapRecoveryTmapSent)
-        {
-            CommandHelper.SendCommand("/tmap");
-            keyItemMapRecoveryTmapSent = true;
-            _plugin.AddDebugLog($"{source} Sent /tmap to recover active key-item map flag.");
         }
 
         var elapsed = now - keyItemMapRecoveryStartedAt;
@@ -705,23 +687,14 @@ public class StateManager : IDisposable
             return true;
         }
 
-        if (!_plugin.GlobeTrotterIPC.IsAvailable)
-        {
-            var message = $"Treasure map key item '{keyItem.DisplayName}' is active, but GlobeTrotter is not loaded. Load GlobeTrotter or open /tmap manually before selecting another map.";
-            SetWarning(message);
-            StateDetail = message;
-            stateStartTime = DateTime.Now;
-            return true;
-        }
-
         if (elapsed < KeyItemMapRecoveryTimeout)
         {
-            StateDetail = $"Recovering active map flag from /tmap... ({elapsed.TotalSeconds:F0}/{KeyItemMapRecoveryTimeout.TotalSeconds:F0}s)";
+            StateDetail = $"Waiting for active key-item map flag... ({elapsed.TotalSeconds:F0}/{KeyItemMapRecoveryTimeout.TotalSeconds:F0}s)";
             stateStartTime = DateTime.Now;
             return true;
         }
 
-        var blocked = $"Treasure map key item '{keyItem.DisplayName}' is active, but no map flag was recovered after /tmap. Finish or reset that map before opening another.";
+        var blocked = $"Treasure map key item '{keyItem.DisplayName}' is active, but no local map flag is set. Open the key item map or set the map flag before opening another.";
         SetWarning(blocked);
         StateDetail = blocked;
         stateStartTime = DateTime.Now;
@@ -754,30 +727,6 @@ public class StateManager : IDisposable
         {
             currentLandingMode = OverworldLandingMode.MountToggle;
         }
-    }
-
-    private bool ShouldIgnoreExistingMapFlagForRetainerOnlyWork(string source)
-    {
-        if (_plugin.GlobeTrotterIPC.TryGetMapLocation() == null)
-            return false;
-
-        if (!_plugin.Configuration.EnableRetainerMapRetrieval)
-            return false;
-
-        var mapSources = _plugin.InventoryService.ScanForMapSources();
-        if (GetEnabledMapCandidates(mapSources, includeInventory: true, includeSaddlebags: true).Count > 0)
-            return false;
-
-        var enabledForRetainers = _plugin.Configuration.EnabledMapTypes.Count > 0
-            ? _plugin.Configuration.EnabledMapTypes.ToList()
-            : TreasureMapData.KnownMaps.Keys.ToList();
-
-        if (!_plugin.RetainerMapRetrievalService.HasRetainerMapCandidate(enabledForRetainers))
-            return false;
-
-        _plugin.AddDebugLog($"{source} Existing deciphered map flag ignored because selected work exists only on a retainer.");
-        ClearWarning();
-        return true;
     }
 
     private List<uint> GetEnabledMapCandidates(
@@ -1086,6 +1035,76 @@ public class StateManager : IDisposable
         saddlebagMovePlan = null;
     }
 
+    private void BeginStartMapRefresh()
+    {
+        startMapRefreshPending = true;
+        startMapRefreshOpenedSaddlebag = false;
+        startMapRefreshStartedAt = DateTime.Now;
+        _plugin.AddDebugLog("[MapRefresh][Start] Queued saddlebag refresh before selecting a map.");
+    }
+
+    private void ResetStartMapRefresh()
+    {
+        startMapRefreshPending = false;
+        startMapRefreshOpenedSaddlebag = false;
+        startMapRefreshStartedAt = DateTime.MinValue;
+    }
+
+    private bool TickStartMapRefresh()
+    {
+        if (!startMapRefreshPending)
+            return false;
+
+        if (!GameHelpers.IsPlayerAvailable())
+        {
+            StateDetail = "Waiting to refresh saddlebags: player unavailable...";
+            return true;
+        }
+
+        if (GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            CompleteStartMapRefresh(startMapRefreshOpenedSaddlebag, "Saddlebag visible; refreshed loaded map sources.");
+            return true;
+        }
+
+        if (!startMapRefreshOpenedSaddlebag)
+        {
+            if (CommandHelper.TrySendCommand("/saddlebag"))
+            {
+                startMapRefreshOpenedSaddlebag = true;
+                startMapRefreshStartedAt = DateTime.Now;
+                _plugin.AddDebugLog("[MapRefresh][Start] Opened saddlebag for start refresh.");
+            }
+
+            StateDetail = "Opening saddlebag to refresh map sources...";
+            return true;
+        }
+
+        if (DateTime.Now - startMapRefreshStartedAt < StartMapRefreshSaddlebagTimeout)
+        {
+            StateDetail = "Waiting for saddlebag map refresh...";
+            return true;
+        }
+
+        CompleteStartMapRefresh(closeSaddlebagAfterScan: false, "Saddlebag did not open before timeout; refreshed currently loaded map sources.");
+        return true;
+    }
+
+    private void CompleteStartMapRefresh(bool closeSaddlebagAfterScan, string detail)
+    {
+        _plugin.InventoryService.ScanForMapSources(includeSaddlebags: true);
+
+        if (closeSaddlebagAfterScan && GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            GameHelpers.CloseCurrentAddon();
+            _plugin.AddDebugLog("[MapRefresh][Start] Closed saddlebag after start refresh.");
+        }
+
+        ResetStartMapRefresh();
+        StateDetail = "Saddlebag map refresh complete.";
+        _plugin.AddDebugLog($"[MapRefresh][Start] {detail}");
+    }
+
     private bool TryRetrieveRetainerMap(IReadOnlyCollection<uint> enabledMapIds, string emptyInventoryError)
     {
         if (!_plugin.Configuration.EnableRetainerMapRetrieval)
@@ -1176,7 +1195,6 @@ public class StateManager : IDisposable
     private void ResetKeyItemMapRecoveryState(bool clearActiveKey = false)
     {
         keyItemMapRecoveryStartedAt = DateTime.MinValue;
-        keyItemMapRecoveryTmapSent = false;
         if (!clearActiveKey)
             return;
 
@@ -1249,8 +1267,8 @@ public class StateManager : IDisposable
             if (string.IsNullOrWhiteSpace(trimmed))
                 continue;
 
-            CommandHelper.SendCommand(trimmed);
-            sent++;
+            if (CommandHelper.TrySendCommand(trimmed))
+                sent++;
         }
 
         if (sent > 0)
@@ -2057,13 +2075,16 @@ public class StateManager : IDisposable
         if (portalMapFlagCleared)
             return;
 
-        var cleared = GameHelpers.ClearMapFlag(_plugin.GlobeTrotterIPC.TryReadFlag);
+        var cleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
         portalMapFlagCleared = true;
         _plugin.AddDebugLog($"[Portal] Cleared map flag before first portal interaction (verified={cleared}).");
     }
 
     private void TickSelectingMap()
     {
+        if (TickStartMapRefresh())
+            return;
+
         if (saddlebagRetrievalStep != SaddlebagRetrievalStep.Idle)
         {
             TickSaddlebagMapRetrieval();
@@ -2161,7 +2182,7 @@ public class StateManager : IDisposable
                        Plugin.Condition[ConditionFlag.BetweenAreas51];
         if (!loading)
         {
-            var cleared = GameHelpers.ClearMapFlag(_plugin.GlobeTrotterIPC.TryReadFlag);
+            var cleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
             _plugin.AddDebugLog($"[SelectingMap] Cleared existing map flag (verified={cleared})");
         }
         else
@@ -2247,7 +2268,7 @@ public class StateManager : IDisposable
         }
 
         // Try to read the map flag from AgentMap (set when map is deciphered)
-        var location = _plugin.GlobeTrotterIPC.TryGetMapLocation();
+        var location = _plugin.MapFlagService.TryGetMapLocation();
         if (location != null)
         {
             // Find nearest aetheryte to navigate from (pass flag position for closest-to-target selection)
@@ -6639,7 +6660,7 @@ public class StateManager : IDisposable
         if (loading)
             return;
 
-        var cleared = GameHelpers.ClearMapFlag(_plugin.GlobeTrotterIPC.TryReadFlag);
+        var cleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
         pendingDungeonMapFlagClear = false;
         _plugin.AddDebugLog($"[MapFlag] Cleared overworld flag after treasure dungeon entry (verified={cleared})");
     }
