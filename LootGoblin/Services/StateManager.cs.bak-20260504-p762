@@ -106,7 +106,6 @@ public class StateManager : IDisposable
     private const double TickIntervalSeconds = 0.5;
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float MapDigXZRange = 5.0f;
-    private const double SameZoneAetheryteTeleportSkipXZRange = 50.0;
     private const float PortalInteractionRange = 3.0f;
     private const float OpeningChestCofferMountRecoveryDistance = 3.0f;
     private const float OpeningChestCofferMountRecoveryYDelta = 0.5f;
@@ -759,24 +758,15 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"{source} Active treasure map key item: {keyItem.DisplayName} (item {keyItem.ItemId}, slot {keyItem.Slot}).");
         }
 
-        if (keyItem.KnownMapItemId != 0)
+        if (keyItem.KnownMapItemId != 0 && SelectedMapItemId != keyItem.KnownMapItemId)
         {
-            var landingMode = ResolveLandingMode(keyItem.KnownMapItemId);
-            if (SelectedMapItemId != keyItem.KnownMapItemId || currentLandingMode != landingMode)
-            {
-                SelectedMapItemId = keyItem.KnownMapItemId;
-                currentLandingMode = landingMode;
-                if (currentLandingMode != OverworldLandingMode.UnderwaterBounce)
-                    ResetUnderwaterLandingState();
-                _plugin.AddDebugLog($"{source} Matched key item to known map ID {SelectedMapItemId}; landing mode {currentLandingMode}.");
-            }
+            SelectedMapItemId = keyItem.KnownMapItemId;
+            currentLandingMode = ResolveLandingMode(SelectedMapItemId);
+            _plugin.AddDebugLog($"{source} Matched key item to known map ID {SelectedMapItemId}; landing mode {currentLandingMode}.");
         }
-        else if (SelectedMapItemId != 0 || currentLandingMode != OverworldLandingMode.MountToggle)
+        else if (SelectedMapItemId == 0)
         {
-            SelectedMapItemId = 0;
             currentLandingMode = OverworldLandingMode.MountToggle;
-            ResetUnderwaterLandingState();
-            _plugin.AddDebugLog($"{source} Active key-item map type is unknown; landing mode MountToggle.");
         }
     }
 
@@ -1215,22 +1205,6 @@ public class StateManager : IDisposable
         portalConfirmedThisMap = false;
         dungeonConfirmedThisMap = false;
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
-        ResetUnderwaterLandingState();
-    }
-
-    private void ResetUnderwaterLandingState()
-    {
-        if (descentInProgress)
-        {
-            GameHelpers.KeyRelease(VirtualKey.CONTROL);
-            GameHelpers.KeyRelease(VirtualKey.SPACE);
-        }
-
-        dismountAttemptStart = DateTime.MinValue;
-        descentInProgress = false;
-        descentMode = false;
-        descentStartTime = DateTime.MinValue;
-        descentStartY = 0f;
         lastUnderwaterBounceDescentStart = DateTime.MinValue;
         underwaterBounceHoldLogged = false;
         underwaterBounceSuppressedVnavLogged = false;
@@ -1466,7 +1440,7 @@ public class StateManager : IDisposable
     private bool ShouldAssumeThiefMapFromDiving()
     {
         return Plugin.Condition[ConditionFlag.Diving]
-            && IsThiefMap(SelectedMapItemId)
+            && (SelectedMapItemId == 0 || IsThiefMap(SelectedMapItemId))
             && (State == BotState.Flying || State == BotState.OpeningChest);
     }
 
@@ -1475,21 +1449,13 @@ public class StateManager : IDisposable
         if (State != BotState.Flying && State != BotState.OpeningChest)
             return false;
 
-        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce && !IsThiefMap(SelectedMapItemId))
-        {
-            currentLandingMode = OverworldLandingMode.MountToggle;
-            ResetUnderwaterLandingState();
-            _plugin.AddDebugLog($"[Landing] Cleared underwater bounce for non-thief map ID {SelectedMapItemId}; using MountToggle.");
-            return false;
-        }
-
         if (currentLandingMode != OverworldLandingMode.UnderwaterBounce)
         {
             if (!ShouldAssumeThiefMapFromDiving())
                 return false;
 
             currentLandingMode = OverworldLandingMode.UnderwaterBounce;
-            _plugin.AddDebugLog("[Underwater] Diving detected for thief map - enabling thief-map trigger flow");
+            _plugin.AddDebugLog("[Underwater] Diving detected with unknown map type - assuming thief-map trigger flow");
         }
 
         if (Plugin.Condition[ConditionFlag.Diving]
@@ -2409,20 +2375,6 @@ public class StateManager : IDisposable
                 {
                     _plugin.AddDebugLog($"[DetectingLocation] Already within dig range ({playerXZDistToFlag:F1}y XZ) - landing/digging without teleport or mount setup.");
                     TransitionTo(BotState.Flying, "Already at map location - landing and digging...");
-                    return;
-                }
-
-                var playerXZDistToAetheryte = aetheryteId != 0
-                    ? _plugin.NavigationService.GetPlayerXZDistanceToAetheryte(aetheryteId)
-                    : null;
-
-                if (playerXZDistToAetheryte is { } aetherytePlayerDistance
-                    && aetherytePlayerDistance <= SameZoneAetheryteTeleportSkipXZRange)
-                {
-                    _plugin.AddDebugLog(
-                        $"[DetectingLocation] Player is already within {SameZoneAetheryteTeleportSkipXZRange:F0}y XZ of selected aetheryte {aetheryteId} " +
-                        $"({aetherytePlayerDistance:F1}y) - skipping same-zone teleport.");
-                    TransitionTo(BotState.Mounting, "Already near selected aetheryte - mounting up...");
                     return;
                 }
 

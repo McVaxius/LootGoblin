@@ -639,44 +639,6 @@ public class NavigationService : IDisposable
         return _condition[ConditionFlag.InFlight] || _condition[ConditionFlag.Diving];
     }
 
-    internal double? GetPlayerXZDistanceToAetheryte(uint aetheryteId)
-    {
-        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-        if (playerPos == Vector3.Zero)
-            return null;
-
-        if (!TryGetAetheryteWorldPosition(aetheryteId, out var aetherytePosition))
-            return null;
-
-        var dx = playerPos.X - aetherytePosition.X;
-        var dz = playerPos.Z - aetherytePosition.Z;
-        return Math.Sqrt(dx * dx + dz * dz);
-    }
-
-    private bool TryGetAetheryteWorldPosition(uint aetheryteId, out Vector3 position)
-    {
-        position = Vector3.Zero;
-        if (aetheryteId == 0)
-            return false;
-
-        if (_plugin.AetherytePositionDatabase != null)
-        {
-            var storedPosition = _plugin.AetherytePositionDatabase.GetPosition(aetheryteId);
-            if (storedPosition != null)
-            {
-                position = new Vector3(storedPosition.X, storedPosition.Y, storedPosition.Z);
-                return true;
-            }
-        }
-
-        var estimatedPosition = GetEstimatedAetherytePosition(aetheryteId);
-        if (estimatedPosition == Vector3.Zero)
-            return false;
-
-        position = estimatedPosition;
-        return true;
-    }
-
     /// <summary>
     /// Get the estimated X,Z position of an aetheryte from Lumina data.
     /// Uses the same MapMarker coordinate conversion as FindNearestAetheryte.

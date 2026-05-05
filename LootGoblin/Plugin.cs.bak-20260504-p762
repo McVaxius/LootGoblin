@@ -78,8 +78,6 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime lastDependencyRefreshAt = DateTime.MinValue;
     private IChatGui.OnHandleableChatMessageDelegate? chatMessageObserver;
     private static readonly TimeSpan DependencyRefreshInterval = TimeSpan.FromSeconds(10);
-    private bool ecommonsInitialized;
-    private bool ecommonsCallbackHookInstalled;
 
     public bool IsAdsAvailable
     {
@@ -92,17 +90,6 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin()
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-
-        try
-        {
-            ECommonsMain.Init(PluginInterface, this);
-            ecommonsInitialized = true;
-            AddDebugLog("ECommons initialized.");
-        }
-        catch (Exception ex)
-        {
-            Log.Error($"Failed to initialize ECommons: {ex}");
-        }
 
         // Initialize services
         InventoryService = new InventoryService(this, DataManager, Log);
@@ -184,12 +171,11 @@ public sealed class Plugin : IDalamudPlugin
         try
         {
             Callback.InstallHook();
-            ecommonsCallbackHookInstalled = true;
             AddDebugLog("ECommons callback hook installed.");
         }
         catch (Exception ex)
         {
-            Log.Error($"Failed to install ECommons callback hook: {ex}");
+            Log.Error($"Failed to install ECommons callback hook: {ex.Message}");
         }
 
         AddDebugLog("Loot Goblin loaded.");
@@ -228,32 +214,15 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(CommandName);
         CommandManager.RemoveHandler(CommandAlias);
 
-        if (ecommonsCallbackHookInstalled)
+        // Dispose ECommons callback hook
+        try
         {
-            try
-            {
-                Callback.UninstallHook();
-                ecommonsCallbackHookInstalled = false;
-                AddDebugLog("ECommons callback hook uninstalled.");
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Failed to uninstall ECommons callback hook: {ex}");
-            }
+            Callback.UninstallHook();
+            AddDebugLog("ECommons callback hook uninstalled.");
         }
-
-        if (ecommonsInitialized)
+        catch (Exception ex)
         {
-            try
-            {
-                ECommonsMain.Dispose();
-                ecommonsInitialized = false;
-                AddDebugLog("ECommons disposed.");
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Failed to dispose ECommons: {ex}");
-            }
+            Log.Error($"Failed to uninstall ECommons callback hook: {ex.Message}");
         }
 
         ClientState.Login -= OnLogin;

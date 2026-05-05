@@ -1,19 +1,14 @@
 using System;
 using System.Linq;
 using Dalamud.Plugin.Services;
+using ECommons;
 using LootGoblin.Windows;
+using LootGoblin.Models;
 
 namespace LootGoblin.Services;
 
 public class AutoDutyDetectionService : IDisposable
 {
-    private enum WatchedPluginState
-    {
-        NotInstalled,
-        InstalledDisabled,
-        Enabled,
-    }
-
     private readonly Plugin plugin;
     private readonly IChatGui chatGui;
     private readonly IFramework framework;
@@ -24,8 +19,6 @@ public class AutoDutyDetectionService : IDisposable
     private readonly TimeSpan checkInterval = TimeSpan.FromSeconds(5);
     private bool autoDutyDetected = false;
     private bool warningShown = false;
-    private WatchedPluginState? lastAutoDutyState;
-    private WatchedPluginState? lastReActionState;
 
     public AutoDutyDetectionService(Plugin plugin, IChatGui chatGui, IFramework framework, IPluginLog log, AutoDutyWarningWindow warningWindow)
     {
@@ -49,15 +42,13 @@ public class AutoDutyDetectionService : IDisposable
         CheckForAutoDuty();
     }
 
-    private void CheckForAutoDuty(bool forceLog = false)
+    private void CheckForAutoDuty()
     {
         try
         {
             // Method 1: Check if AutoDuty plugin is installed AND enabled
             bool autoDutyInstalled = false;
             bool autoDutyEnabled = false;
-            var autoDutyState = WatchedPluginState.NotInstalled;
-            var reActionState = WatchedPluginState.NotInstalled;
             try
             {
                 var installedPlugins = Plugin.PluginInterface.InstalledPlugins;
@@ -65,7 +56,7 @@ public class AutoDutyDetectionService : IDisposable
                     p.InternalName.Equals("AutoDuty", StringComparison.OrdinalIgnoreCase) ||
                     p.Name.Contains("AutoDuty", StringComparison.OrdinalIgnoreCase));
                 
-                var reActionPlugin = installedPlugins.FirstOrDefault(p =>
+                 var ReActionPlugin = installedPlugins.FirstOrDefault(p => 
                     p.InternalName.Equals("ReAction", StringComparison.OrdinalIgnoreCase) ||
                     p.Name.Contains("ReAction", StringComparison.OrdinalIgnoreCase));
                 
@@ -73,22 +64,30 @@ public class AutoDutyDetectionService : IDisposable
                 {
                     autoDutyInstalled = true;
                     autoDutyEnabled |= autodutyPlugin.IsLoaded; // Check if actually loaded/enabled
-                    autoDutyState = autodutyPlugin.IsLoaded
-                        ? WatchedPluginState.Enabled
-                        : WatchedPluginState.InstalledDisabled;
+                    
+                    if (autodutyPlugin.IsLoaded)
+                    {
+                        log.Information("[LootGoblin.AutoDutyDetection] AutoDuty plugin is enabled and running");
+                    }
+                    else
+                    {
+                        log.Information("[LootGoblin.AutoDutyDetection] AutoDuty plugin is installed but disabled");
+                    }
                 }
 
-                if (reActionPlugin != null)
+                if (ReActionPlugin != null)
                 {
                     autoDutyInstalled = true;
-                    autoDutyEnabled |= reActionPlugin.IsLoaded;
-                    reActionState = reActionPlugin.IsLoaded
-                        ? WatchedPluginState.Enabled
-                        : WatchedPluginState.InstalledDisabled;
+                    autoDutyEnabled |= ReActionPlugin.IsLoaded;
+                    if (ReActionPlugin.IsLoaded)
+                    {
+                        log.Information("[LootGoblin.AutoDutyDetection] ReAction plugin is enabled and running");
+                    }
+                    else
+                    {
+                        log.Information("[LootGoblin.AutoDutyDetection] ReAction plugin is installed but disabled");
+                    }
                 }
-
-                LogWatchedPluginState("AutoDuty", autoDutyState, ref lastAutoDutyState, forceLog);
-                LogWatchedPluginState("ReAction", reActionState, ref lastReActionState, forceLog);
             }
             catch (Exception ex)
             {
@@ -104,10 +103,7 @@ public class AutoDutyDetectionService : IDisposable
             var wasDetected = autoDutyDetected;
             autoDutyDetected = autoDutyEnabled || autoDutyActive; // Only detect if actually enabled
 
-            if (forceLog || wasDetected != autoDutyDetected)
-            {
-                log.Debug($"[LootGoblin.AutoDutyDetection] Detection result: Installed={autoDutyInstalled}, Enabled={autoDutyEnabled}, Active={autoDutyActive}, Detected={autoDutyDetected}");
-            }
+            log.Debug($"[LootGoblin.AutoDutyDetection] Detection result: Installed={autoDutyInstalled}, Enabled={autoDutyEnabled}, Active={autoDutyActive}, Detected={autoDutyDetected}");
 
             // Log state changes and show warning if both conditions are met
             if (autoDutyDetected && !wasDetected)
@@ -127,31 +123,16 @@ public class AutoDutyDetectionService : IDisposable
                     log.Information("[LootGoblin.AutoDutyDetection] Closed warning window since AutoDuty is no longer detected");
                 }
             }
+            else if (autoDutyDetected && wasDetected)
+            {
+                log.Debug("[LootGoblin.AutoDutyDetection] AutoDuty still detected - no action taken");
+                // Don't show warning automatically - only when START is clicked
+            }
         }
         catch (Exception ex)
         {
             log.Error($"[LootGoblin.AutoDutyDetection] Error checking for AutoDuty: {ex.Message}");
         }
-    }
-
-    private void LogWatchedPluginState(
-        string pluginName,
-        WatchedPluginState state,
-        ref WatchedPluginState? lastState,
-        bool forceLog)
-    {
-        if (!forceLog && lastState == state)
-            return;
-
-        lastState = state;
-        var message = state switch
-        {
-            WatchedPluginState.Enabled => $"{pluginName} plugin is enabled and running",
-            WatchedPluginState.InstalledDisabled => $"{pluginName} plugin is installed but disabled",
-            _ => $"{pluginName} plugin is not installed",
-        };
-
-        log.Information($"[LootGoblin.AutoDutyDetection] {message}");
     }
 
     private void ShowWarning()
@@ -191,7 +172,7 @@ public class AutoDutyDetectionService : IDisposable
     public void ForceCheck()
     {
         log.Information("[LootGoblin.AutoDutyDetection] Force checking for AutoDuty");
-        CheckForAutoDuty(forceLog: true);
+        CheckForAutoDuty();
     }
 
     public void Dispose()
