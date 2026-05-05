@@ -86,12 +86,12 @@ public class MainWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
-        DrawControlsSection();
+        DrawBotControlSection();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
-        DrawBotControlSection();
+        DrawOperatorDashboardSection();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -203,9 +203,12 @@ public class MainWindow : Window, IDisposable
         }
     }
 
-    private void DrawControlsSection()
+    private void DrawOperatorDashboardSection()
     {
-        if (ImGui.Button("Settings", new Vector2(120, 0)))
+        if (!ImGui.CollapsingHeader("Operator Controls", ImGuiTreeNodeFlags.DefaultOpen))
+            return;
+
+        if (ImGui.Button("Full Settings", new Vector2(120, 0)))
         {
             plugin.ToggleConfigUi();
         }
@@ -224,6 +227,95 @@ public class MainWindow : Window, IDisposable
         {
             plugin.StateManager.ResetAll();
         }
+
+        ImGui.Spacing();
+
+        ImGui.TextColored(ColorCyan, "Run");
+        if (ImGui.BeginTable("##LootGoblinRunToggles", 2, ImGuiTableFlags.SizingStretchSame))
+        {
+            DrawDashboardCheckboxCell("Bot Enabled", plugin.Configuration.Enabled, value => plugin.Configuration.Enabled = value);
+            DrawDashboardCheckboxCell("Auto-Start Next Map", plugin.Configuration.AutoStartNextMap, value => plugin.Configuration.AutoStartNextMap = value);
+            DrawDashboardCheckboxCell("Show Main Window on Login", plugin.Configuration.ShowMainWindow, value => plugin.Configuration.ShowMainWindow = value);
+            ImGui.EndTable();
+        }
+
+        ImGui.TextColored(ColorCyan, "Travel");
+        if (ImGui.BeginTable("##LootGoblinTravelToggles", 2, ImGuiTableFlags.SizingStretchSame))
+        {
+            DrawDashboardCheckboxCell("Auto Teleport", plugin.Configuration.AutoTeleport, value => plugin.Configuration.AutoTeleport = value);
+            DrawDashboardCheckboxCell("Require vnavmesh", plugin.Configuration.RequireVNav, value => plugin.Configuration.RequireVNav = value);
+            DrawDashboardCheckboxCell("Use ADS for dungeons", plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver, value => plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver = value,
+                "After duty entry, LootGoblin sends /ads and waits for ADS instead of using the legacy dungeon solver.");
+            ImGui.EndTable();
+        }
+        if (plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
+            ImGui.TextColored(ColorRed, "ADS handoff enabled, but ADS is not loaded.");
+
+        ImGui.TextColored(ColorCyan, "Automation");
+        if (ImGui.BeginTable("##LootGoblinAutomationToggles", 2, ImGuiTableFlags.SizingStretchSame))
+        {
+            DrawDashboardCheckboxCell("Fetch retainer maps", plugin.Configuration.EnableRetainerMapRetrieval, value => plugin.Configuration.EnableRetainerMapRetrieval = value,
+                "When no enabled map is in inventory or loaded saddlebags, try to withdraw one from retainers through XA Database / XA Slave.");
+            DrawDashboardCheckboxCell("Auto Discard", plugin.Configuration.EnableAutoDiscard, value => plugin.Configuration.EnableAutoDiscard = value,
+                "Runs /ays discard during safe idle windows.");
+            DrawDashboardCheckboxCell("Auto Loot Chest", plugin.Configuration.AutoLootChest, value => plugin.Configuration.AutoLootChest = value);
+            DrawDashboardCheckboxCell("Summon Chocobo", plugin.Configuration.SummonChocobo, value => plugin.Configuration.SummonChocobo = value);
+            ImGui.EndTable();
+        }
+
+        if (plugin.Configuration.SummonChocobo)
+        {
+            var stances = new[] { "Free Stance", "Defender Stance", "Attacker Stance", "Healer Stance", "Follow" };
+            var stanceIdx = Array.IndexOf(stances, plugin.Configuration.CompanionStance);
+            if (stanceIdx < 0)
+                stanceIdx = 0;
+
+            ImGui.SetNextItemWidth(180f);
+            if (ImGui.Combo("Companion Stance##Dashboard", ref stanceIdx, stances, stances.Length))
+            {
+                plugin.Configuration.CompanionStance = stances[stanceIdx];
+                plugin.Configuration.Save();
+            }
+        }
+
+        ImGui.TextColored(ColorCyan, "Party");
+        if (ImGui.BeginTable("##LootGoblinPartyToggles", 2, ImGuiTableFlags.SizingStretchSame))
+        {
+            DrawDashboardCheckboxCell("Wait for Party", plugin.Configuration.WaitForParty, value => plugin.Configuration.WaitForParty = value,
+                "Wait for party members to mount before travel.");
+            DrawDashboardCheckboxCell("Require All Mounted", plugin.Configuration.RequireAllMounted, value => plugin.Configuration.RequireAllMounted = value);
+            DrawDashboardCheckboxCell("Wait Before Dismount", plugin.Configuration.PartyWaitBeforeDismount, value => plugin.Configuration.PartyWaitBeforeDismount = value,
+                "Wait for party members near the destination before dismounting.");
+            ImGui.EndTable();
+        }
+
+        ImGui.TextColored(ColorCyan, "Debug");
+        if (ImGui.BeginTable("##LootGoblinDebugToggles", 2, ImGuiTableFlags.SizingStretchSame))
+        {
+            DrawDashboardCheckboxCell("State Logging", plugin.Configuration.EnableStateLogging, value => plugin.Configuration.EnableStateLogging = value);
+            DrawDashboardCheckboxCell("Debug Mode", plugin.Configuration.DebugMode, value => plugin.Configuration.DebugMode = value);
+            DrawDashboardCheckboxCell("Map Debug Tools", plugin.Configuration.ShowDebugMapCompletion, value => plugin.Configuration.ShowDebugMapCompletion = value);
+            ImGui.EndTable();
+        }
+    }
+
+    private void DrawDashboardCheckboxCell(string label, bool currentValue, Action<bool> setter, string? tooltip = null)
+    {
+        ImGui.TableNextColumn();
+        DrawSavedCheckbox(label, currentValue, setter, tooltip);
+    }
+
+    private void DrawSavedCheckbox(string label, bool currentValue, Action<bool> setter, string? tooltip = null)
+    {
+        var value = currentValue;
+        if (ImGui.Checkbox(label, ref value))
+        {
+            setter(value);
+            plugin.Configuration.Save();
+        }
+
+        if (!string.IsNullOrWhiteSpace(tooltip) && ImGui.IsItemHovered())
+            ImGui.SetTooltip(tooltip);
     }
 
     private void DrawMapInventorySection()
@@ -288,7 +380,10 @@ public class MainWindow : Window, IDisposable
                         ImGui.SameLine();
                         ImGui.Text($"{itemName} x{quantity}");
                         ImGui.SameLine();
-                        ImGui.TextColored(ColorGrey, $"  [Inv {kvp.Value.Inventory} | Saddle {kvp.Value.Saddlebag} | Prem {kvp.Value.PremiumSaddlebag} | Retainer {kvp.Value.Retainer}]");
+                        var combinedSaddlebag = kvp.Value.Saddlebag + kvp.Value.PremiumSaddlebag;
+                        ImGui.TextColored(ColorGrey, $"  [Inv {kvp.Value.Inventory} | Saddlebag {combinedSaddlebag} | Retainer {kvp.Value.Retainer}]");
+                        if (ImGui.IsItemHovered())
+                            ImGui.SetTooltip($"Saddlebag includes regular ({kvp.Value.Saddlebag}) + premium ({kvp.Value.PremiumSaddlebag}) saddlebag counts.");
                         if (mapTier > 0)
                         {
                             ImGui.SameLine();
