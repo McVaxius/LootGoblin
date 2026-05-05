@@ -512,6 +512,7 @@ public class StateManager : IDisposable
         ResetRunCommandTriggers();
         ResetSaddlebagRetrieval();
         ResetStartMapRefresh();
+        _plugin.TreasureMapLocationService.ClearCapturedLocation();
 
         // Check for AutoDuty when starting LootGoblin
         _plugin.RefreshDependencyStatus(logStatus: true);
@@ -675,6 +676,24 @@ public class StateManager : IDisposable
                 RetryCount = 0;
                 CurrentLocation = null;
                 TransitionTo(BotState.DetectingLocation, $"Recovered active map flag from {keyItem.DisplayName}...");
+                return true;
+            }
+
+            return false;
+        }
+
+        if (_plugin.TreasureMapLocationService.TryGetLatestLocationForKeyItem(keyItem.ItemId, out _))
+        {
+            ResetKeyItemMapRecoveryState();
+            SetWarning(keyItem.KnownMapItemId == 0
+                ? $"Active treasure map key item '{keyItem.DisplayName}' found. LootGoblin recovered its location locally and will not open another map."
+                : $"Active deciphered map key item '{keyItem.DisplayName}' found. LootGoblin recovered its location locally and will finish it before opening another map.");
+
+            if (transitionToDetectingOnActive && State != BotState.DetectingLocation)
+            {
+                RetryCount = 0;
+                CurrentLocation = null;
+                TransitionTo(BotState.DetectingLocation, $"Recovered active map location from {keyItem.DisplayName}...");
                 return true;
             }
 
@@ -1216,6 +1235,7 @@ public class StateManager : IDisposable
         dungeonConfirmedThisMap = false;
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
         ResetUnderwaterLandingState();
+        _plugin.TreasureMapLocationService.ClearCapturedLocation();
     }
 
     private void ResetUnderwaterLandingState()
@@ -2346,6 +2366,12 @@ public class StateManager : IDisposable
 
         // Try to read the map flag from AgentMap (set when map is deciphered)
         var location = _plugin.MapFlagService.TryGetMapLocation();
+        if (location == null && _plugin.TreasureMapLocationService.TryGetLatestLocation(SelectedMapItemId, activeKeyItemMapItemId, out var capturedLocation))
+        {
+            location = capturedLocation;
+            _plugin.AddDebugLog("[DetectingLocation] Using captured treasure-map location because AgentMap has no flag.");
+        }
+
         if (location != null)
         {
             // Find nearest aetheryte to navigate from (pass flag position for closest-to-target selection)
@@ -2452,7 +2478,7 @@ public class StateManager : IDisposable
 
         // Not found yet - keep polling (timeout handled by StateTimeouts)
         var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-        StateDetail = $"Waiting for map flag... ({elapsed:F0}s / {StateTimeouts[BotState.DetectingLocation]}s)";
+        StateDetail = $"Waiting for map location... ({elapsed:F0}s / {StateTimeouts[BotState.DetectingLocation]}s)";
     }
 
     private void TickTeleporting()

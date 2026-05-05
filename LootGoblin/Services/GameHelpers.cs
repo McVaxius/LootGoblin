@@ -851,9 +851,34 @@ public static class GameHelpers
             }
 
             var mapId = territory.Value.Map.RowId;
+            SetMapFlag(territoryId, mapId, worldX, worldZ);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[MapFlag] SetMapFlag failed: {ex.Message}");
+        }
+    }
+
+    public static unsafe void SetMapFlag(uint territoryId, uint mapId, float worldX, float worldZ)
+    {
+        try
+        {
+            if (territoryId == 0 || mapId == 0)
+            {
+                ClearMapFlag();
+                return;
+            }
+
+            var agentMap = AgentMap.Instance();
+            if (agentMap == null)
+            {
+                Plugin.Log.Warning("[MapFlag] AgentMap is null");
+                return;
+            }
+
             var worldPos = new Vector3(worldX, 0f, worldZ);
             agentMap->SetFlagMapMarker(territoryId, mapId, worldPos);
-            Plugin.Log.Information($"[MapFlag] Set flag at territory {territoryId}, world ({worldX:F1}, {worldZ:F1})");
+            Plugin.Log.Information($"[MapFlag] Set flag at territory {territoryId}, map {mapId}, world ({worldX:F1}, {worldZ:F1})");
         }
         catch (Exception ex)
         {

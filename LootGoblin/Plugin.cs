@@ -30,6 +30,8 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
     [PluginService] internal static IToastGui ToastGui { get; private set; } = null!;
+    [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
+    [PluginService] internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
 
     private const string CommandName = "/lootgoblin";
     private const string CommandAlias = "/lg";
@@ -50,6 +52,7 @@ public sealed class Plugin : IDalamudPlugin
     public StateManager StateManager { get; init; }
     public ChestDetectionService ChestDetectionService { get; init; }
     public MapLocationDatabase MapLocationDatabase { get; init; }
+    public TreasureMapLocationService TreasureMapLocationService { get; init; }
     public SpecialNavigationDatabase SpecialNavigationDatabase { get; init; }
     public AetherytePositionDatabase AetherytePositionDatabase { get; init; }
     public AutoDutyDetectionService AutoDutyDetectionService { get; init; }
@@ -126,6 +129,7 @@ public sealed class Plugin : IDalamudPlugin
         // Initialize map location database
         MapLocationDatabase = new MapLocationDatabase(this, Log);
         MapLocationDatabase.PopulateFromTreasureSpot(DataManager);
+        TreasureMapLocationService = new TreasureMapLocationService(this, DataManager, SigScanner, GameInteropProvider, Log);
 
         // Initialize special navigation database
         SpecialNavigationDatabase = new SpecialNavigationDatabase(this, Log);
@@ -207,6 +211,7 @@ public sealed class Plugin : IDalamudPlugin
         StateManager?.Dispose();
         NavigationService?.Dispose();
         PartyService?.Dispose();
+        TreasureMapLocationService?.Dispose();
         SpecialNavigationDatabase?.Dispose();
         AutoDutyDetectionService?.Dispose();
         WindowSystem.RemoveAllWindows();
@@ -293,6 +298,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         VNavIPC.CheckAvailability(logStatus);
         MapFlagService.CheckAvailability(logStatus);
+        TreasureMapLocationService.CheckAvailability(logStatus);
         RotationPluginIPC.CheckAvailability(logStatus);
     }
 
