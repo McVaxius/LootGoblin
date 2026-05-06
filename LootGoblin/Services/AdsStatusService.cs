@@ -14,6 +14,13 @@ public sealed class AdsStatusSnapshot
     public string OwnershipMode { get; init; } = string.Empty;
     public string ExecutionPhase { get; init; } = string.Empty;
     public string ExecutionStatus { get; init; } = string.Empty;
+    public bool UtilityRunning { get; init; }
+    public string UtilityTask { get; init; } = string.Empty;
+    public string UtilityMode { get; init; } = string.Empty;
+    public string UtilityStatus { get; init; } = string.Empty;
+    public string UtilityLastSuccess { get; init; } = string.Empty;
+    public string UtilityLastFailure { get; init; } = string.Empty;
+    public DateTime? UtilityCompletedAtUtc { get; init; }
     public bool InDuty { get; init; }
     public bool SupportedDuty { get; init; }
     public DateTime CapturedAtUtc { get; init; }
@@ -85,7 +92,14 @@ public sealed class AdsStatusService : IDisposable
                 OwnershipMode = GetString(root, "ownershipMode"),
                 ExecutionPhase = GetString(root, "executionPhase"),
                 ExecutionStatus = GetString(root, "executionStatus"),
-                InDuty = GetBool(root, "inDuty"),
+                UtilityRunning = GetBool(root, "utilityRunning"),
+                UtilityTask = GetString(root, "utilityTask"),
+                UtilityMode = GetString(root, "utilityMode"),
+                UtilityStatus = GetString(root, "utilityStatus"),
+                UtilityLastSuccess = GetString(root, "utilityLastSuccess"),
+                UtilityLastFailure = GetString(root, "utilityLastFailure"),
+                UtilityCompletedAtUtc = GetDateTime(root, "utilityCompletedAtUtc"),
+                InDuty = GetBool(root, "inDuty") || GetBool(root, "inInstancedDuty"),
                 SupportedDuty = GetBool(root, "supportedDuty"),
                 CapturedAtUtc = now,
             };
@@ -104,6 +118,23 @@ public sealed class AdsStatusService : IDisposable
         }
     }
 
+    public bool StartRepair(string mode)
+    {
+        if (!_plugin.IsAdsAvailable)
+            return false;
+
+        try
+        {
+            var subscriber = _pluginInterface.GetIpcSubscriber<string, bool>("ADS.StartRepair");
+            return subscriber.InvokeFunc(mode);
+        }
+        catch (Exception ex)
+        {
+            _log.Debug($"[ADS] Failed to start ADS repair via IPC: {ex.Message}");
+            return false;
+        }
+    }
+
     private static string GetString(JsonElement root, string propertyName)
         => root.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
             ? property.GetString() ?? string.Empty
@@ -113,4 +144,14 @@ public sealed class AdsStatusService : IDisposable
         => root.TryGetProperty(propertyName, out var property)
             && property.ValueKind is JsonValueKind.True or JsonValueKind.False
             && property.GetBoolean();
+
+    private static DateTime? GetDateTime(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+            return null;
+
+        return DateTime.TryParse(property.GetString(), out var value)
+            ? value
+            : null;
+    }
 }

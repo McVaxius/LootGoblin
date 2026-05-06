@@ -4,6 +4,19 @@ using System.Collections.Generic;
 
 namespace LootGoblin;
 
+public enum RepairMode
+{
+    Self,
+    NpcNoInn,
+}
+
+public enum ReturnWhenDoneDestination
+{
+    FC,
+    Personal,
+    Inn,
+}
+
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
@@ -33,6 +46,10 @@ public class Configuration : IPluginConfiguration
     public bool EnableStateLogging { get; set; } = true;
     public bool UseAdsInsteadOfLegacyDungeonSolver { get; set; } = true;
     public bool EnableRetainerMapRetrieval { get; set; } = true;
+    public int RepairThresholdPercent { get; set; } = 25;
+    public RepairMode RepairMode { get; set; } = RepairMode.NpcNoInn;
+    public bool ReturnWhenDoneEnabled { get; set; } = false;
+    public ReturnWhenDoneDestination ReturnWhenDoneDestination { get; set; } = ReturnWhenDoneDestination.FC;
 
     // Phase 6: Map Selection + Chest Interaction
     public List<uint> EnabledMapTypes { get; set; } = new();
@@ -55,10 +72,10 @@ public class Configuration : IPluginConfiguration
 
     public List<string> FinishCommandTriggers { get; set; } = new()
     {
-        "/li fc",
         "/rotation cancel",
         "/bmrai off",
         "/vbmai off",
+        string.Empty,
         string.Empty,
     };
 

@@ -81,6 +81,8 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime lastDependencyRefreshAt = DateTime.MinValue;
     private IChatGui.OnHandleableChatMessageDelegate? chatMessageObserver;
     private static readonly TimeSpan DependencyRefreshInterval = TimeSpan.FromSeconds(10);
+    private static readonly string[] LegacyFinishCommandDefaults = { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty };
+    private static readonly string[] CurrentFinishCommandDefaults = { "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty, string.Empty };
     private bool ecommonsInitialized;
     private bool ecommonsCallbackHookInstalled;
 
@@ -95,6 +97,8 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin()
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        if (ApplyConfigurationMigrations(Configuration))
+            Configuration.Save();
 
         try
         {
@@ -480,6 +484,57 @@ public sealed class Plugin : IDalamudPlugin
 
     public void ToggleConfigUi() => ConfigWindow.Toggle();
     public void ToggleMainUi() => MainWindow.Toggle();
+
+    private static bool ApplyConfigurationMigrations(Configuration configuration)
+    {
+        var changed = false;
+        if (configuration.Version < 1)
+        {
+            if (configuration.FinishCommandTriggers != null
+                && configuration.FinishCommandTriggers.SequenceEqual(LegacyFinishCommandDefaults, StringComparer.Ordinal))
+            {
+                configuration.FinishCommandTriggers.Clear();
+                configuration.FinishCommandTriggers.AddRange(CurrentFinishCommandDefaults);
+                changed = true;
+            }
+
+            configuration.Version = 1;
+            changed = true;
+        }
+
+        if (configuration.LandingOrDutyCommandTriggers == null)
+        {
+            configuration.LandingOrDutyCommandTriggers = new List<string>();
+            changed = true;
+        }
+
+        if (configuration.FinishCommandTriggers == null)
+        {
+            configuration.FinishCommandTriggers = new List<string>(CurrentFinishCommandDefaults);
+            changed = true;
+        }
+
+        var clampedRepairThreshold = Math.Clamp(configuration.RepairThresholdPercent, 0, 100);
+        if (configuration.RepairThresholdPercent != clampedRepairThreshold)
+        {
+            configuration.RepairThresholdPercent = clampedRepairThreshold;
+            changed = true;
+        }
+
+        if (!Enum.IsDefined(typeof(RepairMode), configuration.RepairMode))
+        {
+            configuration.RepairMode = RepairMode.NpcNoInn;
+            changed = true;
+        }
+
+        if (!Enum.IsDefined(typeof(ReturnWhenDoneDestination), configuration.ReturnWhenDoneDestination))
+        {
+            configuration.ReturnWhenDoneDestination = ReturnWhenDoneDestination.FC;
+            changed = true;
+        }
+
+        return changed;
+    }
 
     private void LoadMountNames()
     {

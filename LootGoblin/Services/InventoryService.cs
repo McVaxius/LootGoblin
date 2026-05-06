@@ -96,6 +96,32 @@ public class InventoryService : IDisposable
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Inventory);
     }
 
+    public unsafe bool TryGetLowestEquippedGearConditionPercent(out int lowestConditionPercent)
+    {
+        lowestConditionPercent = 100;
+        var foundEquippedItem = false;
+
+        var manager = InventoryManager.Instance();
+        if (manager == null)
+            return false;
+
+        var equippedContainer = manager->GetInventoryContainer(InventoryType.EquippedItems);
+        if (equippedContainer == null || !equippedContainer->IsLoaded)
+            return false;
+
+        for (var i = 0; i < equippedContainer->Size; i++)
+        {
+            var slot = equippedContainer->GetInventorySlot(i);
+            if (slot == null || slot->ItemId == 0)
+                continue;
+
+            foundEquippedItem = true;
+            lowestConditionPercent = Math.Min(lowestConditionPercent, slot->Condition / 300);
+        }
+
+        return foundEquippedItem;
+    }
+
     public unsafe Dictionary<uint, MapSourceCount> ScanForMapSources(bool includeSaddlebags = true)
     {
         var results = new Dictionary<uint, MapSourceCount>();

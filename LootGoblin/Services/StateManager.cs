@@ -126,6 +126,8 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalSearchTimeout = TimeSpan.FromSeconds(15.0);
     private static readonly TimeSpan PortalActiveApproachTimeout = TimeSpan.FromSeconds(60.0);
+    private static readonly TimeSpan AdsRepairStartGrace = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan AdsRepairTimeout = TimeSpan.FromMinutes(3.0);
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
@@ -209,12 +211,17 @@ public class StateManager : IDisposable
     private bool adsInsideRetrySent;
     private bool adsLeaveIssued;
     private bool adsUnreadableStatusLogged;
+    private bool adsRepairHandoffActive;
+    private bool adsRepairUtilityObserved;
+    private DateTime adsRepairHandoffStarted = DateTime.MinValue;
+    private string adsRepairRequestedMode = string.Empty;
     private bool mountedRotationSuppressed;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
     private bool landingCommandsRanThisMap;
     private bool dutyEntryCommandsRanThisMap;
     private bool finishCommandsRanThisRun;
+    private bool returnWhenDoneRanThisRun;
     private bool digIssuedThisMap;
     private DateTime digIssuedAt = DateTime.MinValue;
     private bool chestConfirmedThisMap;
@@ -385,7 +392,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
+        if ((_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver || adsRepairHandoffActive) && _plugin.IsAdsAvailable)
             _plugin.AdsStatusService.Refresh();
 
         CheckStateTimeout();
@@ -395,6 +402,12 @@ public class StateManager : IDisposable
     private void CheckStateTimeout()
     {
         if (!StateTimeouts.TryGetValue(State, out var timeout)) return;
+
+        if (adsRepairHandoffActive)
+        {
+            stateStartTime = DateTime.Now;
+            return;
+        }
 
         if (State == BotState.DetectingLocation && _plugin.InventoryService.HasTreasureMapKeyItem())
         {
@@ -431,6 +444,9 @@ public class StateManager : IDisposable
 
         UpdateMountedRotationLifecycle();
         TryClearPendingDungeonMapFlag();
+
+        if (TickAdsRepairHandoff())
+            return;
 
         // Check for territory change and refresh maps to fix inventory index issues
         var currentTerritory = Plugin.ClientState.TerritoryType;
@@ -584,6 +600,7 @@ public class StateManager : IDisposable
 
         BeginStartMapRefresh();
         TransitionTo(BotState.SelectingMap, "Starting map run - refreshing saddlebag maps...");
+        TryStartAdsRepairIfNeeded("[Start]");
     }
 
     public void Stop()
@@ -600,6 +617,7 @@ public class StateManager : IDisposable
         EndPortalRetryWindow();
         dungeonEntryProcessed = false;
         ResetAdsHandoffTracking(resetStatus: true);
+        ResetAdsRepairHandoffTracking();
         _plugin.RetainerMapRetrievalService.Reset();
         ResetSaddlebagRetrieval();
         ResetStartMapRefresh();
@@ -621,6 +639,7 @@ public class StateManager : IDisposable
         SelectedMapItemId = 0;
         EndPortalRetryWindow();
         ResetAdsHandoffTracking(resetStatus: true);
+        ResetAdsRepairHandoffTracking();
         _plugin.RetainerMapRetrievalService.Reset();
         ResetSaddlebagRetrieval();
         ResetStartMapRefresh();
@@ -1222,6 +1241,7 @@ public class StateManager : IDisposable
     {
         ResetPerMapCommandTriggers();
         finishCommandsRanThisRun = false;
+        returnWhenDoneRanThisRun = false;
     }
 
     private void ResetPerMapCommandTriggers()
@@ -1344,6 +1364,23 @@ public class StateManager : IDisposable
 
         finishCommandsRanThisRun = true;
         RunConfiguredCommands(_plugin.Configuration.FinishCommandTriggers, reason);
+    }
+
+    private void RunReturnWhenDoneOnce(string reason)
+    {
+        if (returnWhenDoneRanThisRun || !_plugin.Configuration.ReturnWhenDoneEnabled)
+            return;
+
+        returnWhenDoneRanThisRun = true;
+        var command = _plugin.Configuration.ReturnWhenDoneDestination switch
+        {
+            ReturnWhenDoneDestination.Personal => "/li home",
+            ReturnWhenDoneDestination.Inn => "/li inn",
+            _ => "/li fc",
+        };
+
+        if (CommandHelper.TrySendCommand(command))
+            _plugin.AddDebugLog($"[ReturnWhenDone] Sent {command} for {reason}.");
     }
 
     private void RunConfiguredCommands(List<string>? commands, string reason)
@@ -1945,7 +1982,7 @@ public class StateManager : IDisposable
     {
         var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                      Plugin.Condition[ConditionFlag.BoundByDuty56];
-        if (inDuty)
+        if (inDuty && IsTreasureDungeonTerritory(Plugin.ClientState.TerritoryType))
             return false;
 
         var yDistance = Math.Abs(yDelta);
@@ -4884,6 +4921,9 @@ public class StateManager : IDisposable
             TransitionTo(BotState.Error, "Still in dungeon - cannot start next map. Manual intervention required.");
             return;
         }
+
+        if (TryStartAdsRepairIfNeeded("[Completed]"))
+            return;
         
         KrangleService.ClearCache();
 
@@ -4939,7 +4979,10 @@ public class StateManager : IDisposable
             }
         }
 
+        var remainingMaps = HasRemainingEnabledMaps("[Completed]");
         RunFinishCommandsOnce("[Completed] run complete");
+        if (!remainingMaps)
+            RunReturnWhenDoneOnce("[Completed] no maps remaining");
         RetryCount = 0;
         TransitionTo(BotState.Idle, "Run complete.");
     }
@@ -5041,6 +5084,26 @@ public class StateManager : IDisposable
             $"[PartyWait][CompletedNextMap] Blocking next map; out-of-zone members: {missingText}");
 
         return false;
+    }
+
+    private bool HasRemainingEnabledMaps(string source)
+    {
+        var mapSources = _plugin.InventoryService.ScanForMapSources();
+        var loadedMaps = GetEnabledMapCandidates(mapSources, includeInventory: true, includeSaddlebags: true);
+        if (loadedMaps.Count > 0)
+        {
+            _plugin.AddDebugLog($"{source} Return deferred; {loadedMaps.Count} enabled inventory/saddlebag map type(s) remain.");
+            return true;
+        }
+
+        var enabledForRetainers = _plugin.Configuration.EnabledMapTypes.Count > 0
+            ? _plugin.Configuration.EnabledMapTypes.ToList()
+            : TreasureMapData.KnownMaps.Keys.ToList();
+        var hasRetainerMap = _plugin.RetainerMapRetrievalService.HasRetainerMapCandidate(enabledForRetainers);
+        if (hasRetainerMap)
+            _plugin.AddDebugLog($"{source} Return deferred; enabled retainer map remains via XADB.");
+
+        return hasRetainerMap;
     }
 
     private bool TryHandleConfirmedDutyEntry(string source, bool? portalAvailable = null)
@@ -5355,6 +5418,122 @@ public class StateManager : IDisposable
     }
 
     // ─── Dungeon Helpers ─────────────────────────────────────────────────────
+
+    private bool TryStartAdsRepairIfNeeded(string source)
+    {
+        var threshold = Math.Clamp(_plugin.Configuration.RepairThresholdPercent, 0, 100);
+        if (threshold <= 0)
+            return false;
+
+        if (!_plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition))
+        {
+            _plugin.AddDebugLog($"{source}[Repair] Could not read equipped gear durability; continuing without repair.");
+            return false;
+        }
+
+        if (lowestCondition >= threshold)
+            return false;
+
+        if (!_plugin.IsAdsAvailable)
+        {
+            TransitionTo(BotState.Error, $"Equipped gear durability is {lowestCondition}% below repair threshold {threshold}%, but ADS is not loaded.");
+            return true;
+        }
+
+        var repairMode = ResolveAdsRepairMode();
+        if (!_plugin.AdsStatusService.StartRepair(repairMode))
+        {
+            var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
+            var statusText = string.IsNullOrWhiteSpace(adsStatus.UtilityStatus)
+                ? "ADS did not accept the repair request."
+                : adsStatus.UtilityStatus;
+            TransitionTo(BotState.Error, $"Could not start ADS repair ({repairMode}) at {lowestCondition}% durability: {statusText}");
+            return true;
+        }
+
+        adsRepairHandoffActive = true;
+        adsRepairUtilityObserved = false;
+        adsRepairHandoffStarted = DateTime.Now;
+        adsRepairRequestedMode = repairMode;
+        StateDetail = $"ADS repair requested ({repairMode}); durability {lowestCondition}% below threshold {threshold}%...";
+        _plugin.AddDebugLog($"{source}[Repair] Requested ADS repair mode {repairMode}; lowest durability {lowestCondition}%, threshold {threshold}%.");
+        return true;
+    }
+
+    private bool TickAdsRepairHandoff()
+    {
+        if (!adsRepairHandoffActive)
+            return false;
+
+        var elapsed = DateTime.Now - adsRepairHandoffStarted;
+        if (elapsed > AdsRepairTimeout)
+        {
+            var status = _plugin.AdsStatusService.Refresh(force: true);
+            var statusText = GetAdsRepairStatusText(status);
+            ResetAdsRepairHandoffTracking();
+            TransitionTo(BotState.Error, $"ADS repair timed out after {AdsRepairTimeout.TotalSeconds:F0}s. ADS: {statusText}");
+            return true;
+        }
+
+        var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
+        if (!adsStatus.StatusReadable)
+        {
+            StateDetail = $"ADS repair requested ({adsRepairRequestedMode}) - waiting for ADS status... ({elapsed.TotalSeconds:F0}s)";
+            return true;
+        }
+
+        if (adsStatus.UtilityRunning)
+        {
+            adsRepairUtilityObserved = true;
+            StateDetail = $"ADS repair running ({adsStatus.UtilityMode})... ({elapsed.TotalSeconds:F0}s, {adsStatus.UtilityStatus})";
+            return true;
+        }
+
+        if (!adsRepairUtilityObserved && elapsed < AdsRepairStartGrace)
+        {
+            StateDetail = $"ADS repair requested ({adsRepairRequestedMode}) - waiting for utility start... ({elapsed.TotalSeconds:F0}s)";
+            return true;
+        }
+
+        var threshold = Math.Clamp(_plugin.Configuration.RepairThresholdPercent, 0, 100);
+        if (threshold > 0
+            && _plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition)
+            && lowestCondition < threshold)
+        {
+            var statusText = GetAdsRepairStatusText(adsStatus);
+            ResetAdsRepairHandoffTracking();
+            TransitionTo(BotState.Error, $"ADS repair finished but durability is still {lowestCondition}% below threshold {threshold}%. ADS: {statusText}");
+            return true;
+        }
+
+        _plugin.AddDebugLog($"[Repair] ADS repair complete; continuing map loop. ADS: {GetAdsRepairStatusText(adsStatus)}");
+        ResetAdsRepairHandoffTracking();
+        return false;
+    }
+
+    private string ResolveAdsRepairMode()
+        => _plugin.Configuration.RepairMode == RepairMode.Self ? "self" : "npc-no-inn";
+
+    private static string GetAdsRepairStatusText(AdsStatusSnapshot status)
+    {
+        if (!string.IsNullOrWhiteSpace(status.UtilityLastFailure))
+            return status.UtilityLastFailure;
+
+        if (!string.IsNullOrWhiteSpace(status.UtilityLastSuccess))
+            return status.UtilityLastSuccess;
+
+        return string.IsNullOrWhiteSpace(status.UtilityStatus)
+            ? "No ADS utility status."
+            : status.UtilityStatus;
+    }
+
+    private void ResetAdsRepairHandoffTracking()
+    {
+        adsRepairHandoffActive = false;
+        adsRepairUtilityObserved = false;
+        adsRepairHandoffStarted = DateTime.MinValue;
+        adsRepairRequestedMode = string.Empty;
+    }
 
     private bool TryHandleAdsCompletedHandoff()
     {

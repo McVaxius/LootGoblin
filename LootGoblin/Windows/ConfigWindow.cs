@@ -12,7 +12,7 @@ public class ConfigWindow : Window, IDisposable
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly string[] LandingOrDutyCommandDefaults = { "/rotation Auto", "/bmrai on", "/vbmai on", "/echo wheee", string.Empty };
-    private static readonly string[] FinishCommandDefaults = { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty };
+    private static readonly string[] FinishCommandDefaults = { "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty, string.Empty };
     
     private readonly Configuration configuration;
     private readonly Plugin plugin;
@@ -185,6 +185,52 @@ public class ConfigWindow : Window, IDisposable
         if (configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
         {
             ImGui.TextColored(ColorRed, "ADS is not loaded. Install ADS or disable this setting.");
+        }
+
+        var repairThreshold = Math.Clamp(configuration.RepairThresholdPercent, 0, 100);
+        if (ImGui.SliderInt("Repair threshold %", ref repairThreshold, 0, 100))
+        {
+            configuration.RepairThresholdPercent = repairThreshold;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing.");
+
+        var repairModes = new[] { "Self", "NPC no inn" };
+        var repairModeIndex = configuration.RepairMode == RepairMode.Self ? 0 : 1;
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.Combo("Repair mode", ref repairModeIndex, repairModes, repairModes.Length))
+        {
+            configuration.RepairMode = repairModeIndex == 0 ? RepairMode.Self : RepairMode.NpcNoInn;
+            configuration.Save();
+        }
+
+        var returnWhenDone = configuration.ReturnWhenDoneEnabled;
+        if (ImGui.Checkbox("Return when done", ref returnWhenDone))
+        {
+            configuration.ReturnWhenDoneEnabled = returnWhenDone;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Runs the selected Lifestream return only after no enabled inventory, saddlebag, or retainer maps remain.");
+
+        var returnDestinations = new[] { "FC", "Personal", "Inn" };
+        var returnDestinationIndex = configuration.ReturnWhenDoneDestination switch
+        {
+            ReturnWhenDoneDestination.Personal => 1,
+            ReturnWhenDoneDestination.Inn => 2,
+            _ => 0,
+        };
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.Combo("Return destination", ref returnDestinationIndex, returnDestinations, returnDestinations.Length))
+        {
+            configuration.ReturnWhenDoneDestination = returnDestinationIndex switch
+            {
+                1 => ReturnWhenDoneDestination.Personal,
+                2 => ReturnWhenDoneDestination.Inn,
+                _ => ReturnWhenDoneDestination.FC,
+            };
+            configuration.Save();
         }
 
         var retainerMapRetrieval = configuration.EnableRetainerMapRetrieval;
