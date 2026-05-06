@@ -59,7 +59,7 @@ public class MapFlagReader : IDisposable
             var worldX = marker.XFloat;
             var worldZ = marker.YFloat;
 
-            // World Y (height): use current player height as best guess; nav will handle actual Z
+            // AgentMap exposes treasure flag X/Z only. This Y is current player height, not destination height.
             var localPlayer = Plugin.ObjectTable.LocalPlayer;
             var worldY = localPlayer?.Position.Y ?? 0f;
 
@@ -68,7 +68,7 @@ public class MapFlagReader : IDisposable
             var territory = territorySheet?.GetRow(territoryId);
             var zoneName = territory?.PlaceName.ValueNullable?.Name.ToString() ?? $"Zone {territoryId}";
 
-            _plugin.AddDebugLog($"Flag: {zoneName} (Territory {territoryId}) → World ({worldX:F1}, {worldY:F1}, {worldZ:F1})");
+            _plugin.AddDebugLog($"Flag: {zoneName} (Territory {territoryId}) -> World X/Z ({worldX:F1}, {worldZ:F1}); Y(player fallback)={worldY:F1}");
 
             return new MapLocation
             {

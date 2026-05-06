@@ -25,7 +25,7 @@ public class SpecialNavigationDatabase : IDisposable
     {
         _plugin = plugin;
         _log = log;
-        var pluginDir = Plugin.PluginInterface.ConfigDirectory.FullName; // Plugin directory, not user config
+        var pluginDir = Plugin.PluginInterface.ConfigDirectory.FullName;
         _filePath = Path.Combine(pluginDir, "SpecialNavigation.json");
         Load();
     }
@@ -48,8 +48,7 @@ public class SpecialNavigationDatabase : IDisposable
         {
             if (!File.Exists(_filePath))
             {
-                // Create sample file if it doesn't exist (for development)
-                CreateSampleFile();
+                CreateDefaultFile();
                 return;
             }
 
@@ -69,49 +68,33 @@ public class SpecialNavigationDatabase : IDisposable
         catch (Exception ex)
         {
             _log.Error($"[SpecialNavDB] Failed to load special navigation entries: {ex.Message}");
-            // Create sample file on error
-            CreateSampleFile();
+            CreateDefaultFile();
         }
     }
 
     /// <summary>
-    /// Create sample SpecialNavigation.json file (for development only).
+    /// Create an inactive default SpecialNavigation.json file.
     /// </summary>
-    private void CreateSampleFile()
+    private void CreateDefaultFile()
     {
-        var sampleEntries = new List<SpecialNavigationEntry>
-        {
-            new SpecialNavigationEntry
-            {
-                DestinationIndex = 42, // Example destination
-                ZoneName = "The Sea of Clouds - Underwater Area",
-                PreX = 123.4f, // Surface coordinates
-                PreY = 45.6f,
-                PreZ = 789.0f,
-                MainX = 124.0f, // Underwater coordinates
-                MainY = 40.0f,
-                MainZ = 790.5f,
-                Notes = "Sample underwater map - fly to surface first, then dive when Condition 81 is true",
-                IsActive = true
-            }
-        };
+        var defaultEntries = new List<SpecialNavigationEntry>();
 
         _entries.Clear();
-        _entries.AddRange(sampleEntries);
+        _entries.AddRange(defaultEntries);
         
         try
         {
-            var json = JsonSerializer.Serialize(sampleEntries, new JsonSerializerOptions
+            var json = JsonSerializer.Serialize(defaultEntries, new JsonSerializerOptions
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
             File.WriteAllText(_filePath, json);
-            _log.Information($"[SpecialNavDB] Created sample SpecialNavigation.json with {sampleEntries.Count} entries");
+            _log.Information("[SpecialNavDB] Created empty SpecialNavigation.json; special navigation is opt-in.");
         }
         catch (Exception ex)
         {
-            _log.Error($"[SpecialNavDB] Failed to create sample file: {ex.Message}");
+            _log.Error($"[SpecialNavDB] Failed to create default file: {ex.Message}");
         }
     }
 
