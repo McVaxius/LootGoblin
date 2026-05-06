@@ -1948,8 +1948,9 @@ public class StateManager : IDisposable
         if (inDuty)
             return false;
 
+        var yDistance = Math.Abs(yDelta);
         var displaced = distance > OpeningChestCofferMountRecoveryDistance ||
-                        Math.Abs(yDelta) > OpeningChestCofferMountRecoveryYDelta;
+                        yDistance > OpeningChestCofferMountRecoveryYDelta;
         if (!displaced && !openingChestCofferMountRecoveryActive)
             return false;
 
@@ -1959,7 +1960,10 @@ public class StateManager : IDisposable
             ResetOpeningChestCofferMountRecovery();
         }
 
-        if (distance <= range)
+        var handoffDistance = Math.Min(range, OpeningChestCofferMountRecoveryDistance);
+        var withinRecoveryHandoff = distance <= handoffDistance &&
+                                    yDistance <= OpeningChestCofferMountRecoveryYDelta;
+        if (withinRecoveryHandoff)
         {
             if (!openingChestCofferMountRecoveryActive && displaced)
             {
@@ -1971,7 +1975,7 @@ public class StateManager : IDisposable
             if (openingChestCofferMountRecoveryActive && !openingChestCofferMountRecoveryRangeReached)
             {
                 _plugin.AddDebugLog(
-                    $"[OpeningChest] Coffer mount recovery reached interaction range for '{chestName}' ({distance:F1}y, Y {Math.Abs(yDelta):F1}y).");
+                    $"[OpeningChest] Coffer mount recovery reached handoff range for '{chestName}' ({distance:F1}y, Y {yDistance:F1}y).");
                 openingChestCofferMountRecoveryRangeReached = true;
             }
 
@@ -1984,7 +1988,8 @@ public class StateManager : IDisposable
             if (_plugin.NavigationService.State != NavigationState.Idle)
             {
                 _plugin.NavigationService.StopNavigation();
-                _plugin.AddDebugLog($"[OpeningChest] Within {range:F1}y - stopped vnav before coffer interaction handoff.");
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Within {handoffDistance:F1}y and Y {OpeningChestCofferMountRecoveryYDelta:F1}y - stopped vnav before coffer interaction handoff.");
             }
 
             var isMountedOrFlying = _plugin.NavigationService.IsMounted()
@@ -1999,7 +2004,7 @@ public class StateManager : IDisposable
                     _mountService.Dismount();
                 }
 
-                StateDetail = $"Landing at '{chestName}' ({distance:F1}y, Y {Math.Abs(yDelta):F1}y)...";
+                StateDetail = $"Landing at '{chestName}' ({distance:F1}y, Y {yDistance:F1}y)...";
                 return true;
             }
 
@@ -2030,7 +2035,7 @@ public class StateManager : IDisposable
             openingChestCofferMountRecoveryEntityId = chest.EntityId;
             _plugin.AddDebugLog(
                 $"[OpeningChest] Displaced coffer '{chestName}' detected at {FormatVectorCompact(chest.Position)}; " +
-                $"player={FormatVectorCompact(playerPosition)}; dist={distance:F1}y; Y={Math.Abs(yDelta):F1}y - using mounted recovery.");
+                $"player={FormatVectorCompact(playerPosition)}; dist={distance:F1}y; Y={yDistance:F1}y - using mounted recovery.");
 
             if (autoMoveActive)
             {
@@ -2052,7 +2057,7 @@ public class StateManager : IDisposable
 
         _plugin.NavigationService.FlyToPosition(chest.Position);
         autoMoveActive = true;
-        StateDetail = $"Flying to displaced coffer '{chestName}' ({distance:F1}y, Y {Math.Abs(yDelta):F1}y)...";
+        StateDetail = $"Flying to displaced coffer '{chestName}' ({distance:F1}y, Y {yDistance:F1}y)...";
         return true;
     }
 
