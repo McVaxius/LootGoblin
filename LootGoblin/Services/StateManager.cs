@@ -84,6 +84,10 @@ public class StateManager : IDisposable
     private bool openingChestCofferMountRecoveryRangeReached; // True after coffer recovery enters interaction handoff
     private DateTime lastOpeningChestCofferMountCommandTime = DateTime.MinValue; // Throttle coffer mount attempts
     private DateTime lastOpeningChestCofferDismountCommandTime = DateTime.MinValue; // Throttle coffer dismount attempts
+    private uint openingChestCofferApproachEntityId; // Coffer being approached by vnav on the overworld
+    private DateTime openingChestCofferApproachLastProgressTime = DateTime.MinValue; // Last time coffer approach distance improved
+    private DateTime lastOpeningChestCofferRepathTime = DateTime.MinValue; // Rate-limit coffer stop + repath recovery
+    private float openingChestCofferApproachBestDistance = float.MaxValue; // Best 3D coffer distance during current approach
     private DateTime portalApproachStartedAt = DateTime.MinValue; // Tracks progress for portal FlyToPosition
     private float portalApproachStartDistance = float.MaxValue; // Distance when current portal approach started
     private DateTime lastPortalRepathTime = DateTime.MinValue; // Rate-limit portal stop + repath recovery
@@ -110,6 +114,7 @@ public class StateManager : IDisposable
     private const float PortalInteractionRange = 3.0f;
     private const float OpeningChestCofferMountRecoveryDistance = 3.0f;
     private const float OpeningChestCofferMountRecoveryYDelta = 0.5f;
+    private const float OpeningChestCofferProgressMargin = 0.5f;
     private const float CapturedLocationMatchXZRange = 10.0f;
     private const float UnderwaterBounceTriggerXZRange = 10.0f;
     private const float UnderwaterFlagApproachArrivalXZRange = 5.0f;
@@ -120,6 +125,8 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan OpeningChestCofferMountCommandInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan OpeningChestCofferDismountCommandInterval = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan OpeningChestCofferStallTimeout = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan OpeningChestCofferRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan KeyItemMapRecoveryTimeout = TimeSpan.FromSeconds(30.0);
     private static readonly TimeSpan KeyItemMapOpenRetryInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
@@ -158,8 +165,6 @@ public class StateManager : IDisposable
     private DateTime forwardMovementStart = DateTime.MinValue; // When we started moving forward after territory change
     private uint lastGlobalTerritoryId; // Track territory changes globally for map refresh
     private DateTime chestDisappearedTime = DateTime.MinValue; // Track when chest first disappeared for grace period
-    private DateTime chestApproachStart = DateTime.MinValue; // When we started approaching chest (stuck detection)
-    private float chestApproachLastDist = 0f; // Distance when we started approaching (stuck detection)
     private bool openingChestCombatInterrupted; // Combat started while recovering an overworld chest
     private bool openingChestRecoveryDigIssued; // One-shot dig retry after combat interruption
     private bool openingChestReturningToFlag; // One-shot path back to the flag after combat displacement
@@ -458,6 +463,9 @@ public class StateManager : IDisposable
         }
         lastGlobalTerritoryId = currentTerritory;
 
+        if (TryYieldToActiveAdsDutyOwnership(currentTerritory))
+            return;
+
         // Enable BMR on territory changes (never turn off)
         if (!adsDutyHandoffActive && !mountedRotationSuppressed && lastBMRTerritoryId != 0 && lastBMRTerritoryId != currentTerritory)
         {
@@ -555,6 +563,34 @@ public class StateManager : IDisposable
         
         if (inDuty)
         {
+            var currentTerritory = Plugin.ClientState.TerritoryType;
+            if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver
+                && _plugin.IsAdsAvailable
+                && IsTreasureDungeonTerritory(currentTerritory))
+            {
+                _plugin.AddDebugLog($"[Start][ADS] Already in treasure dungeon territory {currentTerritory} - handing duty to ADS.");
+                RetryCount = 0;
+                CurrentLocation = null;
+                SelectedMapItemId = 0;
+                currentLandingMode = OverworldLandingMode.MountToggle;
+                _plugin.YesAlreadyIPC.Pause();
+                _plugin.AddDebugLog($"[Start][ADS] YesAlready paused: {_plugin.YesAlreadyIPC.IsPaused}");
+
+                EndPortalRetryWindow();
+                ResetAdsHandoffTracking(resetStatus: true);
+                adsDutyHandoffActive = true;
+                adsDutyHandoffStarted = DateTime.Now;
+                SendAdsInsideCommand("[Start][ADS] Sent /ads inside for already-active treasure dungeon.", includeAssistCommands: true);
+                TransitionTo(BotState.Completed, "ADS handoff active - waiting for dungeon to finish...");
+                return;
+            }
+
+            if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !_plugin.IsAdsAvailable)
+            {
+                _plugin.ShowAdsMissingToast();
+                _plugin.AddDebugLog("[Start][ADS] ADS handoff requested from duty start, but ADS is not installed/loaded. Falling back to legacy dungeon solver.");
+            }
+
             _plugin.AddDebugLog("[Start] Already in dungeon - starting objective system");
             RetryCount = 0;
             CurrentLocation = null;
@@ -1924,8 +1960,9 @@ public class StateManager : IDisposable
     private void ResetOpeningChestCofferMountRecovery(string? reason = null, bool stopNavigation = false)
     {
         var wasActive = openingChestCofferMountRecoveryActive;
+        var wasApproaching = openingChestCofferApproachEntityId != 0;
 
-        if (stopNavigation && wasActive)
+        if (stopNavigation && (wasActive || wasApproaching))
         {
             if (autoMoveActive)
             {
@@ -1945,7 +1982,84 @@ public class StateManager : IDisposable
         openingChestCofferMountRecoveryActive = false;
         openingChestCofferMountRecoveryRangeReached = false;
         lastOpeningChestCofferMountCommandTime = DateTime.MinValue;
-        chestApproachStart = DateTime.MinValue;
+        ResetOpeningChestCofferApproachTracking();
+    }
+
+    private void ResetOpeningChestCofferApproachTracking()
+    {
+        openingChestCofferApproachEntityId = 0;
+        openingChestCofferApproachLastProgressTime = DateTime.MinValue;
+        lastOpeningChestCofferRepathTime = DateTime.MinValue;
+        openingChestCofferApproachBestDistance = float.MaxValue;
+    }
+
+    private void StopOpeningChestCofferMovement(string reason)
+    {
+        var hadMovement = autoMoveActive || _plugin.NavigationService.State != NavigationState.Idle;
+
+        if (autoMoveActive)
+        {
+            GameHelpers.StopAutoMove();
+            autoMoveActive = false;
+        }
+
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+
+        if (hadMovement)
+            _plugin.AddDebugLog($"[OpeningChest] Stopped coffer movement {reason}.");
+    }
+
+    private void NavigateToOpeningChestCoffer(IGameObject chest, string chestName, float distance, DateTime now, bool fly)
+    {
+        var action = fly ? "fly" : "move";
+
+        if (openingChestCofferApproachEntityId != chest.EntityId)
+        {
+            ResetOpeningChestCofferApproachTracking();
+            openingChestCofferApproachEntityId = chest.EntityId;
+            openingChestCofferApproachLastProgressTime = now;
+            openingChestCofferApproachBestDistance = distance;
+            StopOpeningChestCofferMovement("before starting fresh coffer vnav path");
+            if (fly)
+                _plugin.NavigationService.FlyToPosition(chest.Position);
+            else
+                _plugin.NavigationService.MoveToPosition(chest.Position);
+            autoMoveActive = true;
+            lastOpeningChestCofferRepathTime = now;
+            _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {distance:F1}y - starting vnav {action} approach.");
+            return;
+        }
+
+        if (distance + OpeningChestCofferProgressMargin < openingChestCofferApproachBestDistance)
+        {
+            openingChestCofferApproachBestDistance = distance;
+            openingChestCofferApproachLastProgressTime = now;
+        }
+
+        var stalled = now - openingChestCofferApproachLastProgressTime >= OpeningChestCofferStallTimeout;
+        var canRepath = now - lastOpeningChestCofferRepathTime >= OpeningChestCofferRepathInterval;
+        if (!autoMoveActive || _plugin.NavigationService.State == NavigationState.Idle || (stalled && canRepath))
+        {
+            var reason = stalled
+                ? $"after vnav stall at {distance:F1}y from '{chestName}'"
+                : $"before repathing to '{chestName}'";
+            StopOpeningChestCofferMovement(reason);
+            if (fly)
+                _plugin.NavigationService.FlyToPosition(chest.Position);
+            else
+                _plugin.NavigationService.MoveToPosition(chest.Position);
+            autoMoveActive = true;
+            lastOpeningChestCofferRepathTime = now;
+            openingChestCofferApproachLastProgressTime = now;
+            openingChestCofferApproachBestDistance = distance;
+
+            if (stalled)
+            {
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Coffer vnav {action} stalled short of '{chestName}' at {distance:F1}y - stopped and reissued path.");
+            }
+        }
     }
 
     private bool EnsureOpeningChestCofferRecoveryMounted(string chestName, float distance, float yDelta, DateTime now)
@@ -2092,7 +2206,7 @@ public class StateManager : IDisposable
         if (!EnsureOpeningChestCofferRecoveryMounted(chestName, distance, yDelta, now))
             return true;
 
-        _plugin.NavigationService.FlyToPosition(chest.Position);
+        NavigateToOpeningChestCoffer(chest, chestName, distance, now, fly: true);
         autoMoveActive = true;
         StateDetail = $"Flying to displaced coffer '{chestName}' ({distance:F1}y, Y {yDistance:F1}y)...";
         return true;
@@ -3143,22 +3257,30 @@ public class StateManager : IDisposable
 
         // Click Yes on any dialog (Open the treasure coffer? etc)
         GameHelpers.ClickYesIfVisible();
-        
-        // Check for portal EVERY tick - portals can appear during/after combat
-        var portal = FindNearestPortal();
-        if (portal != null)
-        {
-            _plugin.AddDebugLog("[OpeningChest] Portal detected - transitioning to portal interaction...");
-            ResetOpeningChestCofferMountRecovery();
-            StopPortalConflictingMovement();
-            CheckForPortalAfterChest();
-            return;
-        }
 
         TryDigWhileDiving("[Underwater] chest phase");
-        
+
         // No portal yet - keep working on chest
         var chest = _plugin.ChestDetectionService.FindNearestCoffer();
+        if (chest != null && !chest.IsTargetable)
+        {
+            _plugin.AddDebugLog("[OpeningChest] Treasure Coffer is visible but not targetable - allowing portal/completion flow.");
+            chest = null;
+        }
+
+        if (chest == null)
+        {
+            var portal = FindNearestPortal();
+            if (portal != null)
+            {
+                _plugin.AddDebugLog("[OpeningChest] Portal detected after targetable coffer cleared - transitioning to portal interaction...");
+                ResetOpeningChestCofferMountRecovery();
+                StopPortalConflictingMovement();
+                CheckForPortalAfterChest();
+                return;
+            }
+        }
+
         var now = DateTime.Now;
         bool inCombat = Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat];
         var hasFlagRecoveryTarget = TryGetCurrentFlagRecoveryTarget(out var flagRecoveryTarget, out var distToFlag);
@@ -3319,7 +3441,6 @@ public class StateManager : IDisposable
             openingChestCombatInterrupted = false;
             openingChestRecoveryDigIssued = false;
             openingChestReturningToFlag = false;
-            chestApproachStart = DateTime.MinValue;
         }
 
         if (inCombat)
@@ -3332,7 +3453,6 @@ public class StateManager : IDisposable
                 GameHelpers.StopAutoMove();
                 _plugin.NavigationService.StopNavigation();
                 autoMoveActive = false;
-                chestApproachStart = DateTime.MinValue;
                 _plugin.AddDebugLog($"[OpeningChest] Combat detected - stopped automove, clearing target");
             }
             // Clear target so player can fight freely
@@ -3347,46 +3467,39 @@ public class StateManager : IDisposable
         if (FlyToOpeningChestCoffer(chest, player.Position, dist, yDelta, range, chestName, now))
             return;
 
-        // Not in combat - approach and interact with chest using lockon+automove
+        // Not in combat - approach and interact with the coffer.
         Plugin.TargetManager.Target = chest;
         
         if (dist > range)
         {
-            if (!autoMoveActive)
-            {
-                _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {dist:F1}y - lockon+automove");
-                GameHelpers.LockOnAndAutoMove();
-                autoMoveActive = true;
-                chestApproachStart = now;
-                chestApproachLastDist = dist;
-            }
-            else
-            {
-                // Stuck detection: if we've been approaching for 5s+ and haven't closed 2y, use vnavmesh
-                var approachElapsed = (now - chestApproachStart).TotalSeconds;
-                if (approachElapsed >= 5.0 && dist >= chestApproachLastDist - 2f)
-                {
-                    _plugin.AddDebugLog($"[OpeningChest] Stuck at {dist:F1}y for {approachElapsed:F0}s (was {chestApproachLastDist:F1}y) - switching to vnavmesh");
-                    GameHelpers.StopAutoMove();
-                    autoMoveActive = false;
-                    _plugin.NavigationService.MoveToPosition(chest.Position);
-                    autoMoveActive = true;
-                    chestApproachStart = now;
-                    chestApproachLastDist = dist;
-                }
-            }
+            NavigateToOpeningChestCoffer(chest, chestName, dist, now, fly: false);
             StateDetail = $"Approaching '{chestName}' ({dist:F1}y away)...";
+            return;
         }
-        else
+
+        StopOpeningChestCofferMovement($"at coffer interaction range for '{chestName}'");
+        ResetOpeningChestCofferApproachTracking();
+
+        var mountedOrFlying = _plugin.NavigationService.IsMounted()
+            || _plugin.NavigationService.IsFlying()
+            || Plugin.Condition[ConditionFlag.Mounting71];
+        if (mountedOrFlying)
         {
-            // In range - stop automove
-            if (autoMoveActive)
+            if (!Plugin.Condition[ConditionFlag.Mounting71] &&
+                now - lastOpeningChestCofferDismountCommandTime >= OpeningChestCofferDismountCommandInterval)
             {
-                GameHelpers.StopAutoMove();
-                _plugin.NavigationService.StopNavigation();
-                autoMoveActive = false;
+                lastOpeningChestCofferDismountCommandTime = now;
+                _mountService.Dismount();
             }
-            chestApproachStart = DateTime.MinValue;
+
+            StateDetail = $"Dismounting at '{chestName}' ({dist:F1}y)...";
+            return;
+        }
+
+        if (!IsCharacterReady())
+        {
+            StateDetail = $"Waiting to interact with '{chestName}' ({DescribeCharacterReadyBlockers()})...";
+            return;
         }
 
         // Continually try to interact every ~1 second (only when NOT in combat)
@@ -3397,9 +3510,6 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[OpeningChest] Interaction attempt with '{chestName}' - returned: {interacted}");
             StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
         }
-        
-        // Continuously pathfind to chest location to counter BMR AI interference
-        _plugin.NavigationService.MoveToPosition(chest.Position);
     }
 
     private void CheckForPortalAfterChest()
@@ -5533,6 +5643,48 @@ public class StateManager : IDisposable
         adsRepairUtilityObserved = false;
         adsRepairHandoffStarted = DateTime.MinValue;
         adsRepairRequestedMode = string.Empty;
+    }
+
+    private bool TryYieldToActiveAdsDutyOwnership(uint currentTerritory)
+    {
+        if (!_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver || !_plugin.IsAdsAvailable)
+            return false;
+
+        var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                     Plugin.Condition[ConditionFlag.BoundByDuty56];
+        if (!inDuty || !IsTreasureDungeonTerritory(currentTerritory))
+            return false;
+
+        if (adsDutyHandoffActive)
+        {
+            if (State != BotState.Completed)
+            {
+                _plugin.NavigationService.StopNavigation();
+                autoMoveActive = false;
+                TransitionTo(BotState.Completed, "ADS handoff active - waiting for dungeon to finish...");
+                return true;
+            }
+
+            return false;
+        }
+
+        var adsStatus = _plugin.AdsStatusService.Current.StatusReadable
+            ? _plugin.AdsStatusService.Current
+            : _plugin.AdsStatusService.Refresh(force: true);
+        if (!adsStatus.IsOwned)
+            return false;
+
+        _plugin.NavigationService.StopNavigation();
+        autoMoveActive = false;
+        EndPortalRetryWindow();
+        QueueDungeonMapFlagClear("[ADS] active ownership guard");
+        adsDutyHandoffActive = true;
+        adsDutyHandoffStarted = DateTime.Now;
+        adsOwnershipObserved = true;
+        adsUnreadableStatusLogged = false;
+        _plugin.AddDebugLog($"[ADS] Active ADS ownership detected from LootGoblin state {State}; yielding dungeon control ({adsStatus.OwnershipMode}/{adsStatus.ExecutionPhase}).");
+        TransitionTo(BotState.Completed, "ADS owns the duty - waiting for completion...");
+        return true;
     }
 
     private bool TryHandleAdsCompletedHandoff()
