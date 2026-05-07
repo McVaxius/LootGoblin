@@ -3543,6 +3543,8 @@ public class StateManager : IDisposable
                 openingChestRecoveryDigIssued = false;
                 openingChestReturningToFlag = false;
                 chestDisappearedTime = DateTime.MinValue;
+                if (TryGuardMapCompletionWithActiveKeyItem("[OpeningChest][CombatRecovery]"))
+                    return;
                 CheckForPortalAfterChest();
                 return;
             }
@@ -3567,6 +3569,8 @@ public class StateManager : IDisposable
             // Grace period elapsed - chest is truly gone, check for portal
             _plugin.AddDebugLog("[OpeningChest] No chest found after 5s grace period - checking for portal");
             chestDisappearedTime = DateTime.MinValue;
+            if (TryGuardMapCompletionWithActiveKeyItem("[OpeningChest]"))
+                return;
             CheckForPortalAfterChest();
             return;
         }
@@ -3755,6 +3759,70 @@ public class StateManager : IDisposable
         }
         
         return null;
+    }
+
+    private bool IsOverworldMapDutyActive()
+    {
+        var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                     Plugin.Condition[ConditionFlag.BoundByDuty56];
+        return inDuty && !IsTreasureDungeonTerritory(Plugin.ClientState.TerritoryType);
+    }
+
+    private IGameObject? FindTargetableOverworldCoffer(float maxRange)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            return null;
+
+        try
+        {
+            return Plugin.ObjectTable
+                .Where(obj => obj != null &&
+                              obj.Name.ToString() == "Treasure Coffer" &&
+                              obj.IsTargetable)
+                .Select(obj => new
+                {
+                    Coffer = obj,
+                    Distance = Vector3.Distance(player.Position, obj.Position),
+                })
+                .Where(candidate => candidate.Distance <= maxRange)
+                .OrderBy(candidate => candidate.Distance)
+                .Select(candidate => candidate.Coffer)
+                .FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            _plugin.AddDebugLog($"[OpeningChest] Overworld coffer rescan failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    private bool TryRecoverOverworldCofferFromCompleted(string source)
+    {
+        if (!IsOverworldMapDutyActive())
+            return false;
+
+        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                      Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (loading)
+            return false;
+
+        var chest = FindTargetableOverworldCoffer(OverworldRecoveryObjectSearchRange);
+        if (chest == null)
+            return false;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var dist = player == null
+            ? float.MaxValue
+            : Vector3.Distance(player.Position, chest.Position);
+        CaptureOpeningChestCofferPosition(chest);
+        _plugin.AddDebugLog(
+            $"{source} Targetable Treasure Coffer found at {dist:F1}y while overworld map duty is active in territory {Plugin.ClientState.TerritoryType}; returning to OpeningChest.");
+
+        EndPortalRetryWindow();
+        chestDisappearedTime = DateTime.MinValue;
+        TransitionTo(BotState.OpeningChest, "Recovered overworld treasure coffer - opening chest...");
+        return true;
     }
 
     private void OnCombatStart()
@@ -5070,6 +5138,9 @@ public class StateManager : IDisposable
                 }
 
                 var portal = FindNearestPortal(keepActivePortalWindow: true);
+                if (portal == null && TryRecoverOverworldCofferFromCompleted("[Portal]"))
+                    return;
+
                 if (TryHandleConfirmedDutyEntry("[Portal]", portal != null || portalApproachPosition.HasValue))
                     return;
 
@@ -5151,6 +5222,8 @@ public class StateManager : IDisposable
             var timedOutPortal = FindNearestPortal(keepActivePortalWindow: true);
             if (timedOutPortal != null)
                 CapturePortalApproachPosition(timedOutPortal);
+            else if (TryRecoverOverworldCofferFromCompleted("[PortalTimeout]"))
+                return;
 
             var mapDutyStillActive = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                                      Plugin.Condition[ConditionFlag.BoundByDuty56];
@@ -5180,7 +5253,7 @@ public class StateManager : IDisposable
                 portalRetryStart = now;
                 StateDetail = portalStillAvailable
                     ? "Portal still active - continuing portal interaction..."
-                    : $"Map duty active in territory {currentTerritory} - waiting for treasure dungeon territory...";
+                    : $"Map duty active in territory {currentTerritory} - recovering coffer/portal...";
                 return;
             }
 
@@ -5228,8 +5301,11 @@ public class StateManager : IDisposable
 
             if (!IsTreasureDungeonTerritory(currentTerritory))
             {
+                if (TryRecoverOverworldCofferFromCompleted("[Completed]"))
+                    return;
+
                 LogMapDutyOutsideDungeon("[Completed]", currentTerritory);
-                StateDetail = $"Map duty active in territory {currentTerritory} - waiting for treasure dungeon territory...";
+                StateDetail = $"Map duty active in territory {currentTerritory} - recovering coffer/portal...";
                 return;
             }
 
@@ -5569,7 +5645,7 @@ public class StateManager : IDisposable
             return;
 
         lastMapDutyOutsideDungeonLog = now;
-        _plugin.AddDebugLog($"{source} BoundByDuty active in territory {territoryId}, but this is not a known treasure dungeon territory. Waiting; no map flag clear and no ADS handoff.");
+        _plugin.AddDebugLog($"{source} BoundByDuty active in territory {territoryId}, but this is not a known treasure dungeon territory. Recovering coffer/portal; no map flag clear and no ADS handoff.");
     }
 
     // ─── Room Sweep Methods (brute-force object interaction) ─────────────────
@@ -6495,10 +6571,12 @@ public class StateManager : IDisposable
             autoMoveActive = false;
         }
 
+        if (newState == BotState.OpeningChest)
+            chestDisappearedTime = DateTime.MinValue;
+
         if (newState == BotState.OpeningChest && Plugin.Condition[ConditionFlag.InCombat])
         {
             openingChestCombatInterrupted = true;
-            chestDisappearedTime = DateTime.MinValue;
             _plugin.AddDebugLog("[OpeningChest] Entered chest recovery while already in combat - will retry after combat");
         }
 
