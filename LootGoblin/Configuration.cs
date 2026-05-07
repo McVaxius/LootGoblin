@@ -59,6 +59,7 @@ public class Configuration : IPluginConfiguration
 
     // Automation
     public bool EnableAutoDiscard { get; set; } = false;
+    public bool AutoSyncFate { get; set; } = true;
     public bool SummonChocobo { get; set; } = false;
     public string CompanionStance { get; set; } = "Free Stance";
     public List<string> LandingOrDutyCommandTriggers { get; set; } = new()

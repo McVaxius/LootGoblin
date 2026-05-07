@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
+using LootGoblin.Services;
 
 namespace LootGoblin.Windows;
 
@@ -250,6 +251,22 @@ public class ConfigWindow : Window, IDisposable
         }
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Runs /ays discard every 30s during a mounted safe idle window.\nDefers while in combat, loading, or cutscene-like states.\nRequires AutoRetainer plugin.");
+
+        var autoSyncFate = configuration.AutoSyncFate;
+        if (ImGui.Checkbox("Auto Sync FATE", ref autoSyncFate))
+        {
+            configuration.AutoSyncFate = autoSyncFate;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Runs /levelsync on after joining a FATE.\nDefers while mounted or riding pillion.");
+        ImGui.SameLine();
+        if (ImGui.SmallButton("DISABLE PANDORA's BOX"))
+        {
+            CommandHelper.TrySendCommand("/xldisableplugin Pandora's Box");
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Disable Pandora's Box through Dalamud.");
 
         var summonChocobo = configuration.SummonChocobo;
         if (ImGui.Checkbox("Summon Chocobo", ref summonChocobo))

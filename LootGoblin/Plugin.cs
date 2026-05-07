@@ -58,6 +58,7 @@ public sealed class Plugin : IDalamudPlugin
     public AutoDutyDetectionService AutoDutyDetectionService { get; init; }
     public AdsStatusService AdsStatusService { get; init; }
     public RetainerMapRetrievalService RetainerMapRetrievalService { get; init; }
+    public FateSyncService FateSyncService { get; init; }
 
     // IPC
     public MapFlagService MapFlagService { get; init; }
@@ -149,6 +150,7 @@ public sealed class Plugin : IDalamudPlugin
 
         AdsStatusService = new AdsStatusService(this, PluginInterface, Log);
         RetainerMapRetrievalService = new RetainerMapRetrievalService(this, Log);
+        FateSyncService = new FateSyncService(this);
 
         // Auto-update community data on login
         ClientState.Login += OnLogin;
@@ -282,6 +284,8 @@ public sealed class Plugin : IDalamudPlugin
     private void OnFrameworkUpdate(IFramework framework)
     {
         var now = DateTime.Now;
+
+        FateSyncService.Update();
 
         if (RetainerMapRetrievalService.IsRunning)
         {
