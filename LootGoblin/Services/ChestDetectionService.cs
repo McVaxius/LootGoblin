@@ -48,17 +48,15 @@ public class ChestDetectionService : IDisposable
         try
         {
             // FrenRider-style: simple exact name match
-            var chestObj = Plugin.ObjectTable.FirstOrDefault(obj => 
-                obj != null && obj.Name.ToString() == "Treasure Coffer");
-            
-            if (chestObj != null)
+            foreach (var chestObj in Plugin.ObjectTable.Where(obj =>
+                         obj != null && obj.Name.ToString() == "Treasure Coffer"))
             {
                 var dist = Vector3.Distance(player.Position, chestObj.Position);
-                if (dist <= maxRange)
-                {
-                    nearest = chestObj;
-                    nearestDist = dist;
-                }
+                if (dist > maxRange || dist >= nearestDist)
+                    continue;
+
+                nearest = chestObj;
+                nearestDist = dist;
             }
         }
         catch (Exception ex)

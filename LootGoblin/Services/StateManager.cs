@@ -88,6 +88,11 @@ public class StateManager : IDisposable
     private DateTime openingChestCofferApproachLastProgressTime = DateTime.MinValue; // Last time coffer approach distance improved
     private DateTime lastOpeningChestCofferRepathTime = DateTime.MinValue; // Rate-limit coffer stop + repath recovery
     private float openingChestCofferApproachBestDistance = float.MaxValue; // Best 3D coffer distance during current approach
+    private Vector3? openingChestLastKnownCofferPosition; // Last targetable overworld Treasure Coffer XYZ seen this map
+    private uint openingChestLastKnownCofferTerritoryId; // Territory for last known overworld coffer XYZ
+    private uint openingChestLastKnownCofferEntityId; // Entity for last known overworld coffer XYZ
+    private bool openingChestReturningToLastKnownCoffer; // True while recovering to captured coffer XYZ
+    private DateTime lastOpeningChestLastKnownCofferLogTime = DateTime.MinValue; // Throttle captured coffer recovery logs
     private DateTime portalApproachStartedAt = DateTime.MinValue; // Tracks progress for portal FlyToPosition
     private float portalApproachStartDistance = float.MaxValue; // Distance when current portal approach started
     private DateTime lastPortalRepathTime = DateTime.MinValue; // Rate-limit portal stop + repath recovery
@@ -112,6 +117,10 @@ public class StateManager : IDisposable
     private const float MapDigXZRange = 5.0f;
     private const double SameZoneAetheryteTeleportSkipXZRange = 50.0;
     private const float PortalInteractionRange = 3.0f;
+    private const float PortalNormalSearchRange = 30.0f;
+    private const float OverworldRecoveryObjectSearchRange = 200.0f;
+    private const float OpeningChestNormalCofferSearchRange = 100.0f;
+    private const float OpeningChestCofferReturnRange = 30.0f;
     private const float OpeningChestCofferMountRecoveryDistance = 3.0f;
     private const float OpeningChestCofferMountRecoveryYDelta = 0.5f;
     private const float OpeningChestCofferProgressMargin = 0.5f;
@@ -557,16 +566,29 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("[Start] AutoDuty not detected - proceeding with start");
         }
 
-        // Check if already in dungeon and start objective system
+        // Check if already in duty; only known treasure dungeon territories enter dungeon handling.
         bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                       Plugin.Condition[ConditionFlag.BoundByDuty56];
         
         if (inDuty)
         {
             var currentTerritory = Plugin.ClientState.TerritoryType;
+            var isTreasureDungeonTerritory = IsTreasureDungeonTerritory(currentTerritory);
+            if (!isTreasureDungeonTerritory)
+            {
+                LogMapDutyOutsideDungeon("[Start]", currentTerritory);
+                RetryCount = 0;
+                CurrentLocation = null;
+                SelectedMapItemId = 0;
+                currentLandingMode = OverworldLandingMode.MountToggle;
+                _plugin.YesAlreadyIPC.Pause();
+                _plugin.AddDebugLog($"[Start] YesAlready paused: {_plugin.YesAlreadyIPC.IsPaused}");
+                TransitionTo(BotState.OpeningChest, "Map duty active outside treasure dungeon - recovering coffer/portal...");
+                return;
+            }
+
             if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver
-                && _plugin.IsAdsAvailable
-                && IsTreasureDungeonTerritory(currentTerritory))
+                && _plugin.IsAdsAvailable)
             {
                 _plugin.AddDebugLog($"[Start][ADS] Already in treasure dungeon territory {currentTerritory} - handing duty to ADS.");
                 RetryCount = 0;
@@ -1292,6 +1314,7 @@ public class StateManager : IDisposable
         dungeonConfirmedThisMap = false;
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
         ResetUnderwaterLandingState();
+        ResetOpeningChestCofferMemory();
         _plugin.TreasureMapLocationService.ClearCapturedLocation();
     }
 
@@ -1993,6 +2016,100 @@ public class StateManager : IDisposable
         openingChestCofferApproachBestDistance = float.MaxValue;
     }
 
+    private void ResetOpeningChestCofferMemory()
+    {
+        openingChestLastKnownCofferPosition = null;
+        openingChestLastKnownCofferTerritoryId = 0;
+        openingChestLastKnownCofferEntityId = 0;
+        openingChestReturningToLastKnownCoffer = false;
+        lastOpeningChestLastKnownCofferLogTime = DateTime.MinValue;
+    }
+
+    private void CaptureOpeningChestCofferPosition(IGameObject chest)
+    {
+        if (chest.Name.ToString() != "Treasure Coffer")
+            return;
+
+        var territoryId = Plugin.ClientState.TerritoryType;
+        var previousPosition = openingChestLastKnownCofferPosition;
+        var changed = openingChestLastKnownCofferEntityId != chest.EntityId
+            || openingChestLastKnownCofferTerritoryId != territoryId
+            || !previousPosition.HasValue
+            || Vector3.DistanceSquared(previousPosition.Value, chest.Position) > 1.0f;
+
+        openingChestLastKnownCofferPosition = chest.Position;
+        openingChestLastKnownCofferTerritoryId = territoryId;
+        openingChestLastKnownCofferEntityId = chest.EntityId;
+
+        if (changed)
+        {
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Captured coffer XYZ {FormatVectorCompact(chest.Position)} in territory {territoryId}.");
+        }
+    }
+
+    private bool TryGetOpeningChestLastKnownCofferPosition(out Vector3 position, out float distance)
+    {
+        position = Vector3.Zero;
+        distance = float.MaxValue;
+
+        if (!openingChestLastKnownCofferPosition.HasValue)
+            return false;
+
+        if (openingChestLastKnownCofferTerritoryId != Plugin.ClientState.TerritoryType)
+            return false;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            return false;
+
+        position = openingChestLastKnownCofferPosition.Value;
+        distance = Vector3.Distance(player.Position, position);
+        return true;
+    }
+
+    private bool TryReturnToOpeningChestLastKnownCoffer(DateTime now)
+    {
+        if (!TryGetOpeningChestLastKnownCofferPosition(out var position, out var distance))
+            return false;
+
+        if (distance <= OpeningChestCofferReturnRange)
+        {
+            if (openingChestReturningToLastKnownCoffer)
+            {
+                StopOpeningChestCofferMovement($"near captured coffer XYZ {FormatVectorCompact(position)}");
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Back near captured coffer XYZ {FormatVectorCompact(position)} ({distance:F1}y) - rechecking objects.");
+            }
+
+            openingChestReturningToLastKnownCoffer = false;
+            return false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            StateDetail = $"In combat - waiting to return to coffer XYZ ({distance:F1}y)...";
+            return true;
+        }
+
+        if (!openingChestReturningToLastKnownCoffer ||
+            now - lastOpeningChestLastKnownCofferLogTime >= TimeSpan.FromSeconds(5.0))
+        {
+            lastOpeningChestLastKnownCofferLogTime = now;
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Returning to captured coffer XYZ {FormatVectorCompact(position)} ({distance:F1}y).");
+        }
+
+        openingChestReturningToLastKnownCoffer = true;
+
+        if (!EnsureOpeningChestCofferRecoveryMounted("captured coffer XYZ", distance, 0f, now))
+            return true;
+
+        NavigateToOpeningChestCofferPosition(position, distance, now);
+        StateDetail = $"Returning to captured coffer XYZ ({distance:F1}y)...";
+        return true;
+    }
+
     private void StopOpeningChestCofferMovement(string reason)
     {
         var hadMovement = autoMoveActive || _plugin.NavigationService.State != NavigationState.Idle;
@@ -2008,6 +2125,22 @@ public class StateManager : IDisposable
 
         if (hadMovement)
             _plugin.AddDebugLog($"[OpeningChest] Stopped coffer movement {reason}.");
+    }
+
+    private void NavigateToOpeningChestCofferPosition(Vector3 position, float distance, DateTime now)
+    {
+        if (!autoMoveActive || _plugin.NavigationService.State == NavigationState.Idle ||
+            now - lastOpeningChestCofferRepathTime >= OpeningChestCofferRepathInterval)
+        {
+            if (_plugin.NavigationService.State != NavigationState.Idle)
+                _plugin.NavigationService.StopNavigation();
+
+            _plugin.NavigationService.FlyToPosition(position);
+            autoMoveActive = true;
+            lastOpeningChestCofferRepathTime = now;
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Flying to captured coffer XYZ {FormatVectorCompact(position)} ({distance:F1}y).");
+        }
     }
 
     private void NavigateToOpeningChestCoffer(IGameObject chest, string chestName, float distance, DateTime now, bool fly)
@@ -3260,12 +3393,29 @@ public class StateManager : IDisposable
 
         TryDigWhileDiving("[Underwater] chest phase");
 
+        var now = DateTime.Now;
+        bool inCombat = Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat];
+        bool mapDutyOutsideDungeon =
+            (Plugin.Condition[ConditionFlag.BoundByDuty] || Plugin.Condition[ConditionFlag.BoundByDuty56]) &&
+            !IsTreasureDungeonTerritory(Plugin.ClientState.TerritoryType);
+        var useWideCofferSearch = openingChestCombatInterrupted
+            || openingChestReturningToLastKnownCoffer
+            || mapDutyOutsideDungeon
+            || openingChestLastKnownCofferPosition.HasValue;
+        var cofferSearchRange = useWideCofferSearch
+            ? OverworldRecoveryObjectSearchRange
+            : OpeningChestNormalCofferSearchRange;
+
         // No portal yet - keep working on chest
-        var chest = _plugin.ChestDetectionService.FindNearestCoffer();
+        var chest = _plugin.ChestDetectionService.FindNearestCoffer(cofferSearchRange);
         if (chest != null && !chest.IsTargetable)
         {
             _plugin.AddDebugLog("[OpeningChest] Treasure Coffer is visible but not targetable - allowing portal/completion flow.");
             chest = null;
+        }
+        else if (chest != null)
+        {
+            CaptureOpeningChestCofferPosition(chest);
         }
 
         if (chest == null)
@@ -3281,11 +3431,14 @@ public class StateManager : IDisposable
             }
         }
 
-        var now = DateTime.Now;
-        bool inCombat = Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat];
         var hasFlagRecoveryTarget = TryGetCurrentFlagRecoveryTarget(out var flagRecoveryTarget, out var distToFlag);
+        var hasKnownCofferRecoveryTarget = TryGetOpeningChestLastKnownCofferPosition(
+            out _,
+            out var distToLastKnownCoffer);
+        var nearKnownCofferForRecovery = hasKnownCofferRecoveryTarget &&
+                                         distToLastKnownCoffer <= OpeningChestCofferReturnRange;
         var nearFlagForRecovery = hasFlagRecoveryTarget && distToFlag <= 30f;
-        var shouldReturnToFlag = hasFlagRecoveryTarget && distToFlag > 30f;
+        var shouldReturnToFlag = hasFlagRecoveryTarget && distToFlag > 30f && !nearKnownCofferForRecovery;
 
         if (chest == null)
         {
@@ -3310,6 +3463,12 @@ public class StateManager : IDisposable
                 {
                     chestDisappearedTime = DateTime.MinValue;
                     StateDetail = $"Combat ended - waiting for chest recovery... ({sinceCombatEnd:F1}/2.0s)";
+                    return;
+                }
+
+                if (TryReturnToOpeningChestLastKnownCoffer(now))
+                {
+                    chestDisappearedTime = DateTime.MinValue;
                     return;
                 }
 
@@ -3413,6 +3572,7 @@ public class StateManager : IDisposable
         }
 
         chestConfirmedThisMap = true;
+        openingChestReturningToLastKnownCoffer = false;
 
         // Chest exists - reset grace period timer
         chestDisappearedTime = DateTime.MinValue;
@@ -3441,6 +3601,7 @@ public class StateManager : IDisposable
             openingChestCombatInterrupted = false;
             openingChestRecoveryDigIssued = false;
             openingChestReturningToFlag = false;
+            openingChestReturningToLastKnownCoffer = false;
         }
 
         if (inCombat)
@@ -3541,46 +3702,56 @@ public class StateManager : IDisposable
     
     private IGameObject? FindNearestPortal(bool keepActivePortalWindow = false)
     {
-        // FrenRider-style: simple exact name match
-        var portalObj = Plugin.ObjectTable.FirstOrDefault(obj => 
-            obj != null && obj.Name.ToString() == "Teleportation Portal");
-        
-        if (portalObj != null)
-        {
-            var player = Plugin.ObjectTable.LocalPlayer;
-            if (player != null)
-            {
-                var dist = Vector3.Distance(player.Position, portalObj.Position);
-                _plugin.AddDebugLog($"[Portal] Found portal at {dist:F1}y distance, XYZ {FormatVectorCompact(portalObj.Position)}");
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            return null;
 
-                // Verify portal is targetable (not a ghost object)
-                if (!IsObjectTargetable(portalObj))
-                {
-                    _plugin.AddDebugLog($"[Portal] Portal is NOT targetable (ghost object) - ignoring");
-                    return null;
-                }
-                
+        var maxRange = keepActivePortalWindow
+            ? OverworldRecoveryObjectSearchRange
+            : PortalNormalSearchRange;
+
+        var portalCandidates = Plugin.ObjectTable
+            .Where(obj => obj != null && obj.Name.ToString() == "Teleportation Portal")
+            .Select(obj => new
+            {
+                Portal = obj,
+                Distance = Vector3.Distance(player.Position, obj.Position),
+            })
+            .OrderBy(candidate => candidate.Distance)
+            .ToList();
+
+        foreach (var candidate in portalCandidates)
+        {
+            var portalObj = candidate.Portal;
+            var dist = candidate.Distance;
+            _plugin.AddDebugLog($"[Portal] Found portal at {dist:F1}y distance, XYZ {FormatVectorCompact(portalObj.Position)}");
+
+            // Verify portal is targetable (not a ghost object)
+            if (!IsObjectTargetable(portalObj))
+            {
+                _plugin.AddDebugLog("[Portal] Portal is NOT targetable (ghost object) - ignoring");
+                continue;
+            }
+
+            if (dist > maxRange)
+            {
+                _plugin.AddDebugLog($"[Portal] Portal too far ({dist:F1}y > {maxRange:F0}y)");
+                continue;
+            }
+
+            if (dist > PortalNormalSearchRange)
+            {
                 var keepCapturedPortal = keepActivePortalWindow
                     && portalApproachPosition.HasValue
                     && Vector3.Distance(portalObj.Position, portalApproachPosition.Value) <= 5f;
-                var keepTargetablePortal = keepActivePortalWindow;
-
-                if (dist > 30f && !keepCapturedPortal && !keepTargetablePortal)
-                {
-                    _plugin.AddDebugLog($"[Portal] Portal too far ({dist:F1}y > 30y)");
-                    return null;
-                }
-                else if (dist > 30f)
-                {
-                    var portalBasis = keepCapturedPortal && portalApproachPosition.HasValue
-                        ? $"captured XYZ {FormatVectorCompact(portalApproachPosition.Value)}"
-                        : "live targetable portal";
-                    _plugin.AddDebugLog($"[Portal] Keeping active portal window despite distance {dist:F1}y; {portalBasis}");
-                }
-
-                portalConfirmedThisMap = true;
-                return portalObj;
+                var portalBasis = keepCapturedPortal && portalApproachPosition.HasValue
+                    ? $"captured XYZ {FormatVectorCompact(portalApproachPosition.Value)}"
+                    : "live targetable portal";
+                _plugin.AddDebugLog($"[Portal] Keeping active portal window despite distance {dist:F1}y; {portalBasis}");
             }
+
+            portalConfirmedThisMap = true;
+            return portalObj;
         }
         
         return null;
@@ -3595,6 +3766,7 @@ public class StateManager : IDisposable
             openingChestCombatInterrupted = true;
             openingChestRecoveryDigIssued = false;
             openingChestReturningToFlag = false;
+            openingChestReturningToLastKnownCoffer = false;
             chestDisappearedTime = DateTime.MinValue;
             ResetOpeningChestCofferMountRecovery();
             _plugin.AddDebugLog("[OpeningChest] Combat interrupted chest recovery - will retry after combat");
@@ -4936,6 +5108,40 @@ public class StateManager : IDisposable
                     return;
                 }
 
+                if (portalApproachPosition.HasValue)
+                {
+                    var player = Plugin.ObjectTable.LocalPlayer;
+                    if (player != null)
+                    {
+                        var approachPosition = portalApproachPosition.Value;
+                        var portalDist = Vector3.Distance(player.Position, approachPosition);
+
+                        if (portalDist > PortalInteractionRange)
+                        {
+                            if (!portalRegularVnavPathLogged)
+                            {
+                                portalRegularVnavPathLogged = true;
+                                _plugin.AddDebugLog("[Portal] Portal object dropped out; flying to captured XYZ for recovery.");
+                            }
+
+                            if (FlyToPortalApproachPosition(approachPosition, portalDist))
+                            {
+                                StateDetail = $"Approaching captured portal XYZ {FormatVectorCompact(approachPosition)} ({portalDist:F1}y)...";
+                            }
+                            return;
+                        }
+
+                        if (_plugin.NavigationService.State != NavigationState.Idle)
+                        {
+                            _plugin.NavigationService.StopNavigation();
+                            autoMoveActive = false;
+                        }
+
+                        StateDetail = $"At captured portal XYZ - waiting for targetable portal... ({sinceStart.TotalSeconds:F0}/{portalWindowTimeout.TotalSeconds:F0}s)";
+                        return;
+                    }
+                }
+
                 StateDetail = portalApproachPosition.HasValue
                     ? $"Waiting for captured portal approach... ({sinceStart.TotalSeconds:F0}/{portalWindowTimeout.TotalSeconds:F0}s)"
                     : $"Searching for portal... ({sinceStart.TotalSeconds:F0}/{portalWindowTimeout.TotalSeconds:F0}s)";
@@ -6202,18 +6408,37 @@ public class StateManager : IDisposable
         RetryCount++;
         _plugin.AddDebugLog($"[Error #{RetryCount}] {message}");
 
-        // CRITICAL: If still in a duty (BoundByDuty), do NOT go to SelectingMap.
-        // Go back to InDungeon to re-evaluate dungeon state instead of trying to start a new map.
+        // BoundByDuty is also used by overworld treasure-map combat. Only known treasure
+        // dungeon territories may recover into the dungeon solver.
         bool stillInDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                            Plugin.Condition[ConditionFlag.BoundByDuty56];
+        var currentTerritory = Plugin.ClientState.TerritoryType;
+        var inTreasureDungeonDuty = stillInDuty && IsTreasureDungeonTerritory(currentTerritory);
 
         _plugin.NavigationService.StopNavigation(clearFlag: !stillInDuty);
 
-        if (stillInDuty)
+        if (inTreasureDungeonDuty)
         {
-            _plugin.AddDebugLog($"[Error #{RetryCount}] Still in duty (BoundByDuty=true) - recovering to InDungeon instead of SelectingMap");
+            _plugin.AddDebugLog($"[Error #{RetryCount}] Still in known treasure dungeon territory {currentTerritory} - recovering to InDungeon instead of SelectingMap");
             dungeonEntryProcessed = false;
             TransitionTo(BotState.InDungeon, $"Error #{RetryCount} (recovered): {message}");
+            return;
+        }
+
+        if (stillInDuty)
+        {
+            LogMapDutyOutsideDungeon($"[Error #{RetryCount}]", currentTerritory);
+
+            if (State == BotState.Completed || portalRetryStart != DateTime.MinValue || portalApproachPosition.HasValue)
+            {
+                if (portalRetryStart == DateTime.MinValue)
+                    portalRetryStart = DateTime.Now;
+
+                TransitionTo(BotState.Completed, $"Error #{RetryCount}: recovering overworld portal search...");
+                return;
+            }
+
+            TransitionTo(BotState.OpeningChest, $"Error #{RetryCount}: recovering overworld coffer/portal...");
             return;
         }
         
@@ -6249,9 +6474,13 @@ public class StateManager : IDisposable
         treasureHighLowHandledThisOpen = false;
         openingChestRecoveryDigIssued = false;
         openingChestReturningToFlag = false;
+        openingChestReturningToLastKnownCoffer = false;
 
         if (prev == BotState.OpeningChest && newState != BotState.OpeningChest)
+        {
             ResetOpeningChestCofferMountRecovery();
+            ResetOpeningChestCofferMemory();
+        }
 
         if (prev == BotState.Completed && newState != BotState.Completed)
         {
