@@ -1125,12 +1125,10 @@ public class StateManager : IDisposable
         bool includeInventory,
         bool includeSaddlebags)
     {
-        var enabled = _plugin.Configuration.EnabledMapTypes;
-
         return mapSources
             .Where(kvp =>
             {
-                if (enabled.Count > 0 && !enabled.Contains(kvp.Key))
+                if (!_plugin.Configuration.IsMapTypeEnabled(kvp.Key))
                     return false;
 
                 var count = 0;
@@ -1536,7 +1534,7 @@ public class StateManager : IDisposable
     }
 
     private static string FormatMapIds(IReadOnlyCollection<uint> mapIds)
-        => mapIds.Count == 0 ? "all configured maps" : string.Join(", ", mapIds);
+        => mapIds.Count == 0 ? "none" : string.Join(", ", mapIds);
 
     private void ResetRunCommandTriggers()
     {
@@ -3361,9 +3359,7 @@ public class StateManager : IDisposable
                 return;
             }
 
-            var enabledForRetainers = _plugin.Configuration.EnabledMapTypes.Count > 0
-                ? _plugin.Configuration.EnabledMapTypes.ToList()
-                : TreasureMapData.KnownMaps.Keys.ToList();
+            var enabledForRetainers = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
             _plugin.AddDebugLog($"[SelectingMap] No inventory/saddlebag maps. Checking retainer maps via XADB for {FormatMapIds(enabledForRetainers)}.");
             if (TryRetrieveRetainerMap(enabledForRetainers, "No maps found in inventory, saddlebags, or retainers."))
                 return;
@@ -3373,17 +3369,18 @@ public class StateManager : IDisposable
 
         ClearWarning();
 
-        var enabled = _plugin.Configuration.EnabledMapTypes;
+        var enabled = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
 
-        // Filter to only enabled map types; if none configured, allow all
-        var candidates = enabled.Count > 0
-            ? maps.Where(kvp => enabled.Contains(kvp.Key) && kvp.Value > 0).Select(kvp => kvp.Key).ToList()
-            : maps.Where(kvp => kvp.Value > 0).Select(kvp => kvp.Key).ToList();
+        // Filter to only enabled map types.
+        var candidates = maps
+            .Where(kvp => _plugin.Configuration.IsMapTypeEnabled(kvp.Key) && kvp.Value > 0)
+            .Select(kvp => kvp.Key)
+            .ToList();
 
         if (candidates.Count == 0)
         {
             _plugin.AddDebugLog(
-                $"[SelectingMap] No enabled local maps. Enabled={FormatMapIds(enabled.Count > 0 ? enabled.ToList() : TreasureMapData.KnownMaps.Keys.ToList())}; local map types={maps.Count}.");
+                $"[SelectingMap] No enabled local maps. Enabled={FormatMapIds(enabled)}; local map types={maps.Count}.");
             var saddlebagCandidates = GetEnabledMapCandidates(mapSources, includeInventory: false, includeSaddlebags: true);
             if (saddlebagCandidates.Count > 0)
             {
@@ -3393,7 +3390,7 @@ public class StateManager : IDisposable
             }
 
             _plugin.AddDebugLog("[SelectingMap] No enabled saddlebag maps. Checking enabled retainer maps via XADB.");
-            if (TryRetrieveRetainerMap(enabled.Count > 0 ? enabled.ToList() : TreasureMapData.KnownMaps.Keys.ToList(),
+            if (TryRetrieveRetainerMap(enabled,
                     "No enabled maps in inventory, saddlebags, or retainers. Check map selection in UI."))
                 return;
 
@@ -6236,9 +6233,7 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("[Completed] No runnable maps in inventory or loaded saddlebags. Checking retainers via XADB.");
             if (_plugin.Configuration.EnableRetainerMapRetrieval)
             {
-                var enabledForRetainers = _plugin.Configuration.EnabledMapTypes.Count > 0
-                    ? _plugin.Configuration.EnabledMapTypes.ToList()
-                    : TreasureMapData.KnownMaps.Keys.ToList();
+                var enabledForRetainers = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
                 var retainerResult = _plugin.RetainerMapRetrievalService.StartOrTick(enabledForRetainers);
                 switch (retainerResult)
                 {
@@ -6385,9 +6380,7 @@ public class StateManager : IDisposable
             return true;
         }
 
-        var enabledForRetainers = _plugin.Configuration.EnabledMapTypes.Count > 0
-            ? _plugin.Configuration.EnabledMapTypes.ToList()
-            : TreasureMapData.KnownMaps.Keys.ToList();
+        var enabledForRetainers = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
         var hasRetainerMap = _plugin.RetainerMapRetrievalService.HasRetainerMapCandidate(enabledForRetainers);
         if (hasRetainerMap)
             _plugin.AddDebugLog($"{source} Return deferred; enabled retainer map remains via XADB.");

@@ -1,6 +1,7 @@
 using Dalamud.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LootGoblin;
 
@@ -52,6 +53,7 @@ public class Configuration : IPluginConfiguration
     public ReturnWhenDoneDestination ReturnWhenDoneDestination { get; set; } = ReturnWhenDoneDestination.FC;
 
     // Phase 6: Map Selection + Chest Interaction
+    public bool UseMapTypeFilter { get; set; } = false;
     public List<uint> EnabledMapTypes { get; set; } = new();
     public float ChestInteractionRange { get; set; } = 5f;
     public bool AutoLootChest { get; set; } = true;
@@ -96,5 +98,52 @@ public class Configuration : IPluginConfiguration
     public void Save()
     {
         Plugin.PluginInterface.SavePluginConfig(this);
+    }
+
+    public bool IsMapTypeEnabled(uint itemId)
+    {
+        if (itemId == 0)
+            return false;
+
+        return !UseMapTypeFilter || EnabledMapTypes.Any(enabledId => enabledId == itemId);
+    }
+
+    public IReadOnlyList<uint> GetEnabledMapIdsOrAll(IEnumerable<uint> allKnownMapIds)
+    {
+        return NormalizeMapIds(UseMapTypeFilter ? EnabledMapTypes : allKnownMapIds);
+    }
+
+    public void SetMapTypeEnabled(uint itemId, bool enabled, IEnumerable<uint> allKnownMapIds)
+    {
+        if (itemId == 0)
+            return;
+
+        EnabledMapTypes ??= new List<uint>();
+
+        if (!UseMapTypeFilter)
+        {
+            UseMapTypeFilter = true;
+            EnabledMapTypes = NormalizeMapIds(allKnownMapIds);
+        }
+
+        if (enabled)
+        {
+            if (!EnabledMapTypes.Any(enabledId => enabledId == itemId))
+                EnabledMapTypes.Add(itemId);
+        }
+        else
+        {
+            EnabledMapTypes.RemoveAll(enabledId => enabledId == itemId);
+        }
+
+        EnabledMapTypes = NormalizeMapIds(EnabledMapTypes);
+    }
+
+    private static List<uint> NormalizeMapIds(IEnumerable<uint> mapIds)
+    {
+        return (mapIds ?? Array.Empty<uint>())
+            .Where(itemId => itemId != 0)
+            .Distinct()
+            .ToList();
     }
 }

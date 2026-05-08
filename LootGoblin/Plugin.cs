@@ -261,9 +261,7 @@ public sealed class Plugin : IDalamudPlugin
 
         if (RetainerMapRetrievalService.IsRunning)
         {
-            var enabledMaps = Configuration.EnabledMapTypes.Count > 0
-                ? Configuration.EnabledMapTypes
-                : TreasureMapData.KnownMaps.Keys.ToList();
+            var enabledMaps = Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
             RetainerMapRetrievalService.StartOrTick(enabledMaps);
         }
 
@@ -477,6 +475,16 @@ public sealed class Plugin : IDalamudPlugin
             }
 
             configuration.Version = 1;
+            changed = true;
+        }
+
+        if (configuration.Version < 2)
+        {
+            configuration.EnabledMapTypes ??= new List<uint>();
+            if (configuration.EnabledMapTypes.Any())
+                configuration.UseMapTypeFilter = true;
+
+            configuration.Version = 2;
             changed = true;
         }
 

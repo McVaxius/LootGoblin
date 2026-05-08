@@ -339,7 +339,6 @@ public class MainWindow : Window, IDisposable
                 else
                 {
                     var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
-                    var enabledTypes = plugin.Configuration.EnabledMapTypes;
 
                     // Show warning if multiple map types detected
                     if (cachedMapSources.Count > 1)
@@ -353,7 +352,7 @@ public class MainWindow : Window, IDisposable
                         .OrderBy(kvp => LootGoblin.Models.TreasureMapData.KnownMaps.TryGetValue(kvp.Key, out var i) ? i.MinLevel : 999)
                         .ToList();
 
-                    ImGui.TextColored(ColorGrey, "  [x] = include in bot run (lowest tier runs first)");
+                    ImGui.TextColored(ColorGrey, "  All maps are enabled by default. Uncheck maps to run an explicit filter (lowest tier runs first).");
                     ImGui.Spacing();
 
                     foreach (var kvp in sortedMaps)
@@ -370,11 +369,10 @@ public class MainWindow : Window, IDisposable
                         var (mapTier, mapLevel) = ParseMapTierAndLevel(desc);
 
                         // Checkbox per map type
-                        var isEnabled = enabledTypes.Contains(itemId);
+                        var isEnabled = plugin.Configuration.IsMapTypeEnabled(itemId);
                         if (ImGui.Checkbox($"##map_{itemId}", ref isEnabled))
                         {
-                            if (isEnabled) enabledTypes.Add(itemId);
-                            else enabledTypes.Remove(itemId);
+                            plugin.Configuration.SetMapTypeEnabled(itemId, isEnabled, TreasureMapData.AllMapItemIds);
                             plugin.Configuration.Save();
                         }
                         ImGui.SameLine();
@@ -463,7 +461,7 @@ public class MainWindow : Window, IDisposable
             }
             else
             {
-                var mapIds = TreasureMapData.KnownMaps.Keys.ToList();
+                var mapIds = TreasureMapData.AllMapItemIds.ToList();
                 var retainerCounts = plugin.RetainerMapRetrievalService.GetRetainerMapCounts(mapIds, refreshXaDatabase);
                 foreach (var kvp in retainerCounts)
                 {
@@ -1316,13 +1314,14 @@ private void DrawDependencySection()
                 }
 
                 // Get enabled maps from main window for comparison
-                var enabledTypes = plugin.Configuration.EnabledMapTypes;
+                var enabledTypes = plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
                 var cachedMaps = plugin.InventoryService.ScanForMaps();
                 var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
+                var enabledInventoryMapCount = cachedMaps.Keys.Count(plugin.Configuration.IsMapTypeEnabled);
 
                 Plugin.Log.Information($"[READ INDICES] === SELECTICONSTRING MENU ANALYSIS ===");
                 Plugin.Log.Information($"[READ INDICES] Total entries in menu: {entryCount}");
-                Plugin.Log.Information($"[READ INDICES] Enabled maps in inventory: {enabledTypes.Count}");
+                Plugin.Log.Information($"[READ INDICES] Enabled maps in inventory: {enabledInventoryMapCount}");
                 Plugin.Log.Information($"[READ INDICES] Total maps in inventory: {cachedMaps.Count}");
                 Plugin.Log.Information($"[READ INDICES] ======================================");
 
@@ -1490,8 +1489,10 @@ private void DrawDependencySection()
             }
             
             // Configuration info
+            var enabledMapTypes = plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
             reportInfo.AppendLine("Configuration:");
-            reportInfo.AppendLine($"Enabled Map Types: {string.Join(", ", plugin.Configuration.EnabledMapTypes)}");
+            reportInfo.AppendLine($"Map Type Filter: {(plugin.Configuration.UseMapTypeFilter ? "Explicit" : "All known maps")}");
+            reportInfo.AppendLine($"Enabled Map Types: {(enabledMapTypes.Count == 0 ? "none" : string.Join(", ", enabledMapTypes))}");
             reportInfo.AppendLine($"Chest Interaction Range: {plugin.Configuration.ChestInteractionRange}y");
             reportInfo.AppendLine($"Auto Loot Chest: {plugin.Configuration.AutoLootChest}");
             reportInfo.AppendLine($"Chest Open Timeout: {plugin.Configuration.ChestOpenTimeout}s");

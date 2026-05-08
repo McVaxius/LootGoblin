@@ -698,8 +698,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
     private IReadOnlyList<uint> GetRequestedMapIds(IReadOnlyCollection<uint> mapIds)
     {
-        var source = mapIds.Count > 0 ? mapIds : GetConfiguredMapIds();
-        return source
+        return mapIds
             .Where(itemId => itemId != 0)
             .Distinct()
             .ToList();
@@ -707,10 +706,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
     private IReadOnlyCollection<uint> GetConfiguredMapIds()
     {
-        if (_plugin.Configuration.EnabledMapTypes.Count > 0)
-            return _plugin.Configuration.EnabledMapTypes;
-
-        return TreasureMapData.KnownMaps.Keys.ToList();
+        return _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
     }
 
     private bool IsXaDatabaseReady()
