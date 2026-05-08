@@ -5,6 +5,7 @@ All notable changes to LootGoblin will be documented in this file.
 ## [Unreleased] - 2026-03-25
 
 ### Fixed
+- **Close coffer recovery** - OpeningChest now walks to flat, nearby targetable overworld coffers before escalating to mounted flight recovery, avoiding mount attempts for live coffers within 10y and 0.3y vertical delta.
 - **Existing deciphered-map flow** - When no maps remain in inventory but a treasure-map flag is already set, LootGoblin now proceeds from the existing flag instead of failing immediately
 - **Saddlebag retrieval logout risk** - Replaced direct backend saddlebag `MoveItemSlot` use during map selection with a paced `/saddlebag` UI flow. X: log evidence showed logout immediately after direct move (`13:56:00.911 [Saddlebag] ... MoveItemSlot` then `13:56:01.090 Logout Type 2 Code 90002`).
 - **Retainer map lookup parsing** - `XA.Database.SearchItems` now parses newline pipe rows (`Character|World|ContainerName|ItemName|ItemId|Quantity|IsHq`) instead of JSON, filters to current character/world retainer containers, and fails visibly when target retainer selection cannot be confirmed.

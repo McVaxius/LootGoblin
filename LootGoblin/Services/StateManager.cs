@@ -88,6 +88,7 @@ public class StateManager : IDisposable
     private DateTime openingChestCofferApproachLastProgressTime = DateTime.MinValue; // Last time coffer approach distance improved
     private DateTime lastOpeningChestCofferRepathTime = DateTime.MinValue; // Rate-limit coffer stop + repath recovery
     private float openingChestCofferApproachBestDistance = float.MaxValue; // Best 3D coffer distance during current approach
+    private uint openingChestCofferWalkFailedEntityId; // Coffer whose short flat walk approach already stalled
     private Vector3? openingChestLastKnownCofferPosition; // Last targetable overworld Treasure Coffer XYZ seen this map
     private uint openingChestLastKnownCofferTerritoryId; // Territory for last known overworld coffer XYZ
     private uint openingChestLastKnownCofferEntityId; // Entity for last known overworld coffer XYZ
@@ -123,6 +124,8 @@ public class StateManager : IDisposable
     private const float OpeningChestCofferReturnRange = 30.0f;
     private const float OpeningChestCofferMountRecoveryDistance = 3.0f;
     private const float OpeningChestCofferMountRecoveryYDelta = 0.5f;
+    private const float OpeningChestCofferWalkPreferredDistance = 10.0f;
+    private const float OpeningChestCofferWalkPreferredYDelta = 0.3f;
     private const float OpeningChestCofferProgressMargin = 0.5f;
     private const float CapturedLocationMatchXZRange = 10.0f;
     private const float UnderwaterBounceTriggerXZRange = 10.0f;
@@ -2016,6 +2019,11 @@ public class StateManager : IDisposable
         openingChestCofferApproachBestDistance = float.MaxValue;
     }
 
+    private void ResetOpeningChestCofferWalkFailure()
+    {
+        openingChestCofferWalkFailedEntityId = 0;
+    }
+
     private void ResetOpeningChestCofferMemory()
     {
         openingChestLastKnownCofferPosition = null;
@@ -2023,6 +2031,7 @@ public class StateManager : IDisposable
         openingChestLastKnownCofferEntityId = 0;
         openingChestReturningToLastKnownCoffer = false;
         lastOpeningChestLastKnownCofferLogTime = DateTime.MinValue;
+        ResetOpeningChestCofferWalkFailure();
     }
 
     private void CaptureOpeningChestCofferPosition(IGameObject chest)
@@ -2031,6 +2040,12 @@ public class StateManager : IDisposable
             return;
 
         var territoryId = Plugin.ClientState.TerritoryType;
+        if (openingChestCofferWalkFailedEntityId != 0 &&
+            openingChestCofferWalkFailedEntityId != chest.EntityId)
+        {
+            ResetOpeningChestCofferWalkFailure();
+        }
+
         var previousPosition = openingChestLastKnownCofferPosition;
         var changed = openingChestLastKnownCofferEntityId != chest.EntityId
             || openingChestLastKnownCofferTerritoryId != territoryId
@@ -2143,7 +2158,7 @@ public class StateManager : IDisposable
         }
     }
 
-    private void NavigateToOpeningChestCoffer(IGameObject chest, string chestName, float distance, DateTime now, bool fly)
+    private bool NavigateToOpeningChestCoffer(IGameObject chest, string chestName, float distance, DateTime now, bool fly)
     {
         var action = fly ? "fly" : "move";
 
@@ -2161,7 +2176,7 @@ public class StateManager : IDisposable
             autoMoveActive = true;
             lastOpeningChestCofferRepathTime = now;
             _plugin.AddDebugLog($"[OpeningChest] Coffer '{chestName}' at {distance:F1}y - starting vnav {action} approach.");
-            return;
+            return false;
         }
 
         if (distance + OpeningChestCofferProgressMargin < openingChestCofferApproachBestDistance)
@@ -2193,6 +2208,27 @@ public class StateManager : IDisposable
                     $"[OpeningChest] Coffer vnav {action} stalled short of '{chestName}' at {distance:F1}y - stopped and reissued path.");
             }
         }
+
+        return stalled;
+    }
+
+    private bool ShouldWalkToShortFlatOpeningChestCoffer(IGameObject chest, Vector3 playerPosition)
+    {
+        if (Plugin.Condition[ConditionFlag.Diving] || _plugin.NavigationService.IsFlying())
+            return false;
+
+        if (!chest.IsTargetable)
+            return false;
+
+        if (openingChestCofferWalkFailedEntityId == chest.EntityId)
+            return false;
+
+        var distance = Vector3.Distance(playerPosition, chest.Position);
+        if (distance >= OpeningChestCofferWalkPreferredDistance)
+            return false;
+
+        var yDistance = Math.Abs(playerPosition.Y - chest.Position.Y);
+        return yDistance <= OpeningChestCofferWalkPreferredYDelta;
     }
 
     private bool EnsureOpeningChestCofferRecoveryMounted(string chestName, float distance, float yDelta, DateTime now)
@@ -2233,6 +2269,29 @@ public class StateManager : IDisposable
             return false;
 
         var yDistance = Math.Abs(yDelta);
+        if (ShouldWalkToShortFlatOpeningChestCoffer(chest, playerPosition))
+        {
+            if (distance <= range)
+                return false;
+
+            if (openingChestCofferMountRecoveryActive)
+                ResetOpeningChestCofferMountRecovery("before short flat coffer walk recovery", stopNavigation: true);
+
+            Plugin.TargetManager.Target = chest;
+            var stalled = NavigateToOpeningChestCoffer(chest, chestName, distance, now, fly: false);
+            if (stalled)
+            {
+                openingChestCofferWalkFailedEntityId = chest.EntityId;
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Short flat walk to '{chestName}' stalled at {distance:F1}y, Y {yDistance:F1}y - allowing mounted recovery next tick.");
+                StateDetail = $"Walk to nearby coffer stalled ({distance:F1}y) - preparing mounted recovery...";
+                return true;
+            }
+
+            StateDetail = $"Walking to nearby coffer '{chestName}' ({distance:F1}y, Y {yDistance:F1}y)...";
+            return true;
+        }
+
         var displaced = distance > OpeningChestCofferMountRecoveryDistance ||
                         yDistance > OpeningChestCofferMountRecoveryYDelta;
         if (!displaced && !openingChestCofferMountRecoveryActive)
@@ -3425,6 +3484,7 @@ public class StateManager : IDisposable
             {
                 _plugin.AddDebugLog("[OpeningChest] Portal detected after targetable coffer cleared - transitioning to portal interaction...");
                 ResetOpeningChestCofferMountRecovery();
+                ResetOpeningChestCofferWalkFailure();
                 StopPortalConflictingMovement();
                 CheckForPortalAfterChest();
                 return;
@@ -3443,6 +3503,7 @@ public class StateManager : IDisposable
         if (chest == null)
         {
             ResetOpeningChestCofferMountRecovery("because chest disappeared", stopNavigation: !inCombat);
+            ResetOpeningChestCofferWalkFailure();
 
             if (openingChestCombatInterrupted)
             {
@@ -3611,15 +3672,9 @@ public class StateManager : IDisposable
         if (inCombat)
         {
             ResetOpeningChestCofferMountRecovery();
+            ResetOpeningChestCofferWalkFailure();
+            StopOpeningChestCofferMovement("because combat started");
 
-            // In combat - stop movement and clear target so we're not chained to chest
-            if (autoMoveActive)
-            {
-                GameHelpers.StopAutoMove();
-                _plugin.NavigationService.StopNavigation();
-                autoMoveActive = false;
-                _plugin.AddDebugLog($"[OpeningChest] Combat detected - stopped automove, clearing target");
-            }
             // Clear target so player can fight freely
             if (Plugin.TargetManager.Target?.Name.ToString() == chestName)
             {
@@ -3680,6 +3735,7 @@ public class StateManager : IDisposable
     private void CheckForPortalAfterChest()
     {
         ResetOpeningChestCofferMountRecovery("before portal search", stopNavigation: true);
+        ResetOpeningChestCofferWalkFailure();
 
         if (ShouldSkipPortalWaitForSelectedMap())
         {
@@ -3836,7 +3892,8 @@ public class StateManager : IDisposable
             openingChestReturningToFlag = false;
             openingChestReturningToLastKnownCoffer = false;
             chestDisappearedTime = DateTime.MinValue;
-            ResetOpeningChestCofferMountRecovery();
+            ResetOpeningChestCofferMountRecovery("because combat started", stopNavigation: true);
+            ResetOpeningChestCofferWalkFailure();
             _plugin.AddDebugLog("[OpeningChest] Combat interrupted chest recovery - will retry after combat");
         }
         
