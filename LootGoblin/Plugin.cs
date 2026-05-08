@@ -7,7 +7,6 @@ using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using ECommons;
-using ECommons.Automation;
 using LootGoblin.IPC;
 using LootGoblin.Models;
 using LootGoblin.Services;
@@ -85,7 +84,6 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly string[] LegacyFinishCommandDefaults = { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty };
     private static readonly string[] CurrentFinishCommandDefaults = { "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty, string.Empty };
     private bool ecommonsInitialized;
-    private bool ecommonsCallbackHookInstalled;
 
     public bool IsAdsAvailable
     {
@@ -190,18 +188,6 @@ public sealed class Plugin : IDalamudPlugin
         // Load mount names from game data
         LoadMountNames();
 
-        // Initialize ECommons callback hook for addon interactions
-        try
-        {
-            Callback.InstallHook();
-            ecommonsCallbackHookInstalled = true;
-            AddDebugLog("ECommons callback hook installed.");
-        }
-        catch (Exception ex)
-        {
-            Log.Error($"Failed to install ECommons callback hook: {ex}");
-        }
-
         AddDebugLog("Loot Goblin loaded.");
         Log.Information("===Loot Goblin loaded!===");
     }
@@ -238,20 +224,6 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.RemoveHandler(CommandName);
         CommandManager.RemoveHandler(CommandAlias);
-
-        if (ecommonsCallbackHookInstalled)
-        {
-            try
-            {
-                Callback.UninstallHook();
-                ecommonsCallbackHookInstalled = false;
-                AddDebugLog("ECommons callback hook uninstalled.");
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Failed to uninstall ECommons callback hook: {ex}");
-            }
-        }
 
         if (ecommonsInitialized)
         {
@@ -415,6 +387,8 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (string.IsNullOrWhiteSpace(text))
             return;
+
+        StateManager.NotifyChatMessage(text);
 
         if (!text.Contains("Failed to find path", StringComparison.OrdinalIgnoreCase))
             return;

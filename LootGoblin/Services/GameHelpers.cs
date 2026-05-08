@@ -323,20 +323,18 @@ public static class GameHelpers
 
         Plugin.Log.Information($"[CALLBACK] Addon is visible, creating AddonMaster...");
 
-        // Both Callback.Fire and AddonMaster are failing with null reference
-        // Let's get detailed error info and try raw AtkUnitBase callback
+        // Use raw AtkUnitBase callback to avoid stale ECommons callback wrappers.
         Plugin.Log.Information($"[CALLBACK] Addon AtkValuesCount={addon->AtkUnitBase.AtkValuesCount}");
         Plugin.Log.Information($"[CALLBACK] Attempting raw callback with 2 params: true, {mapIndex}");
         
         try
         {
-            // The callback uses 0-based indexing
-            // First parameter: bool (true = confirm selection)
-            // Second parameter: int (0-based index of the item to select)
             var atkValues = stackalloc AtkValue[2];
-            atkValues[0].Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Bool;
+            atkValues[0] = default;
+            atkValues[0].Type = AtkValueType.Bool;
             atkValues[0].Byte = 1; // true = confirm selection
-            atkValues[1].Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Int;
+            atkValues[1] = default;
+            atkValues[1].Type = AtkValueType.Int;
             atkValues[1].Int = mapIndex; // 0-based index
             
             Plugin.Log.Information($"[CALLBACK] Calling FireCallback with Bool=true, Int={mapIndex} (0-based)");
@@ -447,17 +445,14 @@ public static class GameHelpers
             {
                 Plugin.Log.Information("[CALLBACK] Pending SelectYesno became visible, clicking Yes...");
 
-                try
+                if (TryFireAddonCallback("SelectYesno", true, 0))
                 {
-                    new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
                     Plugin.Log.Information("[CALLBACK] Successfully clicked Yes on decipher confirmation");
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Log.Error($"[CALLBACK] Pending decipher confirmation click failed: {ex.Message}");
+                    ResetPendingConfirmDialogWatch();
+                    return;
                 }
 
-                ResetPendingConfirmDialogWatch();
+                Plugin.Log.Warning("[CALLBACK] Pending decipher confirmation click failed; will retry until timeout");
                 return;
             }
         }
@@ -487,7 +482,6 @@ public static class GameHelpers
 
     /// <summary>
     /// Generic SelectYesno handler - clicks Yes on any visible SelectYesno dialog.
-    /// Uses exact same pattern as FrenRider's AcceptInvite.
     /// Call this from state ticks whenever we expect a Yes/No dialog.
     /// Returns true if a dialog was found and clicked.
     /// </summary>
@@ -503,10 +497,15 @@ public static class GameHelpers
             if (!addon->AtkUnitBase.IsVisible)
                 return false;
 
-            new AddonMaster.SelectYesno(&addon->AtkUnitBase).Yes();
-            ResetPendingConfirmDialogWatch();
-            Plugin.Log.Information("[YES/NO] Clicked Yes on SelectYesno dialog");
-            return true;
+            if (TryFireAddonCallback("SelectYesno", true, 0))
+            {
+                ResetPendingConfirmDialogWatch();
+                Plugin.Log.Information("[YES/NO] Clicked Yes on SelectYesno dialog");
+                return true;
+            }
+
+            Plugin.Log.Warning("[YES/NO] SelectYesno direct callback failed");
+            return false;
         }
         catch (Exception ex)
         {
@@ -521,9 +520,18 @@ public static class GameHelpers
     /// </summary>
     public static unsafe bool InteractWithObject(IGameObject obj)
     {
+        return InteractWithObject(obj, true);
+    }
+
+    /// <summary>
+    /// Interact with a targeted game object via TargetSystem.
+    /// Sets the Dalamud target first, then calls TargetSystem.InteractWithObject.
+    /// </summary>
+    public static unsafe bool InteractWithObject(IGameObject obj, bool useCameraRaycast)
+    {
         try
         {
-            Plugin.Log.Information($"[INTERACT] Starting interaction with {obj.Name.TextValue} (Address: {obj.Address:X})");
+            Plugin.Log.Information($"[INTERACT] Starting interaction with {obj.Name.TextValue} (Address: {obj.Address:X}, useCameraRaycast={useCameraRaycast})");
             
             Plugin.TargetManager.Target = obj;
 
@@ -542,7 +550,7 @@ public static class GameHelpers
             }
 
             Plugin.Log.Information($"[INTERACT] Calling TargetSystem.InteractWithObject for {obj.Name.TextValue}");
-            ts->InteractWithObject(gameObjPtr, true);
+            ts->InteractWithObject(gameObjPtr, useCameraRaycast);
             Plugin.Log.Information($"[INTERACT] InteractWithObject called successfully for {obj.Name.TextValue} at {obj.Position}");
             return true;
         }
@@ -1020,7 +1028,15 @@ public static class GameHelpers
     /// Fire a callback on a named addon with variable arguments.
     /// Uses AtkUnitBase.FireCallback pattern from map decipher solution.
     /// </summary>
-    public static unsafe void FireAddonCallback(string addonName, bool updateState, params object[] args)
+    public static void FireAddonCallback(string addonName, bool updateState, params object[] args)
+    {
+        _ = TryFireAddonCallback(addonName, updateState, args);
+    }
+
+    /// <summary>
+    /// Fire a callback on a named addon and report whether it was sent.
+    /// </summary>
+    public static unsafe bool TryFireAddonCallback(string addonName, bool updateState, params object[] args)
     {
         try
         {
@@ -1028,20 +1044,12 @@ public static class GameHelpers
             if (addon == null || !addon->IsVisible)
             {
                 Plugin.Log.Warning($"[FireAddonCallback] Addon '{addonName}' not found or not visible");
-                return;
+                return false;
             }
 
             var atkValues = new AtkValue[args.Length];
             for (int i = 0; i < args.Length; i++)
-            {
-                atkValues[i] = args[i] switch
-                {
-                    int intVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Int, Int = intVal },
-                    uint uintVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.UInt, UInt = uintVal },
-                    bool boolVal => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Bool, Byte = (byte)(boolVal ? 1 : 0) },
-                    _ => new AtkValue { Type = FFXIVClientStructs.FFXIV.Component.GUI.AtkValueType.Int, Int = Convert.ToInt32(args[i]) },
-                };
-            }
+                atkValues[i] = CreateCallbackValue(args[i]);
 
             fixed (AtkValue* ptr = atkValues)
             {
@@ -1049,10 +1057,68 @@ public static class GameHelpers
             }
 
             Plugin.Log.Information($"[FireAddonCallback] Fired callback on '{addonName}' with {args.Length} args");
+            return true;
         }
         catch (Exception ex)
         {
             Plugin.Log.Error($"[FireAddonCallback] Failed for '{addonName}': {ex.Message}");
+            return false;
+        }
+    }
+
+    private static AtkValue CreateCallbackValue(object? arg)
+    {
+        var value = default(AtkValue);
+        switch (arg)
+        {
+            case bool boolVal:
+                value.Type = AtkValueType.Bool;
+                value.Byte = (byte)(boolVal ? 1 : 0);
+                break;
+            case uint uintVal:
+                value.Type = AtkValueType.UInt;
+                value.UInt = uintVal;
+                break;
+            case int intVal:
+                value.Type = AtkValueType.Int;
+                value.Int = intVal;
+                break;
+            default:
+                value.Type = AtkValueType.Int;
+                value.Int = arg == null ? 0 : Convert.ToInt32(arg);
+                break;
+        }
+
+        return value;
+    }
+
+    /// <summary>
+    /// Close a visible addon by firing its cancel callback.
+    /// </summary>
+    public static unsafe bool TryCloseAddonByCallback(string addonName)
+    {
+        try
+        {
+            var addon = RaptureAtkUnitManager.Instance()->GetAddonByName(addonName);
+            if (addon == null || !addon->IsVisible)
+            {
+                Plugin.Log.Debug($"[CloseAddonCallback] Addon '{addonName}' not found or not visible");
+                return false;
+            }
+
+            var atkValues = stackalloc AtkValue[1];
+            atkValues[0] = default;
+            atkValues[0].Type = AtkValueType.Int;
+            atkValues[0].Int = -1;
+            addon->FireCallback(1, atkValues, true);
+
+            Plugin.Log.Information($"[CloseAddonCallback] Fired cancel callback on '{addonName}'");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning($"[CloseAddonCallback] Failed for '{addonName}': {ex.Message}");
+            return false;
         }
     }
 

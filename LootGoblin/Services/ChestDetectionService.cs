@@ -15,6 +15,9 @@ public class ChestDetectionService : IDisposable
 {
     private readonly Plugin _plugin;
     private readonly IPluginLog _log;
+    private DateTime lastCofferLogTime = DateTime.MinValue;
+    private uint lastLoggedCofferEntityId;
+    private bool lastLoggedCofferTargetable;
 
     public IGameObject? NearestCoffer { get; private set; }
     public float NearestCofferDistance { get; private set; } = float.MaxValue;
@@ -29,7 +32,7 @@ public class ChestDetectionService : IDisposable
 
     /// <summary>
     /// Scan the ObjectTable for the nearest treasure coffer.
-    /// Uses FrenRider-style simple targeting: look for exact name "Treasure Coffer".
+    /// Prefer exact "Treasure Coffer", then safe coffer/chest name tokens.
     /// Returns the nearest one within maxRange (default 100 yalms).
     /// </summary>
     public IGameObject? FindNearestCoffer(float maxRange = 100f)
@@ -47,16 +50,25 @@ public class ChestDetectionService : IDisposable
 
         try
         {
-            // FrenRider-style: simple exact name match
-            foreach (var chestObj in Plugin.ObjectTable.Where(obj =>
-                         obj != null && obj.Name.ToString() == "Treasure Coffer"))
-            {
-                var dist = Vector3.Distance(player.Position, chestObj.Position);
-                if (dist > maxRange || dist >= nearestDist)
-                    continue;
+            var candidate = Plugin.ObjectTable
+                .Where(IsCofferObject)
+                .Select(obj => new
+                {
+                    Object = obj,
+                    Distance = Vector3.Distance(player.Position, obj.Position),
+                    NameRank = IsExactTreasureCofferName(obj.Name.TextValue) ? 0 : 1,
+                    TargetRank = obj.IsTargetable ? 0 : 1,
+                })
+                .Where(candidate => candidate.Distance <= maxRange)
+                .OrderBy(candidate => candidate.NameRank)
+                .ThenBy(candidate => candidate.TargetRank)
+                .ThenBy(candidate => candidate.Distance)
+                .FirstOrDefault();
 
-                nearest = chestObj;
-                nearestDist = dist;
+            if (candidate != null)
+            {
+                nearest = candidate.Object;
+                nearestDist = candidate.Distance;
             }
         }
         catch (Exception ex)
@@ -67,17 +79,58 @@ public class ChestDetectionService : IDisposable
         NearestCoffer = nearest;
         NearestCofferDistance = nearestDist;
 
-        if (nearest != null)
-            _plugin.AddDebugLog($"Coffer found: '{nearest.Name.TextValue}' at {nearest.Position} ({nearestDist:F1}y away)");
-        else
+        if (nearest != null && ShouldLogCoffer(nearest))
         {
-            // Fallback: try /target command approach
-            _plugin.AddDebugLog("No chest found via ObjectTable - trying /target command...");
-            // Note: We could send CommandHelper.SendCommand("/target \"Treasure Coffer\"") here
-            // but that would make the player target it, not return the object reference
+            _plugin.AddDebugLog(
+                $"Coffer found: '{nearest.Name.TextValue}' kind={nearest.ObjectKind} targetable={nearest.IsTargetable} " +
+                $"at {nearest.Position} ({nearestDist:F1}y away)");
         }
 
         return nearest;
+    }
+
+    public static bool IsCofferObject(IGameObject? obj)
+    {
+        if (obj == null)
+            return false;
+
+        if (obj.ObjectKind != ObjectKind.EventObj && obj.ObjectKind != ObjectKind.Treasure)
+            return false;
+
+        return IsSafeCofferName(obj.Name.TextValue);
+    }
+
+    public static bool IsExactTreasureCofferName(string name)
+    {
+        return string.Equals(name.Trim(), "Treasure Coffer", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsSafeCofferName(string name)
+    {
+        var trimmed = name.Trim();
+        if (trimmed.Length == 0)
+            return false;
+
+        if (IsExactTreasureCofferName(trimmed))
+            return true;
+
+        return trimmed.Contains("coffer", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Contains("chest", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool ShouldLogCoffer(IGameObject coffer)
+    {
+        var now = DateTime.Now;
+        var shouldLog = coffer.EntityId != lastLoggedCofferEntityId ||
+                        coffer.IsTargetable != lastLoggedCofferTargetable ||
+                        now - lastCofferLogTime >= TimeSpan.FromSeconds(5.0);
+        if (!shouldLog)
+            return false;
+
+        lastLoggedCofferEntityId = coffer.EntityId;
+        lastLoggedCofferTargetable = coffer.IsTargetable;
+        lastCofferLogTime = now;
+        return true;
     }
 
     /// <summary>

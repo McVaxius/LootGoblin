@@ -94,11 +94,23 @@ public class StateManager : IDisposable
     private uint openingChestLastKnownCofferEntityId; // Entity for last known overworld coffer XYZ
     private bool openingChestReturningToLastKnownCoffer; // True while recovering to captured coffer XYZ
     private DateTime lastOpeningChestLastKnownCofferLogTime = DateTime.MinValue; // Throttle captured coffer recovery logs
+    private DateTime lastOpeningChestObjectScanLogTime = DateTime.MinValue; // Throttle missing-coffer ObjectTable diagnostics
+    private DateTime lastOpeningChestUntargetableLogTime = DateTime.MinValue; // Throttle visible-but-untargetable coffer logs
+    private DateTime lastOpeningChestTargetCommandTime = DateTime.MinValue; // Throttle /target fallback attempts
+    private DateTime openingChestMissingCofferRecoveryStartedAt = DateTime.MinValue; // Bounds no-object recovery after dig
+    private DateTime lastOpeningChestRecoveryDigTime = DateTime.MinValue; // Throttle recovery /gaction dig retries
+    private int openingChestRecoveryDigRetryCount; // Bounded retry count for missing coffer after dig
+    private int openingChestInteractionAttemptCount; // Cycles coffer interaction methods
+    private uint openingChestInteractionEntityId; // Coffer currently being interacted with
+    private bool openingChestBotInteractionAttemptedThisMap; // Used to flag manual/inconclusive evidence
     private DateTime portalApproachStartedAt = DateTime.MinValue; // Tracks progress for portal FlyToPosition
     private float portalApproachStartDistance = float.MaxValue; // Distance when current portal approach started
     private DateTime lastPortalRepathTime = DateTime.MinValue; // Rate-limit portal stop + repath recovery
     private bool portalRegularVnavPathLogged; // One-shot log for portal vnav-only approach path
     private DateTime lastPortalTimeoutHoldLogTime = DateTime.MinValue; // Throttle timeout hold logs while portal/duty still active
+    private DateTime lastPortalObjectScanLogTime = DateTime.MinValue; // Throttle active portal ObjectTable logs
+    private int portalInteractionAttemptCount; // Alternates TargetSystem and /interact while portal dialog is pending
+    private bool portalUnderwaterReadyLogged; // One-shot log when a diving/dismounted portal can be interacted directly
     private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
     private bool descentInProgress = false; // Whether Ctrl+Space descent is currently running
     private DateTime descentStartTime = DateTime.MinValue; // When Ctrl+Space descent started
@@ -127,6 +139,8 @@ public class StateManager : IDisposable
     private const float OpeningChestCofferWalkPreferredDistance = 10.0f;
     private const float OpeningChestCofferWalkPreferredYDelta = 0.3f;
     private const float OpeningChestCofferProgressMargin = 0.5f;
+    private const float OpeningChestNearbyObjectScanRange = 60.0f;
+    private const int OpeningChestMissingCofferMaxDigRetries = 2;
     private const float CapturedLocationMatchXZRange = 10.0f;
     private const float UnderwaterBounceTriggerXZRange = 10.0f;
     private const float UnderwaterFlagApproachArrivalXZRange = 5.0f;
@@ -139,12 +153,18 @@ public class StateManager : IDisposable
     private static readonly TimeSpan OpeningChestCofferDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan OpeningChestCofferStallTimeout = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan OpeningChestCofferRepathInterval = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan OpeningChestObjectScanLogInterval = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan OpeningChestTargetFallbackInterval = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan OpeningChestRecoveryDigInterval = TimeSpan.FromSeconds(6.0);
+    private static readonly TimeSpan OpeningChestMissingCofferRecoveryTimeout = TimeSpan.FromSeconds(45.0);
+    private static readonly TimeSpan OpeningChestInitialCofferWaitAfterDig = TimeSpan.FromSeconds(6.0);
     private static readonly TimeSpan KeyItemMapRecoveryTimeout = TimeSpan.FromSeconds(30.0);
     private static readonly TimeSpan KeyItemMapOpenRetryInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalSearchTimeout = TimeSpan.FromSeconds(15.0);
     private static readonly TimeSpan PortalActiveApproachTimeout = TimeSpan.FromSeconds(60.0);
+    private static readonly TimeSpan PortalObjectScanLogInterval = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairStartGrace = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairTimeout = TimeSpan.FromMinutes(3.0);
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
@@ -244,6 +264,13 @@ public class StateManager : IDisposable
     private bool chestConfirmedThisMap;
     private bool portalConfirmedThisMap;
     private bool dungeonConfirmedThisMap;
+    private bool openingChestDiscoveredByChat;
+    private bool openingChestOpenedByChat;
+    private bool openingChestPortalByChat;
+    private bool openingChestManualInterventionSuspected;
+    private DateTime openingChestDiscoveredChatAt = DateTime.MinValue;
+    private DateTime openingChestOpenedChatAt = DateTime.MinValue;
+    private DateTime openingChestPortalChatAt = DateTime.MinValue;
     private DateTime keyItemMapRecoveryStartedAt = DateTime.MinValue;
     private DateTime keyItemMapNextOpenAttemptAt = DateTime.MinValue;
     private int keyItemMapOpenAttemptCount;
@@ -1315,6 +1342,7 @@ public class StateManager : IDisposable
         chestConfirmedThisMap = false;
         portalConfirmedThisMap = false;
         dungeonConfirmedThisMap = false;
+        ResetOpeningChestLifecycleState();
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
         ResetUnderwaterLandingState();
         ResetOpeningChestCofferMemory();
@@ -1354,6 +1382,73 @@ public class StateManager : IDisposable
         lastVnavPathFailureTime = DateTime.Now;
         lastVnavPathFailureText = text;
         _plugin.AddDebugLog($"[Flying] Observed vnav path failure: {text}");
+    }
+
+    public void NotifyChatMessage(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        if (text.Contains("You discover a treasure coffer!", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!openingChestDiscoveredByChat)
+            {
+                openingChestDiscoveredByChat = true;
+                openingChestDiscoveredChatAt = DateTime.Now;
+                chestConfirmedThisMap = true;
+                _plugin.AddDebugLog("[OpeningChest] Chat evidence: treasure coffer discovered.");
+            }
+            return;
+        }
+
+        if (text.Contains("You open the lock on the treasure coffer!", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!openingChestOpenedByChat)
+            {
+                openingChestOpenedByChat = true;
+                openingChestOpenedChatAt = DateTime.Now;
+                chestConfirmedThisMap = true;
+                _plugin.AddDebugLog("[OpeningChest] Chat evidence: treasure coffer lock opened.");
+                MarkOpeningChestManualInterventionIfNeeded("coffer lock chat");
+            }
+            return;
+        }
+
+        if (IsTreasurePortalChatMessage(text))
+        {
+            if (!openingChestPortalByChat)
+            {
+                openingChestPortalByChat = true;
+                openingChestPortalChatAt = DateTime.Now;
+                portalConfirmedThisMap = true;
+                _plugin.AddDebugLog($"[OpeningChest] Chat evidence: portal message observed ('{text}').");
+                MarkOpeningChestManualInterventionIfNeeded("portal chat");
+            }
+        }
+    }
+
+    private static bool IsTreasurePortalChatMessage(string text)
+    {
+        if (!text.Contains("portal", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return text.Contains("appear", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("open", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("teleportation", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("arcane", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void MarkOpeningChestManualInterventionIfNeeded(string source)
+    {
+        if (openingChestBotInteractionAttemptedThisMap || openingChestManualInterventionSuspected)
+            return;
+
+        if (State != BotState.OpeningChest && State != BotState.Completed && portalRetryStart == DateTime.MinValue)
+            return;
+
+        openingChestManualInterventionSuspected = true;
+        _plugin.AddDebugLog(
+            $"[OpeningChest] {source} arrived before any LootGoblin coffer interaction attempt - marking run inconclusive/manual.");
     }
 
     private void ResetVnavFlyFlagFallbackState()
@@ -1932,6 +2027,9 @@ public class StateManager : IDisposable
         lastPortalRepathTime = DateTime.MinValue;
         portalRegularVnavPathLogged = false;
         lastPortalTimeoutHoldLogTime = DateTime.MinValue;
+        lastPortalObjectScanLogTime = DateTime.MinValue;
+        portalInteractionAttemptCount = 0;
+        portalUnderwaterReadyLogged = false;
     }
 
     private void ResetPortalApproachTrackingForAreaChange()
@@ -2031,12 +2129,42 @@ public class StateManager : IDisposable
         openingChestLastKnownCofferEntityId = 0;
         openingChestReturningToLastKnownCoffer = false;
         lastOpeningChestLastKnownCofferLogTime = DateTime.MinValue;
+        lastOpeningChestObjectScanLogTime = DateTime.MinValue;
+        lastOpeningChestUntargetableLogTime = DateTime.MinValue;
+        lastOpeningChestTargetCommandTime = DateTime.MinValue;
         ResetOpeningChestCofferWalkFailure();
+    }
+
+    private void ResetOpeningChestLifecycleState()
+    {
+        openingChestDiscoveredByChat = false;
+        openingChestOpenedByChat = false;
+        openingChestPortalByChat = false;
+        openingChestManualInterventionSuspected = false;
+        openingChestDiscoveredChatAt = DateTime.MinValue;
+        openingChestOpenedChatAt = DateTime.MinValue;
+        openingChestPortalChatAt = DateTime.MinValue;
+        openingChestBotInteractionAttemptedThisMap = false;
+        ResetOpeningChestMissingCofferRecoveryState();
+        ResetOpeningChestInteractionTracking();
+    }
+
+    private void ResetOpeningChestMissingCofferRecoveryState()
+    {
+        openingChestMissingCofferRecoveryStartedAt = DateTime.MinValue;
+        lastOpeningChestRecoveryDigTime = DateTime.MinValue;
+        openingChestRecoveryDigRetryCount = 0;
+    }
+
+    private void ResetOpeningChestInteractionTracking()
+    {
+        openingChestInteractionAttemptCount = 0;
+        openingChestInteractionEntityId = 0;
     }
 
     private void CaptureOpeningChestCofferPosition(IGameObject chest)
     {
-        if (chest.Name.ToString() != "Treasure Coffer")
+        if (!ChestDetectionService.IsCofferObject(chest))
             return;
 
         var territoryId = Plugin.ClientState.TerritoryType;
@@ -2363,8 +2491,7 @@ public class StateManager : IDisposable
             if ((now - lastInteractionTime).TotalSeconds >= 1.0)
             {
                 lastInteractionTime = now;
-                var interacted = GameHelpers.InteractWithObject(chest);
-                _plugin.AddDebugLog($"[OpeningChest] Interaction attempt with '{chestName}' after coffer recovery - returned: {interacted}");
+                AttemptOpeningChestCofferInteraction(chest, chestName, "after coffer recovery");
             }
 
             StateDetail = $"Interacting with '{chestName}' after recovery ({distance:F1}y)...";
@@ -2402,6 +2529,305 @@ public class StateManager : IDisposable
         autoMoveActive = true;
         StateDetail = $"Flying to displaced coffer '{chestName}' ({distance:F1}y, Y {yDistance:F1}y)...";
         return true;
+    }
+
+    private void AttemptOpeningChestCofferInteraction(IGameObject chest, string chestName, string reason)
+    {
+        if (openingChestInteractionEntityId != chest.EntityId)
+        {
+            openingChestInteractionEntityId = chest.EntityId;
+            openingChestInteractionAttemptCount = 0;
+        }
+
+        openingChestInteractionAttemptCount++;
+        openingChestBotInteractionAttemptedThisMap = true;
+        Plugin.TargetManager.Target = chest;
+
+        var attemptMethod = (openingChestInteractionAttemptCount - 1) % 3;
+        switch (attemptMethod)
+        {
+            case 0:
+            {
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} via TargetSystem(camera) with '{chestName}' {reason}.");
+                var interacted = GameHelpers.InteractWithObject(chest, useCameraRaycast: true);
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} TargetSystem(camera) returned: {interacted}");
+                break;
+            }
+
+            case 1:
+            {
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} via TargetSystem(no-camera) with '{chestName}' {reason}.");
+                var interacted = GameHelpers.InteractWithObject(chest, useCameraRaycast: false);
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} TargetSystem(no-camera) returned: {interacted}");
+                break;
+            }
+
+            default:
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} via target+/interact with '{chestName}' {reason}.");
+                CommandHelper.SendCommand("/interact");
+                break;
+        }
+    }
+
+    private bool HasOpeningChestCofferCompletionEvidence()
+    {
+        return openingChestOpenedByChat ||
+               openingChestPortalByChat ||
+               portalConfirmedThisMap ||
+               dungeonConfirmedThisMap;
+    }
+
+    private bool ShouldExpectOpeningChestCoffer()
+    {
+        return digIssuedThisMap ||
+               openingChestDiscoveredByChat ||
+               openingChestLastKnownCofferPosition.HasValue ||
+               IsOverworldMapDutyActive();
+    }
+
+    private bool TryResolveOpeningChestCofferFromCurrentTarget(float maxRange, DateTime now, out IGameObject? chest)
+    {
+        chest = null;
+        var target = Plugin.TargetManager.Target;
+        if (!ChestDetectionService.IsCofferObject(target))
+            return false;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            return false;
+
+        var cofferTarget = target!;
+        var distance = Vector3.Distance(player.Position, cofferTarget.Position);
+        if (distance > maxRange)
+            return false;
+
+        chest = cofferTarget;
+        if (now - lastOpeningChestObjectScanLogTime >= OpeningChestObjectScanLogInterval)
+        {
+            lastOpeningChestObjectScanLogTime = now;
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Resolved coffer from current target '{cofferTarget.Name.TextValue}' kind={cofferTarget.ObjectKind} " +
+                $"targetable={cofferTarget.IsTargetable} at {distance:F1}y, XYZ {FormatVectorCompact(cofferTarget.Position)}.");
+        }
+        return true;
+    }
+
+    private bool TryIssueOpeningChestTargetFallback(DateTime now)
+    {
+        if (!openingChestDiscoveredByChat || openingChestOpenedByChat || openingChestPortalByChat)
+            return false;
+
+        if (now - lastOpeningChestTargetCommandTime < OpeningChestTargetFallbackInterval)
+            return false;
+
+        lastOpeningChestTargetCommandTime = now;
+        _plugin.AddDebugLog("[OpeningChest] Coffer discovered by chat but ObjectTable lookup failed - sending /target \"Treasure Coffer\" fallback.");
+        CommandHelper.SendCommand("/target \"Treasure Coffer\"");
+        return true;
+    }
+
+    private void HandleVisibleUntargetableOpeningChestCoffer(IGameObject chest, DateTime now)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var distance = player == null
+            ? float.MaxValue
+            : Vector3.Distance(player.Position, chest.Position);
+
+        var portal = FindNearestPortal();
+        if (portal != null)
+        {
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Coffer '{chest.Name.TextValue}' is untargetable, but portal is visible - proceeding to portal flow.");
+            CheckForPortalAfterChest();
+            return;
+        }
+
+        if (openingChestOpenedByChat || openingChestPortalByChat)
+        {
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Coffer '{chest.Name.TextValue}' is untargetable after chat evidence - proceeding to portal/completion flow.");
+            CheckForPortalAfterChest();
+            return;
+        }
+
+        if (now - lastOpeningChestUntargetableLogTime >= OpeningChestObjectScanLogInterval)
+        {
+            lastOpeningChestUntargetableLogTime = now;
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Coffer visible but not targetable; waiting. name='{chest.Name.TextValue}' " +
+                $"kind={chest.ObjectKind} targetable={chest.IsTargetable} dist={distance:F1}y XYZ {FormatVectorCompact(chest.Position)}.");
+        }
+
+        StateDetail = $"Waiting for coffer to become targetable ({distance:F1}y)...";
+    }
+
+    private bool TryRecoverMissingOpeningChestCoffer(
+        DateTime now,
+        bool inCombat,
+        bool hasFlagRecoveryTarget,
+        Vector3 flagRecoveryTarget,
+        float distToFlag)
+    {
+        if (!ShouldExpectOpeningChestCoffer())
+            return false;
+
+        if (inCombat)
+        {
+            chestDisappearedTime = DateTime.MinValue;
+            StateDetail = hasFlagRecoveryTarget
+                ? $"In combat - waiting to recover missing coffer ({distToFlag:F1}y from flag)..."
+                : "In combat - waiting to recover missing coffer...";
+            return true;
+        }
+
+        if (openingChestMissingCofferRecoveryStartedAt == DateTime.MinValue)
+        {
+            openingChestMissingCofferRecoveryStartedAt = now;
+            _plugin.AddDebugLog("[OpeningChest] Expected coffer is missing after dig - starting bounded ObjectTable/flag recovery.");
+        }
+
+        LogOpeningChestObjectTableDiagnostics(now, "expected coffer missing");
+
+        if (TryReturnToOpeningChestLastKnownCoffer(now))
+        {
+            chestDisappearedTime = DateTime.MinValue;
+            return true;
+        }
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var xzDistToFlag = hasFlagRecoveryTarget && player != null
+            ? (float)CalculateXZDistance(player.Position, flagRecoveryTarget)
+            : distToFlag;
+
+        if (hasFlagRecoveryTarget && xzDistToFlag > MapDigXZRange)
+        {
+            if (_plugin.NavigationService.State == NavigationState.Idle ||
+                now - lastOpeningChestCofferRepathTime >= OpeningChestCofferRepathInterval)
+            {
+                _plugin.NavigationService.MoveToPosition(flagRecoveryTarget);
+                autoMoveActive = true;
+                lastOpeningChestCofferRepathTime = now;
+                _plugin.AddDebugLog($"[OpeningChest] Missing coffer recovery: returning to flag ({xzDistToFlag:F1}y XZ).");
+            }
+
+            StateDetail = $"Returning to flag to recover coffer ({xzDistToFlag:F1}y XZ)...";
+            return true;
+        }
+
+        if (hasFlagRecoveryTarget)
+        {
+            if (autoMoveActive && _plugin.NavigationService.State != NavigationState.Idle)
+            {
+                _plugin.NavigationService.StopNavigation();
+                autoMoveActive = false;
+            }
+
+            var timeSinceDig = digIssuedAt == DateTime.MinValue
+                ? TimeSpan.MaxValue
+                : now - digIssuedAt;
+            if (openingChestRecoveryDigRetryCount == 0 && timeSinceDig < OpeningChestInitialCofferWaitAfterDig)
+            {
+                StateDetail = $"Waiting for coffer after dig... ({timeSinceDig.TotalSeconds:F1}/{OpeningChestInitialCofferWaitAfterDig.TotalSeconds:F1}s)";
+                return true;
+            }
+
+            var canRetryDig = openingChestRecoveryDigRetryCount < OpeningChestMissingCofferMaxDigRetries &&
+                              now - lastOpeningChestRecoveryDigTime >= OpeningChestRecoveryDigInterval &&
+                              now - lastDigTime >= TimeSpan.FromSeconds(3.0);
+            if (canRetryDig)
+            {
+                openingChestRecoveryDigRetryCount++;
+                lastOpeningChestRecoveryDigTime = now;
+                lastDigTime = now;
+                digIssuedThisMap = true;
+                digIssuedAt = now;
+                CommandHelper.SendCommand("/gaction dig");
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Missing coffer recovery: retrying /gaction dig near flag " +
+                    $"({openingChestRecoveryDigRetryCount}/{OpeningChestMissingCofferMaxDigRetries}).");
+                StateDetail = $"Retrying dig for missing coffer ({openingChestRecoveryDigRetryCount}/{OpeningChestMissingCofferMaxDigRetries})...";
+                return true;
+            }
+        }
+
+        var recoveryElapsed = now - openingChestMissingCofferRecoveryStartedAt;
+        if (recoveryElapsed >= OpeningChestMissingCofferRecoveryTimeout)
+        {
+            FailOpeningChestMissingCofferRecovery(recoveryElapsed);
+            return true;
+        }
+
+        StateDetail = hasFlagRecoveryTarget
+            ? $"Recovering missing coffer near flag ({xzDistToFlag:F1}y XZ, retry {openingChestRecoveryDigRetryCount}/{OpeningChestMissingCofferMaxDigRetries})..."
+            : $"Recovering missing coffer (retry {openingChestRecoveryDigRetryCount}/{OpeningChestMissingCofferMaxDigRetries})...";
+        return true;
+    }
+
+    private void LogOpeningChestObjectTableDiagnostics(DateTime now, string reason)
+    {
+        if (now - lastOpeningChestObjectScanLogTime < OpeningChestObjectScanLogInterval)
+            return;
+
+        lastOpeningChestObjectScanLogTime = now;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+        {
+            _plugin.AddDebugLog($"[OpeningChest] Object scan skipped ({reason}) - local player unavailable.");
+            return;
+        }
+
+        try
+        {
+            var nearby = Plugin.ObjectTable
+                .Where(obj => obj != null)
+                .Select(obj => new
+                {
+                    Object = obj,
+                    Name = obj.Name.TextValue,
+                    Distance = Vector3.Distance(player.Position, obj.Position),
+                })
+                .Where(candidate =>
+                    candidate.Distance <= OpeningChestNearbyObjectScanRange &&
+                    (candidate.Object.ObjectKind == ObjectKind.EventObj ||
+                     candidate.Object.ObjectKind == ObjectKind.Treasure ||
+                     ChestDetectionService.IsSafeCofferName(candidate.Name)))
+                .OrderBy(candidate => candidate.Distance)
+                .Take(10)
+                .ToList();
+
+            if (nearby.Count == 0)
+            {
+                _plugin.AddDebugLog(
+                    $"[OpeningChest] Nearby ObjectTable scan ({reason}) found no EventObj/Treasure within {OpeningChestNearbyObjectScanRange:F0}y.");
+                return;
+            }
+
+            var details = string.Join(" | ", nearby.Select(candidate =>
+                $"'{candidate.Name}' kind={candidate.Object.ObjectKind} targetable={candidate.Object.IsTargetable} " +
+                $"dist={candidate.Distance:F1}y xyz={FormatVectorCompact(candidate.Object.Position)}"));
+            _plugin.AddDebugLog($"[OpeningChest] Nearby ObjectTable scan ({reason}): {details}");
+        }
+        catch (Exception ex)
+        {
+            _plugin.AddDebugLog($"[OpeningChest] Nearby ObjectTable scan failed ({reason}): {ex.Message}");
+        }
+    }
+
+    private void FailOpeningChestMissingCofferRecovery(TimeSpan recoveryElapsed)
+    {
+        StopOpeningChestCofferMovement("after bounded missing-coffer recovery failure");
+        var message =
+            $"Treasure coffer was expected after /dig but could not be resolved after {recoveryElapsed.TotalSeconds:F0}s " +
+            $"and {openingChestRecoveryDigRetryCount}/{OpeningChestMissingCofferMaxDigRetries} dig retries. Manual intervention required.";
+        _plugin.AddDebugLog($"[OpeningChest] {message}");
+        SetWarning(message);
+        TransitionTo(BotState.Error, "Treasure coffer recovery failed after dig. Manual intervention required.");
     }
 
     private bool EnsurePortalFlyApproachMounted()
@@ -2506,6 +2932,50 @@ public class StateManager : IDisposable
             : "[Portal] Ensured automove is off before portal vnav path.");
     }
 
+    private bool IsPortalInteractionMountBlocked()
+    {
+        var isDiving = Plugin.Condition[ConditionFlag.Diving];
+        return Plugin.Condition[ConditionFlag.Mounted]
+            || Plugin.Condition[ConditionFlag.Mounting71]
+            || (Plugin.Condition[ConditionFlag.InFlight] && !isDiving);
+    }
+
+    private void PrepareDismountedUnderwaterPortalInteraction()
+    {
+        if (!Plugin.Condition[ConditionFlag.Diving])
+            return;
+
+        GameHelpers.KeyRelease(VirtualKey.CONTROL);
+        GameHelpers.KeyRelease(VirtualKey.SPACE);
+        descentMode = false;
+        descentInProgress = false;
+        underwaterTargetPosition = Vector3.Zero;
+
+        if (!portalUnderwaterReadyLogged)
+        {
+            portalUnderwaterReadyLogged = true;
+            _plugin.AddDebugLog("[Portal] Underwater portal ready while dismounted - released descent and interacting without dismount.");
+        }
+    }
+
+    private void AttemptPortalInteraction(IGameObject portal, Vector3 approachPosition)
+    {
+        portalInteractionAttemptCount++;
+        var useTargetSystem = portalInteractionAttemptCount % 2 == 1;
+        if (useTargetSystem)
+        {
+            _plugin.AddDebugLog(
+                $"[Portal] Interaction attempt #{portalInteractionAttemptCount} via TargetSystem for '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}.");
+            var interacted = GameHelpers.InteractWithObject(portal);
+            _plugin.AddDebugLog($"[Portal] Interaction attempt #{portalInteractionAttemptCount} TargetSystem returned: {interacted}");
+            return;
+        }
+
+        _plugin.AddDebugLog(
+            $"[Portal] Interaction attempt #{portalInteractionAttemptCount} via /interact for '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}.");
+        CommandHelper.SendCommand("/interact");
+    }
+
     private void HandlePortalInInteractionRange(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
     {
         CommandHelper.SendCommand("/automove off");
@@ -2519,11 +2989,7 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[Portal] Within {PortalInteractionRange:F1}y - stopped vnav before portal interaction handoff.");
         }
 
-        var isMountedOrFlying = _plugin.NavigationService.IsMounted()
-            || _plugin.NavigationService.IsFlying()
-            || Plugin.Condition[ConditionFlag.Mounting71];
-
-        if (isMountedOrFlying)
+        if (IsPortalInteractionMountBlocked())
         {
             if (portalLandingStartedAt == DateTime.MinValue)
             {
@@ -2540,6 +3006,8 @@ public class StateManager : IDisposable
             StateDetail = $"Landing at portal ({portalDist:F1}y)...";
             return;
         }
+
+        PrepareDismountedUnderwaterPortalInteraction();
 
         if (portalLandingStartedAt != DateTime.MinValue)
         {
@@ -2558,8 +3026,7 @@ public class StateManager : IDisposable
             EnsurePortalMapFlagCleared();
             Plugin.TargetManager.Target = portal;
             lastInteractionTime = now;
-            _plugin.AddDebugLog($"[Portal] Interacting with '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}...");
-            GameHelpers.InteractWithObject(portal);
+            AttemptPortalInteraction(portal, approachPosition);
         }
 
         StateDetail = $"Interacting with portal ({portalDist:F1}y)...";
@@ -3449,6 +3916,8 @@ public class StateManager : IDisposable
 
         // Click Yes on any dialog (Open the treasure coffer? etc)
         GameHelpers.ClickYesIfVisible();
+        if (TrySkipCardGame())
+            return;
 
         TryDigWhileDiving("[Underwater] chest phase");
 
@@ -3467,14 +3936,24 @@ public class StateManager : IDisposable
 
         // No portal yet - keep working on chest
         var chest = _plugin.ChestDetectionService.FindNearestCoffer(cofferSearchRange);
-        if (chest != null && !chest.IsTargetable)
+        if (chest == null && TryResolveOpeningChestCofferFromCurrentTarget(cofferSearchRange, now, out var targetedCoffer))
         {
-            _plugin.AddDebugLog("[OpeningChest] Treasure Coffer is visible but not targetable - allowing portal/completion flow.");
-            chest = null;
+            chest = targetedCoffer;
         }
-        else if (chest != null)
+
+        if (chest == null)
+            TryIssueOpeningChestTargetFallback(now);
+
+        if (chest != null)
         {
             CaptureOpeningChestCofferPosition(chest);
+            chestConfirmedThisMap = true;
+
+            if (!chest.IsTargetable)
+            {
+                HandleVisibleUntargetableOpeningChestCoffer(chest, now);
+                return;
+            }
         }
 
         if (chest == null)
@@ -3486,6 +3965,13 @@ public class StateManager : IDisposable
                 ResetOpeningChestCofferMountRecovery();
                 ResetOpeningChestCofferWalkFailure();
                 StopPortalConflictingMovement();
+                CheckForPortalAfterChest();
+                return;
+            }
+
+            if (openingChestOpenedByChat || openingChestPortalByChat)
+            {
+                _plugin.AddDebugLog("[OpeningChest] Coffer open/portal chat evidence present and no coffer object remains - transitioning to portal/completion flow.");
                 CheckForPortalAfterChest();
                 return;
             }
@@ -3597,6 +4083,12 @@ public class StateManager : IDisposable
                     return;
                 }
 
+                if (!HasOpeningChestCofferCompletionEvidence() &&
+                    TryRecoverMissingOpeningChestCoffer(now, inCombat, hasFlagRecoveryTarget, flagRecoveryTarget, distToFlag))
+                {
+                    return;
+                }
+
                 _plugin.AddDebugLog(openingChestRecoveryDigIssued
                     ? "[OpeningChest] No chest found after combat recovery dig - checking for portal"
                     : "[OpeningChest] No chest found after combat recovery window - checking for portal");
@@ -3607,6 +4099,12 @@ public class StateManager : IDisposable
                 if (TryGuardMapCompletionWithActiveKeyItem("[OpeningChest][CombatRecovery]"))
                     return;
                 CheckForPortalAfterChest();
+                return;
+            }
+
+            if (!HasOpeningChestCofferCompletionEvidence() &&
+                TryRecoverMissingOpeningChestCoffer(now, inCombat, hasFlagRecoveryTarget, flagRecoveryTarget, distToFlag))
+            {
                 return;
             }
 
@@ -3638,6 +4136,7 @@ public class StateManager : IDisposable
 
         chestConfirmedThisMap = true;
         openingChestReturningToLastKnownCoffer = false;
+        ResetOpeningChestMissingCofferRecoveryState();
 
         // Chest exists - reset grace period timer
         chestDisappearedTime = DateTime.MinValue;
@@ -3726,8 +4225,7 @@ public class StateManager : IDisposable
         if ((now - lastInteractionTime).TotalSeconds >= 1.0)
         {
             lastInteractionTime = now;
-            var interacted = GameHelpers.InteractWithObject(chest);
-            _plugin.AddDebugLog($"[OpeningChest] Interaction attempt with '{chestName}' - returned: {interacted}");
+            AttemptOpeningChestCofferInteraction(chest, chestName, "at interaction range");
             StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
         }
     }
@@ -3759,6 +4257,18 @@ public class StateManager : IDisposable
             && !mapInfo.HasDungeon
             && mapInfo.Category == MapCategory.Outdoor;
     }
+
+    private bool ShouldLogPortalObjectScan(DateTime now)
+    {
+        if (portalRetryStart == DateTime.MinValue)
+            return true;
+
+        if (now - lastPortalObjectScanLogTime < PortalObjectScanLogInterval)
+            return false;
+
+        lastPortalObjectScanLogTime = now;
+        return true;
+    }
     
     private IGameObject? FindNearestPortal(bool keepActivePortalWindow = false)
     {
@@ -3780,22 +4290,28 @@ public class StateManager : IDisposable
             .OrderBy(candidate => candidate.Distance)
             .ToList();
 
+        var now = DateTime.Now;
+        var logScanDetails = portalCandidates.Count > 0 && ShouldLogPortalObjectScan(now);
+
         foreach (var candidate in portalCandidates)
         {
             var portalObj = candidate.Portal;
             var dist = candidate.Distance;
-            _plugin.AddDebugLog($"[Portal] Found portal at {dist:F1}y distance, XYZ {FormatVectorCompact(portalObj.Position)}");
+            if (logScanDetails)
+                _plugin.AddDebugLog($"[Portal] Found portal at {dist:F1}y distance, XYZ {FormatVectorCompact(portalObj.Position)}");
 
             // Verify portal is targetable (not a ghost object)
-            if (!IsObjectTargetable(portalObj))
+            if (!IsObjectTargetable(portalObj, logScanDetails))
             {
-                _plugin.AddDebugLog("[Portal] Portal is NOT targetable (ghost object) - ignoring");
+                if (logScanDetails)
+                    _plugin.AddDebugLog("[Portal] Portal is NOT targetable (ghost object) - ignoring");
                 continue;
             }
 
             if (dist > maxRange)
             {
-                _plugin.AddDebugLog($"[Portal] Portal too far ({dist:F1}y > {maxRange:F0}y)");
+                if (logScanDetails)
+                    _plugin.AddDebugLog($"[Portal] Portal too far ({dist:F1}y > {maxRange:F0}y)");
                 continue;
             }
 
@@ -3807,7 +4323,8 @@ public class StateManager : IDisposable
                 var portalBasis = keepCapturedPortal && portalApproachPosition.HasValue
                     ? $"captured XYZ {FormatVectorCompact(portalApproachPosition.Value)}"
                     : "live targetable portal";
-                _plugin.AddDebugLog($"[Portal] Keeping active portal window despite distance {dist:F1}y; {portalBasis}");
+                if (logScanDetails)
+                    _plugin.AddDebugLog($"[Portal] Keeping active portal window despite distance {dist:F1}y; {portalBasis}");
             }
 
             portalConfirmedThisMap = true;
@@ -3834,7 +4351,7 @@ public class StateManager : IDisposable
         {
             return Plugin.ObjectTable
                 .Where(obj => obj != null &&
-                              obj.Name.ToString() == "Treasure Coffer" &&
+                              ChestDetectionService.IsCofferObject(obj) &&
                               obj.IsTargetable)
                 .Select(obj => new
                 {
@@ -5204,7 +5721,7 @@ public class StateManager : IDisposable
                 if (portal != null)
                 {
                     // Double-check portal is still targetable before attempting to move
-                    if (!IsObjectTargetable(portal))
+                    if (!IsObjectTargetable(portal, logResult: false))
                     {
                         _plugin.AddDebugLog($"[Portal] Portal became untargetable - waiting...");
                         return;
@@ -5333,7 +5850,10 @@ public class StateManager : IDisposable
         
         if (!stateActionIssued)
         {
-            _plugin.AddDebugLog("[Completed] Map run complete.");
+            if (openingChestManualInterventionSuspected)
+                _plugin.AddDebugLog("[Completed] Map run ended with manual/inconclusive coffer evidence; not marking as clean LootGoblin chest-open success.");
+            else
+                _plugin.AddDebugLog("[Completed] Map run complete.");
             stateActionIssued = true;
         }
         
@@ -6252,13 +6772,14 @@ public class StateManager : IDisposable
         return true;
     }
 
-    private bool IsObjectTargetable(IGameObject obj)
+    private bool IsObjectTargetable(IGameObject obj, bool logResult = true)
     {
         // Verify object can actually be targeted (not a ghost object)
         // Quick check without blocking delays
         if (Plugin.Condition[ConditionFlag.InCombat])
         {
-            _plugin.AddDebugLog($"[ObjectCheck] Skipping targeting check for '{obj.Name}' during combat");
+            if (logResult)
+                _plugin.AddDebugLog($"[ObjectCheck] Skipping targeting check for '{obj.Name}' during combat");
             return true;
         }
         
@@ -6271,16 +6792,19 @@ public class StateManager : IDisposable
             
             if (canTarget)
             {
-                _plugin.AddDebugLog($"[ObjectCheck] '{obj.Name}' targetable");
+                if (logResult)
+                    _plugin.AddDebugLog($"[ObjectCheck] '{obj.Name}' targetable");
                 return true;
             }
         }
         catch (Exception ex)
         {
-            _plugin.AddDebugLog($"[ObjectCheck] Exception: {ex.Message}");
+            if (logResult)
+                _plugin.AddDebugLog($"[ObjectCheck] Exception: {ex.Message}");
         }
         
-        _plugin.AddDebugLog($"[ObjectCheck] '{obj.Name}' not targetable - skipping");
+        if (logResult)
+            _plugin.AddDebugLog($"[ObjectCheck] '{obj.Name}' not targetable - skipping");
         return false;
     }
 

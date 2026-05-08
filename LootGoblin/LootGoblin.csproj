@@ -2,9 +2,9 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Version>0.1.4.21</Version>
-    <FileVersion>0.1.4.21</FileVersion>
-    <AssemblyVersion>0.1.4.21</AssemblyVersion>
+    <Version>0.1.4.22</Version>
+    <FileVersion>0.1.4.22</FileVersion>
+    <AssemblyVersion>0.1.4.22</AssemblyVersion>
     <PackageProjectUrl>https://github.com/McVaxius/LootGoblin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
@@ -15,7 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ECommons" Version="3.1.0.1" />
+    <PackageReference Include="ECommons" Version="3.2.0.17" />
     <PackageReference Include="PInvoke.User32" Version="0.7.0" />
   </ItemGroup>
 
