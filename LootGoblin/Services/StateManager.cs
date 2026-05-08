@@ -71,6 +71,7 @@ public class StateManager : IDisposable
 
     private DateTime stateStartTime = DateTime.Now;
     private DateTime lastTickTime = DateTime.MinValue;
+    private DateTime lastSelectYesnoWatchdogTime = DateTime.MinValue;
     private DateTime lastMapScanTime = DateTime.MinValue;
     private int mapScanCounter = 0; // Counter for reducing log spam
     private bool stateActionIssued;
@@ -130,6 +131,7 @@ public class StateManager : IDisposable
     private bool mapCountChecked = false;
     private bool mapOpeningRetried = false;
     private const double TickIntervalSeconds = 0.5;
+    private static readonly TimeSpan SelectYesnoWatchdogInterval = TimeSpan.FromSeconds(10);
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float MapDigXZRange = 5.0f;
     private const double SameZoneAetheryteTeleportSkipXZRange = 50.0;
@@ -151,6 +153,7 @@ public class StateManager : IDisposable
     private const float PortalRunawayDistanceIncrease = 2.0f;
     private static readonly TimeSpan UnderwaterBounceDescentInterval = TimeSpan.FromSeconds(1.25);
     private static readonly TimeSpan UnderwaterFlagApproachReissueInterval = TimeSpan.FromSeconds(3.0);
+    private static readonly TimeSpan UnderwaterTriggerLoopLogInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan PortalMountCommandInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan OpeningChestCofferMountCommandInterval = TimeSpan.FromSeconds(3.0);
@@ -293,6 +296,7 @@ public class StateManager : IDisposable
     private bool underwaterFlagApproachIssued;
     private bool underwaterFlagApproachLogged;
     private DateTime lastUnderwaterFlagApproachTime = DateTime.MinValue;
+    private DateTime lastUnderwaterTriggerLoopLogTime = DateTime.MinValue;
 
     // Cycling mode state
     private List<(uint Id, string Name, uint TerritoryId)> cycleAetheryteQueue = new();
@@ -493,6 +497,8 @@ public class StateManager : IDisposable
         }
         betweenAreasMovementStopped = false;
 
+        RunSelectYesnoWatchdog();
+
         UpdateMountedRotationLifecycle();
         TryClearPendingDungeonMapFlag();
 
@@ -562,6 +568,18 @@ public class StateManager : IDisposable
             case BotState.AlexandriteFarming: TickAlexandriteFarming(); break;
             case BotState.Completed:        TickCompleted();        break;
         }
+    }
+
+    private void RunSelectYesnoWatchdog()
+    {
+        var now = DateTime.Now;
+        if (now - lastSelectYesnoWatchdogTime < SelectYesnoWatchdogInterval)
+            return;
+
+        lastSelectYesnoWatchdogTime = now;
+
+        if (GameHelpers.ClickYesIfVisible())
+            _plugin.AddDebugLog("[SelectYesnoWatchdog] Clicked Yes on visible SelectYesno dialog.");
     }
 
     private void HandleBetweenAreasTick()
@@ -1561,6 +1579,7 @@ public class StateManager : IDisposable
         underwaterFlagApproachIssued = false;
         underwaterFlagApproachLogged = false;
         lastUnderwaterFlagApproachTime = DateTime.MinValue;
+        lastUnderwaterTriggerLoopLogTime = DateTime.MinValue;
         underwaterTargetPosition = Vector3.Zero;
         wasDiving = false;
         nonThiefDivingIgnoredLogged = false;
@@ -1781,16 +1800,16 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[CommandTrigger] Sent {sent} command(s) for {reason}.");
     }
 
-    private void TryDigWhileDiving(string reason)
+    private bool TryDigWhileDiving(string reason)
     {
         if (!Plugin.Condition[ConditionFlag.Diving])
-            return;
+            return false;
 
         if (!CanUseUnderwaterNavigation())
-            return;
+            return false;
 
         if ((DateTime.Now - lastDigTime).TotalSeconds < 3.0)
-            return;
+            return false;
 
         RunLandingCommandsOnce(reason);
         CommandHelper.SendCommand("/gaction dig");
@@ -1798,6 +1817,7 @@ public class StateManager : IDisposable
         digIssuedThisMap = true;
         digIssuedAt = lastDigTime;
         _plugin.AddDebugLog($"{reason}: issued /gaction dig while diving.");
+        return true;
     }
 
     private bool TryHandleMapLandingAndDig(
@@ -2083,7 +2103,7 @@ public class StateManager : IDisposable
         }
     }
 
-    private void EnsureUnderwaterBounceDescent(DateTime now, Vector3 currentPos)
+    private bool EnsureUnderwaterBounceDescent(DateTime now, Vector3 currentPos)
     {
         descentMode = true;
 
@@ -2101,10 +2121,31 @@ public class StateManager : IDisposable
         }
 
         if (descentInProgress || now - lastUnderwaterBounceDescentStart < UnderwaterBounceDescentInterval)
-            return;
+            return false;
 
         lastUnderwaterBounceDescentStart = now;
         StartSafeDescent("[Underwater] thief-map trigger");
+        return true;
+    }
+
+    private void LogUnderwaterTriggerLoop(
+        DateTime now,
+        Vector3 currentPos,
+        double targetXZDistance,
+        bool descentPulseIssued,
+        bool digIssued)
+    {
+        if (!descentPulseIssued
+            && !digIssued
+            && now - lastUnderwaterTriggerLoopLogTime < UnderwaterTriggerLoopLogInterval)
+        {
+            return;
+        }
+
+        lastUnderwaterTriggerLoopLogTime = now;
+        _plugin.AddDebugLog(
+            $"[Underwater] Trigger loop: y={currentPos.Y:F1}; flagXZ={targetXZDistance:F1}y; " +
+            $"descentPulse={descentPulseIssued}; digIssued={digIssued}.");
     }
 
     private bool TryHandleUnderwaterBounceTriggerFlow(bool isDiving, bool includeNearTarget = true)
@@ -2195,7 +2236,11 @@ public class StateManager : IDisposable
             }
 
             SuppressUnderwaterBounceVnav();
-            TryDigWhileDiving("[Underwater] thief-map trigger");
+            var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
+            var digIssued = TryDigWhileDiving("[Underwater] thief-map trigger");
+            LogUnderwaterTriggerLoop(now, currentPos, approachXZ, descentPulseIssued, digIssued);
+            StateDetail = "Holding underwater thief-map trigger...";
+            return true;
         }
         else if (wasDiving)
         {
@@ -3870,8 +3915,6 @@ public class StateManager : IDisposable
             wasDiving = false;
         }
 
-        TryDigWhileDiving("[Underwater] flying");
-        
         // Rate limit diving checks to every 2 seconds
         if ((DateTime.Now - lastDivingCheck).TotalSeconds < 2.0) return;
         lastDivingCheck = DateTime.Now;
@@ -4165,8 +4208,6 @@ public class StateManager : IDisposable
         GameHelpers.ClickYesIfVisible();
         if (TrySkipCardGame())
             return;
-
-        TryDigWhileDiving("[Underwater] chest phase");
 
         var now = DateTime.Now;
         bool inCombat = Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat];
