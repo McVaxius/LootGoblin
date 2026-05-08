@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Text.Json;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -44,9 +45,8 @@ public sealed class RetainerMapRetrievalService : IDisposable
     private enum RetainerMapCandidateScanState
     {
         CandidateFound,
-        OnlyOtherCharacterRows,
-        CurrentCharacterNoRetainerRows,
-        NoParseableRows,
+        NoUsableRows,
+        InvalidResponse,
         NoRows,
     }
 
@@ -54,20 +54,23 @@ public sealed class RetainerMapRetrievalService : IDisposable
     private sealed record RetainerMapCandidateScan(
         RetainerMapCandidateScanState State,
         RetainerMapCandidate? Candidate,
-        int ResponseCount,
-        int ParseableRowCount,
-        int CurrentCharacterRowCount,
-        int RetainerRowCount,
-        int OtherCharacterRowCount);
+        int RowCount,
+        int WarningCount);
     private sealed record RetainerListEntry(int Index, string Name);
-    private sealed record XaItemRow(
-        string Character,
-        string World,
-        string ContainerName,
-        string ItemName,
+    private sealed record ScopedRetainerItemSearchResult(
+        bool Ready,
+        IReadOnlyList<ScopedRetainerItemRow> Rows,
+        IReadOnlyList<string> Warnings);
+    private sealed record ScopedRetainerItemRow(
+        string OwnerContentId,
+        string RetainerId,
+        string RetainerName,
         uint ItemId,
+        string ItemName,
         int Quantity,
-        bool IsHq);
+        bool IsHq,
+        string LastSeenUtc,
+        string SnapshotQuality);
 
     private const uint RevenantsTollTerritoryId = 156;
     private static readonly Vector3 RevenantsTollBellApproachPosition = new(12.188f, 29.000f, -735.430f);
@@ -200,61 +203,28 @@ public sealed class RetainerMapRetrievalService : IDisposable
         if (refreshFirst)
             TryRefreshXaDatabase();
 
-        var allowed = mapIds.Count > 0 ? mapIds.ToHashSet() : GetConfiguredMapIds().ToHashSet();
-        var itemSheet = Plugin.DataManager.GetExcelSheet<Item>();
-        if (itemSheet == null)
-        {
-            LastError = "Item sheet unavailable.";
-            StatusText = LastError;
+        var requested = GetRequestedMapIds(mapIds);
+        if (requested.Count == 0)
             return counts;
-        }
 
-        var totalRows = 0;
-        var currentCharacterRows = 0;
-        var retainerRows = 0;
+        var search = SearchCurrentCharacterRetainerItems(requested, "count", emitDebug: true);
+        if (!search.Ready)
+            return counts;
 
-        foreach (var itemId in allowed)
+        var requestedSet = requested.ToHashSet();
+        foreach (var row in search.Rows)
         {
-            var item = itemSheet.GetRow(itemId);
-            var itemName = item.Name.ToString();
-            if (string.IsNullOrWhiteSpace(itemName))
+            if (!requestedSet.Contains(row.ItemId) || row.Quantity <= 0)
                 continue;
 
-            foreach (var response in SearchXaDatabase(itemName))
-            {
-                foreach (var row in ParseXaSearchRows(response))
-                {
-                    totalRows++;
-                    if (!IsCurrentCharacterRow(row))
-                    {
-                        _plugin.AddDebugLog($"[RetainerMap] Rejected XA row for other character/world: {row.Character}@{row.World} {row.ItemName} {row.ContainerName}");
-                        continue;
-                    }
-
-                    currentCharacterRows++;
-                    if (!IsRetainerContainerName(row.ContainerName))
-                    {
-                        _plugin.AddDebugLog($"[RetainerMap] Rejected XA row with non-retainer container: {row.ContainerName} ({row.ItemName}).");
-                        continue;
-                    }
-
-                    retainerRows++;
-                    if (row.ItemId != itemId || row.Quantity <= 0)
-                        continue;
-
-                    counts[itemId] = counts.TryGetValue(itemId, out var existing)
-                        ? existing + row.Quantity
-                        : row.Quantity;
-                }
-            }
+            counts[row.ItemId] = counts.TryGetValue(row.ItemId, out var existing)
+                ? existing + row.Quantity
+                : row.Quantity;
         }
 
-        _plugin.AddDebugLog(
-            $"[RetainerMap] XA count refresh: rows={totalRows}, current-character={currentCharacterRows}, retainer={retainerRows}, map-types={counts.Count}.");
-        if (totalRows > 0 && currentCharacterRows == 0)
-            LastError = "XADB returned rows, but none matched current character/world.";
-        else if (currentCharacterRows > 0 && retainerRows == 0)
-            LastError = "XADB returned current-character rows, but none were retainer containers.";
+        LogScopedXa(
+            $"[RetainerMap] XADB scoped count summary: rows={search.Rows.Count}, map-types={counts.Count}.",
+            emitDebug: true);
 
         return counts;
     }
@@ -621,7 +591,13 @@ public sealed class RetainerMapRetrievalService : IDisposable
             return EmptyCandidateScan(RetainerMapCandidateScanState.NoRows);
         }
 
-        var allowed = enabledMapIds.Count > 0 ? enabledMapIds.ToHashSet() : GetConfiguredMapIds().ToHashSet();
+        var requested = GetRequestedMapIds(enabledMapIds);
+        if (requested.Count == 0)
+        {
+            StatusText = "No enabled maps configured for retainer lookup.";
+            return EmptyCandidateScan(RetainerMapCandidateScanState.NoRows);
+        }
+
         var itemSheet = Plugin.DataManager.GetExcelSheet<Item>();
         if (itemSheet == null)
         {
@@ -630,134 +606,103 @@ public sealed class RetainerMapRetrievalService : IDisposable
             return EmptyCandidateScan(RetainerMapCandidateScanState.NoRows);
         }
 
-        var responseCount = 0;
-        var parseableRowCount = 0;
-        var currentCharacterRowCount = 0;
-        var retainerRowCount = 0;
-        var otherCharacterRowCount = 0;
-
-        foreach (var itemId in allowed)
+        var itemNames = requested.ToDictionary(
+            itemId => itemId,
+            itemId => itemSheet.GetRow(itemId).Name.ToString());
+        var search = SearchCurrentCharacterRetainerItems(requested, "candidate", emitDebug);
+        if (!search.Ready)
         {
-            var item = itemSheet.GetRow(itemId);
-            var itemName = item.Name.ToString();
-            if (string.IsNullOrWhiteSpace(itemName))
-                continue;
+            if (!string.IsNullOrWhiteSpace(LastError))
+                StatusText = LastError;
 
-            foreach (var response in SearchXaDatabase(itemName))
-            {
-                responseCount++;
-                var candidate = TryParseCandidate(
-                    response,
-                    itemId,
-                    itemName,
-                    emitDebug,
-                    ref parseableRowCount,
-                    ref currentCharacterRowCount,
-                    ref retainerRowCount,
-                    ref otherCharacterRowCount);
-                if (candidate != null)
-                {
-                    LastError = string.Empty;
-                    return new RetainerMapCandidateScan(
-                        RetainerMapCandidateScanState.CandidateFound,
-                        candidate,
-                        responseCount,
-                        parseableRowCount,
-                        currentCharacterRowCount,
-                        retainerRowCount,
-                        otherCharacterRowCount);
-                }
-            }
+            return new RetainerMapCandidateScan(
+                RetainerMapCandidateScanState.InvalidResponse,
+                null,
+                search.Rows.Count,
+                search.Warnings.Count);
         }
 
-        if (!string.IsNullOrWhiteSpace(LastError))
-            StatusText = LastError;
+        foreach (var itemId in requested)
+        {
+            var row = search.Rows
+                .Where(row => row.ItemId == itemId &&
+                              row.Quantity > 0 &&
+                              !string.IsNullOrWhiteSpace(row.RetainerName))
+                .OrderBy(row => row.RetainerName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(row => row.RetainerId, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(row => row.ItemName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(row => row.IsHq)
+                .FirstOrDefault();
 
-        var state = ClassifyCandidateScan(responseCount, parseableRowCount, currentCharacterRowCount, retainerRowCount);
-        if (string.IsNullOrWhiteSpace(LastError))
-            SetCandidateScanStatus(state, responseCount, parseableRowCount, currentCharacterRowCount, retainerRowCount, otherCharacterRowCount, emitDebug);
+            if (row == null)
+                continue;
+
+            var itemName = !string.IsNullOrWhiteSpace(row.ItemName)
+                ? row.ItemName
+                : itemNames.GetValueOrDefault(itemId, $"Item {itemId}");
+            var candidate = new RetainerMapCandidate(itemId, itemName, row.RetainerName, -1, row.Quantity);
+            LogScopedXa($"[RetainerMap] XADB scoped candidate selected: {FormatScopedRetainerRow(row)}.", emitDebug);
+            LastError = string.Empty;
+            return new RetainerMapCandidateScan(
+                RetainerMapCandidateScanState.CandidateFound,
+                candidate,
+                search.Rows.Count,
+                search.Warnings.Count);
+        }
+
+        var state = search.Rows.Count == 0
+            ? RetainerMapCandidateScanState.NoRows
+            : RetainerMapCandidateScanState.NoUsableRows;
+        SetCandidateScanStatus(state, search.Rows.Count, search.Warnings.Count, emitDebug);
 
         return new RetainerMapCandidateScan(
             state,
             null,
-            responseCount,
-            parseableRowCount,
-            currentCharacterRowCount,
-            retainerRowCount,
-            otherCharacterRowCount);
+            search.Rows.Count,
+            search.Warnings.Count);
     }
 
     private static RetainerMapCandidateScan EmptyCandidateScan(RetainerMapCandidateScanState state)
-        => new(state, null, 0, 0, 0, 0, 0);
-
-    private static RetainerMapCandidateScanState ClassifyCandidateScan(
-        int responseCount,
-        int parseableRowCount,
-        int currentCharacterRowCount,
-        int retainerRowCount)
-    {
-        if (parseableRowCount == 0)
-            return responseCount > 0
-                ? RetainerMapCandidateScanState.NoParseableRows
-                : RetainerMapCandidateScanState.NoRows;
-
-        if (currentCharacterRowCount == 0)
-            return RetainerMapCandidateScanState.OnlyOtherCharacterRows;
-
-        return RetainerMapCandidateScanState.CurrentCharacterNoRetainerRows;
-    }
+        => new(state, null, 0, 0);
 
     private void SetCandidateScanStatus(
         RetainerMapCandidateScanState state,
-        int responseCount,
-        int parseableRowCount,
-        int currentCharacterRowCount,
-        int retainerRowCount,
-        int otherCharacterRowCount,
+        int rowCount,
+        int warningCount,
         bool emitDebug)
     {
         switch (state)
         {
-            case RetainerMapCandidateScanState.OnlyOtherCharacterRows:
-                StatusText = "XA Database SearchItems is global; matching enabled map rows are on another character/world, not this client.";
-                if (emitDebug)
-                    _plugin.AddDebugLog(
-                        $"[RetainerMap] XADB SearchItems is global. Parsed {parseableRowCount} enabled map row(s), " +
-                        $"but all usable matches were for other characters/worlds (other={otherCharacterRowCount}).");
+            case RetainerMapCandidateScanState.NoUsableRows:
+                StatusText = "No enabled current-character retainer map found in XA Database.";
+                LogScopedXa(
+                    $"[RetainerMap] XADB scoped candidate scan found {rowCount} row(s), " +
+                    $"but none had enabled item id, positive quantity, and retainer name. warnings={warningCount}.",
+                    emitDebug);
                 break;
 
-            case RetainerMapCandidateScanState.CurrentCharacterNoRetainerRows:
-                if (retainerRowCount == 0)
-                {
-                    StatusText = "No enabled current-character retainer map found; XA Database matches are not retainer containers.";
-                    if (emitDebug)
-                        _plugin.AddDebugLog(
-                            $"[RetainerMap] Parsed {parseableRowCount} XADB row(s); current-character rows={currentCharacterRowCount}, retainer rows=0.");
-                }
-                else
-                {
-                    StatusText = "No enabled current-character retainer map found; current-character retainer rows had no available quantity.";
-                    if (emitDebug)
-                        _plugin.AddDebugLog(
-                            $"[RetainerMap] Parsed {parseableRowCount} XADB row(s); current-character retainer rows={retainerRowCount}, " +
-                            "but none matched an enabled item id with quantity.");
-                }
-
-                break;
-
-            case RetainerMapCandidateScanState.NoParseableRows:
-                StatusText = "XA Database returned enabled map search results, but no parseable SearchItems rows.";
-                if (emitDebug)
-                    _plugin.AddDebugLog(
-                        $"[RetainerMap] XADB SearchItems returned {responseCount} response(s), but no parseable pipe rows.");
+            case RetainerMapCandidateScanState.InvalidResponse:
+                if (string.IsNullOrWhiteSpace(StatusText))
+                    StatusText = "XA Database scoped current-character item search failed.";
+                LogScopedXa(
+                    $"[RetainerMap] XADB scoped candidate scan failed. rows={rowCount}, warnings={warningCount}.",
+                    emitDebug);
                 break;
 
             case RetainerMapCandidateScanState.NoRows:
-                StatusText = "No enabled maps found on retainers in XA Database.";
-                if (emitDebug)
-                    _plugin.AddDebugLog("[RetainerMap] XADB SearchItems returned no rows for enabled map names.");
+                StatusText = "No enabled maps found on current-character retainers in XA Database.";
+                LogScopedXa("[RetainerMap] XADB scoped candidate scan returned 0 rows.", emitDebug);
                 break;
         }
+    }
+
+    private IReadOnlyList<uint> GetRequestedMapIds(IReadOnlyCollection<uint> mapIds)
+    {
+        var source = mapIds.Count > 0 ? mapIds : GetConfiguredMapIds();
+        return source
+            .Where(itemId => itemId != 0)
+            .Distinct()
+            .ToList();
     }
 
     private IReadOnlyCollection<uint> GetConfiguredMapIds()
@@ -792,27 +737,71 @@ public sealed class RetainerMapRetrievalService : IDisposable
         }
     }
 
-    private IEnumerable<string> SearchXaDatabase(string itemName)
+    private ScopedRetainerItemSearchResult SearchCurrentCharacterRetainerItems(
+        IReadOnlyList<uint> itemIds,
+        string context,
+        bool emitDebug)
     {
-        var results = new List<string>();
-
         if (!_plugin.IsXaDatabaseAvailable)
-            return results;
+            return new ScopedRetainerItemSearchResult(true, Array.Empty<ScopedRetainerItemRow>(), Array.Empty<string>());
+
+        LogScopedXa(
+            $"[RetainerMap] XADB scoped {context} request: local={GetLocalCharacterContext()}; " +
+            $"itemIds={FormatItemIds(itemIds)}; sources=retainers; includeZeroQuantity=False.",
+            emitDebug);
 
         try
         {
-            var subscriber = Plugin.PluginInterface.GetIpcSubscriber<string, string>("XA.Database.SearchItems");
-            var response = subscriber.InvokeFunc(itemName);
-            if (!string.IsNullOrWhiteSpace(response))
-                results.Add(response);
+            var subscriber = Plugin.PluginInterface.GetIpcSubscriber<string, string>("XA.Database.SearchCurrentCharacterItemsJson");
+            var request = JsonSerializer.Serialize(new
+            {
+                version = 1,
+                itemIds = itemIds.ToArray(),
+                sources = new[] { "retainers" },
+                includeZeroQuantity = false,
+            });
+            var response = subscriber.InvokeFunc(request);
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                LastError = "XA Database SearchCurrentCharacterItemsJson IPC returned empty response.";
+                StatusText = LastError;
+                _log.Warning(LastError);
+                return new ScopedRetainerItemSearchResult(false, Array.Empty<ScopedRetainerItemRow>(), Array.Empty<string>());
+            }
+
+            var result = ParseCurrentCharacterRetainerItemsJson(response);
+            LogScopedXa(
+                $"[RetainerMap] XADB scoped {context} response: ready={result.Ready}; " +
+                $"warnings={result.Warnings.Count}; rows={result.Rows.Count}.",
+                emitDebug);
+            foreach (var warning in result.Warnings)
+                LogScopedXa($"[RetainerMap] XADB scoped warning: {warning}", emitDebug);
+
+            if (result.Rows.Count == 0)
+            {
+                LogScopedXa($"[RetainerMap] XADB scoped {context} rows: 0 rows.", emitDebug);
+            }
+            else
+            {
+                foreach (var row in result.Rows)
+                    LogScopedXa($"[RetainerMap] XADB scoped row: {FormatScopedRetainerRow(row)}", emitDebug);
+            }
+
+            if (!result.Ready && string.IsNullOrWhiteSpace(LastError))
+            {
+                LastError = "XA Database scoped current-character item search returned ready=false.";
+                StatusText = LastError;
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
-            LastError = $"XA Database SearchItems IPC failed for {itemName}: {ex.Message}";
+            LastError = $"XA Database SearchCurrentCharacterItemsJson IPC failed: {ex.Message}";
+            StatusText = LastError;
             _log.Warning(LastError);
+            return new ScopedRetainerItemSearchResult(false, Array.Empty<ScopedRetainerItemRow>(), Array.Empty<string>());
         }
-
-        return results;
     }
 
     private bool TryRefreshXaDatabase()
@@ -835,129 +824,199 @@ public sealed class RetainerMapRetrievalService : IDisposable
         }
     }
 
-    private RetainerMapCandidate? TryParseCandidate(
-        string response,
-        uint itemId,
-        string itemName,
-        bool emitDebug,
-        ref int parseableRowCount,
-        ref int currentCharacterRowCount,
-        ref int retainerRowCount,
-        ref int otherCharacterRowCount)
+    private ScopedRetainerItemSearchResult ParseCurrentCharacterRetainerItemsJson(string response)
     {
-        foreach (var row in ParseXaSearchRows(response))
+        var rows = new List<ScopedRetainerItemRow>();
+        var warnings = new List<string>();
+        var ready = true;
+
+        try
         {
-            parseableRowCount++;
-            if (!IsCurrentCharacterRow(row))
+            using var document = JsonDocument.Parse(response);
+            var root = document.RootElement;
+
+            if (TryGetJsonProperty(root, out var readyElement, "ready"))
+                ready = ReadJsonBool(readyElement, defaultValue: true);
+
+            if (TryGetJsonProperty(root, out var warningsElement, "warnings") &&
+                warningsElement.ValueKind == JsonValueKind.Array)
             {
-                otherCharacterRowCount++;
-                if (emitDebug)
-                    _plugin.AddDebugLog(
-                        $"[RetainerMap] Ignored global XADB row for other character/world: {row.Character}@{row.World} {row.ItemName} {row.ContainerName}");
-                continue;
+                foreach (var warningElement in warningsElement.EnumerateArray())
+                {
+                    var warning = ReadJsonString(warningElement);
+                    if (!string.IsNullOrWhiteSpace(warning))
+                        warnings.Add(warning);
+                }
             }
 
-            currentCharacterRowCount++;
-            if (!IsRetainerContainerName(row.ContainerName))
+            if (TryGetJsonProperty(root, out var rowsElement, "rows") &&
+                rowsElement.ValueKind == JsonValueKind.Array)
             {
-                if (emitDebug)
-                    _plugin.AddDebugLog($"[RetainerMap] Ignored current-character XADB row with non-retainer container: {row.ContainerName} ({row.ItemName}).");
-                continue;
+                foreach (var rowElement in rowsElement.EnumerateArray())
+                {
+                    if (TryParseScopedRetainerItemRow(rowElement, out var row))
+                        rows.Add(row);
+                }
             }
-
-            retainerRowCount++;
-            if (row.ItemId != itemId || row.Quantity <= 0)
-            {
-                if (emitDebug)
-                    _plugin.AddDebugLog(
-                        $"[RetainerMap] Ignored current-character retainer row without enabled quantity: item={row.ItemId}, quantity={row.Quantity}, expected={itemId}.");
-                continue;
-            }
-
-            var retainerName = ExtractRetainerName(row.ContainerName);
-            if (emitDebug)
-                _plugin.AddDebugLog(
-                    $"[RetainerMap] XA row matched: {row.ItemName} x{row.Quantity} on {retainerName} ({row.ContainerName}).");
-            return new RetainerMapCandidate(itemId, itemName, retainerName, -1, row.Quantity);
+        }
+        catch (JsonException ex)
+        {
+            LastError = $"XA Database SearchCurrentCharacterItemsJson returned invalid JSON: {ex.Message}";
+            StatusText = LastError;
+            _log.Warning(LastError);
+            return new ScopedRetainerItemSearchResult(false, rows, warnings);
         }
 
-        return null;
+        return new ScopedRetainerItemSearchResult(ready, rows, warnings);
     }
 
-    private IEnumerable<XaItemRow> ParseXaSearchRows(string response)
+    private static bool TryParseScopedRetainerItemRow(JsonElement rowElement, out ScopedRetainerItemRow row)
     {
-        if (string.IsNullOrWhiteSpace(response))
-            yield break;
-
-        foreach (var rawLine in response.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
-        {
-            var line = rawLine.Trim();
-            if (line.Length == 0)
-                continue;
-
-            var parts = line.Split('|');
-            if (parts.Length < 7)
-            {
-                _plugin.AddDebugLog($"[RetainerMap] Skipping XA row with {parts.Length} columns: {line}");
-                continue;
-            }
-
-            if (!uint.TryParse(parts[4].Trim(), out var parsedItemId))
-            {
-                if (!parts[4].Trim().Equals("ItemId", StringComparison.OrdinalIgnoreCase))
-                    _plugin.AddDebugLog($"[RetainerMap] Skipping XA row with invalid ItemId: {line}");
-                continue;
-            }
-
-            var quantity = 0;
-            if (!int.TryParse(parts[5].Trim(), out quantity))
-                quantity = 0;
-
-            var isHq = bool.TryParse(parts[6].Trim(), out var parsedIsHq) && parsedIsHq;
-            yield return new XaItemRow(
-                parts[0].Trim(),
-                parts[1].Trim(),
-                parts[2].Trim(),
-                parts[3].Trim(),
-                parsedItemId,
-                quantity,
-                isHq);
-        }
-    }
-
-    private bool IsCurrentCharacterRow(XaItemRow row)
-    {
-        var player = Plugin.ObjectTable.LocalPlayer;
-        var currentCharacter = player?.Name.TextValue ?? string.Empty;
-        var currentWorld = player?.HomeWorld.Value.Name.ToString() ?? string.Empty;
-
-        if (!string.IsNullOrWhiteSpace(currentCharacter) &&
-            !string.Equals(row.Character, currentCharacter, StringComparison.OrdinalIgnoreCase))
+        row = null!;
+        if (rowElement.ValueKind != JsonValueKind.Object ||
+            !TryReadJsonUInt(rowElement, out var itemId, "itemId"))
             return false;
 
-        if (!string.IsNullOrWhiteSpace(currentWorld) &&
-            !string.Equals(row.World, currentWorld, StringComparison.OrdinalIgnoreCase))
-            return false;
-
+        row = new ScopedRetainerItemRow(
+            ReadJsonString(rowElement, "ownerContentId"),
+            ReadJsonString(rowElement, "retainerId"),
+            ReadJsonString(rowElement, "retainerName"),
+            itemId,
+            ReadJsonString(rowElement, "itemName"),
+            ReadJsonInt(rowElement, 0, "quantity"),
+            ReadJsonBool(rowElement, false, "isHq"),
+            ReadJsonString(rowElement, "lastSeenUtc"),
+            ReadJsonString(rowElement, "snapshotQuality"));
         return true;
     }
 
-    private static bool IsRetainerContainerName(string containerName)
+    private void LogScopedXa(string message, bool emitDebug)
     {
-        return !string.IsNullOrWhiteSpace(containerName) &&
-               containerName.Contains("retainer", StringComparison.OrdinalIgnoreCase);
+        if (!emitDebug)
+            return;
+
+        _log.Information(message);
+        _plugin.AddDebugLog(message);
     }
 
-    private static string ExtractRetainerName(string containerName)
+    private static string FormatScopedRetainerRow(ScopedRetainerItemRow row)
     {
-        var cleaned = containerName.Trim();
-        foreach (var prefix in new[] { "Retainer:", "Retainer -", "Retainer", "Retainer Inventory:" })
+        var retainerName = string.IsNullOrWhiteSpace(row.RetainerName) ? "unknown" : row.RetainerName;
+        var retainerId = string.IsNullOrWhiteSpace(row.RetainerId) ? "unknown" : row.RetainerId;
+        var itemName = string.IsNullOrWhiteSpace(row.ItemName) ? "unknown" : row.ItemName;
+        var owner = string.IsNullOrWhiteSpace(row.OwnerContentId) ? "unknown" : row.OwnerContentId;
+        var quality = string.IsNullOrWhiteSpace(row.SnapshotQuality) ? "unknown" : row.SnapshotQuality;
+        var seen = string.IsNullOrWhiteSpace(row.LastSeenUtc) ? "unknown" : row.LastSeenUtc;
+
+        return $"{retainerName} [{retainerId}] | {itemName} ({row.ItemId}) x{row.Quantity} HQ={row.IsHq} | owner={owner} | quality={quality} | seen={seen}";
+    }
+
+    private static string GetLocalCharacterContext()
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var character = player?.Name.TextValue ?? string.Empty;
+        var world = player?.HomeWorld.Value.Name.ToString() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(character) && string.IsNullOrWhiteSpace(world))
+            return "unknown";
+
+        if (string.IsNullOrWhiteSpace(world))
+            return character;
+
+        if (string.IsNullOrWhiteSpace(character))
+            return world;
+
+        return $"{character}@{world}";
+    }
+
+    private static string FormatItemIds(IReadOnlyCollection<uint> itemIds)
+        => itemIds.Count == 0 ? "none" : string.Join(", ", itemIds);
+
+    private static bool TryGetJsonProperty(JsonElement element, out JsonElement value, params string[] names)
+    {
+        value = default;
+        if (element.ValueKind != JsonValueKind.Object)
+            return false;
+
+        foreach (var name in names)
         {
-            if (cleaned.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                return cleaned[prefix.Length..].Trim(' ', '-', ':');
+            if (element.TryGetProperty(name, out value))
+                return true;
         }
 
-        return cleaned;
+        foreach (var property in element.EnumerateObject())
+        {
+            if (names.Any(name => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase)))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string ReadJsonString(JsonElement element, params string[] names)
+    {
+        if (names.Length > 0 && !TryGetJsonProperty(element, out element, names))
+            return string.Empty;
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => element.ToString(),
+            _ => string.Empty,
+        };
+    }
+
+    private static bool TryReadJsonUInt(JsonElement element, out uint value, params string[] names)
+    {
+        value = 0;
+        if (names.Length > 0 && !TryGetJsonProperty(element, out element, names))
+            return false;
+
+        if (element.ValueKind == JsonValueKind.Number)
+        {
+            if (element.TryGetUInt32(out value))
+                return true;
+
+            if (element.TryGetUInt64(out var ulongValue) && ulongValue <= uint.MaxValue)
+            {
+                value = (uint)ulongValue;
+                return true;
+            }
+        }
+
+        return element.ValueKind == JsonValueKind.String &&
+               uint.TryParse(element.GetString(), out value);
+    }
+
+    private static int ReadJsonInt(JsonElement element, int defaultValue, params string[] names)
+    {
+        if (names.Length > 0 && !TryGetJsonProperty(element, out element, names))
+            return defaultValue;
+
+        if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var value))
+            return value;
+
+        return element.ValueKind == JsonValueKind.String &&
+               int.TryParse(element.GetString(), out value)
+            ? value
+            : defaultValue;
+    }
+
+    private static bool ReadJsonBool(JsonElement element, bool defaultValue, params string[] names)
+    {
+        if (names.Length > 0 && !TryGetJsonProperty(element, out element, names))
+            return defaultValue;
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String when bool.TryParse(element.GetString(), out var value) => value,
+            _ => defaultValue,
+        };
     }
 
     private bool TryFindNearestBell(out IGameObject bell)
