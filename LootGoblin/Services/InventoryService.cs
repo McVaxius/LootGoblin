@@ -60,6 +60,7 @@ public class InventoryService : IDisposable
         { "leather buried", 8156 },
         { "leather buried treasure", 8156 },
         { "leather buried treasure map", 8156 },
+		{ "fabled thief's", 19770 },
     };
 
     private static readonly Dictionary<uint, uint> KeyItemIdAliases = new()

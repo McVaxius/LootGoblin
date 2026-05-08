@@ -92,7 +92,7 @@ public static class TreasureMapData
         //{ ????, new TreasureMapInfo { ItemId = ????, Name = "? Special Timeworn Map", Tier = MapTier.Party, MinLevel = 100, Expansion = "DT", HasDungeon = true, Category = MapCategory.GuaranteedPortal, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1209, InstanceName = "Cenote Ja Ja Gural" } },
         //{ ????, new TreasureMapInfo { ItemId = ????, Name = "? Special Timeworn Map", Tier = MapTier.Party, MinLevel = 100, Expansion = "DT", HasDungeon = true, Category = MapCategory.GuaranteedPortal, Status = ImplementationStatus.Implemented, DungeonTerritoryId = 1279, InstanceName = "Vault Oneiron" } },
 		
-		//Dawnstination or whatever 8.x is called.
+		//Evercold is 8.x
 		//rough out 5 maps or just wait? haha
 
     };

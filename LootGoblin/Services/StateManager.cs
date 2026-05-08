@@ -53,10 +53,13 @@ public class StateManager : IDisposable
         public int OutOfZoneCount { get; init; }
     }
 
+    private readonly record struct ActiveMapTargetKey(uint EventItemId, uint MapItemId);
+
     private const uint ThiefMapItemId = 19770;
     private readonly Plugin _plugin;
     private readonly IFramework _framework;
     private readonly IPluginLog _log;
+    private readonly Dictionary<ActiveMapTargetKey, MapLocation> activeMapTargetCache = new();
 
     public BotState State { get; private set; } = BotState.Idle;
     public string StateDetail { get; private set; } = "";
@@ -120,6 +123,7 @@ public class StateManager : IDisposable
     private bool autoMoveActive; // Track if automove is currently on
     private bool pendingDungeonMapFlagClear; // Clear the overworld flag once dungeon entry has settled
     private bool treasureHighLowHandledThisOpen; // Prevent callback spam while puzzle addon stays open
+    private bool betweenAreasMovementStopped; // Stop LootGoblin-owned movement once per loading screen
     
     // Map opening validation variables
     private int initialMapCount;
@@ -276,6 +280,8 @@ public class StateManager : IDisposable
     private int keyItemMapOpenAttemptCount;
     private uint activeKeyItemMapItemId;
     private int activeKeyItemMapSlot = -1;
+    private bool activeKeyItemRecoverySourceLogged;
+    private bool activeKeyItemRecoveryUnderwaterLogged;
     private DateTime lastKeyItemCompletionGuardLogAt = DateTime.MinValue;
     private DateTime lastVnavPathFailureTime = DateTime.MinValue;
     private string lastVnavPathFailureText = string.Empty;
@@ -455,6 +461,7 @@ public class StateManager : IDisposable
 
         if (State == BotState.DetectingLocation && _plugin.InventoryService.HasTreasureMapKeyItem())
         {
+            // Active key-item recovery has its own bounded timer in TickDetectingLocation.
             stateStartTime = DateTime.Now;
             return;
         }
@@ -481,10 +488,10 @@ public class StateManager : IDisposable
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51];
         if (loading)
         {
-            ResetPortalApproachTrackingForAreaChange();
-            stateStartTime = DateTime.Now; // Don't timeout while loading
+            HandleBetweenAreasTick();
             return;
         }
+        betweenAreasMovementStopped = false;
 
         UpdateMountedRotationLifecycle();
         TryClearPendingDungeonMapFlag();
@@ -555,6 +562,44 @@ public class StateManager : IDisposable
             case BotState.AlexandriteFarming: TickAlexandriteFarming(); break;
             case BotState.Completed:        TickCompleted();        break;
         }
+    }
+
+    private void HandleBetweenAreasTick()
+    {
+        ResetPortalApproachTrackingForAreaChange();
+        stateStartTime = DateTime.Now; // Don't timeout while loading
+
+        if (betweenAreasMovementStopped)
+            return;
+
+        var hadMovement = autoMoveActive
+            || descentInProgress
+            || descentMode
+            || underwaterTargetPosition != Vector3.Zero
+            || _plugin.NavigationService.State != NavigationState.Idle;
+
+        if (descentInProgress || descentMode)
+        {
+            GameHelpers.KeyRelease(VirtualKey.CONTROL);
+            GameHelpers.KeyRelease(VirtualKey.SPACE);
+        }
+
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+
+        CommandHelper.SendCommand("/automove off");
+        autoMoveActive = false;
+        descentInProgress = false;
+        descentMode = false;
+        dismountAttemptStart = DateTime.MinValue;
+        underwaterTargetPosition = Vector3.Zero;
+        underwaterFlagApproachIssued = false;
+        underwaterFlagApproachLogged = false;
+        lastUnderwaterFlagApproachTime = DateTime.MinValue;
+        betweenAreasMovementStopped = true;
+
+        if (hadMovement)
+            _plugin.AddDebugLog("[BetweenAreas] Stopped LootGoblin movement/descent during load; preserving map flags.");
     }
 
     public void Start()
@@ -733,6 +778,7 @@ public class StateManager : IDisposable
         ResetStartMapRefresh();
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
+        ResetKeyItemMapRecoveryState(clearActiveKey: true);
         RestoreMountedRotationLifecycle("full reset");
         KrangleService.ClearCache();
         ClearWarning();
@@ -771,71 +817,43 @@ public class StateManager : IDisposable
         mapOpeningRetried = false;
         initialMapCount = 0;
 
-        var existingFlag = _plugin.MapFlagService.TryGetMapLocation();
-        if (existingFlag != null)
+        if (TryResolveActiveKeyItemMapTarget(keyItem, out var recoveryLocation, out var recoverySource))
         {
             ResetKeyItemMapRecoveryState();
             SetWarning(keyItem.KnownMapItemId == 0
-                ? $"Active treasure map key item '{keyItem.DisplayName}' found. Map type is unknown, but LootGoblin will use the existing map flag and will not open another map."
-                : $"Active deciphered map key item '{keyItem.DisplayName}' found. LootGoblin will finish it before opening another map.");
+                ? $"Active treasure map key item '{keyItem.DisplayName}' found. Map type is unknown, but LootGoblin recovered its target and will not open another map."
+                : $"Active deciphered map key item '{keyItem.DisplayName}' found. LootGoblin recovered its target and will finish it before opening another map.");
 
-            if (transitionToDetectingOnActive && State != BotState.DetectingLocation)
-            {
-                RetryCount = 0;
-                CurrentLocation = null;
-                TransitionTo(BotState.DetectingLocation, $"Recovered active map flag from {keyItem.DisplayName}...");
-                return true;
-            }
-
-            return false;
-        }
-
-        if (_plugin.TreasureMapLocationService.TryGetLatestLocationForKeyItem(keyItem.ItemId, out _))
-        {
-            ResetKeyItemMapRecoveryState();
-            SetWarning(keyItem.KnownMapItemId == 0
-                ? $"Active treasure map key item '{keyItem.DisplayName}' found. LootGoblin recovered its location locally and will not open another map."
-                : $"Active deciphered map key item '{keyItem.DisplayName}' found. LootGoblin recovered its location locally and will finish it before opening another map.");
-
-            if (transitionToDetectingOnActive && State != BotState.DetectingLocation)
-            {
-                RetryCount = 0;
-                CurrentLocation = null;
-                TransitionTo(BotState.DetectingLocation, $"Recovered active map location from {keyItem.DisplayName}...");
-                return true;
-            }
-
-            return false;
+            RetryCount = 0;
+            ResumeActiveKeyItemMapFromTarget(keyItem, recoveryLocation, recoverySource, source);
+            return true;
         }
 
         var now = DateTime.Now;
         if (keyItemMapRecoveryStartedAt == DateTime.MinValue)
         {
             keyItemMapRecoveryStartedAt = now;
-            _plugin.AddDebugLog($"{source} Active key-item map found ({keyItem.DisplayName}) but AgentMap has no flag.");
+            _plugin.AddDebugLog(
+                $"{source} Active key-item map found ({keyItem.DisplayName}) but no AgentMap flag, TreasureSpot capture, or cached target is available.");
         }
 
         var elapsed = now - keyItemMapRecoveryStartedAt;
         if (transitionToDetectingOnActive && State != BotState.DetectingLocation)
         {
-            TransitionTo(BotState.DetectingLocation, $"Recovering active map flag for {keyItem.DisplayName}...");
-            return true;
+            TransitionTo(BotState.DetectingLocation, $"Recovering active map target for {keyItem.DisplayName}...");
         }
 
         if (elapsed >= KeyItemMapRecoveryTimeout)
         {
             var failed =
-                $"Treasure map key item '{keyItem.DisplayName}' is active, but no local map flag appeared after LootGoblin tried to open it. Open the key item manually or stop before opening another.";
+                $"Treasure map key item '{keyItem.DisplayName}' is active, but no AgentMap flag, TreasureSpot capture, or cached target was available after {KeyItemMapRecoveryTimeout.TotalSeconds:F0}s. Manual intervention required.";
             SetWarning(failed);
             TransitionTo(BotState.Error, failed);
             return true;
         }
 
         TryOpenActiveKeyItemMap(keyItem);
-        StateDetail = keyItemMapOpenAttemptCount > 0
-            ? $"Opening active key-item map '{keyItem.DisplayName}'... ({elapsed.TotalSeconds:F0}/{KeyItemMapRecoveryTimeout.TotalSeconds:F0}s)"
-            : $"Waiting to open active key-item map '{keyItem.DisplayName}'...";
-        stateStartTime = DateTime.Now;
+        StateDetail = $"Opening active key-item map '{keyItem.DisplayName}'... ({elapsed.TotalSeconds:F0}/{KeyItemMapRecoveryTimeout.TotalSeconds:F0}s)";
         return true;
     }
 
@@ -847,12 +865,6 @@ public class StateManager : IDisposable
 
         keyItemMapNextOpenAttemptAt = now.Add(KeyItemMapOpenRetryInterval);
         keyItemMapOpenAttemptCount++;
-
-        if (!GameHelpers.IsPlayerAvailable())
-        {
-            _plugin.AddDebugLog($"[KeyItemMap] Player unavailable; deferring active key-item open for {keyItem.DisplayName}.");
-            return;
-        }
 
         if (GameHelpers.UseEventItem(keyItem.ItemId, keyItem.DisplayName))
         {
@@ -876,13 +888,17 @@ public class StateManager : IDisposable
         if (changed)
         {
             ResetKeyItemMapRecoveryState();
+            activeMapTargetCache.Clear();
             digIssuedThisMap = false;
             digIssuedAt = DateTime.MinValue;
             chestConfirmedThisMap = false;
             portalConfirmedThisMap = false;
             dungeonConfirmedThisMap = false;
+            CurrentLocation = null;
             activeKeyItemMapItemId = keyItem.ItemId;
             activeKeyItemMapSlot = keyItem.Slot;
+            activeKeyItemRecoverySourceLogged = false;
+            activeKeyItemRecoveryUnderwaterLogged = false;
             _plugin.AddDebugLog($"{source} Active treasure map key item: {keyItem.DisplayName} (item {keyItem.ItemId}, slot {keyItem.Slot}).");
         }
 
@@ -905,6 +921,182 @@ public class StateManager : IDisposable
             ResetUnderwaterLandingState();
             _plugin.AddDebugLog($"{source} Active key-item map type is unknown; landing mode MountToggle.");
         }
+    }
+
+    private bool TryResolveActiveKeyItemMapTarget(
+        TreasureMapKeyItem keyItem,
+        out MapLocation location,
+        out string recoverySource)
+    {
+        var expectedMapItemId = keyItem.KnownMapItemId != 0 ? keyItem.KnownMapItemId : SelectedMapItemId;
+
+        var agentMapLocation = _plugin.MapFlagService.TryGetMapLocation();
+        if (agentMapLocation != null)
+        {
+            CacheActiveMapTarget(keyItem, agentMapLocation, "AgentMap");
+            location = CloneMapLocation(agentMapLocation);
+            recoverySource = "AgentMap";
+            return true;
+        }
+
+        if (_plugin.TreasureMapLocationService.TryGetLatestLocation(expectedMapItemId, keyItem.ItemId, out var capturedLocation))
+        {
+            CacheActiveMapTarget(keyItem, capturedLocation, "TreasureSpot");
+            location = CloneMapLocation(capturedLocation);
+            recoverySource = "TreasureSpot";
+            return true;
+        }
+
+        if (TryGetCachedActiveMapTarget(keyItem, out location))
+        {
+            recoverySource = "cache";
+            return true;
+        }
+
+        if (CurrentLocation != null)
+        {
+            CacheActiveMapTarget(keyItem, CurrentLocation, "CurrentLocation");
+            location = CloneMapLocation(CurrentLocation);
+            recoverySource = "current location";
+            return true;
+        }
+
+        location = new MapLocation();
+        recoverySource = string.Empty;
+        return false;
+    }
+
+    private void ResumeActiveKeyItemMapFromTarget(
+        TreasureMapKeyItem keyItem,
+        MapLocation location,
+        string recoverySource,
+        string source)
+    {
+        PopulateNearestAetheryte(location, out var aetheryteId, out var bestAethDist, out var usedXyz);
+        SetLocation(location);
+        LogActiveKeyItemRecoverySourceOnce(keyItem, recoverySource, source, location);
+
+        mapCountChecked = true;
+        mapOpeningRetried = false;
+
+        var currentTerritory = Plugin.ClientState.TerritoryType;
+        if (currentTerritory != location.TerritoryId)
+        {
+            if (aetheryteId == 0)
+            {
+                var failed = $"Active map target recovered from {recoverySource}, but no aetheryte is available for {location.ZoneName}. Manual intervention required.";
+                SetWarning(failed);
+                TransitionTo(BotState.Error, failed);
+                return;
+            }
+
+            TransitionTo(BotState.Teleporting, $"Recovered active map target from {recoverySource}; teleporting to {location.ZoneName}...");
+            return;
+        }
+
+        RouteSameTerritoryMapTarget(
+            location,
+            aetheryteId,
+            bestAethDist,
+            usedXyz,
+            source,
+            $"Recovered active map target from {recoverySource}; already at map location - landing and digging...",
+            $"Recovered active map target from {recoverySource}; already mounted - resuming map run...",
+            $"Recovered active map target from {recoverySource}; mounting up...");
+    }
+
+    private void LogActiveKeyItemRecoverySourceOnce(
+        TreasureMapKeyItem keyItem,
+        string recoverySource,
+        string source,
+        MapLocation location)
+    {
+        var isDiving = Plugin.Condition[ConditionFlag.Diving];
+        if (!activeKeyItemRecoverySourceLogged)
+        {
+            activeKeyItemRecoverySourceLogged = true;
+            _plugin.AddDebugLog(
+                $"{source} Active key-item recovery source={recoverySource}; key={keyItem.DisplayName}; " +
+                $"target=T{location.TerritoryId} {FormatVectorCompact(new Vector3(location.X, location.Y, location.Z))}; " +
+                $"mapId={SelectedMapItemId}; landing={currentLandingMode}; diving={isDiving}.");
+        }
+
+        if (isDiving && CanUseUnderwaterNavigation() && !activeKeyItemRecoveryUnderwaterLogged)
+        {
+            activeKeyItemRecoveryUnderwaterLogged = true;
+            _plugin.AddDebugLog("[Underwater] Active thief-map recovery is already Diving; resuming trigger descent/dig flow.");
+        }
+    }
+
+    private bool TryGetActiveMapTargetKey(TreasureMapKeyItem? keyItem, out ActiveMapTargetKey key)
+    {
+        var eventItemId = keyItem?.ItemId ?? activeKeyItemMapItemId;
+        var mapItemId = keyItem?.KnownMapItemId ?? SelectedMapItemId;
+
+        if (eventItemId == 0 && _plugin.InventoryService.TryFindTreasureMapKeyItem(out var currentKeyItem))
+        {
+            eventItemId = currentKeyItem.ItemId;
+            if (mapItemId == 0)
+                mapItemId = currentKeyItem.KnownMapItemId;
+        }
+
+        if (mapItemId == 0)
+            mapItemId = SelectedMapItemId;
+
+        if (eventItemId == 0)
+        {
+            key = default;
+            return false;
+        }
+
+        key = new ActiveMapTargetKey(eventItemId, mapItemId);
+        return true;
+    }
+
+    private void CacheActiveMapTarget(TreasureMapKeyItem keyItem, MapLocation location, string source)
+    {
+        if (!TryGetActiveMapTargetKey(keyItem, out var key))
+            return;
+
+        activeMapTargetCache[key] = CloneMapLocation(location);
+        _plugin.AddDebugLog($"[KeyItemMap] Cached active map target from {source}: key={key.EventItemId}/{key.MapItemId}, T{location.TerritoryId} {FormatVectorCompact(new Vector3(location.X, location.Y, location.Z))}.");
+    }
+
+    private void CacheActiveMapTarget(MapLocation location, string source)
+    {
+        if (!TryGetActiveMapTargetKey(null, out var key))
+            return;
+
+        activeMapTargetCache[key] = CloneMapLocation(location);
+        _plugin.AddDebugLog($"[KeyItemMap] Cached active map target from {source}: key={key.EventItemId}/{key.MapItemId}, T{location.TerritoryId} {FormatVectorCompact(new Vector3(location.X, location.Y, location.Z))}.");
+    }
+
+    private bool TryGetCachedActiveMapTarget(TreasureMapKeyItem keyItem, out MapLocation location)
+    {
+        if (TryGetActiveMapTargetKey(keyItem, out var key) &&
+            activeMapTargetCache.TryGetValue(key, out var cached))
+        {
+            location = CloneMapLocation(cached);
+            return true;
+        }
+
+        location = new MapLocation();
+        return false;
+    }
+
+    private static MapLocation CloneMapLocation(MapLocation location)
+    {
+        return new MapLocation
+        {
+            TerritoryId = location.TerritoryId,
+            ZoneName = location.ZoneName,
+            X = location.X,
+            Y = location.Y,
+            Z = location.Z,
+            NearestAetheryteId = location.NearestAetheryteId,
+            NearestAetheryteName = location.NearestAetheryteName,
+            IsResolved = location.IsResolved,
+        };
     }
 
     private List<uint> GetEnabledMapCandidates(
@@ -1374,6 +1566,32 @@ public class StateManager : IDisposable
         nonThiefDivingIgnoredLogged = false;
     }
 
+    private void StartSafeDescent(string source)
+    {
+        if (descentInProgress)
+            return;
+
+        descentInProgress = true;
+        Task.Run(async () =>
+        {
+            try
+            {
+                await GameHelpers.PerformDescentAsync();
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"[StateManager] {source} descent failed: {ex}");
+                _plugin.AddDebugLog($"{source}: descent failed ({ex.GetType().Name}: {ex.Message}).");
+            }
+            finally
+            {
+                GameHelpers.KeyRelease(VirtualKey.CONTROL);
+                GameHelpers.KeyRelease(VirtualKey.SPACE);
+                descentInProgress = false;
+            }
+        });
+    }
+
     public void NotifyVnavPathFailure(string text)
     {
         if (State != BotState.Flying)
@@ -1469,6 +1687,9 @@ public class StateManager : IDisposable
         activeKeyItemMapItemId = 0;
         activeKeyItemMapSlot = -1;
         lastKeyItemCompletionGuardLogAt = DateTime.MinValue;
+        activeKeyItemRecoverySourceLogged = false;
+        activeKeyItemRecoveryUnderwaterLogged = false;
+        activeMapTargetCache.Clear();
     }
 
     private bool TryFallbackToFlyFlagAfterVnavFailure(DateTime now)
@@ -1883,12 +2104,7 @@ public class StateManager : IDisposable
             return;
 
         lastUnderwaterBounceDescentStart = now;
-        descentInProgress = true;
-        System.Threading.Tasks.Task.Run(async () =>
-        {
-            await GameHelpers.PerformDescentAsync();
-            descentInProgress = false;
-        });
+        StartSafeDescent("[Underwater] thief-map trigger");
     }
 
     private bool TryHandleUnderwaterBounceTriggerFlow(bool isDiving, bool includeNearTarget = true)
@@ -3248,6 +3464,124 @@ public class StateManager : IDisposable
         return CalculateXZDistance(agentPos, capturedPos) <= CapturedLocationMatchXZRange;
     }
 
+    private void PopulateNearestAetheryte(
+        MapLocation location,
+        out uint aetheryteId,
+        out double bestAethDist,
+        out bool usedXyz)
+    {
+        var flagPos = new Vector3(location.X, location.Y, location.Z);
+        aetheryteId = _plugin.NavigationService.FindNearestAetheryte(location.TerritoryId, flagPos, out bestAethDist, out usedXyz);
+        location.NearestAetheryteId = aetheryteId;
+
+        if (aetheryteId == 0)
+            return;
+
+        try
+        {
+            var aetheryteSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Aetheryte>();
+            if (aetheryteSheet != null)
+            {
+                var aetheryte = aetheryteSheet.GetRow(aetheryteId);
+                location.NearestAetheryteName = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"ID {aetheryteId}";
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private double CalculatePlayerDistanceToMapTarget(MapLocation location, Vector3 playerPos, bool usedXyz)
+    {
+        if (usedXyz)
+        {
+            var dbEntry = _plugin.MapLocationDatabase?.FindEntry(location.TerritoryId, location.X, location.Z);
+            if (dbEntry != null && dbEntry.HasRealXYZ)
+            {
+                var realDx = playerPos.X - dbEntry.RealX;
+                var realDy = playerPos.Y - dbEntry.RealY;
+                var realDz = playerPos.Z - dbEntry.RealZ;
+                return Math.Sqrt(realDx * realDx + realDy * realDy + realDz * realDz);
+            }
+        }
+
+        var dx = playerPos.X - location.X;
+        var dz = playerPos.Z - location.Z;
+        return Math.Sqrt(dx * dx + dz * dz);
+    }
+
+    private void RouteSameTerritoryMapTarget(
+        MapLocation location,
+        uint aetheryteId,
+        double bestAethDist,
+        bool usedXyz,
+        string logPrefix,
+        string closeTransitionDetail,
+        string mountedTransitionDetail,
+        string mountTransitionDetail,
+        bool allowSameZoneTeleport = false)
+    {
+        var flagPos = new Vector3(location.X, location.Y, location.Z);
+        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        var playerDist = CalculatePlayerDistanceToMapTarget(location, playerPos, usedXyz);
+
+        _plugin.AddDebugLog($"{logPrefix} Already in zone: player {(usedXyz ? "XYZ" : "XZ")} dist={playerDist:F0}y, best aetheryte dist={bestAethDist:F0}y");
+        _plugin.AddDebugLog($"{logPrefix} Player pos: ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1}), Aetheryte ID: {aetheryteId}");
+
+        var playerXZDistToFlag = CalculateXZDistance(playerPos, flagPos);
+        if (playerXZDistToFlag <= MapDigXZRange)
+        {
+            _plugin.AddDebugLog($"{logPrefix} Already within dig range ({playerXZDistToFlag:F1}y XZ) - landing/digging without teleport or mount setup.");
+            TransitionTo(BotState.Flying, closeTransitionDetail);
+            return;
+        }
+
+        var nav = _plugin.NavigationService;
+        if (nav.IsMounted() || nav.IsFlying())
+        {
+            _plugin.AddDebugLog($"{logPrefix} Already mounted or flying - skipping mount setup.");
+            TransitionTo(BotState.Flying, mountedTransitionDetail);
+            return;
+        }
+
+        if (!allowSameZoneTeleport)
+        {
+            _plugin.AddDebugLog($"{logPrefix} Same-zone target recovered while unmounted - mounting up.");
+            TransitionTo(BotState.Mounting, mountTransitionDetail);
+            return;
+        }
+
+        var playerXZDistToAetheryte = aetheryteId != 0
+            ? _plugin.NavigationService.GetPlayerXZDistanceToAetheryte(aetheryteId)
+            : null;
+
+        if (playerXZDistToAetheryte is { } aetherytePlayerDistance
+            && aetherytePlayerDistance <= SameZoneAetheryteTeleportSkipXZRange)
+        {
+            _plugin.AddDebugLog(
+                $"{logPrefix} Player is already within {SameZoneAetheryteTeleportSkipXZRange:F0}y XZ of selected aetheryte {aetheryteId} " +
+                $"({aetherytePlayerDistance:F1}y) - skipping same-zone teleport.");
+            TransitionTo(BotState.Mounting, "Already near selected aetheryte - mounting up...");
+            return;
+        }
+
+        if (aetheryteId != 0 && bestAethDist < playerDist && bestAethDist != double.MaxValue)
+        {
+            _plugin.AddDebugLog($"{logPrefix} Aetheryte is closer ({bestAethDist:F0}y < {playerDist:F0}y) - teleporting to aetheryte {aetheryteId}");
+            TransitionTo(BotState.Teleporting, $"In zone but aetheryte closer ({bestAethDist:F0}y vs {playerDist:F0}y) - teleporting...");
+            return;
+        }
+
+        if (aetheryteId == 0)
+            _plugin.AddDebugLog($"{logPrefix} No valid aetheryte found ({aetheryteId}) - mounting up");
+        else if (bestAethDist == double.MaxValue)
+            _plugin.AddDebugLog($"{logPrefix} Aetheryte has no position data (dist=infinity) - mounting up, no teleport possible");
+        else
+            _plugin.AddDebugLog($"{logPrefix} Player is closer ({playerDist:F0}y <= {bestAethDist:F0}y) - mounting up, no teleport needed");
+
+        TransitionTo(BotState.Mounting, mountTransitionDetail);
+    }
+
     private void TickDetectingLocation()
     {
         if (TryRecoverActiveKeyItemMap("[DetectingLocation]", transitionToDetectingOnActive: false))
@@ -3296,99 +3630,22 @@ public class StateManager : IDisposable
         if (location != null)
         {
             // Find nearest aetheryte to navigate from (pass flag position for closest-to-target selection)
-            var flagPos = new Vector3(location.X, location.Y, location.Z);
-            var aetheryteId = _plugin.NavigationService.FindNearestAetheryte(location.TerritoryId, flagPos, out var bestAethDist, out var usedXyz);
-            location.NearestAetheryteId = aetheryteId;
-
-            // Populate aetheryte name for passive recording
-            if (aetheryteId > 0)
-            {
-                try
-                {
-                    var aetheryteSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Aetheryte>();
-                    if (aetheryteSheet != null)
-                    {
-                        var aetheryte = aetheryteSheet.GetRow(aetheryteId);
-                        location.NearestAetheryteName = aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"ID {aetheryteId}";
-                    }
-                }
-                catch { }
-            }
+            PopulateNearestAetheryte(location, out var aetheryteId, out var bestAethDist, out var usedXyz);
 
             SetLocation(location);
 
             if (Plugin.ClientState.TerritoryType == location.TerritoryId)
             {
-                // Already in zone - compare player distance vs aetheryte distance to decide if teleporting is worth it
-                var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-                double playerDist;
-                if (usedXyz)
-                {
-                    // We have community RealXYZ - use full 3D distance for player too
-                    var dbEntry = _plugin.MapLocationDatabase?.FindEntry(location.TerritoryId, location.X, location.Z);
-                    if (dbEntry != null && dbEntry.HasRealXYZ)
-                    {
-                        var dx = playerPos.X - dbEntry.RealX;
-                        var dy = playerPos.Y - dbEntry.RealY;
-                        var dz = playerPos.Z - dbEntry.RealZ;
-                        playerDist = Math.Sqrt(dx * dx + dy * dy + dz * dz);
-                    }
-                    else
-                    {
-                        var dx = playerPos.X - location.X;
-                        var dz = playerPos.Z - location.Z;
-                        playerDist = Math.Sqrt(dx * dx + dz * dz);
-                    }
-                }
-                else
-                {
-                    // No community RealXYZ - use XZ only for player distance
-                    var dx = playerPos.X - location.X;
-                    var dz = playerPos.Z - location.Z;
-                    playerDist = Math.Sqrt(dx * dx + dz * dz);
-                }
-
-                _plugin.AddDebugLog($"[DetectingLocation] Already in zone: player {(usedXyz ? "XYZ" : "XZ")} dist={playerDist:F0}y, best aetheryte dist={bestAethDist:F0}y");
-                _plugin.AddDebugLog($"[DetectingLocation] Player pos: ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1}), Aetheryte ID: {aetheryteId}");
-
-                var playerXZDistToFlag = CalculateXZDistance(playerPos, flagPos);
-                if (playerXZDistToFlag <= MapDigXZRange)
-                {
-                    _plugin.AddDebugLog($"[DetectingLocation] Already within dig range ({playerXZDistToFlag:F1}y XZ) - landing/digging without teleport or mount setup.");
-                    TransitionTo(BotState.Flying, "Already at map location - landing and digging...");
-                    return;
-                }
-
-                var playerXZDistToAetheryte = aetheryteId != 0
-                    ? _plugin.NavigationService.GetPlayerXZDistanceToAetheryte(aetheryteId)
-                    : null;
-
-                if (playerXZDistToAetheryte is { } aetherytePlayerDistance
-                    && aetherytePlayerDistance <= SameZoneAetheryteTeleportSkipXZRange)
-                {
-                    _plugin.AddDebugLog(
-                        $"[DetectingLocation] Player is already within {SameZoneAetheryteTeleportSkipXZRange:F0}y XZ of selected aetheryte {aetheryteId} " +
-                        $"({aetherytePlayerDistance:F1}y) - skipping same-zone teleport.");
-                    TransitionTo(BotState.Mounting, "Already near selected aetheryte - mounting up...");
-                    return;
-                }
-
-                if (aetheryteId != 0 && bestAethDist < playerDist && bestAethDist != double.MaxValue)
-                {
-                    // Aetheryte is closer than player - teleport
-                    _plugin.AddDebugLog($"[DetectingLocation] Aetheryte is closer ({bestAethDist:F0}y < {playerDist:F0}y) - teleporting to aetheryte {aetheryteId}");
-                    TransitionTo(BotState.Teleporting, $"In zone but aetheryte closer ({bestAethDist:F0}y vs {playerDist:F0}y) - teleporting...");
-                }
-                else
-                {
-                    if (aetheryteId == 0)
-                        _plugin.AddDebugLog($"[DetectingLocation] No valid aetheryte found ({aetheryteId}) - mounting up");
-                    else if (bestAethDist == double.MaxValue)
-                        _plugin.AddDebugLog($"[DetectingLocation] Aetheryte has no position data (dist=∞) - mounting up, no teleport possible");
-                    else
-                        _plugin.AddDebugLog($"[DetectingLocation] Player is closer ({playerDist:F0}y <= {bestAethDist:F0}y) - mounting up, no teleport needed");
-                    TransitionTo(BotState.Mounting, "Already in zone & closer than aetheryte! Mounting up...");
-                }
+                RouteSameTerritoryMapTarget(
+                    location,
+                    aetheryteId,
+                    bestAethDist,
+                    usedXyz,
+                    "[DetectingLocation]",
+                    "Already at map location - landing and digging...",
+                    "Already mounted - flying to location...",
+                    "Already in zone & closer than aetheryte! Mounting up...",
+                    allowSameZoneTeleport: true);
             }
             else
             {
@@ -3801,13 +4058,8 @@ public class StateManager : IDisposable
                     if (!descentInProgress)
                     {
                         // Start Ctrl+Space descent
-                        descentInProgress = true;
                         _plugin.AddDebugLog($"[Flying] Starting Ctrl+Space descent attempt ({descentElapsed:F0}s into dismount)");
-                        
-                        System.Threading.Tasks.Task.Run(async () => {
-                            await GameHelpers.PerformDescentAsync();
-                            descentInProgress = false;
-                        });
+                        StartSafeDescent("[Flying] descent mode");
                     }
                     
                     // Monitor Y position change
@@ -3851,13 +4103,8 @@ public class StateManager : IDisposable
                 // Fallback: Try Ctrl+Space as last resort
                 if (!descentInProgress)
                 {
-                    descentInProgress = true;
                     _plugin.AddDebugLog($"[Flying] Normal dismount failed after {dismountElapsed:F0}s - trying Ctrl+Space as fallback");
-                    
-                    System.Threading.Tasks.Task.Run(async () => {
-                        await GameHelpers.PerformDescentAsync();
-                        descentInProgress = false;
-                    });
+                    StartSafeDescent("[Flying] fallback descent");
                 }
                 
                 StateDetail = $"Fallback descent... ({dismountElapsed:F0}s)";
@@ -5992,27 +6239,29 @@ public class StateManager : IDisposable
         digIssuedAt = DateTime.MinValue;
         chestDisappearedTime = DateTime.MinValue;
 
-        var player = Plugin.ObjectTable.LocalPlayer;
-        if (player != null && TryGetCurrentFlagRecoveryTarget(out var flagTarget, out _))
+        if (TryResolveActiveKeyItemMapTarget(keyItem, out var recoveryLocation, out var recoverySource))
         {
-            var xzDist = CalculateXZDistance(player.Position, flagTarget);
-            if (xzDist <= MapDigXZRange)
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player != null && recoveryLocation.TerritoryId == Plugin.ClientState.TerritoryType)
             {
-                _plugin.AddDebugLog($"{source} Key item still active and player is {xzDist:F1}y XZ from flag - retrying dig.");
-                TransitionTo(BotState.Flying, "Treasure map key item still active - retrying dig...");
-                return true;
+                var flagTarget = new Vector3(recoveryLocation.X, recoveryLocation.Y, recoveryLocation.Z);
+                var xzDist = CalculateXZDistance(player.Position, flagTarget);
+                _plugin.AddDebugLog(xzDist <= MapDigXZRange
+                    ? $"{source} Key item still active and player is {xzDist:F1}y XZ from recovered target - retrying dig."
+                    : $"{source} Key item still active and player is {xzDist:F1}y XZ from recovered target - resuming navigation.");
+            }
+            else
+            {
+                _plugin.AddDebugLog($"{source} Key item still active - recovered target from {recoverySource} and resuming map run.");
             }
 
-            _plugin.AddDebugLog($"{source} Key item still active but player is {xzDist:F1}y XZ from flag - recovering flag and navigating again.");
-        }
-        else
-        {
-            _plugin.AddDebugLog($"{source} Key item still active but current flag/location is unavailable - reopening the active key item.");
+            ResumeActiveKeyItemMapFromTarget(keyItem, recoveryLocation, recoverySource, source);
+            return true;
         }
 
-        CurrentLocation = null;
+        _plugin.AddDebugLog($"{source} Key item still active but no current flag, capture, or cached target is available - entering bounded recovery.");
         ResetKeyItemMapRecoveryState();
-        TransitionTo(BotState.DetectingLocation, $"Recovering active map flag for {keyItem.DisplayName}...");
+        TransitionTo(BotState.DetectingLocation, $"Recovering active map target for {keyItem.DisplayName}...");
         return true;
     }
 
@@ -7071,8 +7320,10 @@ public class StateManager : IDisposable
                            Plugin.Condition[ConditionFlag.BoundByDuty56];
         var currentTerritory = Plugin.ClientState.TerritoryType;
         var inTreasureDungeonDuty = stillInDuty && IsTreasureDungeonTerritory(currentTerritory);
+        TreasureMapKeyItem? activeMapKeyItem = null;
+        var hasActiveMapKeyItem = !stillInDuty && _plugin.InventoryService.TryFindTreasureMapKeyItem(out activeMapKeyItem);
 
-        _plugin.NavigationService.StopNavigation(clearFlag: !stillInDuty);
+        _plugin.NavigationService.StopNavigation(clearFlag: !stillInDuty && !hasActiveMapKeyItem);
 
         if (inTreasureDungeonDuty)
         {
@@ -7096,6 +7347,29 @@ public class StateManager : IDisposable
             }
 
             TransitionTo(BotState.OpeningChest, $"Error #{RetryCount}: recovering overworld coffer/portal...");
+            return;
+        }
+
+        if (hasActiveMapKeyItem && activeMapKeyItem != null)
+        {
+            UpdateActiveKeyItemMap(activeMapKeyItem, $"[Error #{RetryCount}]");
+            SetWarning($"Treasure map key item '{activeMapKeyItem.DisplayName}' is still active. Recovering its target instead of opening another map.");
+            mapCountChecked = true;
+            mapOpeningRetried = false;
+            digIssuedThisMap = false;
+            digIssuedAt = DateTime.MinValue;
+
+            if (TryResolveActiveKeyItemMapTarget(activeMapKeyItem, out var recoveryLocation, out var recoverySource))
+            {
+                _plugin.AddDebugLog($"[Error #{RetryCount}] Active key item still has target from {recoverySource}; resuming map run.");
+                ResumeActiveKeyItemMapFromTarget(activeMapKeyItem, recoveryLocation, recoverySource, $"[Error #{RetryCount}]");
+                return;
+            }
+
+            var failed =
+                $"Treasure map key item '{activeMapKeyItem.DisplayName}' is active after error '{message}', but no AgentMap flag, TreasureSpot capture, or cached target is available. Manual intervention required.";
+            SetWarning(failed);
+            TransitionTo(BotState.Error, failed);
             return;
         }
         
@@ -7125,6 +7399,11 @@ public class StateManager : IDisposable
         stateStartTime = DateTime.Now;
         stateActionIssued = false;
         dismountAttemptStart = DateTime.MinValue;
+        if (descentInProgress)
+        {
+            GameHelpers.KeyRelease(VirtualKey.CONTROL);
+            GameHelpers.KeyRelease(VirtualKey.SPACE);
+        }
         descentInProgress = false;
         lastLandingPartyWaitSignature = string.Empty;
         openingChestCombatInterrupted = false;
@@ -8069,6 +8348,7 @@ public class StateManager : IDisposable
     public void SetLocation(MapLocation location)
     {
         CurrentLocation = location;
+        CacheActiveMapTarget(location, "SetLocation");
         _plugin.AddDebugLog($"Location set: {location.ZoneName} ({location.X:F1}, {location.Y:F1}, {location.Z:F1})");
     }
 
