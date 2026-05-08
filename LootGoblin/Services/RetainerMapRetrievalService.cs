@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text.Json;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -42,7 +41,24 @@ public sealed class RetainerMapRetrievalService : IDisposable
         Error,
     }
 
+    private enum RetainerMapCandidateScanState
+    {
+        CandidateFound,
+        OnlyOtherCharacterRows,
+        CurrentCharacterNoRetainerRows,
+        NoParseableRows,
+        NoRows,
+    }
+
     private sealed record RetainerMapCandidate(uint ItemId, string ItemName, string RetainerName, int RetainerIndex, int Quantity);
+    private sealed record RetainerMapCandidateScan(
+        RetainerMapCandidateScanState State,
+        RetainerMapCandidate? Candidate,
+        int ResponseCount,
+        int ParseableRowCount,
+        int CurrentCharacterRowCount,
+        int RetainerRowCount,
+        int OtherCharacterRowCount);
     private sealed record RetainerListEntry(int Index, string Name);
     private sealed record XaItemRow(
         string Character,
@@ -134,10 +150,11 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
         if (step == RetrievalStep.Idle)
         {
-            var candidate = FindRetainerMapCandidate(enabledMapIds);
-            if (candidate == null)
-                return string.IsNullOrEmpty(LastError) ? RetainerMapRetrievalResult.NotAvailable : RetainerMapRetrievalResult.Error;
+            var scan = ScanRetainerMapCandidates(enabledMapIds);
+            if (scan.Candidate == null)
+                return RetainerMapRetrievalResult.NotAvailable;
 
+            var candidate = scan.Candidate;
             target = candidate;
             _plugin.AddDebugLog($"[RetainerMap] Found {candidate.ItemName} on retainer {candidate.RetainerName} via XA Database.");
             SuppressAutoRetainer();
@@ -166,10 +183,10 @@ public sealed class RetainerMapRetrievalService : IDisposable
     {
         var previousStatus = StatusText;
         var previousError = LastError;
-        var candidate = FindRetainerMapCandidate(enabledMapIds);
+        var scan = ScanRetainerMapCandidates(enabledMapIds, emitDebug: false);
         StatusText = previousStatus;
         LastError = previousError;
-        return candidate != null;
+        return scan.Candidate != null;
     }
 
     public Dictionary<uint, int> GetRetainerMapCounts(IReadOnlyCollection<uint> mapIds, bool refreshFirst)
@@ -585,21 +602,23 @@ public sealed class RetainerMapRetrievalService : IDisposable
         return RetainerMapRetrievalResult.Retrieved;
     }
 
-    private RetainerMapCandidate? FindRetainerMapCandidate(IReadOnlyCollection<uint> enabledMapIds)
+    private RetainerMapCandidateScan ScanRetainerMapCandidates(IReadOnlyCollection<uint> enabledMapIds, bool emitDebug = true)
     {
         LastError = string.Empty;
 
         if (!_plugin.Configuration.EnableRetainerMapRetrieval)
         {
             StatusText = "Retainer map retrieval disabled.";
-            return null;
+            return EmptyCandidateScan(RetainerMapCandidateScanState.NoRows);
         }
 
         if (!IsXaDatabaseReady())
         {
-            if (string.IsNullOrWhiteSpace(LastError))
+            if (!string.IsNullOrWhiteSpace(LastError))
+                StatusText = LastError;
+            else if (string.IsNullOrWhiteSpace(StatusText))
                 StatusText = "XA Database unavailable.";
-            return null;
+            return EmptyCandidateScan(RetainerMapCandidateScanState.NoRows);
         }
 
         var allowed = enabledMapIds.Count > 0 ? enabledMapIds.ToHashSet() : GetConfiguredMapIds().ToHashSet();
@@ -608,8 +627,14 @@ public sealed class RetainerMapRetrievalService : IDisposable
         {
             LastError = "Item sheet unavailable.";
             StatusText = LastError;
-            return null;
+            return EmptyCandidateScan(RetainerMapCandidateScanState.NoRows);
         }
+
+        var responseCount = 0;
+        var parseableRowCount = 0;
+        var currentCharacterRowCount = 0;
+        var retainerRowCount = 0;
+        var otherCharacterRowCount = 0;
 
         foreach (var itemId in allowed)
         {
@@ -620,14 +645,119 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
             foreach (var response in SearchXaDatabase(itemName))
             {
-                var candidate = TryParseCandidate(response, itemId, itemName);
+                responseCount++;
+                var candidate = TryParseCandidate(
+                    response,
+                    itemId,
+                    itemName,
+                    emitDebug,
+                    ref parseableRowCount,
+                    ref currentCharacterRowCount,
+                    ref retainerRowCount,
+                    ref otherCharacterRowCount);
                 if (candidate != null)
-                    return candidate;
+                {
+                    LastError = string.Empty;
+                    return new RetainerMapCandidateScan(
+                        RetainerMapCandidateScanState.CandidateFound,
+                        candidate,
+                        responseCount,
+                        parseableRowCount,
+                        currentCharacterRowCount,
+                        retainerRowCount,
+                        otherCharacterRowCount);
+                }
             }
         }
 
-        StatusText = "No enabled maps found on retainers in XA Database.";
-        return null;
+        if (!string.IsNullOrWhiteSpace(LastError))
+            StatusText = LastError;
+
+        var state = ClassifyCandidateScan(responseCount, parseableRowCount, currentCharacterRowCount, retainerRowCount);
+        if (string.IsNullOrWhiteSpace(LastError))
+            SetCandidateScanStatus(state, responseCount, parseableRowCount, currentCharacterRowCount, retainerRowCount, otherCharacterRowCount, emitDebug);
+
+        return new RetainerMapCandidateScan(
+            state,
+            null,
+            responseCount,
+            parseableRowCount,
+            currentCharacterRowCount,
+            retainerRowCount,
+            otherCharacterRowCount);
+    }
+
+    private static RetainerMapCandidateScan EmptyCandidateScan(RetainerMapCandidateScanState state)
+        => new(state, null, 0, 0, 0, 0, 0);
+
+    private static RetainerMapCandidateScanState ClassifyCandidateScan(
+        int responseCount,
+        int parseableRowCount,
+        int currentCharacterRowCount,
+        int retainerRowCount)
+    {
+        if (parseableRowCount == 0)
+            return responseCount > 0
+                ? RetainerMapCandidateScanState.NoParseableRows
+                : RetainerMapCandidateScanState.NoRows;
+
+        if (currentCharacterRowCount == 0)
+            return RetainerMapCandidateScanState.OnlyOtherCharacterRows;
+
+        return RetainerMapCandidateScanState.CurrentCharacterNoRetainerRows;
+    }
+
+    private void SetCandidateScanStatus(
+        RetainerMapCandidateScanState state,
+        int responseCount,
+        int parseableRowCount,
+        int currentCharacterRowCount,
+        int retainerRowCount,
+        int otherCharacterRowCount,
+        bool emitDebug)
+    {
+        switch (state)
+        {
+            case RetainerMapCandidateScanState.OnlyOtherCharacterRows:
+                StatusText = "XA Database SearchItems is global; matching enabled map rows are on another character/world, not this client.";
+                if (emitDebug)
+                    _plugin.AddDebugLog(
+                        $"[RetainerMap] XADB SearchItems is global. Parsed {parseableRowCount} enabled map row(s), " +
+                        $"but all usable matches were for other characters/worlds (other={otherCharacterRowCount}).");
+                break;
+
+            case RetainerMapCandidateScanState.CurrentCharacterNoRetainerRows:
+                if (retainerRowCount == 0)
+                {
+                    StatusText = "No enabled current-character retainer map found; XA Database matches are not retainer containers.";
+                    if (emitDebug)
+                        _plugin.AddDebugLog(
+                            $"[RetainerMap] Parsed {parseableRowCount} XADB row(s); current-character rows={currentCharacterRowCount}, retainer rows=0.");
+                }
+                else
+                {
+                    StatusText = "No enabled current-character retainer map found; current-character retainer rows had no available quantity.";
+                    if (emitDebug)
+                        _plugin.AddDebugLog(
+                            $"[RetainerMap] Parsed {parseableRowCount} XADB row(s); current-character retainer rows={retainerRowCount}, " +
+                            "but none matched an enabled item id with quantity.");
+                }
+
+                break;
+
+            case RetainerMapCandidateScanState.NoParseableRows:
+                StatusText = "XA Database returned enabled map search results, but no parseable SearchItems rows.";
+                if (emitDebug)
+                    _plugin.AddDebugLog(
+                        $"[RetainerMap] XADB SearchItems returned {responseCount} response(s), but no parseable pipe rows.");
+                break;
+
+            case RetainerMapCandidateScanState.NoRows:
+                StatusText = "No enabled maps found on retainers in XA Database.";
+                if (emitDebug)
+                    _plugin.AddDebugLog("[RetainerMap] XADB SearchItems returned no rows for enabled map names.");
+                break;
+        }
     }
 
     private IReadOnlyCollection<uint> GetConfiguredMapIds()
@@ -705,38 +835,51 @@ public sealed class RetainerMapRetrievalService : IDisposable
         }
     }
 
-    private RetainerMapCandidate? TryParseCandidate(string response, uint itemId, string itemName)
+    private RetainerMapCandidate? TryParseCandidate(
+        string response,
+        uint itemId,
+        string itemName,
+        bool emitDebug,
+        ref int parseableRowCount,
+        ref int currentCharacterRowCount,
+        ref int retainerRowCount,
+        ref int otherCharacterRowCount)
     {
-        var sawRows = false;
-        var sawCurrentCharacterRows = false;
-        var sawRetainerRows = false;
-
         foreach (var row in ParseXaSearchRows(response))
         {
-            sawRows = true;
+            parseableRowCount++;
             if (!IsCurrentCharacterRow(row))
+            {
+                otherCharacterRowCount++;
+                if (emitDebug)
+                    _plugin.AddDebugLog(
+                        $"[RetainerMap] Ignored global XADB row for other character/world: {row.Character}@{row.World} {row.ItemName} {row.ContainerName}");
                 continue;
+            }
 
-            sawCurrentCharacterRows = true;
+            currentCharacterRowCount++;
             if (!IsRetainerContainerName(row.ContainerName))
+            {
+                if (emitDebug)
+                    _plugin.AddDebugLog($"[RetainerMap] Ignored current-character XADB row with non-retainer container: {row.ContainerName} ({row.ItemName}).");
                 continue;
+            }
 
-            sawRetainerRows = true;
+            retainerRowCount++;
             if (row.ItemId != itemId || row.Quantity <= 0)
+            {
+                if (emitDebug)
+                    _plugin.AddDebugLog(
+                        $"[RetainerMap] Ignored current-character retainer row without enabled quantity: item={row.ItemId}, quantity={row.Quantity}, expected={itemId}.");
                 continue;
+            }
 
             var retainerName = ExtractRetainerName(row.ContainerName);
-            _plugin.AddDebugLog(
-                $"[RetainerMap] XA row matched: {row.ItemName} x{row.Quantity} on {retainerName} ({row.ContainerName}).");
+            if (emitDebug)
+                _plugin.AddDebugLog(
+                    $"[RetainerMap] XA row matched: {row.ItemName} x{row.Quantity} on {retainerName} ({row.ContainerName}).");
             return new RetainerMapCandidate(itemId, itemName, retainerName, -1, row.Quantity);
         }
-
-        if (!sawRows)
-            LastError = $"XA Database SearchItems response for {itemName} had no parseable pipe rows.";
-        else if (!sawCurrentCharacterRows)
-            LastError = $"XA Database SearchItems found {itemName}, but not for current character/world.";
-        else if (!sawRetainerRows)
-            LastError = $"XA Database SearchItems found {itemName}, but not in retainer containers.";
 
         return null;
     }
@@ -815,122 +958,6 @@ public sealed class RetainerMapRetrievalService : IDisposable
         }
 
         return cleaned;
-    }
-
-    private static IEnumerable<JsonElement> EnumerateObjects(JsonElement element)
-    {
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            yield return element;
-            foreach (var property in element.EnumerateObject())
-            {
-                foreach (var child in EnumerateObjects(property.Value))
-                    yield return child;
-            }
-        }
-        else if (element.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in element.EnumerateArray())
-            {
-                foreach (var child in EnumerateObjects(item))
-                    yield return child;
-            }
-        }
-    }
-
-    private bool IsCurrentCharacterResult(JsonElement element)
-    {
-        var currentContentId = 0UL;
-        var resultContentId = GetUlong(element, "CharacterContentId", "OwnerContentId", "ContentId", "CID");
-        if (resultContentId.HasValue && currentContentId != 0 && resultContentId.Value != currentContentId)
-            return false;
-
-        var player = Plugin.ObjectTable.LocalPlayer;
-        var currentWorld = player?.HomeWorld.RowId ?? 0;
-        var worldId = GetUint(element, "WorldId", "HomeWorldId", "OwnerWorldId");
-        if (worldId.HasValue && currentWorld != 0 && worldId.Value != currentWorld)
-            return false;
-
-        return true;
-    }
-
-    private static string? GetString(JsonElement element, params string[] names)
-    {
-        foreach (var name in names)
-        {
-            if (TryGetPropertyIgnoreCase(element, name, out var value))
-            {
-                if (value.ValueKind == JsonValueKind.String)
-                    return value.GetString();
-                if (value.ValueKind == JsonValueKind.Number)
-                    return value.GetRawText();
-            }
-        }
-
-        return null;
-    }
-
-    private static int? GetInt(JsonElement element, params string[] names)
-    {
-        foreach (var name in names)
-        {
-            if (TryGetPropertyIgnoreCase(element, name, out var value))
-            {
-                if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number))
-                    return number;
-                if (value.ValueKind == JsonValueKind.String && int.TryParse(value.GetString(), out number))
-                    return number;
-            }
-        }
-
-        return null;
-    }
-
-    private static uint? GetUint(JsonElement element, params string[] names)
-    {
-        foreach (var name in names)
-        {
-            if (TryGetPropertyIgnoreCase(element, name, out var value))
-            {
-                if (value.ValueKind == JsonValueKind.Number && value.TryGetUInt32(out var number))
-                    return number;
-                if (value.ValueKind == JsonValueKind.String && uint.TryParse(value.GetString(), out number))
-                    return number;
-            }
-        }
-
-        return null;
-    }
-
-    private static ulong? GetUlong(JsonElement element, params string[] names)
-    {
-        foreach (var name in names)
-        {
-            if (TryGetPropertyIgnoreCase(element, name, out var value))
-            {
-                if (value.ValueKind == JsonValueKind.Number && value.TryGetUInt64(out var number))
-                    return number;
-                if (value.ValueKind == JsonValueKind.String && ulong.TryParse(value.GetString(), out number))
-                    return number;
-            }
-        }
-
-        return null;
-    }
-
-    private static bool TryGetPropertyIgnoreCase(JsonElement element, string name, out JsonElement value)
-    {
-        foreach (var property in element.EnumerateObject())
-        {
-            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
-            {
-                value = property.Value;
-                return true;
-            }
-        }
-
-        value = default;
-        return false;
     }
 
     private bool TryFindNearestBell(out IGameObject bell)
