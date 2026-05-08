@@ -151,6 +151,8 @@ public class StateManager : IDisposable
     private const float UnderwaterBounceTriggerXZRange = 10.0f;
     private const float UnderwaterFlagApproachArrivalXZRange = 5.0f;
     private const float PortalRunawayDistanceIncrease = 2.0f;
+    private const int UnderwaterBounceAutomoveHoldMs = 250;
+    private const int UnderwaterBounceDescentHoldMs = 1000;
     private static readonly TimeSpan UnderwaterBounceDescentInterval = TimeSpan.FromSeconds(1.25);
     private static readonly TimeSpan UnderwaterFlagApproachReissueInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan UnderwaterTriggerLoopLogInterval = TimeSpan.FromSeconds(3.0);
@@ -598,6 +600,7 @@ public class StateManager : IDisposable
 
         if (descentInProgress || descentMode)
         {
+            GameHelpers.KeyRelease(VirtualKey.W);
             GameHelpers.KeyRelease(VirtualKey.CONTROL);
             GameHelpers.KeyRelease(VirtualKey.SPACE);
         }
@@ -1563,6 +1566,8 @@ public class StateManager : IDisposable
     {
         if (descentInProgress)
         {
+            CommandHelper.SendCommand("/automove off");
+            GameHelpers.KeyRelease(VirtualKey.W);
             GameHelpers.KeyRelease(VirtualKey.CONTROL);
             GameHelpers.KeyRelease(VirtualKey.SPACE);
         }
@@ -1585,7 +1590,7 @@ public class StateManager : IDisposable
         nonThiefDivingIgnoredLogged = false;
     }
 
-    private void StartSafeDescent(string source)
+    private void StartSafeDescent(string source, bool includeForward = false)
     {
         if (descentInProgress)
             return;
@@ -1595,7 +1600,10 @@ public class StateManager : IDisposable
         {
             try
             {
-                await GameHelpers.PerformDescentAsync();
+                if (includeForward)
+                    await GameHelpers.PerformForwardDescentAsync(UnderwaterBounceAutomoveHoldMs, UnderwaterBounceDescentHoldMs);
+                else
+                    await GameHelpers.PerformDescentAsync();
             }
             catch (Exception ex)
             {
@@ -1604,6 +1612,7 @@ public class StateManager : IDisposable
             }
             finally
             {
+                GameHelpers.KeyRelease(VirtualKey.W);
                 GameHelpers.KeyRelease(VirtualKey.CONTROL);
                 GameHelpers.KeyRelease(VirtualKey.SPACE);
                 descentInProgress = false;
@@ -2124,7 +2133,7 @@ public class StateManager : IDisposable
             return false;
 
         lastUnderwaterBounceDescentStart = now;
-        StartSafeDescent("[Underwater] thief-map trigger");
+        StartSafeDescent("[Underwater] thief-map trigger", includeForward: !Plugin.Condition[ConditionFlag.Diving]);
         return true;
     }
 
@@ -2214,6 +2223,8 @@ public class StateManager : IDisposable
             {
                 if (descentInProgress)
                 {
+                    CommandHelper.SendCommand("/automove off");
+                    GameHelpers.KeyRelease(VirtualKey.W);
                     GameHelpers.KeyRelease(VirtualKey.CONTROL);
                     GameHelpers.KeyRelease(VirtualKey.SPACE);
                     descentInProgress = false;
@@ -2327,6 +2338,7 @@ public class StateManager : IDisposable
 
         if (descentInProgress)
         {
+            GameHelpers.KeyRelease(VirtualKey.W);
             GameHelpers.KeyRelease(VirtualKey.CONTROL);
             GameHelpers.KeyRelease(VirtualKey.SPACE);
         }
@@ -3178,6 +3190,7 @@ public class StateManager : IDisposable
 
         if (descentInProgress || descentMode)
         {
+            GameHelpers.KeyRelease(VirtualKey.W);
             GameHelpers.KeyRelease(VirtualKey.CONTROL);
             GameHelpers.KeyRelease(VirtualKey.SPACE);
             descentMode = false;
@@ -3206,6 +3219,8 @@ public class StateManager : IDisposable
         if (!Plugin.Condition[ConditionFlag.Diving])
             return;
 
+        CommandHelper.SendCommand("/automove off");
+        GameHelpers.KeyRelease(VirtualKey.W);
         GameHelpers.KeyRelease(VirtualKey.CONTROL);
         GameHelpers.KeyRelease(VirtualKey.SPACE);
         descentMode = false;
@@ -4102,7 +4117,9 @@ public class StateManager : IDisposable
                     {
                         // Start Ctrl+Space descent
                         _plugin.AddDebugLog($"[Flying] Starting Ctrl+Space descent attempt ({descentElapsed:F0}s into dismount)");
-                        StartSafeDescent("[Flying] descent mode");
+                        StartSafeDescent(
+                            "[Flying] descent mode",
+                            includeForward: currentLandingMode == OverworldLandingMode.UnderwaterBounce && !Plugin.Condition[ConditionFlag.Diving]);
                     }
                     
                     // Monitor Y position change
@@ -4111,19 +4128,32 @@ public class StateManager : IDisposable
                     
                     if (descentElapsed >= 5.0)
                     {
-                        if (yChange < 5.0f)
+                        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
                         {
-                            // Y didn't change much - switch to normal dismount
-                            _plugin.AddDebugLog($"[Flying] Ctrl+Space descent ineffective (Y change: {yChange:F1}y) - switching to normal dismount");
-                            descentMode = false;
-                            descentInProgress = false;
+                            _plugin.AddDebugLog(
+                                yChange < 5.0f
+                                    ? $"[Flying] Forward descent has not changed Y yet (Y change: {yChange:F1}y) - continuing toward water until Diving"
+                                    : $"[Flying] Forward descent moving (Y change: {yChange:F1}y) - continuing until Diving");
+
+                            descentStartTime = DateTime.Now;
+                            descentStartY = currentY;
                         }
                         else
                         {
-                            // Y changed significantly - reset monitoring and continue descent
-                            _plugin.AddDebugLog($"[Flying] Ctrl+Space descent working (Y change: {yChange:F1}y) - continuing descent");
-                            descentStartTime = DateTime.Now;
-                            descentStartY = currentY;
+                            if (yChange < 5.0f)
+                            {
+                                // Y didn't change much - switch to normal dismount
+                                _plugin.AddDebugLog($"[Flying] Ctrl+Space descent ineffective (Y change: {yChange:F1}y) - switching to normal dismount");
+                                descentMode = false;
+                                descentInProgress = false;
+                            }
+                            else
+                            {
+                                // Y changed significantly - reset monitoring and continue descent
+                                _plugin.AddDebugLog($"[Flying] Ctrl+Space descent working (Y change: {yChange:F1}y) - continuing descent");
+                                descentStartTime = DateTime.Now;
+                                descentStartY = currentY;
+                            }
                         }
                     }
                     
@@ -7442,6 +7472,8 @@ public class StateManager : IDisposable
         dismountAttemptStart = DateTime.MinValue;
         if (descentInProgress)
         {
+            CommandHelper.SendCommand("/automove off");
+            GameHelpers.KeyRelease(VirtualKey.W);
             GameHelpers.KeyRelease(VirtualKey.CONTROL);
             GameHelpers.KeyRelease(VirtualKey.SPACE);
         }

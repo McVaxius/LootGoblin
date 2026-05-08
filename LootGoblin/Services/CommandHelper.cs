@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Numerics;
 using System.Text;
+using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
@@ -12,6 +13,11 @@ public static class CommandHelper
     public static unsafe void SendCommand(string command)
     {
         TrySendCommand(command);
+    }
+
+    public static async Task SendCommandOnFrameworkThreadAsync(string command)
+    {
+        await Plugin.Framework.RunOnFrameworkThread(() => SendCommand(command)).ConfigureAwait(false);
     }
 
     public static unsafe bool TrySendCommand(string command)

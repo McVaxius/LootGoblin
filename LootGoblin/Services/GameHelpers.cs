@@ -779,6 +779,36 @@ public static class GameHelpers
         Plugin.Log.Information("[KEY] Descent key sequence complete.");
     }
 
+    public static async Task PerformForwardDescentAsync(int automoveHoldMs, int totalHoldMs)
+    {
+        totalHoldMs = Math.Max(50, totalHoldMs);
+        automoveHoldMs = Math.Clamp(automoveHoldMs, 50, totalHoldMs);
+
+        var automoveActiveThisPulse = false;
+
+        Plugin.Log.Information("[KEY] Performing automove Ctrl+Space descent...");
+        try
+        {
+            await CommandHelper.SendCommandOnFrameworkThreadAsync("/automove on");
+            automoveActiveThisPulse = true;
+            KeyHold(VirtualKey.CONTROL);
+            KeyHold(VirtualKey.SPACE);
+            await Task.Delay(automoveHoldMs);
+            await CommandHelper.SendCommandOnFrameworkThreadAsync("/automove off");
+            automoveActiveThisPulse = false;
+            await Task.Delay(totalHoldMs - automoveHoldMs);
+        }
+        finally
+        {
+            if (automoveActiveThisPulse)
+                await CommandHelper.SendCommandOnFrameworkThreadAsync("/automove off");
+
+            KeyRelease(VirtualKey.W);
+            KeyRelease(VirtualKey.CONTROL);
+            KeyRelease(VirtualKey.SPACE);
+        }
+    }
+
     // ─── Map Flag ──────────────────────────────────────────────────────────────
 
     /// <summary>
