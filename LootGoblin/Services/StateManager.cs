@@ -157,6 +157,7 @@ public class StateManager : IDisposable
     private const float OpeningChestNormalCofferSearchRange = 100.0f;
     private const float OpeningChestCofferReturnRange = 30.0f;
     private const float OpeningChestCofferStrictInteractionRange = 3.0f;
+    private const float OpeningChestCofferCloseDismountDistance = 5.0f;
     private const float OpeningChestCofferMountRecoveryDistance = 3.0f;
     private const float OpeningChestCofferMountRecoveryYDelta = 0.5f;
     private const float OpeningChestCofferWalkPreferredDistance = 10.0f;
@@ -3002,6 +3003,39 @@ public class StateManager : IDisposable
             return false;
 
         var yDistance = Math.Abs(yDelta);
+        var handoffDistance = Math.Min(range, OpeningChestCofferMountRecoveryDistance);
+        var closeTargetableCoffer = chest.IsTargetable &&
+                                    distance > handoffDistance &&
+                                    distance < OpeningChestCofferCloseDismountDistance &&
+                                    !Plugin.Condition[ConditionFlag.Diving];
+        if (closeTargetableCoffer)
+        {
+            var mountedOrFlyingOrMounting = _plugin.NavigationService.IsMounted()
+                || _plugin.NavigationService.IsFlying()
+                || Plugin.Condition[ConditionFlag.Mounting71];
+            if (mountedOrFlyingOrMounting)
+            {
+                Plugin.TargetManager.Target = chest;
+                StopOpeningChestCofferMovement($"near close coffer '{chestName}' before dismount");
+
+                if (now - lastOpeningChestCofferDismountCommandTime >= OpeningChestCofferDismountCommandInterval)
+                {
+                    lastOpeningChestCofferDismountCommandTime = now;
+                    _mountService.Dismount();
+                    _plugin.AddDebugLog(
+                        $"[OpeningChest] Close coffer '{chestName}' at {distance:F1}y, Y {yDistance:F1}y - dismounting before ground handoff.");
+                }
+
+                StateDetail = $"Dismounting near '{chestName}' ({distance:F1}y, Y {yDistance:F1}y)...";
+                return true;
+            }
+
+            if (openingChestCofferMountRecoveryActive || openingChestCofferMountRecoveryEntityId != 0)
+                ResetOpeningChestCofferMountRecovery("after close coffer dismount", stopNavigation: true);
+
+            return false;
+        }
+
         if (ShouldUseShortRangeOpeningChestCofferAutoMove(chest, playerPosition))
         {
             if (distance <= range)
@@ -3021,7 +3055,6 @@ public class StateManager : IDisposable
             ResetOpeningChestCofferMountRecovery();
         }
 
-        var handoffDistance = Math.Min(range, OpeningChestCofferMountRecoveryDistance);
         var withinRecoveryHandoff = distance <= handoffDistance &&
                                     yDistance < OpeningChestCofferMountRecoveryYDelta;
         if (withinRecoveryHandoff)
