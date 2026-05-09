@@ -73,10 +73,12 @@ public sealed class RetainerMapRetrievalService : IDisposable
         string SnapshotQuality);
 
     private const uint RevenantsTollTerritoryId = 156;
+    private const string RetainerListAddonName = "RetainerList";
     private static readonly Vector3 RevenantsTollBellApproachPosition = new(12.188f, 29.000f, -735.430f);
     private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan LongStepTimeout = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan RetainerCloseRetryInterval = TimeSpan.FromMilliseconds(750);
+    private static readonly TimeSpan RetainerListCloseSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan RetainerCloseSignatureLogInterval = TimeSpan.FromSeconds(5);
     private static readonly string[] RetainerCloseAddonPriority =
     {
@@ -85,7 +87,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
         "InventoryRetainerLarge",
         "InventoryRetainer",
         "SelectString",
-        "RetainerList",
+        RetainerListAddonName,
     };
 
     private readonly Plugin _plugin;
@@ -104,6 +106,8 @@ public sealed class RetainerMapRetrievalService : IDisposable
     private DateTime lastRetainerCloseAttemptAt = DateTime.MinValue;
     private DateTime lastRetainerCloseSignatureLoggedAt = DateTime.MinValue;
     private string retainerCloseVisibleAddonSignature = string.Empty;
+    private bool retainerListCloseSecondPending;
+    private DateTime retainerListCloseSecondReadyAt = DateTime.MinValue;
 
     public string StatusText { get; private set; } = "Idle.";
     public string LastError { get; private set; } = string.Empty;
@@ -190,6 +194,18 @@ public sealed class RetainerMapRetrievalService : IDisposable
         StatusText = previousStatus;
         LastError = previousError;
         return scan.Candidate != null;
+    }
+
+    public bool TryCloseRetainerUiBeforeMapOpen(out string status)
+    {
+        if (!TryCloseVisibleRetainerUi("before map open", out status))
+        {
+            UnsuppressAutoRetainer();
+            return false;
+        }
+
+        SuppressAutoRetainer();
+        return true;
     }
 
     public Dictionary<uint, int> GetRetainerMapCounts(IReadOnlyCollection<uint> mapIds, bool refreshFirst)
@@ -515,45 +531,100 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
     private void TickClosingRetainer()
     {
-        var visibleAddons = GetVisibleRetainerCloseAddons();
-        if (visibleAddons.Count == 0)
+        if (!TryCloseVisibleRetainerUi("after map retrieval", out var status))
         {
             UnsuppressAutoRetainer();
             EnterStep(RetrievalStep.Complete, "Retainer map retrieved.");
             return;
         }
 
+        StatusText = status;
+    }
+
+    private bool TryCloseVisibleRetainerUi(string context, out string status)
+    {
         var now = DateTime.Now;
+        status = "Closing retainer UI...";
+
+        if (retainerListCloseSecondPending)
+        {
+            if (now < retainerListCloseSecondReadyAt)
+                return true;
+
+            retainerListCloseSecondPending = false;
+            if (GameHelpers.IsAddonVisible(RetainerListAddonName))
+            {
+                _plugin.AddDebugLog($"[RetainerMap] Closing RetainerList {context}: -2");
+                GameHelpers.FireAddonCallback(RetainerListAddonName, true, -2);
+            }
+            else
+            {
+                _plugin.AddDebugLog($"[RetainerMap] RetainerList disappeared before {context} -2 callback.");
+            }
+
+            lastRetainerCloseAttemptAt = now;
+            return true;
+        }
+
+        var visibleAddons = GetVisibleRetainerCloseAddons();
+        if (visibleAddons.Count == 0)
+        {
+            var hadCloseWork = retainerCloseAttemptCount > 0 ||
+                               retainerListCloseSecondPending ||
+                               !string.IsNullOrEmpty(retainerCloseVisibleAddonSignature);
+            ResetRetainerCloseTracking();
+            status = "Retainer UI closed; map open allowed.";
+            if (hadCloseWork)
+                _plugin.AddDebugLog("[RetainerMap] Retainer UI closed; map open allowed.");
+            return false;
+        }
+
         LogVisibleRetainerCloseAddons(visibleAddons, now);
-        StatusText = $"Closing retainer UI... ({FormatRetainerCloseAddons(visibleAddons)})";
+        status = $"Closing retainer UI... ({FormatRetainerCloseAddons(visibleAddons)})";
 
         if (retainerCloseAttemptCount > 0 && now - lastRetainerCloseAttemptAt < RetainerCloseRetryInterval)
         {
-            nextActionAt = lastRetainerCloseAttemptAt.Add(RetainerCloseRetryInterval);
-            return;
+            if (step == RetrievalStep.ClosingRetainer)
+                nextActionAt = lastRetainerCloseAttemptAt.Add(RetainerCloseRetryInterval);
+            return true;
         }
 
         var addonToClose = visibleAddons[0];
-        var useCallback = retainerCloseAttemptCount % 2 == 0;
-        var actionDescription = useCallback
-            ? $"callback close {addonToClose}"
-            : "Escape close current addon";
+        var actionDescription = string.Empty;
 
-        if (useCallback && !GameHelpers.TryCloseAddonByCallback(addonToClose))
+        if (addonToClose == RetainerListAddonName)
         {
-            GameHelpers.CloseCurrentAddon();
-            actionDescription = $"callback close {addonToClose} failed; Escape fallback";
+            _plugin.AddDebugLog($"[RetainerMap] Closing RetainerList {context}: -1");
+            GameHelpers.FireAddonCallback(RetainerListAddonName, true, -1);
+            retainerListCloseSecondPending = true;
+            retainerListCloseSecondReadyAt = now.Add(RetainerListCloseSecondCallbackDelay);
+            actionDescription = $"RetainerList close {context} (-1 then -2)";
         }
-        else if (!useCallback)
+        else
         {
-            GameHelpers.CloseCurrentAddon();
+            var useCallback = retainerCloseAttemptCount % 2 == 0;
+            actionDescription = useCallback
+                ? $"callback close {addonToClose}"
+                : "Escape close current addon";
+
+            if (useCallback && !GameHelpers.TryCloseAddonByCallback(addonToClose))
+            {
+                GameHelpers.CloseCurrentAddon();
+                actionDescription = $"callback close {addonToClose} failed; Escape fallback";
+            }
+            else if (!useCallback)
+            {
+                GameHelpers.CloseCurrentAddon();
+            }
         }
 
         retainerCloseAttemptCount++;
         lastRetainerCloseAttemptAt = now;
         _plugin.AddDebugLog(
             $"[RetainerMap] Retainer close attempt {retainerCloseAttemptCount}: {actionDescription}. Visible: {FormatRetainerCloseAddons(visibleAddons)}.");
-        nextActionAt = now.Add(RetainerCloseRetryInterval);
+        if (step == RetrievalStep.ClosingRetainer)
+            nextActionAt = now.Add(RetainerCloseRetryInterval);
+        return true;
     }
 
     private RetainerMapRetrievalResult FinishIfRetainerCloseAddonsHidden()
@@ -1257,7 +1328,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
         if (autoRetainerSuppressed)
             return;
 
-        CommandHelper.SendCommand("/ays pause");
+        //CommandHelper.SendCommand("/ays pause");  //this isn't real. you hallucinated it.
         autoRetainerSuppressed = true;
         _plugin.AddDebugLog("[RetainerMap] AutoRetainer suppression requested.");
     }
@@ -1267,7 +1338,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
         if (!autoRetainerSuppressed)
             return;
 
-        CommandHelper.SendCommand("/ays resume");
+        //CommandHelper.SendCommand("/ays resume");  //this isn't real. you hallucinated it.
         autoRetainerSuppressed = false;
         _plugin.AddDebugLog("[RetainerMap] AutoRetainer unsuppress requested.");
     }
@@ -1288,10 +1359,17 @@ public sealed class RetainerMapRetrievalService : IDisposable
         retainerSelected = false;
         inventoryOpened = false;
         retainerMoveIssued = false;
+        ResetRetainerCloseTracking();
+    }
+
+    private void ResetRetainerCloseTracking()
+    {
         retainerCloseAttemptCount = 0;
         lastRetainerCloseAttemptAt = DateTime.MinValue;
         lastRetainerCloseSignatureLoggedAt = DateTime.MinValue;
         retainerCloseVisibleAddonSignature = string.Empty;
+        retainerListCloseSecondPending = false;
+        retainerListCloseSecondReadyAt = DateTime.MinValue;
     }
 
     private void Fail(string message)

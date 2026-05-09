@@ -958,7 +958,7 @@ public static class GameHelpers
     public static void LockOnAndAutoMove()
     {
         CommandHelper.SendCommand("/lockon");
-        CommandHelper.SendCommand("/automove");
+        CommandHelper.SendCommand("/automove on");
     }
 
     /// <summary>
@@ -966,7 +966,7 @@ public static class GameHelpers
     /// </summary>
     public static void StopAutoMove()
     {
-        CommandHelper.SendCommand("/automove");
+        CommandHelper.SendCommand("/automove off");
     }
 
     // ─── NPC + Addon Helpers (Alexandrite Farming) ────────────────────────────

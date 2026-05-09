@@ -54,6 +54,22 @@ public class StateManager : IDisposable
     }
 
     private readonly record struct ActiveMapTargetKey(uint EventItemId, uint MapItemId);
+    private readonly record struct CompletedKeyItemStaleState(
+        bool HasCompletionEvidence,
+        bool MapDutyActive,
+        bool HasTargetableCoffer,
+        bool HasTargetablePortal,
+        bool HasCapturedPortalPosition,
+        bool PortalRetryWindowOpen)
+    {
+        public bool IsStale =>
+            HasCompletionEvidence &&
+            !MapDutyActive &&
+            !HasTargetableCoffer &&
+            !HasTargetablePortal &&
+            !HasCapturedPortalPosition &&
+            !PortalRetryWindowOpen;
+    }
 
     private const uint ThiefMapItemId = 19770;
     private readonly Plugin _plugin;
@@ -140,10 +156,10 @@ public class StateManager : IDisposable
     private const float OverworldRecoveryObjectSearchRange = 200.0f;
     private const float OpeningChestNormalCofferSearchRange = 100.0f;
     private const float OpeningChestCofferReturnRange = 30.0f;
+    private const float OpeningChestCofferStrictInteractionRange = 3.0f;
     private const float OpeningChestCofferMountRecoveryDistance = 3.0f;
     private const float OpeningChestCofferMountRecoveryYDelta = 0.5f;
     private const float OpeningChestCofferWalkPreferredDistance = 10.0f;
-    private const float OpeningChestCofferWalkPreferredYDelta = 0.3f;
     private const float OpeningChestCofferProgressMargin = 0.5f;
     private const float OpeningChestNearbyObjectScanRange = 60.0f;
     private const int OpeningChestMissingCofferMaxDigRetries = 2;
@@ -191,7 +207,9 @@ public class StateManager : IDisposable
     private static readonly TimeSpan StartMapRefreshSaddlebagTimeout = TimeSpan.FromSeconds(6.0);
     private bool startMapRefreshPending;
     private bool startMapRefreshOpenedSaddlebag;
+    private string startMapRefreshScope = "Start";
     private DateTime startMapRefreshStartedAt = DateTime.MinValue;
+    private bool completedSaddlebagRefreshAttempted;
 
     // Dungeon state tracking (Phase 8)
     private int dungeonFloor;
@@ -288,6 +306,11 @@ public class StateManager : IDisposable
     private bool activeKeyItemRecoverySourceLogged;
     private bool activeKeyItemRecoveryUnderwaterLogged;
     private DateTime lastKeyItemCompletionGuardLogAt = DateTime.MinValue;
+    private bool completedStaleKeyItemSuppressionActive;
+    private uint completedStaleKeyItemId;
+    private int completedStaleKeyItemSlot = -1;
+    private uint completedStaleKeyItemMapItemId;
+    private DateTime lastCompletedStaleKeyItemGuardLogAt = DateTime.MinValue;
     private DateTime lastVnavPathFailureTime = DateTime.MinValue;
     private string lastVnavPathFailureText = string.Empty;
     private bool flyFlagFallbackUsedThisFlight;
@@ -828,12 +851,18 @@ public class StateManager : IDisposable
         if (!_plugin.InventoryService.TryFindTreasureMapKeyItem(out var keyItem))
         {
             ResetKeyItemMapRecoveryState(clearActiveKey: true);
+            ClearCompletedStaleKeyItemSuppression($"{source} active key item missing");
             if (WarningMessage.Contains("key item", StringComparison.OrdinalIgnoreCase))
                 ClearWarning();
             return false;
         }
 
         UpdateActiveKeyItemMap(keyItem, source);
+        if (TryHandleCompletedStaleKeyItemSuppression(keyItem, source, out var suppressRecovery))
+            return true;
+        if (suppressRecovery)
+            return false;
+
         mapCountChecked = true;
         mapOpeningRetried = false;
         initialMapCount = 0;
@@ -903,6 +932,156 @@ public class StateManager : IDisposable
         }
     }
 
+    private bool TryHandleCompletedStaleKeyItemSuppression(
+        TreasureMapKeyItem keyItem,
+        string source,
+        out bool suppressRecovery)
+    {
+        suppressRecovery = false;
+
+        var sameSuppressedKey = IsSameCompletedStaleKeyItem(keyItem);
+        if (completedStaleKeyItemSuppressionActive && !sameSuppressedKey)
+        {
+            LogCompletedStaleKeyItemGuard(
+                keyItem,
+                source,
+                BuildCompletedKeyItemStaleState(hasCompletionEvidence: false),
+                "clear-different-key",
+                force: true);
+            ClearCompletedStaleKeyItemSuppression($"{source} different active key item");
+        }
+
+        if (State == BotState.OpeningChest)
+            return false;
+
+        var hasCompletionEvidence = HasCompletedKeyItemCompletionEvidence() || sameSuppressedKey;
+        if (!hasCompletionEvidence)
+            return false;
+
+        var staleState = BuildCompletedKeyItemStaleState(hasCompletionEvidence);
+        if (!staleState.IsStale)
+        {
+            if (sameSuppressedKey)
+            {
+                LogCompletedStaleKeyItemGuard(keyItem, source, staleState, "cancel-suppression", force: true);
+                ClearCompletedStaleKeyItemSuppression($"{source} stale condition cleared");
+            }
+            else
+            {
+                LogCompletedStaleKeyItemGuard(keyItem, source, staleState, "not-suppressed");
+            }
+
+            return false;
+        }
+
+        var wasAlreadySuppressed = sameSuppressedKey;
+        SetCompletedStaleKeyItemSuppression(keyItem);
+        suppressRecovery = true;
+
+        var action = State == BotState.DetectingLocation
+            ? "suppress-transition-completed"
+            : "suppress-active-key-recovery";
+        LogCompletedStaleKeyItemGuard(
+            keyItem,
+            source,
+            staleState,
+            action,
+            force: !wasAlreadySuppressed || State == BotState.DetectingLocation);
+
+        if (WarningMessage.Contains("key item", StringComparison.OrdinalIgnoreCase))
+            ClearWarning();
+
+        if (State == BotState.DetectingLocation)
+        {
+            TransitionTo(BotState.Completed, $"Ignoring stale completed active key item for {keyItem.DisplayName}...");
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool HasCompletedKeyItemCompletionEvidence()
+        => chestConfirmedThisMap ||
+           portalConfirmedThisMap ||
+           dungeonConfirmedThisMap ||
+           openingChestOpenedByChat ||
+           openingChestPortalByChat;
+
+    private CompletedKeyItemStaleState BuildCompletedKeyItemStaleState(bool hasCompletionEvidence)
+    {
+        var hasTargetableCoffer = FindTargetableOverworldCoffer(OverworldRecoveryObjectSearchRange) != null;
+        var hasTargetablePortal = FindTargetablePortal(OverworldRecoveryObjectSearchRange) != null;
+
+        return new CompletedKeyItemStaleState(
+            hasCompletionEvidence,
+            IsOverworldMapDutyActive(),
+            hasTargetableCoffer,
+            hasTargetablePortal,
+            portalApproachPosition.HasValue,
+            portalRetryStart != DateTime.MinValue);
+    }
+
+    private void SetCompletedStaleKeyItemSuppression(TreasureMapKeyItem keyItem)
+    {
+        completedStaleKeyItemSuppressionActive = true;
+        completedStaleKeyItemId = keyItem.ItemId;
+        completedStaleKeyItemSlot = keyItem.Slot;
+        completedStaleKeyItemMapItemId = ResolveKeyItemMapItemId(keyItem);
+    }
+
+    private bool IsSameCompletedStaleKeyItem(TreasureMapKeyItem keyItem)
+    {
+        if (!completedStaleKeyItemSuppressionActive)
+            return false;
+
+        if (completedStaleKeyItemId != keyItem.ItemId || completedStaleKeyItemSlot != keyItem.Slot)
+            return false;
+
+        var mapItemId = ResolveKeyItemMapItemId(keyItem);
+        return completedStaleKeyItemMapItemId == 0 ||
+               mapItemId == 0 ||
+               completedStaleKeyItemMapItemId == mapItemId;
+    }
+
+    private uint ResolveKeyItemMapItemId(TreasureMapKeyItem keyItem)
+        => keyItem.KnownMapItemId != 0 ? keyItem.KnownMapItemId : SelectedMapItemId;
+
+    private void ClearCompletedStaleKeyItemSuppression(string reason)
+    {
+        if (!completedStaleKeyItemSuppressionActive)
+            return;
+
+        _plugin.AddDebugLog(
+            $"[KeyItemMap][CompletionGuard] Cleared stale active key-item suppression ({reason}); " +
+            $"keyItem={completedStaleKeyItemId} slot={completedStaleKeyItemSlot} mapId={completedStaleKeyItemMapItemId}.");
+
+        completedStaleKeyItemSuppressionActive = false;
+        completedStaleKeyItemId = 0;
+        completedStaleKeyItemSlot = -1;
+        completedStaleKeyItemMapItemId = 0;
+        lastCompletedStaleKeyItemGuardLogAt = DateTime.MinValue;
+    }
+
+    private void LogCompletedStaleKeyItemGuard(
+        TreasureMapKeyItem keyItem,
+        string source,
+        CompletedKeyItemStaleState staleState,
+        string action,
+        bool force = false)
+    {
+        var now = DateTime.Now;
+        if (!force && now - lastCompletedStaleKeyItemGuardLogAt < TimeSpan.FromSeconds(5.0))
+            return;
+
+        lastCompletedStaleKeyItemGuardLogAt = now;
+        _plugin.AddDebugLog(
+            $"[KeyItemMap][CompletionGuard] {source} keyItem={keyItem.ItemId} slot={keyItem.Slot} " +
+            $"mapId={ResolveKeyItemMapItemId(keyItem)} evidence=chest:{chestConfirmedThisMap},openedChat:{openingChestOpenedByChat}," +
+            $"portal:{portalConfirmedThisMap},portalChat:{openingChestPortalByChat},dungeon:{dungeonConfirmedThisMap},prior:{staleState.HasCompletionEvidence} " +
+            $"state=duty:{staleState.MapDutyActive},coffer200:{staleState.HasTargetableCoffer},portal200:{staleState.HasTargetablePortal}," +
+            $"capturedPortal:{staleState.HasCapturedPortalPosition},portalRetry:{staleState.PortalRetryWindowOpen} action={action}.");
+    }
+
     private void UpdateActiveKeyItemMap(TreasureMapKeyItem keyItem, string source)
     {
         var changed = activeKeyItemMapItemId != keyItem.ItemId || activeKeyItemMapSlot != keyItem.Slot;
@@ -915,6 +1094,7 @@ public class StateManager : IDisposable
             chestConfirmedThisMap = false;
             portalConfirmedThisMap = false;
             dungeonConfirmedThisMap = false;
+            ResetOpeningChestLifecycleState();
             CurrentLocation = null;
             activeKeyItemMapItemId = keyItem.ItemId;
             activeKeyItemMapSlot = keyItem.Slot;
@@ -1426,16 +1606,28 @@ public class StateManager : IDisposable
 
     private void BeginStartMapRefresh()
     {
+        BeginSaddlebagMapRefresh("Start");
+    }
+
+    private void BeginCompletedMapRefresh()
+    {
+        BeginSaddlebagMapRefresh("Completed");
+    }
+
+    private void BeginSaddlebagMapRefresh(string scope)
+    {
         startMapRefreshPending = true;
         startMapRefreshOpenedSaddlebag = false;
+        startMapRefreshScope = scope;
         startMapRefreshStartedAt = DateTime.Now;
-        _plugin.AddDebugLog("[MapRefresh][Start] Queued saddlebag refresh before selecting a map.");
+        _plugin.AddDebugLog($"[MapRefresh][{startMapRefreshScope}] Queued saddlebag refresh before map scan.");
     }
 
     private void ResetStartMapRefresh()
     {
         startMapRefreshPending = false;
         startMapRefreshOpenedSaddlebag = false;
+        startMapRefreshScope = "Start";
         startMapRefreshStartedAt = DateTime.MinValue;
     }
 
@@ -1462,7 +1654,7 @@ public class StateManager : IDisposable
             {
                 startMapRefreshOpenedSaddlebag = true;
                 startMapRefreshStartedAt = DateTime.Now;
-                _plugin.AddDebugLog("[MapRefresh][Start] Opened saddlebag for start refresh.");
+                _plugin.AddDebugLog($"[MapRefresh][{startMapRefreshScope}] Opened saddlebag for map refresh.");
             }
 
             StateDetail = "Opening saddlebag to refresh map sources...";
@@ -1481,17 +1673,38 @@ public class StateManager : IDisposable
 
     private void CompleteStartMapRefresh(bool closeSaddlebagAfterScan, string detail)
     {
+        var scope = startMapRefreshScope;
         _plugin.InventoryService.ScanForMapSources(includeSaddlebags: true);
+        RefreshCompletedRetainerMapCountsIfNeeded(scope);
 
         if (closeSaddlebagAfterScan && GameHelpers.IsAddonVisible("InventoryBuddy"))
         {
             GameHelpers.CloseCurrentAddon();
-            _plugin.AddDebugLog("[MapRefresh][Start] Closed saddlebag after start refresh.");
+            _plugin.AddDebugLog($"[MapRefresh][{scope}] Closed saddlebag after map refresh.");
         }
 
         ResetStartMapRefresh();
         StateDetail = "Saddlebag map refresh complete.";
-        _plugin.AddDebugLog($"[MapRefresh][Start] {detail}");
+        _plugin.AddDebugLog($"[MapRefresh][{scope}] {detail}");
+    }
+
+    private void RefreshCompletedRetainerMapCountsIfNeeded(string scope)
+    {
+        if (scope != "Completed" || !_plugin.Configuration.EnableRetainerMapRetrieval)
+            return;
+
+        if (!_plugin.IsXaDatabaseAvailable)
+        {
+            _plugin.RetainerMapRetrievalService.ClearUnavailableXaDatabaseState();
+            _plugin.AddDebugLog("[MapRefresh][Completed] XADB unavailable; skipped retainer refresh.");
+            return;
+        }
+
+        var enabledMapIds = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
+        var counts = _plugin.RetainerMapRetrievalService.GetRetainerMapCounts(enabledMapIds, refreshFirst: true);
+        _plugin.AddDebugLog(
+            $"[MapRefresh][Completed] Refreshed XADB retainer maps for {FormatMapIds(enabledMapIds)}; " +
+            $"{counts.Values.Sum()} item(s) across {counts.Count} map type(s).");
     }
 
     private bool TryRetrieveRetainerMap(IReadOnlyCollection<uint> enabledMapIds, string emptyInventoryError)
@@ -1633,6 +1846,9 @@ public class StateManager : IDisposable
         if (string.IsNullOrWhiteSpace(text))
             return;
 
+        if (HandleOpeningChestTooFarChatMessage(text))
+            return;
+
         if (text.Contains("You discover a treasure coffer!", StringComparison.OrdinalIgnoreCase))
         {
             if (!openingChestDiscoveredByChat)
@@ -1669,6 +1885,58 @@ public class StateManager : IDisposable
                 MarkOpeningChestManualInterventionIfNeeded("portal chat");
             }
         }
+    }
+
+    private bool HandleOpeningChestTooFarChatMessage(string text)
+    {
+        if (State != BotState.OpeningChest || !IsOpeningChestTooFarChatMessage(text))
+            return false;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var target = Plugin.TargetManager.Target;
+        var targetIsCoffer = ChestDetectionService.IsCofferObject(target);
+        var yDistance = 0f;
+        var distance = 0f;
+
+        if (player != null && targetIsCoffer)
+        {
+            var cofferTarget = target!;
+            distance = Vector3.Distance(player.Position, cofferTarget.Position);
+            yDistance = Math.Abs(player.Position.Y - cofferTarget.Position.Y);
+            CaptureOpeningChestCofferPosition(cofferTarget);
+        }
+
+        StopOpeningChestCofferMovement("after too-far coffer chat");
+        ResetOpeningChestCofferApproachTracking();
+        ResetOpeningChestInteractionTracking();
+        chestDisappearedTime = DateTime.MinValue;
+        lastInteractionTime = DateTime.MinValue;
+
+        if (targetIsCoffer && yDistance >= OpeningChestCofferMountRecoveryYDelta)
+        {
+            var cofferTarget = target!;
+            openingChestCofferWalkFailedEntityId = cofferTarget.EntityId;
+            openingChestCofferMountRecoveryActive = true;
+            openingChestCofferMountRecoveryRangeReached = false;
+            openingChestCofferMountRecoveryEntityId = cofferTarget.EntityId;
+        }
+        else
+        {
+            ResetOpeningChestCofferWalkFailure();
+            ResetOpeningChestCofferMountRecovery("after too-far coffer chat");
+        }
+
+        _plugin.AddDebugLog(targetIsCoffer
+            ? $"[OpeningChest] Too-far chat while targeting coffer at {distance:F1}y, Y {yDistance:F1}y - forcing fresh close approach."
+            : "[OpeningChest] Too-far chat during coffer flow - forcing fresh close approach.");
+        StateDetail = "Coffer was too far to open - re-approaching...";
+        return true;
+    }
+
+    private static bool IsOpeningChestTooFarChatMessage(string text)
+    {
+        return text.Contains("too far", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("far away", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsTreasurePortalChatMessage(string text)
@@ -2611,7 +2879,12 @@ public class StateManager : IDisposable
         return stalled;
     }
 
-    private bool ShouldWalkToShortFlatOpeningChestCoffer(IGameObject chest, Vector3 playerPosition)
+    private static float GetOpeningChestCofferInteractionRange(float configuredRange)
+    {
+        return Math.Min(configuredRange, OpeningChestCofferStrictInteractionRange);
+    }
+
+    private bool ShouldUseShortRangeOpeningChestCofferAutoMove(IGameObject chest, Vector3 playerPosition)
     {
         if (Plugin.Condition[ConditionFlag.Diving] || _plugin.NavigationService.IsFlying())
             return false;
@@ -2627,7 +2900,68 @@ public class StateManager : IDisposable
             return false;
 
         var yDistance = Math.Abs(playerPosition.Y - chest.Position.Y);
-        return yDistance <= OpeningChestCofferWalkPreferredYDelta;
+        return yDistance < OpeningChestCofferMountRecoveryYDelta;
+    }
+
+    private bool UseShortRangeOpeningChestCofferAutoMove(
+        IGameObject chest,
+        string chestName,
+        float distance,
+        float yDistance,
+        DateTime now)
+    {
+        if (openingChestCofferMountRecoveryActive)
+            ResetOpeningChestCofferMountRecovery("before short-range coffer automove", stopNavigation: true);
+
+        Plugin.TargetManager.Target = chest;
+
+        if (openingChestCofferApproachEntityId != chest.EntityId)
+        {
+            ResetOpeningChestCofferApproachTracking();
+            openingChestCofferApproachEntityId = chest.EntityId;
+            openingChestCofferApproachLastProgressTime = now;
+            openingChestCofferApproachBestDistance = distance;
+
+            if (_plugin.NavigationService.State != NavigationState.Idle)
+                _plugin.NavigationService.StopNavigation();
+
+            GameHelpers.LockOnAndAutoMove();
+            autoMoveActive = true;
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Coffer '{chestName}' at {distance:F1}y, Y {yDistance:F1}y - lockon+automove close approach.");
+            StateDetail = $"Closing on nearby coffer '{chestName}' ({distance:F1}y, Y {yDistance:F1}y)...";
+            return true;
+        }
+
+        if (distance + OpeningChestCofferProgressMargin < openingChestCofferApproachBestDistance)
+        {
+            openingChestCofferApproachBestDistance = distance;
+            openingChestCofferApproachLastProgressTime = now;
+        }
+
+        var stalled = now - openingChestCofferApproachLastProgressTime >= OpeningChestCofferStallTimeout;
+        if (stalled)
+        {
+            GameHelpers.StopAutoMove();
+            autoMoveActive = false;
+            openingChestCofferWalkFailedEntityId = chest.EntityId;
+            ResetOpeningChestCofferApproachTracking();
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Short-range automove to '{chestName}' stalled at {distance:F1}y, Y {yDistance:F1}y - forcing mounted recovery.");
+            StateDetail = $"Close coffer approach stalled ({distance:F1}y) - preparing mounted recovery...";
+            return true;
+        }
+
+        if (!autoMoveActive)
+        {
+            GameHelpers.LockOnAndAutoMove();
+            autoMoveActive = true;
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Restarted lockon+automove close approach to '{chestName}' at {distance:F1}y, Y {yDistance:F1}y.");
+        }
+
+        StateDetail = $"Closing on nearby coffer '{chestName}' ({distance:F1}y, Y {yDistance:F1}y)...";
+        return true;
     }
 
     private bool EnsureOpeningChestCofferRecoveryMounted(string chestName, float distance, float yDelta, DateTime now)
@@ -2668,31 +3002,16 @@ public class StateManager : IDisposable
             return false;
 
         var yDistance = Math.Abs(yDelta);
-        if (ShouldWalkToShortFlatOpeningChestCoffer(chest, playerPosition))
+        if (ShouldUseShortRangeOpeningChestCofferAutoMove(chest, playerPosition))
         {
             if (distance <= range)
                 return false;
 
-            if (openingChestCofferMountRecoveryActive)
-                ResetOpeningChestCofferMountRecovery("before short flat coffer walk recovery", stopNavigation: true);
-
-            Plugin.TargetManager.Target = chest;
-            var stalled = NavigateToOpeningChestCoffer(chest, chestName, distance, now, fly: false);
-            if (stalled)
-            {
-                openingChestCofferWalkFailedEntityId = chest.EntityId;
-                _plugin.AddDebugLog(
-                    $"[OpeningChest] Short flat walk to '{chestName}' stalled at {distance:F1}y, Y {yDistance:F1}y - allowing mounted recovery next tick.");
-                StateDetail = $"Walk to nearby coffer stalled ({distance:F1}y) - preparing mounted recovery...";
-                return true;
-            }
-
-            StateDetail = $"Walking to nearby coffer '{chestName}' ({distance:F1}y, Y {yDistance:F1}y)...";
-            return true;
+            return UseShortRangeOpeningChestCofferAutoMove(chest, chestName, distance, yDistance, now);
         }
 
         var displaced = distance > OpeningChestCofferMountRecoveryDistance ||
-                        yDistance > OpeningChestCofferMountRecoveryYDelta;
+                        yDistance >= OpeningChestCofferMountRecoveryYDelta;
         if (!displaced && !openingChestCofferMountRecoveryActive)
             return false;
 
@@ -2704,7 +3023,7 @@ public class StateManager : IDisposable
 
         var handoffDistance = Math.Min(range, OpeningChestCofferMountRecoveryDistance);
         var withinRecoveryHandoff = distance <= handoffDistance &&
-                                    yDistance <= OpeningChestCofferMountRecoveryYDelta;
+                                    yDistance < OpeningChestCofferMountRecoveryYDelta;
         if (withinRecoveryHandoff)
         {
             if (!openingChestCofferMountRecoveryActive && displaced)
@@ -3397,6 +3716,13 @@ public class StateManager : IDisposable
             return;
         }
 
+        if (_plugin.RetainerMapRetrievalService.TryCloseRetainerUiBeforeMapOpen(out var closeRetainerStatus))
+        {
+            StateDetail = closeRetainerStatus;
+            lastMapScanTime = DateTime.MinValue;
+            return;
+        }
+
         // Don't sort - use inventory order to match menu order
         SelectedMapItemId = candidates[0];
         var mapName = TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var info) ? info.Name : $"ID {SelectedMapItemId}";
@@ -3408,6 +3734,7 @@ public class StateManager : IDisposable
         initialMapCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
         mapCountChecked = false;
         mapOpeningRetried = false;
+        ClearCompletedStaleKeyItemSuppression("[SelectingMap] starting fresh map");
         ResetPerMapCommandTriggers();
         _plugin.AddDebugLog($"[SelectingMap] Initial map count: {initialMapCount}");
         
@@ -4465,7 +4792,7 @@ public class StateManager : IDisposable
 
         var dist = Vector3.Distance(player.Position, chest.Position);
         var yDelta = player.Position.Y - chest.Position.Y;
-        var range = _plugin.Configuration.ChestInteractionRange;
+        var range = GetOpeningChestCofferInteractionRange(_plugin.Configuration.ChestInteractionRange);
         var chestName = chest.Name.TextValue;
 
         if (openingChestCombatInterrupted && !inCombat)
@@ -4646,6 +4973,39 @@ public class StateManager : IDisposable
             return portalObj;
         }
         
+        return null;
+    }
+
+    private IGameObject? FindTargetablePortal(float maxRange)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            return null;
+
+        try
+        {
+            var portalCandidates = Plugin.ObjectTable
+                .Where(obj => obj != null && obj.Name.ToString() == "Teleportation Portal")
+                .Select(obj => new
+                {
+                    Portal = obj,
+                    Distance = Vector3.Distance(player.Position, obj.Position),
+                })
+                .Where(candidate => candidate.Distance <= maxRange)
+                .OrderBy(candidate => candidate.Distance)
+                .ToList();
+
+            foreach (var candidate in portalCandidates)
+            {
+                if (IsObjectTargetable(candidate.Portal, logResult: false))
+                    return candidate.Portal;
+            }
+        }
+        catch (Exception ex)
+        {
+            _plugin.AddDebugLog($"[Portal] Targetable portal scan failed: {ex.Message}");
+        }
+
         return null;
     }
 
@@ -6216,6 +6576,9 @@ public class StateManager : IDisposable
             if (!CanStartNextMapAfterPartyWait())
                 return;
 
+            if (TryRunCompletedMapRefreshBeforeDecisions())
+                return;
+
             _plugin.AddDebugLog("[Completed] AutoStartNextMap enabled - scanning for maps");
             var mapSources = _plugin.InventoryService.ScanForMapSources();
             var maps = GetEnabledMapCandidates(mapSources, includeInventory: true, includeSaddlebags: true);
@@ -6261,6 +6624,9 @@ public class StateManager : IDisposable
             }
         }
 
+        if (TryRunCompletedMapRefreshBeforeDecisions())
+            return;
+
         var remainingMaps = HasRemainingEnabledMaps("[Completed]");
         RunFinishCommandsOnce("[Completed] run complete");
         if (!remainingMaps)
@@ -6274,12 +6640,16 @@ public class StateManager : IDisposable
         if (!_plugin.InventoryService.TryFindTreasureMapKeyItem(out var keyItem))
         {
             ResetKeyItemMapRecoveryState(clearActiveKey: true);
+            ClearCompletedStaleKeyItemSuppression($"{source} active key item missing");
             return false;
         }
 
         UpdateActiveKeyItemMap(keyItem, source);
 
-        if (chestConfirmedThisMap || portalConfirmedThisMap || dungeonConfirmedThisMap)
+        var hadSuppressedKey = IsSameCompletedStaleKeyItem(keyItem);
+        if (TryHandleCompletedStaleKeyItemSuppression(keyItem, source, out var suppressRecovery))
+            return true;
+        if (suppressRecovery || HasCompletedKeyItemCompletionEvidence() || hadSuppressedKey)
             return false;
 
         var now = DateTime.Now;
@@ -6368,6 +6738,17 @@ public class StateManager : IDisposable
             $"[PartyWait][CompletedNextMap] Blocking next map; out-of-zone members: {missingText}");
 
         return false;
+    }
+
+    private bool TryRunCompletedMapRefreshBeforeDecisions()
+    {
+        if (!completedSaddlebagRefreshAttempted)
+        {
+            completedSaddlebagRefreshAttempted = true;
+            BeginCompletedMapRefresh();
+        }
+
+        return TickStartMapRefresh();
     }
 
     private bool HasRemainingEnabledMaps(string source)
@@ -7488,6 +7869,7 @@ public class StateManager : IDisposable
         {
             CommandHelper.SendCommand("/automove off");
             ResetPortalApproachTrackingForAreaChange();
+            completedSaddlebagRefreshAttempted = false;
         }
 
         // Stop navigation if it was active
@@ -7500,6 +7882,9 @@ public class StateManager : IDisposable
         if (newState == BotState.OpeningChest)
             chestDisappearedTime = DateTime.MinValue;
 
+        if (newState == BotState.Completed && prev != BotState.Completed)
+            completedSaddlebagRefreshAttempted = false;
+
         if (newState == BotState.OpeningChest && Plugin.Condition[ConditionFlag.InCombat])
         {
             openingChestCombatInterrupted = true;
@@ -7509,6 +7894,7 @@ public class StateManager : IDisposable
         // Unpause YesAlready when bot reaches terminal states
         if (newState == BotState.Idle || newState == BotState.Error)
         {
+            ClearCompletedStaleKeyItemSuppression($"terminal state {newState}");
             _plugin.YesAlreadyIPC.Unpause();
             _plugin.AddDebugLog($"[TransitionTo] YesAlready unpaused: {!_plugin.YesAlreadyIPC.IsPaused}");
         }
