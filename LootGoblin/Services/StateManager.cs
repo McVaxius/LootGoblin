@@ -7533,6 +7533,8 @@ public class StateManager : IDisposable
         CommandHelper.SendCommand("/rotation cancel");
         CommandHelper.SendCommand("/rotation Settings DummyBoss False");
         CommandHelper.SendCommand("/rotation Settings DisableTargetDummys True");
+        CommandHelper.SendCommand("/rotation Settings BmrSafetyCheckIntercept True");
+        CommandHelper.SendCommand("/rotation Settings BmrSafetyCheckAuto True");
 	
         mountedRotationSuppressed = true;
         _plugin.AddDebugLog("[Rotation] Mounted lifecycle suppression active.");
