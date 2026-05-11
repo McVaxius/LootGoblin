@@ -1,825 +1,825 @@
 ﻿AetheryteName,FlagX,FlagY,FlagZ,HasRealXYZ,MapName,RealX,RealY,RealZ,RecordedAt,TerritoryId,ZoneName
-,525.5,68,-799.6,TRUE,Seemingly Special Timeworn Map,525.5,20.6,-799.7,3/7/2026 2:07,614,Yanxia
-,505.6,68.3,-33.9,TRUE,Seemingly Special Timeworn Map,505.6,72,-34,3/7/2026 4:20,612,The Fringes
-,185.5,72.2,-679.8,TRUE,Seemingly Special Timeworn Map,189.6,9.1,-683.1,3/7/2026 4:28,621,The Lochs
-,-224.2,7.6,-591.6,TRUE,Seemingly Special Timeworn Map,-224,2.9,-591.5,3/7/2026 4:48,613,The Ruby Sea
-,-295.3,2.9,-237.3,TRUE,Seemingly Special Timeworn Map,-295.1,57.8,-237.2,3/7/2026 4:57,612,The Fringes
-,-688.2,57.8,413.5,TRUE,Seemingly Special Timeworn Map,-683.6,26.5,408.9,3/7/2026 5:08,613,The Ruby Sea
-,-658.4,26.5,335.9,TRUE,Seemingly Special Timeworn Map,-657.1,45.1,330.3,3/7/2026 5:22,612,The Fringes
-,364.9,6.7,60.1,TRUE,Timeworn Leather Map,362.2,8.4,56.4,3/7/2026 18:29,148,Central Shroud
+,-590,5.3,60,TRUE,Timeworn Gliderskin Map,-589.9,5.3,59.9,3/12/2026 17:00,815,Amh Araeng
+,-459.1,-0.3,-357,TRUE,Timeworn Zonureskin Map,-458.9,-0.3,-357,3/12/2026 18:37,815,Amh Araeng
+,-413.7,-63,427.5,TRUE,Timeworn Zonureskin Map,-413.8,-63,427.9,3/12/2026 18:38,815,Amh Araeng
+,-400,23.6,-90,TRUE,Timeworn Gliderskin Map,-400.2,23.6,-89.7,3/12/2026 16:56,815,Amh Araeng
+,-320,-61.5,320,TRUE,Timeworn Gliderskin Map,-320.5,-61.5,320.1,3/12/2026 17:01,815,Amh Araeng
+,-90,35.2,-230,TRUE,Timeworn Gliderskin Map,-92.5,37,-228.9,3/12/2026 16:56,815,Amh Araeng
+,-75,50.8,-630,TRUE,Timeworn Gliderskin Map,-74.8,50.8,-630,3/12/2026 16:55,815,Amh Araeng
+,-60.9,-41.6,137.3,TRUE,Timeworn Gliderskin Map,-57.6,-40.1,139.1,3/12/2026 17:01,815,Amh Araeng
+,270,-39,120,TRUE,Timeworn Zonureskin Map,270.1,-39,119.9,3/12/2026 18:39,815,Amh Araeng
+,310.9,-22.4,-426.4,TRUE,Timeworn Zonureskin Map,314.8,-21,-426.8,3/12/2026 18:35,815,Amh Araeng
+,440.9,-61.5,462,TRUE,Timeworn Zonureskin Map,441.1,-61.7,462.7,3/12/2026 18:40,815,Amh Araeng
+,478,-46.8,147.6,TRUE,Timeworn Gliderskin Map,478.3,-46.8,147.8,3/12/2026 16:57,815,Amh Araeng
+,550,-54.9,-642.3,TRUE,Timeworn Zonureskin Map,548.5,-53.1,-640.1,3/12/2026 18:34,815,Amh Araeng
+,630,-32.6,-200,TRUE,Timeworn Zonureskin Map,634,-31.9,-197.1,3/12/2026 18:36,815,Amh Araeng
+,695.6,-33.3,-371.9,TRUE,Timeworn Gliderskin Map,695.8,-33.3,-371.9,3/12/2026 16:54,815,Amh Araeng
+,735,-74.6,-498.2,TRUE,Timeworn Zonureskin Map,735.4,-74.8,-497.8,3/12/2026 18:35,815,Amh Araeng
+,-538,65.4,103.7,TRUE,Mysterious Map,-538.1,65.4,103.9,3/8/2026 6:45,148,Central Shroud
+,-454.3,56.7,-204.6,TRUE,Timeworn Peisteskin Map,-454.3,56.7,-204.6,3/8/2026 5:49,148,Central Shroud
+,-380.9,50.7,5.7,TRUE,Timeworn Boarskin Map,-380.7,50.7,5.6,3/8/2026 4:57,148,Central Shroud
+,-289,61.6,-101.9,TRUE,Timeworn Peisteskin Map,-289.1,61.7,-101.9,3/8/2026 5:49,148,Central Shroud
+,-285.1,19,102.4,TRUE,Unhidden Leather Map,-285.4,19.1,102.8,3/8/2026 16:11,148,Central Shroud
+,-258.4,64,-186.3,TRUE,Timeworn Toadskin Map,-246.9,66.7,-181.8,3/8/2026 2:19,148,Central Shroud
+,-192.3,1.9,-38.6,TRUE,Timeworn Goatskin Map,-182.6,1.9,-38.5,3/7/2026 19:13,148,Central Shroud
 ,-105.5,6.1,-161.9,TRUE,Timeworn Leather Map,-105.8,6.2,-162,3/7/2026 18:29,148,Central Shroud
+,-25.3,-32.4,327.4,TRUE,Thorne Dynasty Map,-25.3,-32.4,327.4,3/8/2026 16:37,148,Central Shroud
+,-13.4,-33.4,377.1,TRUE,Timeworn Peisteskin Map,-13.4,-33.4,377,3/8/2026 5:47,148,Central Shroud
+,-11.2,-34.6,431.5,TRUE,Mysterious Map,-11.2,-34.7,431.3,3/8/2026 6:46,148,Central Shroud
+,43.8,-18.8,192,TRUE,Timeworn Boarskin Map,43.6,-18.9,192.4,3/8/2026 4:59,148,Central Shroud
 ,63.2,-23.6,272.1,TRUE,Timeworn Leather Map,63.4,-23.5,272.7,3/7/2026 18:30,148,Central Shroud
-,-408,0.3,87.5,TRUE,Timeworn Leather Map,-408,0.3,87.5,3/7/2026 18:30,152,East Shroud
-,-315,18,384.1,TRUE,Timeworn Leather Map,-314.9,18.2,384.6,3/7/2026 18:31,152,East Shroud
-,-209.1,8.8,8.2,TRUE,Timeworn Leather Map,-209.3,8.8,8.3,3/7/2026 18:32,153,South Shroud
-,-308.6,0.2,405.5,TRUE,Timeworn Leather Map,-308.7,0.2,406.1,3/7/2026 18:33,153,South Shroud
-,307.1,10.8,-191.7,TRUE,Timeworn Leather Map,307.2,10.8,-191.8,3/7/2026 18:34,153,South Shroud
-,246.6,-7.3,-3.2,TRUE,Timeworn Leather Map,246.6,-7.3,-3.2,3/7/2026 18:35,154,North Shroud
-,138.9,62.5,303.4,TRUE,Timeworn Leather Map,142.8,-30.3,297.6,3/7/2026 18:37,134,Middle La Noscea
-,49.7,53.3,-119.1,TRUE,Timeworn Leather Map,49.5,53.3,-118.9,3/7/2026 18:37,134,Middle La Noscea
-,62.7,54.3,180.9,TRUE,Timeworn Leather Map,62.6,54.2,180.3,3/7/2026 18:38,135,Lower La Noscea
-,448.7,57.3,-6.4,TRUE,Timeworn Leather Map,448.6,57.3,-6.3,3/7/2026 18:39,135,Lower La Noscea
-,-72.3,51.6,542,TRUE,Timeworn Leather Map,-72.2,51.5,542,3/7/2026 18:40,135,Lower La Noscea
-,269.1,43.2,524.1,TRUE,Timeworn Leather Map,269.2,43.2,524.1,3/7/2026 18:40,137,Eastern La Noscea
-,52.9,57.2,105.6,TRUE,Timeworn Leather Map,52.6,57.3,105.1,3/7/2026 18:41,137,Eastern La Noscea
-,-199.4,48.7,590.5,TRUE,Timeworn Leather Map,-199.6,48.8,590.9,3/7/2026 18:41,137,Eastern La Noscea
-,638.6,40.3,333.2,TRUE,Timeworn Leather Map,628,40.3,330.7,3/7/2026 18:43,138,Western La Noscea
-,159.8,-11.9,106.2,TRUE,Timeworn Leather Map,155.1,-11.1,104.1,3/7/2026 18:44,138,Western La Noscea
-,451.3,5.3,277,TRUE,Timeworn Leather Map,451.8,5.4,277.3,3/7/2026 18:44,138,Western La Noscea
-,688.5,-1,163.2,TRUE,Timeworn Leather Map,689,-1,163.3,3/7/2026 18:45,139,Upper La Noscea
-,-350.4,-0.8,143.9,TRUE,Timeworn Leather Map,-350.5,-0.8,143.9,3/7/2026 18:46,139,Upper La Noscea
-,414.9,-1.4,184.3,TRUE,Timeworn Leather Map,415.3,-1.5,184.4,3/7/2026 18:47,139,Upper La Noscea
-,-361.9,52,-264,TRUE,Timeworn Leather Map,-346.3,52.3,-261.3,3/7/2026 18:48,180,Outer La Noscea
-,-64,63.8,-280.7,TRUE,Timeworn Leather Map,-71.5,65.1,-281.4,3/7/2026 18:48,180,Outer La Noscea
-,-52.9,63.8,-219.6,TRUE,Timeworn Leather Map,-56.9,65.1,-221.1,3/7/2026 18:49,180,Outer La Noscea
-,91.6,16.6,129.5,TRUE,Timeworn Leather Map,91.6,16.6,129.6,3/7/2026 18:49,140,Western Thanalan
-,140.4,57.2,270.1,TRUE,Timeworn Leather Map,140.4,57.2,270,3/7/2026 18:50,140,Western Thanalan
-,-250.3,15.8,-338.9,TRUE,Timeworn Leather Map,-250.3,15.8,-339,3/7/2026 18:51,140,Western Thanalan
-,141.4,4.6,639.7,TRUE,Timeworn Leather Map,140.6,6.2,643,3/7/2026 18:53,141,Central Thanalan
-,191.7,4.4,-171.5,TRUE,Timeworn Leather Map,185.5,4.9,-177.8,3/7/2026 18:55,141,Central Thanalan
-,-199.3,24.8,-124,TRUE,Timeworn Leather Map,-195.7,23.9,-129.3,3/7/2026 18:57,141,Central Thanalan
-,261.3,7.8,-119.2,TRUE,Timeworn Leather Map,261.4,8.3,-129,3/7/2026 19:00,145,Eastern Thanalan
-,127,10.8,-147.5,TRUE,Timeworn Leather Map,128.4,12.5,-144.2,3/7/2026 19:00,145,Eastern Thanalan
-,-331,-19.2,-110.6,TRUE,Timeworn Leather Map,-331.6,-19.3,-110.6,3/7/2026 19:01,145,Eastern Thanalan
-,56.6,10,-418,TRUE,Timeworn Leather Map,60.9,10.3,-410.7,3/7/2026 19:05,146,Southern Thanalan
-,-176,7.6,416.2,TRUE,Timeworn Leather Map,-176,7.6,416,3/7/2026 19:07,146,Southern Thanalan
-,-343.3,12.6,-276,TRUE,Timeworn Leather Map,-353,13,-275.8,3/7/2026 19:10,146,Southern Thanalan
-,327.3,258,117.8,TRUE,Timeworn Leather Map,327.4,257.9,118.3,3/7/2026 19:10,155,Coerthas Central Highlands
-,155.3,227.4,289.1,TRUE,Timeworn Leather Map,155,227.3,289.4,3/7/2026 19:10,155,Coerthas Central Highlands
-,111.4,292.6,-76.1,TRUE,Timeworn Leather Map,110.1,295.9,-82.2,3/7/2026 19:11,155,Coerthas Central Highlands
+,154.2,-7.7,-15,TRUE,Timeworn Toadskin Map,154,-7.7,-15,3/8/2026 2:18,148,Central Shroud
+,154.5,-31,343.6,TRUE,Unhidden Leather Map,154.7,-31,344,3/8/2026 16:10,148,Central Shroud
 ,163.6,-23.8,530.7,TRUE,Timeworn Goatskin Map,163.7,-23.8,531.1,3/7/2026 19:12,148,Central Shroud
 ,202.2,-9.4,-18.1,TRUE,Timeworn Goatskin Map,202.3,-9.4,-18.6,3/7/2026 19:12,148,Central Shroud
-,-192.3,1.9,-38.6,TRUE,Timeworn Goatskin Map,-182.6,1.9,-38.5,3/7/2026 19:13,148,Central Shroud
-,114.7,11.9,468.1,TRUE,Timeworn Goatskin Map,114.5,11.8,468,3/7/2026 19:14,152,East Shroud
-,3.4,-3.8,199.5,TRUE,Timeworn Goatskin Map,3.4,-3.8,199.5,3/7/2026 19:14,152,East Shroud
-,-204.3,15.5,13.4,TRUE,Timeworn Goatskin Map,-204.4,15.5,13.3,3/7/2026 19:15,152,East Shroud
-,19,5.5,-96,TRUE,Timeworn Goatskin Map,18.5,5.5,-96,3/7/2026 19:15,153,South Shroud
-,318.1,-0.2,41.9,TRUE,Timeworn Goatskin Map,318.2,-0.3,41.9,3/7/2026 19:15,153,South Shroud
-,200.3,31,-164.2,TRUE,Timeworn Goatskin Map,203.6,32.7,-164.5,3/7/2026 19:16,153,South Shroud
-,353.8,8.9,234.2,TRUE,Timeworn Goatskin Map,345.2,7.7,234.5,3/7/2026 19:20,154,North Shroud
-,415,-5.5,69.8,TRUE,Timeworn Goatskin Map,411.9,-4.7,78,3/7/2026 19:20,154,North Shroud
-,190.8,53.7,178.2,TRUE,Timeworn Goatskin Map,190.2,56.4,183.6,3/7/2026 19:20,134,Middle La Noscea
-,143.9,58,-26.9,TRUE,Timeworn Goatskin Map,144.9,59.7,-22.2,3/7/2026 19:21,134,Middle La Noscea
-,-169,15.6,-400,TRUE,Timeworn Goatskin Map,-169.3,15.7,-400.3,3/7/2026 19:21,134,Middle La Noscea
-,397.6,84.6,-385.6,TRUE,Timeworn Goatskin Map,397.6,84.6,-385.3,3/7/2026 19:24,135,Lower La Noscea
-,164.9,59.1,289.9,TRUE,Timeworn Goatskin Map,164.7,59.2,290.5,3/7/2026 19:24,135,Lower La Noscea
-,379.8,72,-258.9,TRUE,Timeworn Goatskin Map,379.9,71.9,-259,3/7/2026 19:25,135,Lower La Noscea
-,405.6,19.8,743.9,TRUE,Timeworn Goatskin Map,405.5,19.7,743.6,3/7/2026 19:26,137,Eastern La Noscea
-,-155.2,48,169,TRUE,Timeworn Goatskin Map,-155.1,47.9,169.2,3/7/2026 19:28,137,Eastern La Noscea
-,401.3,34.7,147.3,TRUE,Timeworn Goatskin Map,409.3,35,147,3/7/2026 19:28,137,Eastern La Noscea
-,404.5,18.5,21.2,TRUE,Timeworn Goatskin Map,404.4,18.5,21.3,3/7/2026 19:29,138,Western La Noscea
-,90.2,-11.3,9,TRUE,Timeworn Goatskin Map,89.6,-11.3,9,3/7/2026 19:30,138,Western La Noscea
-,730.4,25.7,440.7,TRUE,Timeworn Goatskin Map,733.2,27.3,436.9,3/7/2026 19:33,138,Western La Noscea
-,-370.5,-0.2,195.1,TRUE,Timeworn Goatskin Map,-363.8,0.6,194.1,3/7/2026 19:34,139,Upper La Noscea
-,585.4,-1.9,121.3,TRUE,Timeworn Goatskin Map,586.1,-2.1,121.2,3/7/2026 19:35,139,Upper La Noscea
-,293.9,-2.6,110.6,TRUE,Timeworn Goatskin Map,293.7,-2.6,110.6,3/7/2026 19:36,139,Upper La Noscea
-,-392.2,48.3,-328.2,TRUE,Timeworn Goatskin Map,-357.8,53.1,-309.9,3/7/2026 19:37,180,Outer La Noscea
-,290.6,-25.6,166.4,TRUE,Timeworn Leather Map,290.7,-25.5,166.4,3/7/2026 19:41,154,North Shroud
-,-59.2,-47.3,335.3,TRUE,Timeworn Leather Map,-59.3,-47.3,335.3,3/7/2026 19:42,154,North Shroud
-,55.8,66.1,-293.4,TRUE,Timeworn Leather Map,55.8,66.1,-293.4,3/7/2026 19:42,134,Middle La Noscea
-,66.9,57.5,-315.1,TRUE,Timeworn Goatskin Map,61.4,58.5,-313.9,3/7/2026 19:44,180,Outer La Noscea
-,-289.1,54,-287.8,TRUE,Timeworn Goatskin Map,-286.3,54.1,-288,3/7/2026 19:45,180,Outer La Noscea
-,276.9,62.7,-220.1,TRUE,Timeworn Goatskin Map,270.2,63.5,-220.1,3/7/2026 19:45,140,Western Thanalan
-,-162.5,-50.4,275.5,TRUE,Timeworn Goatskin Map,-162.3,-50.4,275.4,3/7/2026 19:55,154,North Shroud
-,-460.3,22.8,-474.6,TRUE,Timeworn Goatskin Map,-465.9,23,-474.6,3/7/2026 19:59,140,Western Thanalan
-,160.6,49.6,113.5,TRUE,Timeworn Goatskin Map,157.2,51.4,111.5,3/7/2026 20:00,140,Western Thanalan
-,-39.1,26.8,-414.4,TRUE,Timeworn Goatskin Map,-28.8,27.2,-416.1,3/7/2026 20:01,141,Central Thanalan
-,-271.5,20.9,-58.8,TRUE,Timeworn Goatskin Map,-271.6,23.6,-61.9,3/7/2026 20:03,141,Central Thanalan
-,161.8,-3.7,47.6,TRUE,Timeworn Goatskin Map,162.4,-3.7,47.5,3/8/2026 2:09,145,Eastern Thanalan
-,397.8,21.6,-197.3,TRUE,Timeworn Goatskin Map,395.2,21.5,-206.3,3/8/2026 2:10,145,Eastern Thanalan
-,-134.7,-42,112.8,TRUE,Timeworn Goatskin Map,-135,-42,113,3/8/2026 2:11,145,Eastern Thanalan
-,39.2,3.8,-366.5,TRUE,Timeworn Goatskin Map,39,3.8,-366.4,3/8/2026 2:12,146,Southern Thanalan
-,125.1,1.1,-675,TRUE,Timeworn Goatskin Map,125.1,1.2,-675.7,3/8/2026 2:12,146,Southern Thanalan
-,-278.7,4.3,-67.3,TRUE,Timeworn Goatskin Map,-278.6,4.3,-67.4,3/8/2026 2:14,146,Southern Thanalan
-,68.2,298.1,170.9,TRUE,Timeworn Goatskin Map,68.2,298.1,170.8,3/8/2026 2:15,155,Coerthas Central Highlands
-,249.3,311.9,-386.3,TRUE,Timeworn Goatskin Map,249.3,311.9,-386.4,3/8/2026 2:16,155,Coerthas Central Highlands
-,524.8,234.9,303.9,TRUE,Timeworn Goatskin Map,524.8,234.9,304,3/8/2026 2:17,155,Coerthas Central Highlands
-,443.4,32,-2.6,TRUE,Timeworn Toadskin Map,443.8,32.1,-2.6,3/8/2026 2:17,148,Central Shroud
-,154.2,-7.7,-15,TRUE,Timeworn Toadskin Map,154,-7.7,-15,3/8/2026 2:18,148,Central Shroud
-,-258.4,64,-186.3,TRUE,Timeworn Toadskin Map,-246.9,66.7,-181.8,3/8/2026 2:19,148,Central Shroud
-,-276.3,6.2,108,TRUE,Timeworn Toadskin Map,-276.3,6.2,108,3/8/2026 2:21,152,East Shroud
-,207.9,-2.8,74.9,TRUE,Timeworn Toadskin Map,207.7,-2.8,74.9,3/8/2026 2:21,152,East Shroud
-,-219.4,3.9,547.2,TRUE,Timeworn Toadskin Map,-219.2,5.7,552.7,3/8/2026 2:22,153,South Shroud
-,-168.8,4.9,125.7,TRUE,Timeworn Toadskin Map,-168.7,4.9,125.2,3/8/2026 2:22,153,South Shroud
-,84.3,9.6,13.6,TRUE,Timeworn Toadskin Map,78.4,11.4,16.1,3/8/2026 2:23,153,South Shroud
-,355.1,-4.5,18.1,TRUE,Timeworn Toadskin Map,355.2,-4.5,18.1,3/8/2026 2:24,154,North Shroud
-,-204.3,23.7,-444,TRUE,Timeworn Toadskin Map,-204.4,23.7,-444,3/8/2026 2:25,134,Middle La Noscea
-,-72.3,12.2,-407.9,TRUE,Timeworn Toadskin Map,-72.1,12.3,-407.8,3/8/2026 2:25,134,Middle La Noscea
-,134.5,48.5,69.1,TRUE,Timeworn Toadskin Map,134.4,48.5,69,3/8/2026 2:26,134,Middle La Noscea
-,428.8,66.4,-148.1,TRUE,Timeworn Toadskin Map,428.8,66.4,-148,3/8/2026 2:27,135,Lower La Noscea
-,101.9,47,79.2,TRUE,Timeworn Toadskin Map,105.4,46.4,75,3/8/2026 2:28,135,Lower La Noscea
-,-243.2,-38.2,485.7,TRUE,Timeworn Toadskin Map,-244,-38.4,491.7,3/8/2026 2:30,138,Western La Noscea
-,57.9,2,182.7,TRUE,Timeworn Leather Map,48.9,1.5,171.9,3/8/2026 2:40,152,East Shroud
-,21.9,13,54.9,TRUE,Timeworn Goatskin Map,21,13,55.1,3/8/2026 3:00,141,Central Thanalan
-,42.2,7.4,435,TRUE,Timeworn Toadskin Map,42.1,7.4,435,3/8/2026 3:01,152,East Shroud
-,160.3,-27.2,211.4,TRUE,Timeworn Toadskin Map,160.8,-27.1,211.3,3/8/2026 3:01,154,North Shroud
-,-244.5,-27.3,203.2,TRUE,Timeworn Toadskin Map,-248.1,-24.4,203.2,3/8/2026 3:02,154,North Shroud
-,-91.6,13.9,665.2,TRUE,Timeworn Toadskin Map,-92.3,13.7,665.3,3/8/2026 3:03,135,Lower La Noscea
-,-99.4,63.7,684.2,TRUE,Timeworn Toadskin Map,-99.4,63.7,684.1,3/8/2026 3:03,137,Eastern La Noscea
-,234.3,54.4,619.6,TRUE,Timeworn Toadskin Map,234.2,54.4,619.6,3/8/2026 3:04,137,Eastern La Noscea
-,352.7,28,710.3,TRUE,Timeworn Toadskin Map,352.7,28,710.2,3/8/2026 3:04,137,Eastern La Noscea
-,322.3,-19.8,159.1,TRUE,Timeworn Toadskin Map,322.3,-19.8,159.2,3/8/2026 3:05,138,Western La Noscea
-,12.5,-23.2,101.1,TRUE,Timeworn Toadskin Map,12.3,-23.2,101.1,3/8/2026 3:05,138,Western La Noscea
-,-463.1,-11.8,220,TRUE,Timeworn Toadskin Map,-463.5,-11.7,220,3/8/2026 3:07,139,Upper La Noscea
-,346.5,27,-151.2,TRUE,Timeworn Toadskin Map,340.4,28.3,-155.1,3/8/2026 3:10,139,Upper La Noscea
-,-586.1,-1.9,-12.9,TRUE,Timeworn Toadskin Map,-586.5,-1.9,-12.9,3/8/2026 3:12,139,Upper La Noscea
-,-288.4,15.1,-531.3,TRUE,Timeworn Toadskin Map,-290.1,15.2,-530.4,3/8/2026 4:26,180,Outer La Noscea
-,192.9,63.8,-279.4,TRUE,Timeworn Toadskin Map,191.1,63.9,-279.4,3/8/2026 4:27,180,Outer La Noscea
-,-362.1,58.5,-373.2,TRUE,Timeworn Toadskin Map,-361.2,58.4,-371.5,3/8/2026 4:28,180,Outer La Noscea
-,-151,15.7,-248.8,TRUE,Timeworn Toadskin Map,-149.9,15.6,-249.2,3/8/2026 4:30,140,Western Thanalan
-,202.6,55.5,-192.2,TRUE,Timeworn Toadskin Map,203,55.5,-192.2,3/8/2026 4:30,140,Western Thanalan
-,-362,15.8,-719.6,TRUE,Timeworn Toadskin Map,-362,15.8,-719.8,3/8/2026 4:32,140,Western Thanalan
-,-170.1,4.2,-8.7,TRUE,Timeworn Toadskin Map,-168.7,4.6,-9.9,3/8/2026 4:35,141,Central Thanalan
-,40.6,15.6,612.1,TRUE,Timeworn Toadskin Map,41.1,15.6,610.1,3/8/2026 4:38,141,Central Thanalan
-,-157,14,-195.7,TRUE,Timeworn Toadskin Map,-156.9,14,-195.5,3/8/2026 4:41,141,Central Thanalan
-,-235,-34.1,434.6,TRUE,Timeworn Toadskin Map,-235,-34.1,434.6,3/8/2026 4:41,145,Eastern Thanalan
-,287.9,2.4,-184.9,TRUE,Timeworn Toadskin Map,288.3,2.5,-184.8,3/8/2026 4:43,145,Eastern Thanalan
-,-228.6,-37.8,122.4,TRUE,Timeworn Toadskin Map,-228.6,-37.8,122.4,3/8/2026 4:44,145,Eastern Thanalan
-,142.3,7.3,474.2,TRUE,Timeworn Toadskin Map,142.6,7.4,474.3,3/8/2026 4:46,146,Southern Thanalan
-,-228.9,22,-522.2,TRUE,Timeworn Toadskin Map,-228.9,22,-522.1,3/8/2026 4:47,146,Southern Thanalan
-,-388.9,-1.8,893.7,TRUE,Timeworn Toadskin Map,-388.9,-1.9,893.8,3/8/2026 4:50,146,Southern Thanalan
-,460,305.5,-284.8,TRUE,Timeworn Toadskin Map,460.2,305.5,-284.4,3/8/2026 4:50,155,Coerthas Central Highlands
-,-301.5,220.5,681.6,TRUE,Timeworn Toadskin Map,-301.5,220.6,681.8,3/8/2026 4:52,155,Coerthas Central Highlands
-,-89.7,300.1,-302.1,TRUE,Timeworn Toadskin Map,-89.7,300.1,-302.3,3/8/2026 4:54,155,Coerthas Central Highlands
-,272,8.9,-602.7,TRUE,Timeworn Toadskin Map,272.1,8.8,-602.7,3/8/2026 4:55,156,Mor Dhona
-,128.7,-14.5,-447.3,TRUE,Timeworn Toadskin Map,128.6,-14.4,-447.2,3/8/2026 4:55,156,Mor Dhona
-,-203.3,8.6,-667.9,TRUE,Timeworn Toadskin Map,-203.6,8.6,-667.9,3/8/2026 4:56,156,Mor Dhona
-,-380.9,50.7,5.7,TRUE,Timeworn Boarskin Map,-380.7,50.7,5.6,3/8/2026 4:57,148,Central Shroud
+,215.9,-7.5,-60.4,TRUE,Thorne Dynasty Map,216,-7.5,-60.6,3/8/2026 16:38,148,Central Shroud
 ,352.1,-2,-38.3,TRUE,Timeworn Boarskin Map,352.5,-1.9,-38.1,3/8/2026 4:58,148,Central Shroud
-,43.8,-18.8,192,TRUE,Timeworn Boarskin Map,43.6,-18.9,192.4,3/8/2026 4:59,148,Central Shroud
-,285.4,-5.5,23.5,TRUE,Timeworn Boarskin Map,285.4,-5.5,23.5,3/8/2026 5:00,152,East Shroud
-,-191.3,46.4,-105.4,TRUE,Timeworn Boarskin Map,-191.3,46.4,-105.3,3/8/2026 5:01,152,East Shroud
-,-428.2,12.2,301.6,TRUE,Timeworn Boarskin Map,-428.1,12.2,301.6,3/8/2026 5:02,152,East Shroud
-,254.8,5.5,48,TRUE,Timeworn Boarskin Map,254.8,5.5,48,3/8/2026 5:03,153,South Shroud
-,-104.3,6,-111.6,TRUE,Timeworn Boarskin Map,-104.2,6,-111.4,3/8/2026 5:03,153,South Shroud
-,-66.8,0.8,369,TRUE,Timeworn Boarskin Map,-66.7,0.8,369.1,3/8/2026 5:04,153,South Shroud
-,-189.4,-45.8,235.4,TRUE,Timeworn Boarskin Map,-189.3,-45.8,235.3,3/8/2026 5:05,154,North Shroud
-,56.4,-39.8,331.3,TRUE,Timeworn Boarskin Map,56.4,-39.9,331.5,3/8/2026 5:05,154,North Shroud
-,62.7,-38.3,256.7,TRUE,Timeworn Boarskin Map,62.7,-38.3,256.5,3/8/2026 5:05,154,North Shroud
-,80.4,58.4,239.1,TRUE,Timeworn Boarskin Map,80.4,58.4,239,3/8/2026 5:06,134,Middle La Noscea
-,-191.3,46.5,-77.3,TRUE,Timeworn Boarskin Map,-191.5,46.5,-77.4,3/8/2026 5:07,134,Middle La Noscea
-,67.4,67.9,-218.7,TRUE,Timeworn Boarskin Map,67.5,67.9,-218.7,3/8/2026 5:08,134,Middle La Noscea
-,23.2,46.3,727.1,TRUE,Timeworn Boarskin Map,23.2,46.3,727,3/8/2026 5:09,135,Lower La Noscea
-,275.4,46.3,12.8,TRUE,Timeworn Boarskin Map,275.4,46.3,12.8,3/8/2026 5:11,135,Lower La Noscea
-,349.2,59.3,-65.5,TRUE,Timeworn Boarskin Map,349.2,59.3,-65.5,3/8/2026 5:12,135,Lower La Noscea
-,-245,59.9,160.6,TRUE,Timeworn Boarskin Map,-246.1,61.7,156.2,3/8/2026 5:15,137,Eastern La Noscea
-,256.3,46.9,681.7,TRUE,Timeworn Boarskin Map,255.4,47.5,684.7,3/8/2026 5:15,137,Eastern La Noscea
-,310.2,42.2,181.9,TRUE,Timeworn Boarskin Map,310.2,42.2,181.9,3/8/2026 5:16,137,Eastern La Noscea
-,-125,-24.4,51.2,TRUE,Timeworn Boarskin Map,-125,-24.4,51.2,3/8/2026 5:17,138,Western La Noscea
-,460,8.3,425.6,TRUE,Timeworn Boarskin Map,460,8.3,425.6,3/8/2026 5:19,138,Western La Noscea
-,-236.2,-39.9,680,TRUE,Timeworn Boarskin Map,-235.9,-39.6,676.8,3/8/2026 5:20,138,Western La Noscea
-,323.1,-2.7,7.3,TRUE,Timeworn Boarskin Map,323.1,-2.7,7.2,3/8/2026 5:21,139,Upper La Noscea
-,-488.4,-2.4,17.8,TRUE,Timeworn Boarskin Map,-488.4,-2.4,17.8,3/8/2026 5:22,139,Upper La Noscea
-,731.6,4.2,170.5,TRUE,Timeworn Boarskin Map,731.6,4.2,170.5,3/8/2026 5:23,139,Upper La Noscea
-,51.5,66.6,-216,TRUE,Timeworn Boarskin Map,52.1,66.6,-216.2,3/8/2026 5:24,180,Outer La Noscea
-,-310,32.4,-444.1,TRUE,Timeworn Boarskin Map,-310.1,32.5,-444.1,3/8/2026 5:25,180,Outer La Noscea
-,60.2,55.5,-497.6,TRUE,Timeworn Boarskin Map,60.2,55.5,-497.4,3/8/2026 5:27,180,Outer La Noscea
-,27.7,51.5,212.6,TRUE,Timeworn Boarskin Map,27.7,51.5,212.6,3/8/2026 5:28,140,Western Thanalan
-,72.5,58,-25.1,TRUE,Timeworn Boarskin Map,72.6,58,-25.1,3/8/2026 5:28,140,Western Thanalan
-,-289.1,18.2,-180.3,TRUE,Timeworn Boarskin Map,-289.1,18.2,-180.1,3/8/2026 5:29,140,Western Thanalan
-,300,-15.3,-36.2,TRUE,Timeworn Boarskin Map,300.2,-15.3,-36.2,3/8/2026 5:30,141,Central Thanalan
-,-237.1,18.9,-258.5,TRUE,Timeworn Boarskin Map,-237.1,18.9,-258.5,3/8/2026 5:31,141,Central Thanalan
-,262,15.2,471.4,TRUE,Timeworn Boarskin Map,262.2,15.2,471.5,3/8/2026 5:32,141,Central Thanalan
-,-42.6,-18.8,368.5,TRUE,Timeworn Boarskin Map,-42.6,-18.8,368.4,3/8/2026 5:33,145,Eastern Thanalan
-,-340.5,-12,-248.6,TRUE,Timeworn Boarskin Map,-340.5,-12,-248.8,3/8/2026 5:34,145,Eastern Thanalan
-,-544.5,-17.7,79.5,TRUE,Timeworn Boarskin Map,-544.5,-17.7,79.5,3/8/2026 5:35,145,Eastern Thanalan
-,-429.1,0.1,711.6,TRUE,Timeworn Boarskin Map,-429.2,0.1,711.8,3/8/2026 5:36,146,Southern Thanalan
-,-10.5,8.7,375.4,TRUE,Timeworn Boarskin Map,-10.4,8.7,375.3,3/8/2026 5:36,146,Southern Thanalan
-,-196,0.2,929.1,TRUE,Timeworn Boarskin Map,-196,0.2,929.3,3/8/2026 5:37,146,Southern Thanalan
-,155.5,22.9,106.7,TRUE,Timeworn Boarskin Map,155.4,22.8,106.6,3/8/2026 5:38,147,Northern Thanalan
-,-93.1,47.2,-18.4,TRUE,Timeworn Boarskin Map,-93,47.2,-18.4,3/8/2026 5:38,147,Northern Thanalan
-,-87.4,66.5,-139.7,TRUE,Timeworn Boarskin Map,-87.4,66.5,-139.8,3/8/2026 5:39,147,Northern Thanalan
-,-775.7,238.8,-141.9,TRUE,Timeworn Boarskin Map,-775.7,238.8,-142.1,3/8/2026 5:40,155,Coerthas Central Highlands
-,104.8,376.1,-647.1,TRUE,Timeworn Boarskin Map,104.7,376.1,-647.2,3/8/2026 5:42,155,Coerthas Central Highlands
-,-685.8,223,-436.4,TRUE,Timeworn Boarskin Map,-685.7,223,-436.3,3/8/2026 5:44,155,Coerthas Central Highlands
-,-201.6,0.2,-528.4,TRUE,Timeworn Boarskin Map,-201.6,0.2,-528.5,3/8/2026 5:45,156,Mor Dhona
-,214.8,-17.9,-466.5,TRUE,Timeworn Boarskin Map,214.7,-17.9,-466.7,3/8/2026 5:46,156,Mor Dhona
-,-307.1,-11.4,-516.2,TRUE,Timeworn Boarskin Map,-307.2,-11.4,-516.1,3/8/2026 5:47,156,Mor Dhona
-,-13.4,-33.4,377.1,TRUE,Timeworn Peisteskin Map,-13.4,-33.4,377,3/8/2026 5:47,148,Central Shroud
-,-289,61.6,-101.9,TRUE,Timeworn Peisteskin Map,-289.1,61.7,-101.9,3/8/2026 5:49,148,Central Shroud
-,-454.3,56.7,-204.6,TRUE,Timeworn Peisteskin Map,-454.3,56.7,-204.6,3/8/2026 5:49,148,Central Shroud
-,-178.1,-1,164.3,TRUE,Timeworn Peisteskin Map,-177.9,-1,163.7,3/8/2026 5:49,152,East Shroud
-,361.5,-19.1,-152.2,TRUE,Timeworn Peisteskin Map,361.3,-19.1,-152.1,3/8/2026 5:50,152,East Shroud
-,350.3,-3.6,-32.7,TRUE,Timeworn Peisteskin Map,350.1,-3.6,-32.5,3/8/2026 5:51,152,East Shroud
-,451.4,1.4,171.2,TRUE,Timeworn Peisteskin Map,451.6,1.3,171.3,3/8/2026 5:52,153,South Shroud
-,376.2,-2.5,142.2,TRUE,Timeworn Peisteskin Map,376.4,-2.4,142.3,3/8/2026 5:52,153,South Shroud
-,67.7,22.3,152.8,TRUE,Timeworn Peisteskin Map,67.8,22.3,152.7,3/8/2026 5:52,153,South Shroud
-,48.2,-11.2,120.7,TRUE,Timeworn Peisteskin Map,48.2,-11.2,120.8,3/8/2026 5:53,154,North Shroud
-,21.4,-13.7,-23,TRUE,Timeworn Peisteskin Map,21.4,-13.7,-22.9,3/8/2026 5:53,154,North Shroud
-,-14.2,-55.4,518.6,TRUE,Timeworn Peisteskin Map,-14.2,-55.4,518.5,3/8/2026 5:55,154,North Shroud
-,-374.8,34.5,-489.1,TRUE,Timeworn Peisteskin Map,-374.6,34.5,-489,3/8/2026 5:56,134,Middle La Noscea
-,3.9,57.6,-331.9,TRUE,Timeworn Peisteskin Map,3.9,57.6,-331.9,3/8/2026 5:57,134,Middle La Noscea
-,-347.7,21.5,-372.4,TRUE,Timeworn Peisteskin Map,-347.8,21.5,-372.4,3/8/2026 5:58,134,Middle La Noscea
-,623,71.4,-277.9,TRUE,Timeworn Peisteskin Map,623,71.4,-277.9,3/8/2026 6:00,135,Lower La Noscea
-,154.4,46,160.4,TRUE,Timeworn Peisteskin Map,154.3,46.1,160.5,3/8/2026 6:01,135,Lower La Noscea
-,-8.2,60.6,459.5,TRUE,Timeworn Peisteskin Map,-8.1,60.6,459.5,3/8/2026 6:02,135,Lower La Noscea
-,116.6,70,15.5,TRUE,Timeworn Peisteskin Map,116.7,70,15.5,3/8/2026 6:02,137,Eastern La Noscea
-,-161,62.9,688.7,TRUE,Timeworn Peisteskin Map,-161,62.9,688.8,3/8/2026 6:04,137,Eastern La Noscea
-,428.7,76.2,-43,TRUE,Timeworn Peisteskin Map,428.8,76.2,-43.1,3/8/2026 6:05,137,Eastern La Noscea
-,-189.4,-42.1,-295,TRUE,Timeworn Peisteskin Map,-189.4,-42.2,-294.9,3/8/2026 6:07,138,Western La Noscea
-,-140.4,-32.7,-116.8,TRUE,Timeworn Peisteskin Map,-140.4,-32.7,-116.8,3/8/2026 6:07,138,Western La Noscea
-,-343.5,-39.2,-220.8,TRUE,Timeworn Peisteskin Map,-343.7,-39.2,-220.8,3/8/2026 6:08,138,Western La Noscea
-,-603.5,-3.4,14.9,TRUE,Seemingly Special Timeworn Map,-603.7,-1.5,14.8,3/8/2026 6:14,139,Upper La Noscea
-,-394.4,37.3,22.4,TRUE,Timeworn Peisteskin Map,-394.2,37.4,22.3,3/8/2026 6:17,139,Upper La Noscea
-,291.3,41.1,-190.3,TRUE,Timeworn Peisteskin Map,291.2,41.1,-190.4,3/8/2026 6:18,139,Upper La Noscea
-,55.4,48.7,-351.2,TRUE,Timeworn Peisteskin Map,55.3,48.7,-351.1,3/8/2026 6:19,180,Outer La Noscea
-,65,56.1,-460.8,TRUE,Timeworn Peisteskin Map,63.4,54.9,-459.7,3/8/2026 6:20,180,Outer La Noscea
-,-138.5,80.9,-305.4,TRUE,Timeworn Peisteskin Map,-138.3,80.9,-305.4,3/8/2026 6:20,180,Outer La Noscea
-,-276.5,15,-739,TRUE,Timeworn Peisteskin Map,-276.6,15,-738.8,3/8/2026 6:22,140,Western Thanalan
-,-533.8,51.6,-778.5,TRUE,Timeworn Peisteskin Map,-533.7,51.6,-778.4,3/8/2026 6:22,140,Western Thanalan
-,-72,53.4,328.4,TRUE,Timeworn Peisteskin Map,-72.2,53.4,328.6,3/8/2026 6:25,140,Western Thanalan
-,-210.9,19.1,-443.9,TRUE,Timeworn Peisteskin Map,-211,19.1,-444,3/8/2026 6:26,141,Central Thanalan
+,364.9,6.7,60.1,TRUE,Timeworn Leather Map,362.2,8.4,56.4,3/7/2026 18:29,148,Central Shroud
+,443.4,32,-2.6,TRUE,Timeworn Toadskin Map,443.8,32.1,-2.6,3/8/2026 2:17,148,Central Shroud
+,-271.5,20.9,-58.8,TRUE,Timeworn Goatskin Map,-271.6,23.6,-61.9,3/7/2026 20:03,141,Central Thanalan
 ,-257.3,-31.1,85.7,TRUE,Timeworn Peisteskin Map,-257.3,-31.1,85.7,3/8/2026 6:26,141,Central Thanalan
-,66.3,29.7,-99.3,TRUE,Timeworn Peisteskin Map,66.3,29.7,-99.3,3/8/2026 6:28,141,Central Thanalan
-,-114.4,-29.7,-32.1,TRUE,Timeworn Peisteskin Map,-114.5,-29.7,-32.1,3/8/2026 6:28,145,Eastern Thanalan
-,191.2,-27.4,203.9,TRUE,Timeworn Peisteskin Map,191.2,-27.4,204.1,3/8/2026 6:30,145,Eastern Thanalan
-,452.7,-64.5,249.5,TRUE,Timeworn Peisteskin Map,452.8,-64.5,249.4,3/8/2026 6:30,145,Eastern Thanalan
-,-272.7,9.3,138.9,TRUE,Timeworn Peisteskin Map,-272.6,9.3,139,3/8/2026 6:31,146,Southern Thanalan
-,235.6,7.6,820.5,TRUE,Timeworn Peisteskin Map,235.6,7.6,820.5,3/8/2026 6:33,146,Southern Thanalan
-,162.3,8,-26,TRUE,Timeworn Peisteskin Map,162.3,8,-26,3/8/2026 6:34,146,Southern Thanalan
-,-71.7,79,-243.3,TRUE,Timeworn Peisteskin Map,-71.7,79,-243.1,3/8/2026 6:35,147,Northern Thanalan
-,-234.1,74,-138.8,TRUE,Timeworn Peisteskin Map,-234.1,74,-138.8,3/8/2026 6:35,147,Northern Thanalan
-,97.4,15,225.6,TRUE,Timeworn Peisteskin Map,97.4,15,225.7,3/8/2026 6:36,147,Northern Thanalan
-,-741.7,255.8,436,TRUE,Timeworn Peisteskin Map,-741.8,255.7,436.1,3/8/2026 6:38,155,Coerthas Central Highlands
-,-622.9,225.9,-52.5,TRUE,Timeworn Peisteskin Map,-623.1,225.9,-52.3,3/8/2026 6:39,155,Coerthas Central Highlands
-,476.2,248.3,-254.9,TRUE,Timeworn Peisteskin Map,476.1,248.3,-254.6,3/8/2026 6:41,155,Coerthas Central Highlands
-,-160.4,40.1,-193.1,TRUE,Timeworn Peisteskin Map,-160.4,40.1,-193.1,3/8/2026 6:42,156,Mor Dhona
-,-501.2,-3.9,-254.7,TRUE,Timeworn Peisteskin Map,-501.3,-3.9,-254.2,3/8/2026 6:43,156,Mor Dhona
-,-541.3,-4.7,-356.3,TRUE,Timeworn Peisteskin Map,-541.4,-4.6,-356.5,3/8/2026 6:43,156,Mor Dhona
-,-538,65.4,103.7,TRUE,Mysterious Map,-538.1,65.4,103.9,3/8/2026 6:45,148,Central Shroud
-,-11.2,-34.6,431.5,TRUE,Mysterious Map,-11.2,-34.7,431.3,3/8/2026 6:46,148,Central Shroud
-,-296,11.6,-22.2,TRUE,Mysterious Map,-296.1,11.6,-22.3,3/8/2026 6:47,152,East Shroud
-,195.8,-23.3,-532,TRUE,Mysterious Map,195.7,-23.4,-531.9,3/8/2026 6:49,152,East Shroud
-,140.6,29.6,171.7,TRUE,Mysterious Map,140.4,29.5,171.7,3/8/2026 6:49,153,South Shroud
-,120.9,17.6,-128.9,TRUE,Mysterious Map,120.9,17.6,-128.7,3/8/2026 6:50,153,South Shroud
-,-264.9,-54.5,288.8,TRUE,Mysterious Map,-264.9,-54.5,288.8,3/8/2026 6:51,154,North Shroud
-,124,-27.7,234.4,TRUE,Mysterious Map,123.8,-27.7,234.4,3/8/2026 6:51,154,North Shroud
-,-177.1,43.9,-176.5,TRUE,Mysterious Map,-177,44,-176.5,3/8/2026 6:52,134,Middle La Noscea
-,13.7,28.8,179.1,TRUE,Mysterious Map,13.6,28.8,179.1,3/8/2026 6:53,134,Middle La Noscea
-,650,77.9,-356.6,TRUE,Mysterious Map,649.9,77.9,-356.5,3/8/2026 6:56,135,Lower La Noscea
-,105.7,51.4,880.9,TRUE,Mysterious Map,105.6,51.4,880.9,3/8/2026 6:58,135,Lower La Noscea
-,450.4,13.2,310.1,TRUE,Mysterious Map,450.4,13.2,310.3,3/8/2026 6:59,137,Eastern La Noscea
-,-222.2,44.9,490.2,TRUE,Mysterious Map,-217.1,45.6,486.6,3/8/2026 7:21,137,Eastern La Noscea
-,-459.3,-37.9,719,TRUE,Mysterious Map,-464.4,-37.8,717.5,3/8/2026 15:47,138,Western La Noscea
-,565.3,39.4,301.5,TRUE,Mysterious Map,569.5,41.7,297.2,3/8/2026 15:49,138,Western La Noscea
-,-365.6,48.1,-13.8,TRUE,Mysterious Map,-365.7,47.3,-13.6,3/8/2026 15:52,139,Upper La Noscea
-,454.9,-2.7,170.4,TRUE,Mysterious Map,454.7,-2.8,170.5,3/8/2026 15:53,139,Upper La Noscea
-,68,66.6,-257.7,TRUE,Mysterious Map,68,66.6,-257.7,3/8/2026 15:54,180,Outer La Noscea
-,-308,63.7,-319.3,TRUE,Mysterious Map,-308,63.7,-319.3,3/8/2026 15:54,180,Outer La Noscea
-,7.7,21.3,90.2,TRUE,Mysterious Map,7.7,21.3,90.4,3/8/2026 15:55,140,Western Thanalan
-,-96.8,52.3,241.5,TRUE,Mysterious Map,-96.8,52.3,241.5,3/8/2026 15:56,140,Western Thanalan
+,-237.1,18.9,-258.5,TRUE,Timeworn Boarskin Map,-237.1,18.9,-258.5,3/8/2026 5:31,141,Central Thanalan
+,-210.9,19.1,-443.9,TRUE,Timeworn Peisteskin Map,-211,19.1,-444,3/8/2026 6:26,141,Central Thanalan
+,-199.3,24.8,-124,TRUE,Timeworn Leather Map,-195.7,23.9,-129.3,3/7/2026 18:57,141,Central Thanalan
+,-170.1,4.2,-8.7,TRUE,Timeworn Toadskin Map,-168.7,4.6,-9.9,3/8/2026 4:35,141,Central Thanalan
+,-157,14,-195.7,TRUE,Timeworn Toadskin Map,-156.9,14,-195.5,3/8/2026 4:41,141,Central Thanalan
 ,-114.8,27.7,-397.7,TRUE,Mysterious Map,-114.7,27.7,-397.6,3/8/2026 15:56,141,Central Thanalan
-,411.4,-18.1,-106.3,TRUE,Mysterious Map,411.3,-18.1,-106.4,3/8/2026 15:57,141,Central Thanalan
-,91.8,-24.8,295.5,TRUE,Mysterious Map,91.6,-24.8,295.5,3/8/2026 15:58,145,Eastern Thanalan
-,-545.9,-7.6,-163.7,TRUE,Mysterious Map,-545.8,-7.6,-163.7,3/8/2026 16:00,145,Eastern Thanalan
-,49.1,2.5,871.3,TRUE,Mysterious Map,49.3,2.5,871.5,3/8/2026 16:01,146,Southern Thanalan
-,-8.2,3.3,-665.8,TRUE,Mysterious Map,-8.2,3.3,-665.9,3/8/2026 16:03,146,Southern Thanalan
-,-41.1,5.8,314.2,TRUE,Mysterious Map,-41.1,5.8,314.2,3/8/2026 16:03,147,Northern Thanalan
-,-49.7,47,32.4,TRUE,Mysterious Map,-49.7,47,32.4,3/8/2026 16:04,147,Northern Thanalan
-,85.4,358.7,-274.3,TRUE,Mysterious Map,85.3,358.7,-274.2,3/8/2026 16:05,155,Coerthas Central Highlands
-,-533,244.6,290.8,TRUE,Mysterious Map,-533,244.6,290.9,3/8/2026 16:07,155,Coerthas Central Highlands
-,508.5,-9.3,-383.9,TRUE,Mysterious Map,508.5,-9.3,-383.9,3/8/2026 16:08,156,Mor Dhona
-,-416.4,-3.7,-548.6,TRUE,Mysterious Map,-416.5,-3.7,-548.6,3/8/2026 16:09,156,Mor Dhona
-,154.5,-31,343.6,TRUE,Unhidden Leather Map,154.7,-31,344,3/8/2026 16:10,148,Central Shroud
-,-285.1,19,102.4,TRUE,Unhidden Leather Map,-285.4,19.1,102.8,3/8/2026 16:11,148,Central Shroud
-,-343.5,-1,248.7,TRUE,Unhidden Leather Map,-343.7,-1.1,248.6,3/8/2026 16:12,152,East Shroud
-,-10.9,19.2,8.4,TRUE,Unhidden Leather Map,-10.9,19.2,8.4,3/8/2026 16:13,152,East Shroud
-,-283.2,13.9,-99.7,TRUE,Unhidden Leather Map,-283.3,13.8,-99.8,3/8/2026 16:13,153,South Shroud
-,-171.1,-0.3,249.6,TRUE,Unhidden Leather Map,-171.1,-0.4,249.4,3/8/2026 16:14,153,South Shroud
-,223.4,-24.9,276,TRUE,Unhidden Leather Map,223.3,-24.9,276,3/8/2026 16:15,154,North Shroud
-,-101.7,-53.1,362.6,TRUE,Unhidden Leather Map,-101.7,-53.1,362.6,3/8/2026 16:16,154,North Shroud
-,-99.8,45.8,-140.7,TRUE,Unhidden Leather Map,-99.8,45.8,-140.5,3/8/2026 16:17,134,Middle La Noscea
-,-318.8,26.6,-552.6,TRUE,Unhidden Leather Map,-313.4,28.5,-559.5,3/8/2026 16:17,134,Middle La Noscea
-,-776.8,114.9,-734.8,TRUE,Seemingly Special Timeworn Map,-777,79.3,-734.9,3/8/2026 3:36,621,The Lochs
-,402.9,26.5,-480,TRUE,Seemingly Special Timeworn Map,402.9,54.9,-479.8,3/8/2026 4:43,622,The Azim Steppe
-,-245.3,54.9,178.3,TRUE,Seemingly Special Timeworn Map,-245.4,23.4,178.4,3/8/2026 11:53,622,The Azim Steppe
-,154.3,23.7,529.8,TRUE,Seemingly Special Timeworn Map,153.9,9,529.6,3/8/2026 11:58,621,The Lochs
-,-412.3,9.1,435.4,TRUE,Seemingly Special Timeworn Map,-412.7,45.1,436,3/8/2026 12:07,614,Yanxia
-,219,45.2,-66.1,TRUE,Seemingly Special Timeworn Map,219.2,94.5,-65.9,3/8/2026 12:13,612,The Fringes
-,-688.2,94.5,413.5,TRUE,Seemingly Special Timeworn Map,-686.9,26.5,412.4,3/8/2026 12:26,613,The Ruby Sea
-,-91,26.6,95.1,TRUE,Seemingly Special Timeworn Map,-90.7,0.1,95.1,3/8/2026 12:31,621,The Lochs
-,522.9,-0.2,-749.3,TRUE,Seemingly Special Timeworn Map,522.9,8,-749.2,3/8/2026 12:36,621,The Lochs
-,456.3,8.1,199,TRUE,Seemingly Special Timeworn Map,456.3,1,198.9,3/8/2026 12:49,613,The Ruby Sea
-,18.8,8,779.8,TRUE,Seemingly Special Timeworn Map,18.9,55.3,779.9,3/8/2026 13:17,622,The Azim Steppe
-,185.5,55.3,-679.8,TRUE,Seemingly Special Timeworn Map,188.7,7.3,-682.5,3/8/2026 13:24,621,The Lochs
-,-643.7,7.6,554.5,TRUE,Seemingly Special Timeworn Map,-644,262.5,554.3,3/8/2026 13:35,620,The Peaks
-,-458,262.5,-779.2,TRUE,Seemingly Special Timeworn Map,-458.8,57.5,-779.2,3/8/2026 13:42,620,The Peaks
-,315.4,57.5,426.9,TRUE,Seemingly Special Timeworn Map,314.9,1.2,427.6,3/8/2026 13:52,613,The Ruby Sea
-,585.6,223.2,-581.2,TRUE,Seemingly Special Timeworn Map,585.6,232.4,-581.2,3/8/2026 14:14,620,The Peaks
-,-284.9,232,581.4,TRUE,Seemingly Special Timeworn Map,-284.9,263.6,581.4,3/8/2026 14:20,620,The Peaks
-,37.6,69.9,317,TRUE,Seemingly Special Timeworn Map,37.5,4.7,316.9,3/8/2026 14:49,614,Yanxia
-,-224.2,4.7,-591.6,TRUE,Seemingly Special Timeworn Map,-223.9,2.9,-591.6,3/8/2026 15:00,613,The Ruby Sea
-,415.7,3,-197,TRUE,Seemingly Special Timeworn Map,415.3,66.4,-196.9,3/8/2026 15:07,621,The Lochs
-,-147.4,94.5,751.7,TRUE,Seemingly Special Timeworn Map,-147.8,9.5,752.1,3/8/2026 15:42,613,The Ruby Sea
-,-295.3,23.4,-237.3,TRUE,Seemingly Special Timeworn Map,-293.4,57.4,-235.9,3/8/2026 15:59,612,The Fringes
-,544.3,57.8,-628.1,TRUE,Seemingly Special Timeworn Map,543.5,105.8,-628.8,3/8/2026 16:07,613,The Ruby Sea
-,218,51.3,29.5,TRUE,Unhidden Leather Map,217.9,51.2,29.7,3/8/2026 16:19,135,Lower La Noscea
-,507.9,69.6,-237.2,TRUE,Unhidden Leather Map,508,69.6,-237.2,3/8/2026 16:20,135,Lower La Noscea
-,342.9,29.2,466.9,TRUE,Unhidden Leather Map,342.8,29.2,466.9,3/8/2026 16:20,137,Eastern La Noscea
-,-329,45.1,437.2,TRUE,Unhidden Leather Map,-327.5,45.7,440.9,3/8/2026 16:21,137,Eastern La Noscea
-,-300.5,-38.5,612.2,TRUE,Unhidden Leather Map,-300.5,-38.5,612.4,3/8/2026 16:24,138,Western La Noscea
-,52.4,-6.5,-36.6,TRUE,Unhidden Leather Map,251.7,-5.2,209.9,3/8/2026 16:25,138,Western La Noscea
-,335.4,11.5,-62.7,TRUE,Unhidden Leather Map,335.4,11.5,-62.7,3/8/2026 16:25,139,Upper La Noscea
-,258.8,-2.5,74.6,TRUE,Unhidden Leather Map,259,-2.6,74.5,3/8/2026 16:26,139,Upper La Noscea
-,-324.2,61.4,-136,TRUE,Unhidden Leather Map,-324,61.4,-136.1,3/8/2026 16:27,180,Outer La Noscea
-,-396,47.2,-268.6,TRUE,Unhidden Leather Map,-395.9,47.2,-268.6,3/8/2026 16:27,180,Outer La Noscea
-,114.3,53.5,-137.5,TRUE,Unhidden Leather Map,114.3,53.5,-137.5,3/8/2026 16:28,140,Western Thanalan
-,-130.1,46.4,385.6,TRUE,Unhidden Leather Map,-130.2,46.4,385.6,3/8/2026 16:29,140,Western Thanalan
-,-3.3,15.5,-312.5,TRUE,Unhidden Leather Map,-3.3,15.5,-312.4,3/8/2026 16:29,141,Central Thanalan
 ,-70.9,-4.9,30.8,TRUE,Unhidden Leather Map,-71.1,-4.8,30.9,3/8/2026 16:30,141,Central Thanalan
+,-39.1,26.8,-414.4,TRUE,Timeworn Goatskin Map,-28.8,27.2,-416.1,3/7/2026 20:01,141,Central Thanalan
+,-3.3,15.5,-312.5,TRUE,Unhidden Leather Map,-3.3,15.5,-312.4,3/8/2026 16:29,141,Central Thanalan
+,21.9,13,54.9,TRUE,Timeworn Goatskin Map,21,13,55.1,3/8/2026 3:00,141,Central Thanalan
+,40.6,15.6,612.1,TRUE,Timeworn Toadskin Map,41.1,15.6,610.1,3/8/2026 4:38,141,Central Thanalan
+,66.3,29.7,-99.3,TRUE,Timeworn Peisteskin Map,66.3,29.7,-99.3,3/8/2026 6:28,141,Central Thanalan
+,100.7,3.8,412.8,TRUE,Thorne Dynasty Map,100.9,3.8,413.1,3/8/2026 16:56,141,Central Thanalan
+,141.4,4.6,639.7,TRUE,Timeworn Leather Map,140.6,6.2,643,3/7/2026 18:53,141,Central Thanalan
+,191.7,4.4,-171.5,TRUE,Timeworn Leather Map,185.5,4.9,-177.8,3/7/2026 18:55,141,Central Thanalan
+,209.5,-1.4,-65.8,TRUE,Thorne Dynasty Map,209.4,-1.4,-65.8,3/8/2026 16:55,141,Central Thanalan
+,262,15.2,471.4,TRUE,Timeworn Boarskin Map,262.2,15.2,471.5,3/8/2026 5:32,141,Central Thanalan
+,300,-15.3,-36.2,TRUE,Timeworn Boarskin Map,300.2,-15.3,-36.2,3/8/2026 5:30,141,Central Thanalan
+,411.4,-18.1,-106.3,TRUE,Mysterious Map,411.3,-18.1,-106.4,3/8/2026 15:57,141,Central Thanalan
+,-775.7,238.8,-141.9,TRUE,Timeworn Boarskin Map,-775.7,238.8,-142.1,3/8/2026 5:40,155,Coerthas Central Highlands
+,-741.7,255.8,436,TRUE,Timeworn Peisteskin Map,-741.8,255.7,436.1,3/8/2026 6:38,155,Coerthas Central Highlands
+,-685.8,223,-436.4,TRUE,Timeworn Boarskin Map,-685.7,223,-436.3,3/8/2026 5:44,155,Coerthas Central Highlands
+,-622.9,225.9,-52.5,TRUE,Timeworn Peisteskin Map,-623.1,225.9,-52.3,3/8/2026 6:39,155,Coerthas Central Highlands
+,-533,244.6,290.8,TRUE,Mysterious Map,-533,244.6,290.9,3/8/2026 16:07,155,Coerthas Central Highlands
+,-301.5,220.5,681.6,TRUE,Timeworn Toadskin Map,-301.5,220.6,681.8,3/8/2026 4:52,155,Coerthas Central Highlands
+,-288.3,263.9,-133.6,TRUE,Unhidden Leather Map,-288.7,263.8,-133.6,3/8/2026 16:35,155,Coerthas Central Highlands
+,-89.7,300.1,-302.1,TRUE,Timeworn Toadskin Map,-89.7,300.1,-302.3,3/8/2026 4:54,155,Coerthas Central Highlands
+,68.2,298.1,170.9,TRUE,Timeworn Goatskin Map,68.2,298.1,170.8,3/8/2026 2:15,155,Coerthas Central Highlands
+,85.4,358.7,-274.3,TRUE,Mysterious Map,85.3,358.7,-274.2,3/8/2026 16:05,155,Coerthas Central Highlands
+,104.8,376.1,-647.1,TRUE,Timeworn Boarskin Map,104.7,376.1,-647.2,3/8/2026 5:42,155,Coerthas Central Highlands
+,111.4,292.6,-76.1,TRUE,Timeworn Leather Map,110.1,295.9,-82.2,3/7/2026 19:11,155,Coerthas Central Highlands
+,155.3,227.4,289.1,TRUE,Timeworn Leather Map,155,227.3,289.4,3/7/2026 19:10,155,Coerthas Central Highlands
+,249.3,311.9,-386.3,TRUE,Timeworn Goatskin Map,249.3,311.9,-386.4,3/8/2026 2:16,155,Coerthas Central Highlands
+,327.3,258,117.8,TRUE,Timeworn Leather Map,327.4,257.9,118.3,3/7/2026 19:10,155,Coerthas Central Highlands
+,365.6,315.3,-398.2,TRUE,Unhidden Leather Map,365.6,315.3,-398.3,3/8/2026 16:34,155,Coerthas Central Highlands
+,460,305.5,-284.8,TRUE,Timeworn Toadskin Map,460.2,305.5,-284.4,3/8/2026 4:50,155,Coerthas Central Highlands
+,476.2,248.3,-254.9,TRUE,Timeworn Peisteskin Map,476.1,248.3,-254.6,3/8/2026 6:41,155,Coerthas Central Highlands
+,524.8,234.9,303.9,TRUE,Timeworn Goatskin Map,524.8,234.9,304,3/8/2026 2:17,155,Coerthas Central Highlands
+,-788.7,106.8,-519.2,TRUE,Timeworn Dragonskin Map,-789,106.9,-519.5,3/8/2026 18:54,397,Coerthas Western Highlands
+,-575.3,94.2,-591.4,TRUE,Timeworn Archaeoskin Map,-575.5,94.2,-591.5,3/8/2026 17:25,397,Coerthas Western Highlands
+,-522.7,166.7,95.2,TRUE,Timeworn Dragonskin Map,-523,166.7,95.3,3/8/2026 19:02,397,Coerthas Western Highlands
+,-340.6,218.8,458.6,TRUE,Timeworn Wyvernskin Map,-340.6,218.8,459.1,3/8/2026 17:52,397,Coerthas Western Highlands
+,-326.4,153.2,29.1,TRUE,Timeworn Wyvernskin Map,-326.7,153.2,28.8,3/8/2026 17:52,397,Coerthas Western Highlands
+,-115.7,113.4,418.7,TRUE,Timeworn Dragonskin Map,-110.7,114,421.6,3/8/2026 18:56,397,Coerthas Western Highlands
+,-101.3,95.6,-233.7,TRUE,Timeworn Archaeoskin Map,-100.9,97.4,-230.1,3/8/2026 17:24,397,Coerthas Western Highlands
+,-43.8,91.3,-515.9,TRUE,Timeworn Dragonskin Map,-43.8,91.3,-515.7,3/8/2026 18:57,397,Coerthas Western Highlands
+,16.6,102.1,116,TRUE,Timeworn Archaeoskin Map,17.1,102.1,116.3,3/8/2026 17:23,397,Coerthas Western Highlands
+,25.2,215.3,238.3,TRUE,Timeworn Wyvernskin Map,25.5,215.3,238.1,3/8/2026 17:53,397,Coerthas Western Highlands
+,116.9,222.6,525.6,TRUE,Timeworn Archaeoskin Map,117,222.6,525.6,3/8/2026 17:30,397,Coerthas Western Highlands
+,277.9,169.9,-561.4,TRUE,Timeworn Wyvernskin Map,277.8,169.9,-561.4,3/8/2026 17:55,397,Coerthas Western Highlands
+,331.4,167.7,-580.2,TRUE,Timeworn Archaeoskin Map,331.4,167.7,-580,3/8/2026 17:28,397,Coerthas Western Highlands
+,331.4,148.3,-349.5,TRUE,Timeworn Dragonskin Map,331.5,148.3,-349.4,3/8/2026 19:01,397,Coerthas Western Highlands
+,361.4,182,518.9,TRUE,Timeworn Archaeoskin Map,361.4,181.9,518.9,3/8/2026 17:30,397,Coerthas Western Highlands
+,397.7,117.6,62.1,TRUE,Timeworn Archaeoskin Map,397.5,117.5,62,3/8/2026 17:27,397,Coerthas Western Highlands
+,536.7,133.9,-835.6,TRUE,Timeworn Wyvernskin Map,537,133.9,-836.1,3/8/2026 17:54,397,Coerthas Western Highlands
+,557.8,206.7,-158.7,TRUE,Timeworn Wyvernskin Map,563.7,206.1,-166.8,3/8/2026 17:56,397,Coerthas Western Highlands
+,616.1,131.6,-741.5,TRUE,Timeworn Dragonskin Map,615.9,131.6,-741.5,3/8/2026 19:22,397,Coerthas Western Highlands
+,659.1,130.8,-603.8,TRUE,Timeworn Wyvernskin Map,659,130.8,-603.9,3/8/2026 17:55,397,Coerthas Western Highlands
+,675.2,210.3,-318.9,TRUE,Timeworn Wyvernskin Map,675.6,210.3,-318.7,3/8/2026 17:56,397,Coerthas Western Highlands
+,719.9,204.9,208.7,TRUE,Timeworn Dragonskin Map,720.2,207.7,212,3/8/2026 19:00,397,Coerthas Western Highlands
+,-428.2,12.2,301.6,TRUE,Timeworn Boarskin Map,-428.1,12.2,301.6,3/8/2026 5:02,152,East Shroud
+,-408,0.3,87.5,TRUE,Timeworn Leather Map,-408,0.3,87.5,3/7/2026 18:30,152,East Shroud
+,-343.5,-1,248.7,TRUE,Unhidden Leather Map,-343.7,-1.1,248.6,3/8/2026 16:12,152,East Shroud
+,-315,18,384.1,TRUE,Timeworn Leather Map,-314.9,18.2,384.6,3/7/2026 18:31,152,East Shroud
+,-296,11.6,-22.2,TRUE,Mysterious Map,-296.1,11.6,-22.3,3/8/2026 6:47,152,East Shroud
+,-276.3,6.2,108,TRUE,Timeworn Toadskin Map,-276.3,6.2,108,3/8/2026 2:21,152,East Shroud
+,-204.3,15.5,13.4,TRUE,Timeworn Goatskin Map,-204.4,15.5,13.3,3/7/2026 19:15,152,East Shroud
+,-191.3,46.4,-105.4,TRUE,Timeworn Boarskin Map,-191.3,46.4,-105.3,3/8/2026 5:01,152,East Shroud
+,-178.1,-1,164.3,TRUE,Timeworn Peisteskin Map,-177.9,-1,163.7,3/8/2026 5:49,152,East Shroud
+,-62.8,-10.7,278.1,TRUE,Thorne Dynasty Map,-62.4,-10.7,277.8,3/8/2026 16:39,152,East Shroud
+,-10.9,19.2,8.4,TRUE,Unhidden Leather Map,-10.9,19.2,8.4,3/8/2026 16:13,152,East Shroud
+,3.4,-3.8,199.5,TRUE,Timeworn Goatskin Map,3.4,-3.8,199.5,3/7/2026 19:14,152,East Shroud
+,40.9,7.5,449,TRUE,Thorne Dynasty Map,41,7.5,449.1,3/8/2026 16:39,152,East Shroud
+,42.2,7.4,435,TRUE,Timeworn Toadskin Map,42.1,7.4,435,3/8/2026 3:01,152,East Shroud
+,57.9,2,182.7,TRUE,Timeworn Leather Map,48.9,1.5,171.9,3/8/2026 2:40,152,East Shroud
+,114.7,11.9,468.1,TRUE,Timeworn Goatskin Map,114.5,11.8,468,3/7/2026 19:14,152,East Shroud
+,195.8,-23.3,-532,TRUE,Mysterious Map,195.7,-23.4,-531.9,3/8/2026 6:49,152,East Shroud
+,207.9,-2.8,74.9,TRUE,Timeworn Toadskin Map,207.7,-2.8,74.9,3/8/2026 2:21,152,East Shroud
+,285.4,-5.5,23.5,TRUE,Timeworn Boarskin Map,285.4,-5.5,23.5,3/8/2026 5:00,152,East Shroud
+,350.3,-3.6,-32.7,TRUE,Timeworn Peisteskin Map,350.1,-3.6,-32.5,3/8/2026 5:51,152,East Shroud
+,361.5,-19.1,-152.2,TRUE,Timeworn Peisteskin Map,361.3,-19.1,-152.1,3/8/2026 5:50,152,East Shroud
+,-329,45.1,437.2,TRUE,Unhidden Leather Map,-327.5,45.7,440.9,3/8/2026 16:21,137,Eastern La Noscea
+,-264.7,48.6,226.3,TRUE,Thorne Dynasty Map,-264.5,48.7,226.4,3/8/2026 16:47,137,Eastern La Noscea
+,-245,59.9,160.6,TRUE,Timeworn Boarskin Map,-246.1,61.7,156.2,3/8/2026 5:15,137,Eastern La Noscea
+,-222.2,44.9,490.2,TRUE,Mysterious Map,-217.1,45.6,486.6,3/8/2026 7:21,137,Eastern La Noscea
+,-199.4,48.7,590.5,TRUE,Timeworn Leather Map,-199.6,48.8,590.9,3/7/2026 18:41,137,Eastern La Noscea
+,-161,62.9,688.7,TRUE,Timeworn Peisteskin Map,-161,62.9,688.8,3/8/2026 6:04,137,Eastern La Noscea
+,-155.2,48,169,TRUE,Timeworn Goatskin Map,-155.1,47.9,169.2,3/7/2026 19:28,137,Eastern La Noscea
+,-99.4,63.7,684.2,TRUE,Timeworn Toadskin Map,-99.4,63.7,684.1,3/8/2026 3:03,137,Eastern La Noscea
+,52.9,57.2,105.6,TRUE,Timeworn Leather Map,52.6,57.3,105.1,3/7/2026 18:41,137,Eastern La Noscea
+,116.6,70,15.5,TRUE,Timeworn Peisteskin Map,116.7,70,15.5,3/8/2026 6:02,137,Eastern La Noscea
+,234.3,54.4,619.6,TRUE,Timeworn Toadskin Map,234.2,54.4,619.6,3/8/2026 3:04,137,Eastern La Noscea
+,256.3,46.9,681.7,TRUE,Timeworn Boarskin Map,255.4,47.5,684.7,3/8/2026 5:15,137,Eastern La Noscea
+,269.1,43.2,524.1,TRUE,Timeworn Leather Map,269.2,43.2,524.1,3/7/2026 18:40,137,Eastern La Noscea
+,310.2,42.2,181.9,TRUE,Timeworn Boarskin Map,310.2,42.2,181.9,3/8/2026 5:16,137,Eastern La Noscea
+,342.9,29.2,466.9,TRUE,Unhidden Leather Map,342.8,29.2,466.9,3/8/2026 16:20,137,Eastern La Noscea
+,352.7,28,710.3,TRUE,Timeworn Toadskin Map,352.7,28,710.2,3/8/2026 3:04,137,Eastern La Noscea
+,405.6,19.8,743.9,TRUE,Timeworn Goatskin Map,405.5,19.7,743.6,3/7/2026 19:26,137,Eastern La Noscea
+,401.3,34.7,147.3,TRUE,Timeworn Goatskin Map,409.3,35,147,3/7/2026 19:28,137,Eastern La Noscea
+,428.7,76.2,-43,TRUE,Timeworn Peisteskin Map,428.8,76.2,-43.1,3/8/2026 6:05,137,Eastern La Noscea
+,450.4,13.2,310.1,TRUE,Mysterious Map,450.4,13.2,310.3,3/8/2026 6:59,137,Eastern La Noscea
+,520.4,41.1,549.3,TRUE,Thorne Dynasty Map,520.2,41.3,549.5,3/8/2026 16:48,137,Eastern La Noscea
+,-545.9,-7.6,-163.7,TRUE,Mysterious Map,-545.8,-7.6,-163.7,3/8/2026 16:00,145,Eastern Thanalan
+,-544.5,-17.7,79.5,TRUE,Timeworn Boarskin Map,-544.5,-17.7,79.5,3/8/2026 5:35,145,Eastern Thanalan
+,-346.3,-22.6,411.1,TRUE,Thorne Dynasty Map,-346.1,-22.6,411.3,3/8/2026 16:57,145,Eastern Thanalan
+,-340.5,-12,-248.6,TRUE,Timeworn Boarskin Map,-340.5,-12,-248.8,3/8/2026 5:34,145,Eastern Thanalan
+,-331,-19.2,-110.6,TRUE,Timeworn Leather Map,-331.6,-19.3,-110.6,3/7/2026 19:01,145,Eastern Thanalan
 ,-284,-32.9,255.1,TRUE,Unhidden Leather Map,-284.2,-32.9,255,3/8/2026 16:30,145,Eastern Thanalan
 ,-237.3,-38.6,-3.8,TRUE,Unhidden Leather Map,-237.2,-38.6,-3.7,3/8/2026 16:31,145,Eastern Thanalan
-,-60.1,18.1,-284.7,TRUE,Unhidden Leather Map,-60.2,18.1,-284.7,3/8/2026 16:31,146,Southern Thanalan
-,17,15.8,486.2,TRUE,Unhidden Leather Map,17.1,15.9,486.3,3/8/2026 16:33,146,Southern Thanalan
-,17.8,5.3,296.8,TRUE,Unhidden Leather Map,17.8,5.3,296.7,3/8/2026 16:33,147,Northern Thanalan
-,12.2,24.1,168.9,TRUE,Unhidden Leather Map,12.2,24.1,168.9,3/8/2026 16:33,147,Northern Thanalan
-,365.6,315.3,-398.2,TRUE,Unhidden Leather Map,365.6,315.3,-398.3,3/8/2026 16:34,155,Coerthas Central Highlands
-,-288.3,263.9,-133.6,TRUE,Unhidden Leather Map,-288.7,263.8,-133.6,3/8/2026 16:35,155,Coerthas Central Highlands
-,112.1,-1.6,-558.6,TRUE,Unhidden Leather Map,111.6,-1.5,-558.7,3/8/2026 16:36,156,Mor Dhona
-,487.2,-2.4,-494.5,TRUE,Unhidden Leather Map,487,-2.5,-494.4,3/8/2026 16:36,156,Mor Dhona
-,-25.3,-32.4,327.4,TRUE,Thorne Dynasty Map,-25.3,-32.4,327.4,3/8/2026 16:37,148,Central Shroud
-,215.9,-7.5,-60.4,TRUE,Thorne Dynasty Map,216,-7.5,-60.6,3/8/2026 16:38,148,Central Shroud
-,-62.8,-10.7,278.1,TRUE,Thorne Dynasty Map,-62.4,-10.7,277.8,3/8/2026 16:39,152,East Shroud
-,40.9,7.5,449,TRUE,Thorne Dynasty Map,41,7.5,449.1,3/8/2026 16:39,152,East Shroud
-,-237.2,13,62,TRUE,Thorne Dynasty Map,-237.5,13,61.6,3/8/2026 16:40,153,South Shroud
-,-194.2,0.9,422.8,TRUE,Thorne Dynasty Map,-194.2,0.9,422.6,3/8/2026 16:40,153,South Shroud
-,-15.6,-50.4,427.4,TRUE,Thorne Dynasty Map,-15.8,-50.4,427.3,3/8/2026 16:41,154,North Shroud
-,430.6,-3.2,262,TRUE,Thorne Dynasty Map,430.6,-3.2,262,3/8/2026 16:42,154,North Shroud
-,-116.2,43.6,-288,TRUE,Thorne Dynasty Map,-116.4,43.5,-288.2,3/8/2026 16:43,134,Middle La Noscea
-,-15.5,49.9,-94.6,TRUE,Thorne Dynasty Map,-15.3,49.9,-94.4,3/8/2026 16:43,134,Middle La Noscea
-,202.3,31.2,137.5,TRUE,Thorne Dynasty Map,202.4,31.1,137.4,3/8/2026 16:45,135,Lower La Noscea
-,627.2,65.7,-199,TRUE,Thorne Dynasty Map,627.4,65.7,-199.1,3/8/2026 16:46,135,Lower La Noscea
-,-264.7,48.6,226.3,TRUE,Thorne Dynasty Map,-264.5,48.7,226.4,3/8/2026 16:47,137,Eastern La Noscea
-,520.4,41.1,549.3,TRUE,Thorne Dynasty Map,520.2,41.3,549.5,3/8/2026 16:48,137,Eastern La Noscea
-,263.2,-16,142.6,TRUE,Thorne Dynasty Map,263.2,-16,142.7,3/8/2026 16:49,138,Western La Noscea
-,611.5,8.7,440.6,TRUE,Thorne Dynasty Map,611.7,8.7,440.9,3/8/2026 16:50,138,Western La Noscea
-,334.4,-1.5,204,TRUE,Thorne Dynasty Map,334.5,-1.5,203.8,3/8/2026 16:50,139,Upper La Noscea
-,366.3,-3.2,26.3,TRUE,Thorne Dynasty Map,366.3,-3.4,26.2,3/8/2026 16:51,139,Upper La Noscea
-,-333.2,63.9,-156.5,TRUE,Thorne Dynasty Map,-333.2,63.9,-156.5,3/8/2026 16:52,180,Outer La Noscea
-,117.5,72.9,-259.1,TRUE,Thorne Dynasty Map,117.8,72.9,-258.9,3/8/2026 16:53,180,Outer La Noscea
-,-51.2,15.4,136.5,TRUE,Thorne Dynasty Map,-51.7,15.4,136.8,3/8/2026 16:54,140,Western Thanalan
-,249.5,51.4,41.8,TRUE,Thorne Dynasty Map,249.8,51.4,41.9,3/8/2026 16:54,140,Western Thanalan
-,209.5,-1.4,-65.8,TRUE,Thorne Dynasty Map,209.4,-1.4,-65.8,3/8/2026 16:55,141,Central Thanalan
-,100.7,3.8,412.8,TRUE,Thorne Dynasty Map,100.9,3.8,413.1,3/8/2026 16:56,141,Central Thanalan
-,-346.3,-22.6,411.1,TRUE,Thorne Dynasty Map,-346.1,-22.6,411.3,3/8/2026 16:57,145,Eastern Thanalan
+,-235,-34.1,434.6,TRUE,Timeworn Toadskin Map,-235,-34.1,434.6,3/8/2026 4:41,145,Eastern Thanalan
+,-228.6,-37.8,122.4,TRUE,Timeworn Toadskin Map,-228.6,-37.8,122.4,3/8/2026 4:44,145,Eastern Thanalan
+,-134.7,-42,112.8,TRUE,Timeworn Goatskin Map,-135,-42,113,3/8/2026 2:11,145,Eastern Thanalan
 ,-132.8,-36.8,157.9,TRUE,Thorne Dynasty Map,-132.6,-36.8,157.7,3/8/2026 16:58,145,Eastern Thanalan
-,-85.5,8.9,-630.3,TRUE,Thorne Dynasty Map,-85.5,9,-630.4,3/8/2026 16:59,146,Southern Thanalan
-,-125.1,9.6,533,TRUE,Thorne Dynasty Map,-125.2,9.5,533.2,3/8/2026 17:00,146,Southern Thanalan
-,16.6,102.1,116,TRUE,Timeworn Archaeoskin Map,17.1,102.1,116.3,3/8/2026 17:23,397,Coerthas Western Highlands
-,-101.3,95.6,-233.7,TRUE,Timeworn Archaeoskin Map,-100.9,97.4,-230.1,3/8/2026 17:24,397,Coerthas Western Highlands
-,-575.3,94.2,-591.4,TRUE,Timeworn Archaeoskin Map,-575.5,94.2,-591.5,3/8/2026 17:25,397,Coerthas Western Highlands
-,397.7,117.6,62.1,TRUE,Timeworn Archaeoskin Map,397.5,117.5,62,3/8/2026 17:27,397,Coerthas Western Highlands
-,331.4,167.7,-580.2,TRUE,Timeworn Archaeoskin Map,331.4,167.7,-580,3/8/2026 17:28,397,Coerthas Western Highlands
-,361.4,182,518.9,TRUE,Timeworn Archaeoskin Map,361.4,181.9,518.9,3/8/2026 17:30,397,Coerthas Western Highlands
-,116.9,222.6,525.6,TRUE,Timeworn Archaeoskin Map,117,222.6,525.6,3/8/2026 17:30,397,Coerthas Western Highlands
-,-63.6,-34,-158.3,TRUE,Timeworn Archaeoskin Map,-63.7,-34,-158.2,3/8/2026 17:32,398,The Dravanian Forelands
-,-517.5,-36.7,246.7,TRUE,Timeworn Archaeoskin Map,-520.9,-35.1,248.7,3/8/2026 17:33,398,The Dravanian Forelands
-,-278.1,-81.6,707.8,TRUE,Timeworn Archaeoskin Map,-274.8,-80.2,713.8,3/8/2026 17:33,398,The Dravanian Forelands
-,645.1,-2.7,-632.6,TRUE,Timeworn Archaeoskin Map,645.1,-2.7,-632.6,3/8/2026 17:38,398,The Dravanian Forelands
-,385.4,-79.2,292,TRUE,Timeworn Archaeoskin Map,389.9,-77.4,285.9,3/8/2026 17:40,398,The Dravanian Forelands
-,671.8,-48.4,-141.5,TRUE,Timeworn Archaeoskin Map,671.9,-48.4,-141.7,3/8/2026 17:40,398,The Dravanian Forelands
-,779.2,-6,-638.2,TRUE,Timeworn Archaeoskin Map,779.2,-6,-639.2,3/8/2026 17:41,398,The Dravanian Forelands
-,60.6,-64.7,585.1,TRUE,Timeworn Archaeoskin Map,60.4,-64.6,585.5,3/8/2026 17:43,398,The Dravanian Forelands
-,-227.3,38.4,-63.7,TRUE,Timeworn Archaeoskin Map,-226,39.6,-61.9,3/8/2026 17:46,400,The Churning Mists
-,-210.3,-15.5,242.7,TRUE,Timeworn Archaeoskin Map,-210.3,-15.5,243.2,3/8/2026 17:46,400,The Churning Mists
-,392.7,-25.4,-41.9,TRUE,Timeworn Archaeoskin Map,393,-25.4,-42,3/8/2026 17:47,400,The Churning Mists
-,39.4,-22.1,154.2,TRUE,Timeworn Archaeoskin Map,39.5,-22.1,154.1,3/8/2026 17:47,400,The Churning Mists
-,407.6,-35.8,236.2,TRUE,Timeworn Archaeoskin Map,407.8,-35.8,236.2,3/8/2026 17:48,400,The Churning Mists
-,285.9,-34.9,-236.6,TRUE,Timeworn Archaeoskin Map,285.9,-34.9,-236.7,3/8/2026 17:49,400,The Churning Mists
-,250.1,223.2,-602.4,TRUE,Timeworn Archaeoskin Map,250.1,223.2,-602.5,3/8/2026 17:49,400,The Churning Mists
-,589.8,-9.7,-0.9,TRUE,Timeworn Archaeoskin Map,590,-9.7,-0.5,3/8/2026 17:50,400,The Churning Mists
-,-326.4,153.2,29.1,TRUE,Timeworn Wyvernskin Map,-326.7,153.2,28.8,3/8/2026 17:52,397,Coerthas Western Highlands
-,-340.6,218.8,458.6,TRUE,Timeworn Wyvernskin Map,-340.6,218.8,459.1,3/8/2026 17:52,397,Coerthas Western Highlands
-,25.2,215.3,238.3,TRUE,Timeworn Wyvernskin Map,25.5,215.3,238.1,3/8/2026 17:53,397,Coerthas Western Highlands
-,536.7,133.9,-835.6,TRUE,Timeworn Wyvernskin Map,537,133.9,-836.1,3/8/2026 17:54,397,Coerthas Western Highlands
-,659.1,130.8,-603.8,TRUE,Timeworn Wyvernskin Map,659,130.8,-603.9,3/8/2026 17:55,397,Coerthas Western Highlands
-,277.9,169.9,-561.4,TRUE,Timeworn Wyvernskin Map,277.8,169.9,-561.4,3/8/2026 17:55,397,Coerthas Western Highlands
-,675.2,210.3,-318.9,TRUE,Timeworn Wyvernskin Map,675.6,210.3,-318.7,3/8/2026 17:56,397,Coerthas Western Highlands
-,557.8,206.7,-158.7,TRUE,Timeworn Wyvernskin Map,563.7,206.1,-166.8,3/8/2026 17:56,397,Coerthas Western Highlands
-,275.5,-20.2,-546,TRUE,Timeworn Wyvernskin Map,275.2,-20.2,-546.6,3/8/2026 17:57,398,The Dravanian Forelands
-,-660.3,-102.9,683.5,TRUE,Timeworn Wyvernskin Map,-660.2,-102.9,683.3,3/8/2026 18:00,398,The Dravanian Forelands
-,-42.3,-129.3,673.4,TRUE,Timeworn Wyvernskin Map,-41.9,-129.4,673.4,3/8/2026 18:01,398,The Dravanian Forelands
-,-103.2,-34.8,131.6,TRUE,Timeworn Wyvernskin Map,-103.3,-34.8,131.3,3/8/2026 18:02,398,The Dravanian Forelands
-,391.5,-106.6,563,TRUE,Timeworn Wyvernskin Map,391.7,-106.6,563.1,3/8/2026 18:03,398,The Dravanian Forelands
-,740.4,-34.4,-258.4,TRUE,Timeworn Wyvernskin Map,737.4,-33.9,-251.4,3/8/2026 18:04,398,The Dravanian Forelands
-,322,-12,204.9,TRUE,Timeworn Wyvernskin Map,321.6,-12,205.3,3/8/2026 18:05,398,The Dravanian Forelands
-,124.7,-3,-484.7,TRUE,Timeworn Wyvernskin Map,124.6,-3,-485,3/8/2026 18:05,398,The Dravanian Forelands
-,73.4,-27.8,81.2,TRUE,Timeworn Wyvernskin Map,73.4,-27.8,81,3/8/2026 18:06,398,The Dravanian Forelands
-,-544.9,125.6,-307.6,TRUE,Timeworn Wyvernskin Map,-545.1,125.6,-307.6,3/8/2026 18:10,400,The Churning Mists
-,-481.3,42.7,375.5,TRUE,Timeworn Wyvernskin Map,-481.3,42.7,375.4,3/8/2026 18:11,400,The Churning Mists
-,12.4,-21.7,90.6,TRUE,Timeworn Wyvernskin Map,12.3,-21.7,90.7,3/8/2026 18:11,400,The Churning Mists
-,492.3,-15,-304.5,TRUE,Timeworn Wyvernskin Map,492.6,-14.9,-304.7,3/8/2026 18:12,400,The Churning Mists
-,626.4,-33.1,327.9,TRUE,Timeworn Wyvernskin Map,626.4,-33.1,327.9,3/8/2026 18:13,400,The Churning Mists
-,289.6,-36.2,74.1,TRUE,Timeworn Wyvernskin Map,282.3,-36.5,70.3,3/8/2026 18:14,400,The Churning Mists
-,-278.6,-30.2,698.2,TRUE,Timeworn Wyvernskin Map,-278.5,-30.2,698.1,3/8/2026 18:15,400,The Churning Mists
-,-531.1,167.1,661.9,TRUE,Timeworn Wyvernskin Map,-531.6,167.1,661.9,3/8/2026 18:15,400,The Churning Mists
-,779,-25.8,-246,TRUE,Timeworn Wyvernskin Map,778.3,-27.6,-236.9,3/8/2026 18:24,400,The Churning Mists
-,-450.2,-56,-601.3,TRUE,Timeworn Wyvernskin Map,-450.2,-56,-601.3,3/8/2026 18:27,401,The Sea of Clouds
-,-602,-59.1,-231.4,TRUE,Timeworn Wyvernskin Map,-602.2,-59.2,-230.8,3/8/2026 18:28,401,The Sea of Clouds
-,-436.1,198.3,-46.2,TRUE,Timeworn Wyvernskin Map,-436.2,198.3,-46.3,3/8/2026 18:28,401,The Sea of Clouds
-,263.1,109.9,34.3,TRUE,Timeworn Wyvernskin Map,263.5,109.8,34.3,3/8/2026 18:29,401,The Sea of Clouds
-,742.9,19.6,-89.3,TRUE,Timeworn Wyvernskin Map,743.1,19.6,-89.3,3/8/2026 18:30,401,The Sea of Clouds
-,226.9,-121.6,652.8,TRUE,Timeworn Wyvernskin Map,226.8,-121.6,653,3/8/2026 18:31,401,The Sea of Clouds
-,630.9,-156.1,742.6,TRUE,Timeworn Wyvernskin Map,631.7,-156.3,742.8,3/8/2026 18:31,401,The Sea of Clouds
-,-633.5,-207.3,206.1,TRUE,Timeworn Wyvernskin Map,-633.6,-207.3,206.1,3/8/2026 18:46,401,The Sea of Clouds
-,638.8,-98.8,-604.8,TRUE,Timeworn Wyvernskin Map,638.8,-98.8,-604.8,3/8/2026 18:49,401,The Sea of Clouds
-,729.1,-11.4,-350.4,TRUE,Timeworn Wyvernskin Map,728.9,-11.4,-349.9,3/8/2026 18:51,401,The Sea of Clouds
-,-788.7,106.8,-519.2,TRUE,Timeworn Dragonskin Map,-789,106.9,-519.5,3/8/2026 18:54,397,Coerthas Western Highlands
-,-115.7,113.4,418.7,TRUE,Timeworn Dragonskin Map,-110.7,114,421.6,3/8/2026 18:56,397,Coerthas Western Highlands
-,-43.8,91.3,-515.9,TRUE,Timeworn Dragonskin Map,-43.8,91.3,-515.7,3/8/2026 18:57,397,Coerthas Western Highlands
-,719.9,204.9,208.7,TRUE,Timeworn Dragonskin Map,720.2,207.7,212,3/8/2026 19:00,397,Coerthas Western Highlands
-,331.4,148.3,-349.5,TRUE,Timeworn Dragonskin Map,331.5,148.3,-349.4,3/8/2026 19:01,397,Coerthas Western Highlands
-,-522.7,166.7,95.2,TRUE,Timeworn Dragonskin Map,-523,166.7,95.3,3/8/2026 19:02,397,Coerthas Western Highlands
-,42.7,-71.6,164.5,TRUE,Timeworn Dragonskin Map,34.6,-70.5,165.5,3/8/2026 19:02,398,The Dravanian Forelands
-,-593.7,-71.1,379.2,TRUE,Timeworn Dragonskin Map,-593.8,-71.1,379.2,3/8/2026 19:03,398,The Dravanian Forelands
-,-453.1,-83.6,606.4,TRUE,Timeworn Dragonskin Map,-449.1,-83.1,613,3/8/2026 19:03,398,The Dravanian Forelands
-,245.8,-110.6,412.8,TRUE,Timeworn Dragonskin Map,234.6,-111.1,415.8,3/8/2026 19:04,398,The Dravanian Forelands
-,325.7,-59.5,76.5,TRUE,Timeworn Dragonskin Map,325.7,-59.5,76.4,3/8/2026 19:05,398,The Dravanian Forelands
-,52.8,-120.3,463.5,TRUE,Timeworn Dragonskin Map,52.8,-120.3,463.6,3/8/2026 19:05,398,The Dravanian Forelands
-,-523.1,-59.2,623.1,TRUE,Timeworn Dragonskin Map,-523.1,-59.2,623.1,3/8/2026 19:06,398,The Dravanian Forelands
-,-379.3,-30.1,594.8,TRUE,Timeworn Dragonskin Map,-382.8,-28.5,595.5,3/8/2026 19:07,398,The Dravanian Forelands
-,-187.4,-65.6,577.9,TRUE,Timeworn Dragonskin Map,-186.6,-65.6,577.8,3/8/2026 19:07,398,The Dravanian Forelands
-,-489.5,113.6,-462.1,TRUE,Timeworn Dragonskin Map,-489.9,113.6,-462.5,3/8/2026 19:11,400,The Churning Mists
-,-605.6,107.1,-118.3,TRUE,Timeworn Dragonskin Map,-605.7,107.1,-118,3/8/2026 19:11,400,The Churning Mists
-,58.8,-33.8,-164.5,TRUE,Timeworn Dragonskin Map,58.8,-33.8,-164.5,3/8/2026 19:12,400,The Churning Mists
-,478.9,-23.6,153.9,TRUE,Timeworn Dragonskin Map,479.5,-23.4,154.4,3/8/2026 19:13,400,The Churning Mists
-,-258.8,30.4,557.9,TRUE,Timeworn Dragonskin Map,-259.3,30.4,558.2,3/8/2026 19:14,400,The Churning Mists
-,274.5,15.7,748.4,TRUE,Timeworn Dragonskin Map,274.3,15.7,748.3,3/8/2026 19:15,400,The Churning Mists
-,-731.9,258.5,-245.7,TRUE,Timeworn Dragonskin Map,-732.1,258.5,-245.9,3/8/2026 19:18,400,The Churning Mists
-,616.1,131.6,-741.5,TRUE,Timeworn Dragonskin Map,615.9,131.6,-741.5,3/8/2026 19:22,397,Coerthas Western Highlands
-,-609.8,257.2,-646.4,TRUE,Timeworn Dragonskin Map,-609.2,257.2,-646.4,3/8/2026 19:24,400,The Churning Mists
-,-46.9,-62.8,765,TRUE,Timeworn Dragonskin Map,-46.7,-62.8,765.6,3/8/2026 19:26,400,The Churning Mists
-,13.8,12.8,-589,TRUE,Timeworn Dragonskin Map,13.7,12.8,-588.9,3/8/2026 19:28,401,The Sea of Clouds
-,-407.2,-154.2,217.9,TRUE,Timeworn Dragonskin Map,-407.3,-154.2,218.1,3/8/2026 19:30,401,The Sea of Clouds
-,-183.6,-166,619.4,TRUE,Timeworn Dragonskin Map,-184.5,-164.7,617.8,3/8/2026 19:30,401,The Sea of Clouds
-,-58.7,-137,479.5,TRUE,Timeworn Dragonskin Map,-58.2,-137,479.1,3/8/2026 19:30,401,The Sea of Clouds
-,331.1,108.5,77.7,TRUE,Timeworn Dragonskin Map,331.4,108.5,77.4,3/8/2026 19:31,401,The Sea of Clouds
-,455.9,112.1,-182.2,TRUE,Timeworn Dragonskin Map,455.9,112.1,-182.1,3/8/2026 19:32,401,The Sea of Clouds
-,-793.2,-90,-763.9,TRUE,Timeworn Dragonskin Map,-793.7,-90,-764.1,3/8/2026 19:36,401,The Sea of Clouds
-,-95.1,9.1,-861.2,TRUE,Timeworn Dragonskin Map,-95.1,9.1,-861.2,3/8/2026 19:37,401,The Sea of Clouds
-,-605.1,-230.2,827.6,TRUE,Timeworn Dragonskin Map,-605.3,-230.2,828.1,3/8/2026 19:41,401,The Sea of Clouds
-,-265.6,94,-292.2,TRUE,Timeworn Dragonskin Map,-265.5,94,-292.5,3/8/2026 19:43,401,The Sea of Clouds
-,-247.7,60.4,-595.6,TRUE,Timeworn Gaganaskin Map,-247.7,60.4,-595.6,3/8/2026 19:43,612,The Fringes
-,353,66.2,-565.5,TRUE,Timeworn Gaganaskin Map,352.9,66.2,-565.5,3/8/2026 19:44,612,The Fringes
-,214.2,96,-248.1,TRUE,Timeworn Gaganaskin Map,214.3,96,-248.3,3/8/2026 19:45,612,The Fringes
-,540.3,94.9,272.9,TRUE,Timeworn Gaganaskin Map,540.3,94.9,272.9,3/8/2026 19:45,612,The Fringes
-,116.3,48.9,602,TRUE,Timeworn Gaganaskin Map,119.4,50.6,599.6,3/8/2026 19:46,612,The Fringes
-,-234.5,55,355.7,TRUE,Timeworn Gaganaskin Map,-234.3,54.9,355.6,3/8/2026 19:47,612,The Fringes
-,-335.7,42,-0.8,TRUE,Timeworn Gaganaskin Map,-335.7,42,-0.9,3/8/2026 19:47,612,The Fringes
-,-258.7,46.7,-221.8,TRUE,Timeworn Gaganaskin Map,-258.6,46.7,-222.2,3/8/2026 19:48,612,The Fringes
-,-666.6,64.5,-480,TRUE,Timeworn Gaganaskin Map,-666.6,64.5,-480,3/8/2026 19:49,620,The Peaks
-,-476.1,56.7,-574.9,TRUE,Timeworn Gaganaskin Map,-483.5,57,-570.7,3/8/2026 19:49,620,The Peaks
-,-12.9,110.6,-421.9,TRUE,Timeworn Gaganaskin Map,-12.7,110.7,-421.9,3/8/2026 19:50,620,The Peaks
-,333.3,136.8,-306.3,TRUE,Timeworn Gaganaskin Map,333.2,136.8,-306.3,3/8/2026 19:50,620,The Peaks
-,284.9,331.8,550.3,TRUE,Timeworn Gaganaskin Map,284.9,331.8,550.4,3/8/2026 19:52,620,The Peaks
-,-171.5,291,339.4,TRUE,Timeworn Gaganaskin Map,-172,291,339.2,3/8/2026 19:52,620,The Peaks
-,-447.8,297.5,239.9,TRUE,Timeworn Gaganaskin Map,-448.4,297.5,239.7,3/8/2026 19:53,620,The Peaks
-,-420.9,263,632.7,TRUE,Timeworn Gaganaskin Map,-420.6,264.8,636.2,3/8/2026 19:53,620,The Peaks
-,-856.8,79.6,-257.5,TRUE,Timeworn Gaganaskin Map,-857.2,79.6,-257.6,3/8/2026 19:54,621,The Lochs
-,-772.1,78.4,-571.6,TRUE,Timeworn Gaganaskin Map,-772.1,78.4,-571.6,3/8/2026 19:54,621,The Lochs
-,-340.8,7.3,-73.1,TRUE,Timeworn Gaganaskin Map,-340.9,7.3,-73.2,3/8/2026 19:55,621,The Lochs
-,-161.2,6,-356.2,TRUE,Timeworn Gaganaskin Map,-160.8,6,-356.9,3/8/2026 19:56,621,The Lochs
-,272.1,11.2,-455.8,TRUE,Timeworn Gaganaskin Map,272.4,11.2,-455.9,3/8/2026 19:56,621,The Lochs
-,333.6,14.6,264.3,TRUE,Timeworn Gaganaskin Map,333.6,14.6,264.4,3/8/2026 19:57,621,The Lochs
-,279.5,20.9,594.1,TRUE,Timeworn Gaganaskin Map,279.5,20.9,594.1,3/8/2026 19:58,621,The Lochs
-,-561,7.7,118.4,TRUE,Timeworn Gaganaskin Map,-561,7.7,118.4,3/8/2026 19:59,621,The Lochs
-,-517,33.8,-724,TRUE,Timeworn Gaganaskin Map,-511.3,36.8,-722.6,3/8/2026 20:00,613,The Ruby Sea
-,-28.2,3,-758.4,TRUE,Timeworn Gaganaskin Map,-38.2,3.8,-757.3,3/8/2026 20:00,613,The Ruby Sea
-,847.4,48.1,-134,TRUE,Timeworn Gaganaskin Map,847.5,48.1,-134,3/8/2026 20:02,613,The Ruby Sea
-,500.2,38.3,59.9,TRUE,Timeworn Gaganaskin Map,499.9,38.3,60,3/8/2026 20:02,613,The Ruby Sea
-,747,46.2,486.3,TRUE,Timeworn Gaganaskin Map,734.7,45.8,486.2,3/8/2026 20:03,613,The Ruby Sea
-,436.2,16.2,849,TRUE,Timeworn Gaganaskin Map,436,16.3,849.3,3/8/2026 20:03,613,The Ruby Sea
-,77.6,15.9,576.7,TRUE,Timeworn Gaganaskin Map,77.6,15.9,576.6,3/8/2026 20:04,613,The Ruby Sea
-,-614.9,7,186.4,TRUE,Timeworn Gaganaskin Map,-614.8,7,186.4,3/8/2026 20:05,613,The Ruby Sea
-,-214.8,63.7,-306.9,TRUE,Timeworn Gaganaskin Map,-214.9,63.7,-306.9,3/8/2026 20:07,614,Yanxia
-,187.5,19.9,-593.5,TRUE,Timeworn Gaganaskin Map,187.7,19.8,-593.7,3/8/2026 20:08,614,Yanxia
-,-1.6,61.6,-638.5,TRUE,Timeworn Gaganaskin Map,-1.8,61.6,-638.6,3/8/2026 20:08,614,Yanxia
-,570.7,22.8,-675.8,TRUE,Timeworn Gaganaskin Map,570.6,22.8,-675.8,3/8/2026 20:09,614,Yanxia
-,124.7,37.7,14.2,TRUE,Timeworn Gaganaskin Map,124.8,37.7,14.2,3/8/2026 20:13,614,Yanxia
-,447.1,92.2,89,TRUE,Timeworn Gaganaskin Map,446.9,92.2,88.9,3/8/2026 20:13,614,Yanxia
-,139,8.7,698.8,TRUE,Timeworn Gaganaskin Map,138.9,8.7,699,3/8/2026 20:14,614,Yanxia
-,-273.4,40.3,301.7,TRUE,Timeworn Gaganaskin Map,-273.4,40.3,301.7,3/8/2026 20:15,614,Yanxia
-,-540.5,119.2,-85,TRUE,Timeworn Gaganaskin Map,-539,120.3,-86.4,3/8/2026 20:15,622,The Azim Steppe
-,-233.7,84.2,-581,TRUE,Timeworn Gaganaskin Map,-233.8,84.2,-580.8,3/8/2026 20:16,622,The Azim Steppe
-,289,12.4,-115.9,TRUE,Timeworn Gaganaskin Map,288.9,12.4,-116,3/8/2026 20:17,622,The Azim Steppe
-,654,21.2,358.5,TRUE,Timeworn Gaganaskin Map,653.9,21.2,358.4,3/8/2026 20:17,622,The Azim Steppe
-,227.3,18,720,TRUE,Timeworn Gaganaskin Map,227.4,18,719.9,3/8/2026 20:18,622,The Azim Steppe
-,-8.8,1.7,555.1,TRUE,Timeworn Gaganaskin Map,-5.7,3.5,557.2,3/8/2026 20:18,622,The Azim Steppe
-,-514.1,8.2,712.3,TRUE,Timeworn Gaganaskin Map,-514.5,8.2,712.4,3/8/2026 20:19,622,The Azim Steppe
-,-589.2,22,307.9,TRUE,Timeworn Gaganaskin Map,-589.2,22,308,3/8/2026 20:20,622,The Azim Steppe
-,-605.6,128.9,-448.4,TRUE,Timeworn Gazelleskin Map,-602.9,127.2,-437.9,3/8/2026 20:20,612,The Fringes
-,97.2,102.3,-465.1,TRUE,Timeworn Gazelleskin Map,97.4,102.3,-465.1,3/8/2026 20:21,612,The Fringes
-,573.7,119,499.8,TRUE,Timeworn Gazelleskin Map,573.7,119,499.7,3/8/2026 20:22,612,The Fringes
-,-515.3,39,484.3,TRUE,Timeworn Gazelleskin Map,-515.4,39,484.3,3/8/2026 20:24,612,The Fringes
-,-262.3,77.8,-602.3,TRUE,Timeworn Gazelleskin Map,-263,77.7,-602,3/8/2026 20:25,620,The Peaks
-,229.3,131.3,-385,TRUE,Timeworn Gazelleskin Map,229.8,131.3,-384.8,3/8/2026 20:25,620,The Peaks
-,127.4,306.7,508.2,TRUE,Timeworn Gazelleskin Map,127.4,306.7,508.4,3/8/2026 20:28,620,The Peaks
-,-301,307.1,73.8,TRUE,Timeworn Gazelleskin Map,-301.2,307.1,73.6,3/8/2026 20:28,620,The Peaks
-,-276.8,38.6,361.2,TRUE,Timeworn Gazelleskin Map,-278.3,39.8,359.7,3/8/2026 20:29,621,The Lochs
-,-643.7,39.1,-187.2,TRUE,Timeworn Gazelleskin Map,-643.8,39.1,-187.3,3/8/2026 20:30,621,The Lochs
-,-809.9,8.6,-319.2,TRUE,Timeworn Gazelleskin Map,-807.7,9.9,-319.8,3/8/2026 20:31,613,The Ruby Sea
-,570.9,70.4,-151.5,TRUE,Timeworn Gazelleskin Map,571.7,70.6,-151.4,3/8/2026 20:33,613,The Ruby Sea
-,-467.6,14.2,-134.5,TRUE,Timeworn Gazelleskin Map,-467.4,14.2,-134.6,3/8/2026 20:34,614,Yanxia
-,-72.7,69.2,-793,TRUE,Timeworn Gazelleskin Map,-72.8,69.2,-793,3/8/2026 20:35,614,Yanxia
-,12.3,77.2,-378.4,TRUE,Timeworn Gazelleskin Map,12.4,77.3,-377.7,3/8/2026 20:35,614,Yanxia
-,479.3,12.5,355.7,TRUE,Timeworn Gazelleskin Map,487.5,12.2,361.5,3/8/2026 20:37,614,Yanxia
-,519.9,31.5,701.8,TRUE,Timeworn Gazelleskin Map,519.9,31.5,701.7,3/8/2026 20:38,614,Yanxia
-,-543.1,55.3,-274.4,TRUE,Timeworn Gazelleskin Map,-542.7,55.4,-275.1,3/8/2026 20:38,622,The Azim Steppe
-,475.8,2.9,30.7,TRUE,Timeworn Gazelleskin Map,485.5,2.8,34.5,3/8/2026 20:40,622,The Azim Steppe
-,388.7,28.7,696.1,TRUE,Timeworn Gazelleskin Map,388.7,28.7,695.9,3/8/2026 20:40,622,The Azim Steppe
-,-323.6,9.6,575.5,TRUE,Timeworn Gazelleskin Map,-321.8,10.5,575.8,3/8/2026 20:41,622,The Azim Steppe
-,-828.2,115.5,208.2,TRUE,Timeworn Gazelleskin Map,-828.9,115.5,207.7,3/8/2026 20:42,622,The Azim Steppe
-,44.4,-47.1,677.1,TRUE,Timeworn Thief's Map,44.4,-0.6,677,3/8/2026 20:55,614,Yanxia
-,-2.3,-29.7,195.2,TRUE,Timeworn Thief's Map,-2.6,2,195.1,3/8/2026 21:03,622,The Azim Steppe
-,-129.9,-36.6,107.6,TRUE,Timeworn Thief's Map,-130,2,107.5,3/8/2026 21:03,622,The Azim Steppe
-,34.6,-249.1,-12.9,TRUE,Timeworn Thief's Map,42.1,-0.2,-23.7,3/8/2026 21:16,621,The Lochs
-,-126.1,-190.6,-155.1,TRUE,Timeworn Thief's Map,-124.3,-192.1,-156.4,3/8/2026 21:22,613,The Ruby Sea
-,-217.8,-277.3,-114.2,TRUE,Timeworn Thief's Map,-217.6,-0.3,-114.2,3/8/2026 21:25,621,The Lochs
-,-0.9,-281.6,-282.8,TRUE,Timeworn Thief's Map,-0.75,-282.8,-282.9,3/8/2026 21:26,621,The Lochs
-,103.5,-343.7,207.7,TRUE,Timeworn Thief's Map,103.6,-349.1,207.9,3/8/2026 21:44,621,The Lochs
-,651.5,-100.6,441.2,TRUE,Timeworn Thief's Map,650.4,-106.3,443,3/8/2026 21:45,613,The Ruby Sea
-,-209.1,-150.4,210.6,TRUE,Timeworn Thief's Map,-209,-151.8,210.7,3/8/2026 21:47,613,The Ruby Sea
-,356.7,-74.8,-337.1,TRUE,Timeworn Thief's Map,356.7,-74.8,-337.1,3/9/2026 12:54,613,The Ruby Sea
-,189,-112.4,69,TRUE,Timeworn Thief's Map,188,-125.7,71,3/8/2026 21:52,613,The Ruby Sea
-,-662,-83.7,-240.7,TRUE,Timeworn Thief's Map,-662.2,-92.1,-241.1,3/8/2026 21:54,614,Yanxia
-,-614,-88.9,577.5,TRUE,Timeworn Thief's Map,-612.5,-97.2,577.2,3/8/2026 21:56,614,Yanxia
-,-475.6,-110.1,-613.9,TRUE,Timeworn Thief's Map,-476.1,-111.9,-614,3/9/2026 12:54,614,Yanxia
-,296,2.4,290,TRUE,Timeworn Gliderskin Map,295.6,2.4,290.3,3/12/2026 16:39,813,Lakeland
-,-34.1,97.8,-596.7,TRUE,Timeworn Gliderskin Map,-34.2,97.8,-596.8,3/12/2026 16:41,813,Lakeland
-,-320,1.6,-15,TRUE,Timeworn Gliderskin Map,-318.1,2.5,-19.6,3/12/2026 16:41,813,Lakeland
-,28.9,4.6,-47.8,TRUE,Timeworn Gliderskin Map,29.2,4.6,-47.8,3/12/2026 16:42,813,Lakeland
-,450,89.5,-260,TRUE,Timeworn Gliderskin Map,444.5,90.6,-255.3,3/12/2026 16:43,813,Lakeland
-,604.7,29.7,-310,TRUE,Timeworn Gliderskin Map,604.8,29.6,-310,3/12/2026 16:43,813,Lakeland
-,110,121.6,-140,TRUE,Timeworn Gliderskin Map,110.2,121.6,-140.1,3/12/2026 16:44,813,Lakeland
-,250,6.7,550,TRUE,Timeworn Gliderskin Map,250.1,6.8,550.5,3/12/2026 16:44,813,Lakeland
-,800,1,300,TRUE,Timeworn Gliderskin Map,799.9,1,300,3/12/2026 16:45,814,Kholusia
-,301.9,32.4,559.9,TRUE,Timeworn Gliderskin Map,309.1,33.2,556.3,3/12/2026 16:46,814,Kholusia
-,87.3,36.8,141.5,TRUE,Timeworn Gliderskin Map,87.2,36.9,141.2,3/12/2026 16:46,814,Kholusia
-,-311.7,15.4,546.3,TRUE,Timeworn Gliderskin Map,-312,15.4,546.6,3/12/2026 16:47,814,Kholusia
-,-650,89.8,43.5,TRUE,Timeworn Gliderskin Map,-650.2,89.9,43.3,3/12/2026 16:48,814,Kholusia
-,680,286.7,-100,TRUE,Timeworn Gliderskin Map,680.1,286.7,-100,3/12/2026 16:50,814,Kholusia
-,331.2,327.3,-433.4,TRUE,Timeworn Gliderskin Map,331.2,327.3,-433.4,3/12/2026 16:51,814,Kholusia
-,-100,325,10,TRUE,Timeworn Gliderskin Map,-100,325,10.1,3/12/2026 16:52,814,Kholusia
-,695.6,-33.3,-371.9,TRUE,Timeworn Gliderskin Map,695.8,-33.3,-371.9,3/12/2026 16:54,815,Amh Araeng
-,-75,50.8,-630,TRUE,Timeworn Gliderskin Map,-74.8,50.8,-630,3/12/2026 16:55,815,Amh Araeng
-,-400,23.6,-90,TRUE,Timeworn Gliderskin Map,-400.2,23.6,-89.7,3/12/2026 16:56,815,Amh Araeng
-,-90,35.2,-230,TRUE,Timeworn Gliderskin Map,-92.5,37,-228.9,3/12/2026 16:56,815,Amh Araeng
-,478,-46.8,147.6,TRUE,Timeworn Gliderskin Map,478.3,-46.8,147.8,3/12/2026 16:57,815,Amh Araeng
-,-590,5.3,60,TRUE,Timeworn Gliderskin Map,-589.9,5.3,59.9,3/12/2026 17:00,815,Amh Araeng
-,-60.9,-41.6,137.3,TRUE,Timeworn Gliderskin Map,-57.6,-40.1,139.1,3/12/2026 17:01,815,Amh Araeng
-,-320,-61.5,320,TRUE,Timeworn Gliderskin Map,-320.5,-61.5,320.1,3/12/2026 17:01,815,Amh Araeng
-,190,-0.3,679.6,TRUE,Timeworn Gliderskin Map,190.5,-0.4,679.8,3/12/2026 17:04,816,Il Mheg
-,10,0.9,320,TRUE,Timeworn Gliderskin Map,10,0.9,319.9,3/12/2026 17:04,816,Il Mheg
-,446.1,183.3,3.5,TRUE,Timeworn Gliderskin Map,441,183.1,7.3,3/12/2026 17:05,816,Il Mheg
-,-130,37.6,670,TRUE,Timeworn Gliderskin Map,-125.3,37.5,664.6,3/12/2026 17:06,816,Il Mheg
-,-430,119.4,790,TRUE,Timeworn Gliderskin Map,-430.2,119.4,790,3/12/2026 17:06,816,Il Mheg
-,-740,59,370,TRUE,Timeworn Gliderskin Map,-740.2,58.9,369.7,3/12/2026 17:07,816,Il Mheg
+,-114.4,-29.7,-32.1,TRUE,Timeworn Peisteskin Map,-114.5,-29.7,-32.1,3/8/2026 6:28,145,Eastern Thanalan
+,-42.6,-18.8,368.5,TRUE,Timeworn Boarskin Map,-42.6,-18.8,368.4,3/8/2026 5:33,145,Eastern Thanalan
+,91.8,-24.8,295.5,TRUE,Mysterious Map,91.6,-24.8,295.5,3/8/2026 15:58,145,Eastern Thanalan
+,127,10.8,-147.5,TRUE,Timeworn Leather Map,128.4,12.5,-144.2,3/7/2026 19:00,145,Eastern Thanalan
+,161.8,-3.7,47.6,TRUE,Timeworn Goatskin Map,162.4,-3.7,47.5,3/8/2026 2:09,145,Eastern Thanalan
+,191.2,-27.4,203.9,TRUE,Timeworn Peisteskin Map,191.2,-27.4,204.1,3/8/2026 6:30,145,Eastern Thanalan
+,261.3,7.8,-119.2,TRUE,Timeworn Leather Map,261.4,8.3,-129,3/7/2026 19:00,145,Eastern Thanalan
+,287.9,2.4,-184.9,TRUE,Timeworn Toadskin Map,288.3,2.5,-184.8,3/8/2026 4:43,145,Eastern Thanalan
+,397.8,21.6,-197.3,TRUE,Timeworn Goatskin Map,395.2,21.5,-206.3,3/8/2026 2:10,145,Eastern Thanalan
+,452.7,-64.5,249.5,TRUE,Timeworn Peisteskin Map,452.8,-64.5,249.4,3/8/2026 6:30,145,Eastern Thanalan
+,-480.3,-33.8,584.6,TRUE,Timeworn Ophiotauroskin Map,-480.3,-33.8,584.4,3/12/2026 20:59,961,Elpis
+,-423.9,312.2,-635.2,TRUE,Timeworn Ophiotauroskin Map,-424.1,312.2,-635.2,3/12/2026 20:57,961,Elpis
+,-230.3,-44.7,478.5,TRUE,Timeworn Ophiotauroskin Map,-226.5,-43.9,474.5,3/12/2026 20:49,961,Elpis
+,54,7.3,158.1,TRUE,Timeworn Ophiotauroskin Map,54,7.2,158.1,3/12/2026 20:49,961,Elpis
+,286.7,7,142.8,TRUE,Timeworn Ophiotauroskin Map,286.8,7,142.8,3/12/2026 20:48,961,Elpis
+,378.4,147.7,-196.2,TRUE,Timeworn Ophiotauroskin Map,378.5,147.7,-196.3,3/12/2026 20:54,961,Elpis
+,422.3,150.7,-598.2,TRUE,Timeworn Ophiotauroskin Map,422.3,150.7,-598.3,3/12/2026 20:55,961,Elpis
+,784.1,152.1,-145.1,TRUE,Timeworn Ophiotauroskin Map,784.3,152.2,-145.2,3/12/2026 21:08,961,Elpis
+,-695.7,23.1,-621.3,TRUE,Timeworn Saigaskin Map,-695.7,23.1,-621.5,3/12/2026 19:45,958,Garlemald
+,-482,45.7,212.2,TRUE,Timeworn Kumbhiraskin Map,-482.1,45.8,212.4,3/12/2026 20:30,958,Garlemald
+,-413.8,17.1,51.7,TRUE,Timeworn Saigaskin Map,-413.7,17.1,51.9,3/12/2026 19:52,958,Garlemald
+,-265.4,12.9,-180.4,TRUE,Timeworn Kumbhiraskin Map,-265.4,12.9,-180.4,3/12/2026 20:30,958,Garlemald
+,-253.4,10.8,-464.5,TRUE,Timeworn Kumbhiraskin Map,-253.4,10.8,-464.5,3/12/2026 20:28,958,Garlemald
+,-179.9,6.8,587.7,TRUE,Timeworn Saigaskin Map,-179.8,6.8,587.6,3/12/2026 19:51,958,Garlemald
+,-163.7,10.6,-82.9,TRUE,Timeworn Saigaskin Map,-163.7,10.6,-82.8,3/12/2026 19:47,958,Garlemald
+,127.3,-13.7,326.4,TRUE,Timeworn Saigaskin Map,127.3,-13.7,326.4,3/12/2026 19:46,958,Garlemald
+,195.7,23.6,-451.2,TRUE,Timeworn Kumbhiraskin Map,195.1,23.6,-451.3,3/12/2026 20:26,958,Garlemald
+,234.5,6.2,-4.7,TRUE,Timeworn Saigaskin Map,234.5,6.2,-4.5,3/12/2026 19:50,958,Garlemald
+,335.7,-8.8,250.5,TRUE,Timeworn Kumbhiraskin Map,336.4,-8.8,250.6,3/12/2026 20:31,958,Garlemald
+,389.6,-19.5,374,TRUE,Timeworn Saigaskin Map,389.1,-18.7,379.3,3/12/2026 19:50,958,Garlemald
+,393.7,-18.8,697.7,TRUE,Timeworn Kumbhiraskin Map,393.8,-18.8,698.2,3/12/2026 20:32,958,Garlemald
+,553.7,11.8,-805.8,TRUE,Timeworn Saigaskin Map,553.6,11.8,-805.7,3/12/2026 19:48,958,Garlemald
+,639.4,15.8,-574.9,TRUE,Timeworn Kumbhiraskin Map,639.5,15.9,-574.9,3/12/2026 20:26,958,Garlemald
+,649.2,13.3,-207.9,TRUE,Timeworn Kumbhiraskin Map,649.9,13.5,-207.7,3/12/2026 20:29,958,Garlemald
+,-623.5,21,-11.4,TRUE,Timeworn Br'aaxskin Map,-623.4,21,-11.4,3/13/2026 2:15,1191,Heritage Found
+,-537.9,5.9,96.9,TRUE,Timeworn Loboskin Map,-538.2,5.8,97,3/12/2026 21:21,1191,Heritage Found
+,-280.5,61,-276.5,TRUE,Timeworn Loboskin Map,-280.5,61,-276.7,3/12/2026 21:23,1191,Heritage Found
+,-241.6,21.3,-419.3,TRUE,Timeworn Br'aaxskin Map,-242.6,21.2,-426.9,3/12/2026 23:12,1191,Heritage Found
+,-231,-5.1,717.2,TRUE,Timeworn Br'aaxskin Map,-231,-5.1,717.2,3/12/2026 23:11,1191,Heritage Found
+,-211.3,28.8,38,TRUE,Timeworn Br'aaxskin Map,-211.3,28.9,37.6,3/12/2026 23:12,1191,Heritage Found
+,-148,16.8,658.9,TRUE,Timeworn Loboskin Map,-148,16.8,659.1,3/12/2026 21:19,1191,Heritage Found
+,-132.6,24.1,-790.1,TRUE,Timeworn Loboskin Map,-132.5,24.1,-790.2,3/12/2026 21:23,1191,Heritage Found
+,34.5,92.4,-117,TRUE,Timeworn Br'aaxskin Map,34.7,92.4,-117.1,3/13/2026 2:15,1191,Heritage Found
+,197.9,94.9,183.8,TRUE,Timeworn Loboskin Map,197.5,96.6,179.9,3/12/2026 21:20,1191,Heritage Found
+,222.2,84.9,-426,TRUE,Timeworn Loboskin Map,222.1,84.9,-426,3/12/2026 21:24,1191,Heritage Found
+,235.3,90.9,703.8,TRUE,Timeworn Loboskin Map,235.4,90.9,703.8,3/12/2026 21:20,1191,Heritage Found
+,239.1,115.8,467.9,TRUE,Timeworn Br'aaxskin Map,239,115.8,468,3/12/2026 23:10,1191,Heritage Found
+,484.9,131.4,-653.3,TRUE,Timeworn Br'aaxskin Map,485.1,131.4,-653.5,3/13/2026 2:16,1191,Heritage Found
+,643.1,125.9,-580,TRUE,Timeworn Loboskin Map,643,125.8,-580,3/12/2026 21:25,1191,Heritage Found
+,719.3,148,205.6,TRUE,Timeworn Br'aaxskin Map,719.7,148,205.8,3/13/2026 2:12,1191,Heritage Found
 ,-860,24.6,200,TRUE,Timeworn Gliderskin Map,-860.4,24.6,199.5,3/12/2026 17:07,816,Il Mheg
 ,-750,23.2,-40,TRUE,Timeworn Gliderskin Map,-749.8,23.2,-40.4,3/12/2026 17:08,816,Il Mheg
-,-762.2,5.1,616.5,TRUE,Timeworn Gliderskin Map,-755.6,5.8,613.1,3/12/2026 17:10,817,The Rak'tika Greatwood
-,432.8,4.6,-496.4,TRUE,Timeworn Gliderskin Map,435.9,6.3,-498.7,3/12/2026 17:13,817,The Rak'tika Greatwood
-,-32.5,0.8,-352.7,TRUE,Timeworn Gliderskin Map,-32.6,0.9,-352.7,3/12/2026 17:14,817,The Rak'tika Greatwood
-,-500,-0.3,580,TRUE,Timeworn Gliderskin Map,-500,-0.3,580,3/12/2026 17:15,817,The Rak'tika Greatwood
-,-310,7.2,500,TRUE,Timeworn Gliderskin Map,-309.9,7.2,500,3/12/2026 17:15,817,The Rak'tika Greatwood
-,527.3,24.3,137,TRUE,Timeworn Gliderskin Map,519.5,23.7,140.3,3/12/2026 17:16,817,The Rak'tika Greatwood
-,-271.9,6,93.3,TRUE,Timeworn Gliderskin Map,-276.6,7,94.5,3/12/2026 17:18,817,The Rak'tika Greatwood
-,-747,9.9,-8.5,TRUE,Timeworn Gliderskin Map,-747.6,10,-8.6,3/12/2026 17:18,817,The Rak'tika Greatwood
-,230.8,412.5,-802.1,TRUE,Timeworn Gliderskin Map,230.7,412.6,-802.3,3/12/2026 17:21,818,The Tempest
-,350,-229.8,430,TRUE,Timeworn Gliderskin Map,350,-229.8,430,3/12/2026 17:47,818,The Tempest
-,180,281.7,70,TRUE,Timeworn Gliderskin Map,179.7,281.7,69.9,3/12/2026 17:53,818,The Tempest
-,-130,304.8,10,TRUE,Timeworn Gliderskin Map,-130.2,304.8,10,3/12/2026 17:54,818,The Tempest
-,740,403.3,50,TRUE,Timeworn Gliderskin Map,739.8,403.3,50,3/12/2026 17:55,818,The Tempest
-,490,379.6,-470,TRUE,Timeworn Gliderskin Map,490.1,379.6,-469.8,3/12/2026 17:56,818,The Tempest
-,708.7,393.4,-296.6,TRUE,Timeworn Gliderskin Map,709,393.4,-296.2,3/12/2026 17:56,818,The Tempest
-,130,198.9,-90,TRUE,Timeworn Gliderskin Map,126.1,200.6,-88.8,3/12/2026 17:57,818,The Tempest
-,-550,-1.6,200,TRUE,Timeworn Zonureskin Map,-549.9,-1.6,200.2,3/12/2026 17:58,813,Lakeland
-,-660,68,-20,TRUE,Timeworn Zonureskin Map,-660.2,68,-20.4,3/12/2026 17:58,813,Lakeland
-,665.2,14.8,217.7,TRUE,Timeworn Zonureskin Map,665.3,14.8,217.7,3/12/2026 18:00,813,Lakeland
-,-180,14.3,-220,TRUE,Timeworn Zonureskin Map,-179.9,14.3,-219.9,3/12/2026 18:01,813,Lakeland
-,-385.5,93.8,-433.1,TRUE,Timeworn Zonureskin Map,-385.8,93.6,-433.5,3/12/2026 18:01,813,Lakeland
-,-537.3,75.6,-490.9,TRUE,Timeworn Zonureskin Map,-537.6,75.6,-491,3/12/2026 18:01,813,Lakeland
-,837.9,79.8,-381.9,TRUE,Timeworn Zonureskin Map,844.4,80.2,-381.4,3/12/2026 18:03,813,Lakeland
-,-160,100.4,-690,TRUE,Timeworn Zonureskin Map,-160.4,100.4,-690.2,3/12/2026 18:05,813,Lakeland
-,469.1,306.3,-210,TRUE,Timeworn Zonureskin Map,468.9,306.2,-210.6,3/12/2026 18:06,814,Kholusia
-,588.1,2.2,513.6,TRUE,Timeworn Zonureskin Map,588.2,2.2,513.9,3/12/2026 18:07,814,Kholusia
+,-740,59,370,TRUE,Timeworn Gliderskin Map,-740.2,58.9,369.7,3/12/2026 17:07,816,Il Mheg
+,-706.1,36.9,-200,TRUE,Timeworn Zonureskin Map,-706.1,36.9,-200,3/12/2026 18:41,816,Il Mheg
+,-550,73.9,-420,TRUE,Timeworn Zonureskin Map,-552,75.6,-417.5,3/12/2026 18:41,816,Il Mheg
+,-430,119.4,790,TRUE,Timeworn Gliderskin Map,-430.2,119.4,790,3/12/2026 17:06,816,Il Mheg
+,-430,0.9,-45,TRUE,Timeworn Zonureskin Map,-429.8,0.9,-44.4,3/12/2026 18:42,816,Il Mheg
+,-362.6,24.9,302.3,TRUE,Timeworn Zonureskin Map,-361,26.2,297.3,3/12/2026 18:44,816,Il Mheg
+,-130,37.6,670,TRUE,Timeworn Gliderskin Map,-125.3,37.5,664.6,3/12/2026 17:06,816,Il Mheg
+,10,59.8,-689.1,TRUE,Timeworn Zonureskin Map,7.7,61.5,-685.7,3/12/2026 18:43,816,Il Mheg
+,10,0.9,320,TRUE,Timeworn Gliderskin Map,10,0.9,319.9,3/12/2026 17:04,816,Il Mheg
+,183.9,9.9,-451.2,TRUE,Timeworn Zonureskin Map,183.8,9.9,-451.2,3/12/2026 18:47,816,Il Mheg
+,190,-0.3,679.6,TRUE,Timeworn Gliderskin Map,190.5,-0.4,679.8,3/12/2026 17:04,816,Il Mheg
+,446.1,183.3,3.5,TRUE,Timeworn Gliderskin Map,441,183.1,7.3,3/12/2026 17:05,816,Il Mheg
+,480,100.4,-870,TRUE,Timeworn Zonureskin Map,480.2,100.5,-870.3,3/12/2026 18:46,816,Il Mheg
+,590,98.9,-550,TRUE,Timeworn Zonureskin Map,590,98.9,-550.2,3/12/2026 18:47,816,Il Mheg
 ,-680,358.6,-169.5,TRUE,Timeworn Zonureskin Map,-685.6,359.6,-174.6,3/12/2026 18:17,814,Kholusia
+,-650,89.8,43.5,TRUE,Timeworn Gliderskin Map,-650.2,89.9,43.3,3/12/2026 16:48,814,Kholusia
+,-480,372.2,-374.8,TRUE,Timeworn Zonureskin Map,-480.1,372.2,-374.8,3/12/2026 18:19,814,Kholusia
 ,-400,357.9,-238.8,TRUE,Timeworn Zonureskin Map,-400,357.9,-238.8,3/12/2026 18:18,814,Kholusia
+,-311.7,15.4,546.3,TRUE,Timeworn Gliderskin Map,-312,15.4,546.6,3/12/2026 16:47,814,Kholusia
+,-100,325,10,TRUE,Timeworn Gliderskin Map,-100,325,10.1,3/12/2026 16:52,814,Kholusia
 ,-69.7,347.6,-220.5,TRUE,Timeworn Zonureskin Map,-62.3,347.9,-220.1,3/12/2026 18:18,814,Kholusia
 ,-46.4,420.5,-612,TRUE,Timeworn Zonureskin Map,-46.4,420.5,-612.4,3/12/2026 18:19,814,Kholusia
-,-480,372.2,-374.8,TRUE,Timeworn Zonureskin Map,-480.1,372.2,-374.8,3/12/2026 18:19,814,Kholusia
-,-374.3,148,-59.1,TRUE,Timeworn Wyvernskin Map,-374.4,148,-59.3,3/12/2026 18:23,399,The Dravanian Hinterlands
+,87.3,36.8,141.5,TRUE,Timeworn Gliderskin Map,87.2,36.9,141.2,3/12/2026 16:46,814,Kholusia
+,301.9,32.4,559.9,TRUE,Timeworn Gliderskin Map,309.1,33.2,556.3,3/12/2026 16:46,814,Kholusia
+,331.2,327.3,-433.4,TRUE,Timeworn Gliderskin Map,331.2,327.3,-433.4,3/12/2026 16:51,814,Kholusia
+,469.1,306.3,-210,TRUE,Timeworn Zonureskin Map,468.9,306.2,-210.6,3/12/2026 18:06,814,Kholusia
+,588.1,2.2,513.6,TRUE,Timeworn Zonureskin Map,588.2,2.2,513.9,3/12/2026 18:07,814,Kholusia
+,668.4,273.3,-537.8,TRUE,Timeworn Zonureskin Map,669.2,275.1,-542.7,3/12/2026 18:33,814,Kholusia
+,680,286.7,-100,TRUE,Timeworn Gliderskin Map,680.1,286.7,-100,3/12/2026 16:50,814,Kholusia
+,800,1,300,TRUE,Timeworn Gliderskin Map,799.9,1,300,3/12/2026 16:45,814,Kholusia
+,-727.4,61.4,-103.2,TRUE,Timeworn Br'aaxskin Map,-727.9,61.4,-102.7,3/13/2026 2:26,1188,Kozama'uka
+,-716,132.4,232.5,TRUE,Timeworn Loboskin Map,-713.7,134.3,232.5,3/12/2026 22:09,1188,Kozama'uka
+,-621.9,129.5,620.4,TRUE,Timeworn Br'aaxskin Map,-621.9,129.5,620.2,3/13/2026 2:27,1188,Kozama'uka
+,-504.3,0.5,-683.3,TRUE,Timeworn Loboskin Map,-504.2,0.4,-683.1,3/12/2026 21:38,1188,Kozama'uka
+,-186.4,0.5,-105.9,TRUE,Timeworn Loboskin Map,-183.6,1.4,-110.4,3/12/2026 21:37,1188,Kozama'uka
+,-129,118.7,51.6,TRUE,Timeworn Br'aaxskin Map,-128.9,118.7,51.5,3/13/2026 2:28,1188,Kozama'uka
+,-75,20.3,-724.8,TRUE,Timeworn Br'aaxskin Map,-75.3,20.3,-725,3/13/2026 2:25,1188,Kozama'uka
+,153,111.8,238.9,TRUE,Timeworn Loboskin Map,152.9,111.8,238.4,3/12/2026 22:08,1188,Kozama'uka
+,206.6,9.2,-713.3,TRUE,Timeworn Loboskin Map,206.5,9.2,-713.4,3/12/2026 21:36,1188,Kozama'uka
+,248.5,115.1,741.3,TRUE,Timeworn Loboskin Map,248,115.2,741.7,3/12/2026 22:07,1188,Kozama'uka
+,497.3,10.7,-326.1,TRUE,Timeworn Br'aaxskin Map,497.1,10.7,-325.8,3/13/2026 2:24,1188,Kozama'uka
+,540.5,122.5,732.1,TRUE,Timeworn Br'aaxskin Map,540.5,122.5,732.1,3/13/2026 2:30,1188,Kozama'uka
+,723.2,117.9,362.5,TRUE,Timeworn Loboskin Map,723.2,117.9,362.5,3/12/2026 22:06,1188,Kozama'uka
+,771.1,41.2,-760,TRUE,Timeworn Br'aaxskin Map,771.1,41.2,-760,3/13/2026 2:23,1188,Kozama'uka
+,824,23.4,11.7,TRUE,Timeworn Br'aaxskin Map,823.9,23.4,11.7,3/13/2026 2:29,1188,Kozama'uka
+,854.7,21.9,-13,TRUE,Timeworn Loboskin Map,854.7,21.9,-13.1,3/12/2026 21:35,1188,Kozama'uka
+,-733.9,-2,-26.8,TRUE,Timeworn Kumbhiraskin Map,-734.3,-1.9,-27,3/12/2026 20:10,956,Labyrinthos
+,-658.9,1.1,-151.2,TRUE,Timeworn Saigaskin Map,-659,1.1,-151.2,3/12/2026 19:26,956,Labyrinthos
+,-651.6,-25.4,449.1,TRUE,Timeworn Kumbhiraskin Map,-651.5,-25.4,449,3/12/2026 20:15,956,Labyrinthos
+,-479.8,-23.6,741.6,TRUE,Timeworn Saigaskin Map,-480,-23.6,741.6,3/12/2026 19:28,956,Labyrinthos
+,-343.2,176.3,-707.3,TRUE,Timeworn Saigaskin Map,-343.2,176.4,-707.7,3/12/2026 19:31,956,Labyrinthos
+,-143.9,-23.9,-167.1,TRUE,Timeworn Kumbhiraskin Map,-143.8,-23.9,-167,3/12/2026 20:09,956,Labyrinthos
+,-57.4,78.5,-499.4,TRUE,Timeworn Saigaskin Map,-57.6,78.5,-499.6,3/12/2026 19:33,956,Labyrinthos
+,20.5,-6.5,805.5,TRUE,Timeworn Kumbhiraskin Map,20.5,-6.4,805.4,3/12/2026 20:12,956,Labyrinthos
+,138.4,80.7,-528.5,TRUE,Timeworn Kumbhiraskin Map,138.4,80.7,-528.3,3/12/2026 20:14,956,Labyrinthos
+,154.5,-5.2,637.1,TRUE,Timeworn Saigaskin Map,154.9,-5.2,637.5,3/12/2026 19:27,956,Labyrinthos
+,162.4,-24.7,410.1,TRUE,Timeworn Kumbhiraskin Map,162.7,-24.7,410.7,3/12/2026 20:09,956,Labyrinthos
+,174.5,-19.5,16.7,TRUE,Timeworn Kumbhiraskin Map,174.5,-19.5,16.7,3/12/2026 20:19,956,Labyrinthos
+,271.6,-10.7,74.7,TRUE,Timeworn Saigaskin Map,271.5,-10.7,74.7,3/12/2026 19:25,956,Labyrinthos
+,434.1,102.3,-272.8,TRUE,Timeworn Saigaskin Map,434.7,102.3,-272.5,3/12/2026 19:34,956,Labyrinthos
+,510.5,104.9,77.6,TRUE,Timeworn Saigaskin Map,510.7,104.9,77.7,3/12/2026 19:32,956,Labyrinthos
+,518.3,164.4,-350.4,TRUE,Timeworn Kumbhiraskin Map,521.7,165.5,-352.8,3/12/2026 20:18,956,Labyrinthos
+,-660,68,-20,TRUE,Timeworn Zonureskin Map,-660.2,68,-20.4,3/12/2026 17:58,813,Lakeland
+,-550,-1.6,200,TRUE,Timeworn Zonureskin Map,-549.9,-1.6,200.2,3/12/2026 17:58,813,Lakeland
+,-537.3,75.6,-490.9,TRUE,Timeworn Zonureskin Map,-537.6,75.6,-491,3/12/2026 18:01,813,Lakeland
+,-385.5,93.8,-433.1,TRUE,Timeworn Zonureskin Map,-385.8,93.6,-433.5,3/12/2026 18:01,813,Lakeland
+,-320,1.6,-15,TRUE,Timeworn Gliderskin Map,-318.1,2.5,-19.6,3/12/2026 16:41,813,Lakeland
+,-180,14.3,-220,TRUE,Timeworn Zonureskin Map,-179.9,14.3,-219.9,3/12/2026 18:01,813,Lakeland
+,-160,100.4,-690,TRUE,Timeworn Zonureskin Map,-160.4,100.4,-690.2,3/12/2026 18:05,813,Lakeland
+,-34.1,97.8,-596.7,TRUE,Timeworn Gliderskin Map,-34.2,97.8,-596.8,3/12/2026 16:41,813,Lakeland
+,28.9,4.6,-47.8,TRUE,Timeworn Gliderskin Map,29.2,4.6,-47.8,3/12/2026 16:42,813,Lakeland
+,110,121.6,-140,TRUE,Timeworn Gliderskin Map,110.2,121.6,-140.1,3/12/2026 16:44,813,Lakeland
+,250,6.7,550,TRUE,Timeworn Gliderskin Map,250.1,6.8,550.5,3/12/2026 16:44,813,Lakeland
+,296,2.4,290,TRUE,Timeworn Gliderskin Map,295.6,2.4,290.3,3/12/2026 16:39,813,Lakeland
+,450,89.5,-260,TRUE,Timeworn Gliderskin Map,444.5,90.6,-255.3,3/12/2026 16:43,813,Lakeland
+,604.7,29.7,-310,TRUE,Timeworn Gliderskin Map,604.8,29.6,-310,3/12/2026 16:43,813,Lakeland
+,665.2,14.8,217.7,TRUE,Timeworn Zonureskin Map,665.3,14.8,217.7,3/12/2026 18:00,813,Lakeland
+,837.9,79.8,-381.9,TRUE,Timeworn Zonureskin Map,844.4,80.2,-381.4,3/12/2026 18:03,813,Lakeland
+,-608.9,-5,-535.5,TRUE,Timeworn Gargantuaskin Map,-608.7,-5,-535.7,3/13/2026 2:46,1192,Living Memory
+,-549.7,-0.4,728.3,TRUE,Timeworn Gargantuaskin Map,-549.7,-0.4,728.6,3/13/2026 2:47,1192,Living Memory
+,-147.3,38.3,-279.7,TRUE,Timeworn Gargantuaskin Map,-147.3,38.2,-279.7,3/13/2026 2:45,1192,Living Memory
+,-61.1,38,81,TRUE,Timeworn Gargantuaskin Map,-66,38.5,75.5,3/13/2026 2:44,1192,Living Memory
+,179.3,39.9,-728.8,TRUE,Timeworn Gargantuaskin Map,172.9,39.3,-724,3/13/2026 2:58,1192,Living Memory
+,480.7,25.2,-166.4,TRUE,Timeworn Gargantuaskin Map,480.7,25.2,-166.4,3/13/2026 2:44,1192,Living Memory
+,678.9,7.7,694.9,TRUE,Timeworn Gargantuaskin Map,678.7,7.7,695.4,3/13/2026 2:42,1192,Living Memory
+,851.2,40.3,332.3,TRUE,Timeworn Gargantuaskin Map,851.3,40.3,332.7,3/13/2026 2:41,1192,Living Memory
+,-91.6,13.9,665.2,TRUE,Timeworn Toadskin Map,-92.3,13.7,665.3,3/8/2026 3:03,135,Lower La Noscea
+,-72.3,51.6,542,TRUE,Timeworn Leather Map,-72.2,51.5,542,3/7/2026 18:40,135,Lower La Noscea
+,-8.2,60.6,459.5,TRUE,Timeworn Peisteskin Map,-8.1,60.6,459.5,3/8/2026 6:02,135,Lower La Noscea
+,23.2,46.3,727.1,TRUE,Timeworn Boarskin Map,23.2,46.3,727,3/8/2026 5:09,135,Lower La Noscea
+,62.7,54.3,180.9,TRUE,Timeworn Leather Map,62.6,54.2,180.3,3/7/2026 18:38,135,Lower La Noscea
+,101.9,47,79.2,TRUE,Timeworn Toadskin Map,105.4,46.4,75,3/8/2026 2:28,135,Lower La Noscea
+,105.7,51.4,880.9,TRUE,Mysterious Map,105.6,51.4,880.9,3/8/2026 6:58,135,Lower La Noscea
+,154.4,46,160.4,TRUE,Timeworn Peisteskin Map,154.3,46.1,160.5,3/8/2026 6:01,135,Lower La Noscea
+,164.9,59.1,289.9,TRUE,Timeworn Goatskin Map,164.7,59.2,290.5,3/7/2026 19:24,135,Lower La Noscea
+,202.3,31.2,137.5,TRUE,Thorne Dynasty Map,202.4,31.1,137.4,3/8/2026 16:45,135,Lower La Noscea
+,218,51.3,29.5,TRUE,Unhidden Leather Map,217.9,51.2,29.7,3/8/2026 16:19,135,Lower La Noscea
+,275.4,46.3,12.8,TRUE,Timeworn Boarskin Map,275.4,46.3,12.8,3/8/2026 5:11,135,Lower La Noscea
+,349.2,59.3,-65.5,TRUE,Timeworn Boarskin Map,349.2,59.3,-65.5,3/8/2026 5:12,135,Lower La Noscea
+,379.8,72,-258.9,TRUE,Timeworn Goatskin Map,379.9,71.9,-259,3/7/2026 19:25,135,Lower La Noscea
+,397.6,84.6,-385.6,TRUE,Timeworn Goatskin Map,397.6,84.6,-385.3,3/7/2026 19:24,135,Lower La Noscea
+,428.8,66.4,-148.1,TRUE,Timeworn Toadskin Map,428.8,66.4,-148,3/8/2026 2:27,135,Lower La Noscea
+,448.7,57.3,-6.4,TRUE,Timeworn Leather Map,448.6,57.3,-6.3,3/7/2026 18:39,135,Lower La Noscea
+,507.9,69.6,-237.2,TRUE,Unhidden Leather Map,508,69.6,-237.2,3/8/2026 16:20,135,Lower La Noscea
+,623,71.4,-277.9,TRUE,Timeworn Peisteskin Map,623,71.4,-277.9,3/8/2026 6:00,135,Lower La Noscea
+,627.2,65.7,-199,TRUE,Thorne Dynasty Map,627.4,65.7,-199.1,3/8/2026 16:46,135,Lower La Noscea
+,650,77.9,-356.6,TRUE,Mysterious Map,649.9,77.9,-356.5,3/8/2026 6:56,135,Lower La Noscea
+,-463.6,129.3,258.8,TRUE,Timeworn Kumbhiraskin Map,-463.4,129.3,258.8,3/12/2026 20:36,959,Mare Lamentorum
+,-278.8,117,648.8,TRUE,Timeworn Kumbhiraskin Map,-278.8,117,648.8,3/12/2026 20:36,959,Mare Lamentorum
+,-236.3,88.5,55.8,TRUE,Timeworn Saigaskin Map,-240,90.5,53.1,3/12/2026 19:58,959,Mare Lamentorum
+,-217.1,122.7,-103.7,TRUE,Timeworn Kumbhiraskin Map,-217.3,122.9,-104,3/12/2026 20:35,959,Mare Lamentorum
+,-134.1,62.3,213.6,TRUE,Timeworn Kumbhiraskin Map,-134.2,60.7,207.2,3/12/2026 20:35,959,Mare Lamentorum
+,-98.2,85.6,619.7,TRUE,Timeworn Saigaskin Map,-98,85.5,620.3,3/12/2026 19:56,959,Mare Lamentorum
+,-44.3,80.7,-49.7,TRUE,Timeworn Saigaskin Map,-44.4,80.7,-49.8,3/12/2026 19:56,959,Mare Lamentorum
+,66.3,111.3,741.3,TRUE,Timeworn Kumbhiraskin Map,66.1,111.5,741.6,3/12/2026 20:38,959,Mare Lamentorum
+,167.9,36.4,240.4,TRUE,Timeworn Saigaskin Map,170,36.8,245.7,3/12/2026 19:55,959,Mare Lamentorum
+,174.3,118.5,-127.2,TRUE,Timeworn Saigaskin Map,173.9,118.5,-127.4,3/12/2026 20:00,959,Mare Lamentorum
+,210.7,83.6,592.5,TRUE,Timeworn Kumbhiraskin Map,210.4,83.7,592.6,3/12/2026 20:34,959,Mare Lamentorum
+,390.7,136.4,799.8,TRUE,Timeworn Saigaskin Map,390.6,136.4,799.7,3/12/2026 19:54,959,Mare Lamentorum
+,393.1,113.7,508.4,TRUE,Timeworn Saigaskin Map,393.3,113.8,508.3,3/12/2026 19:57,959,Mare Lamentorum
+,451.9,103.6,174.8,TRUE,Timeworn Kumbhiraskin Map,450.8,103.3,171.5,3/12/2026 20:37,959,Mare Lamentorum
+,668.3,146,423.1,TRUE,Timeworn Kumbhiraskin Map,668.2,146,423.1,3/12/2026 20:33,959,Mare Lamentorum
+,689.1,144.2,127.5,TRUE,Timeworn Saigaskin Map,689.2,144.2,127.5,3/12/2026 19:59,959,Mare Lamentorum
+,-374.8,34.5,-489.1,TRUE,Timeworn Peisteskin Map,-374.6,34.5,-489,3/8/2026 5:56,134,Middle La Noscea
+,-347.7,21.5,-372.4,TRUE,Timeworn Peisteskin Map,-347.8,21.5,-372.4,3/8/2026 5:58,134,Middle La Noscea
+,-318.8,26.6,-552.6,TRUE,Unhidden Leather Map,-313.4,28.5,-559.5,3/8/2026 16:17,134,Middle La Noscea
+,-204.3,23.7,-444,TRUE,Timeworn Toadskin Map,-204.4,23.7,-444,3/8/2026 2:25,134,Middle La Noscea
+,-191.3,46.5,-77.3,TRUE,Timeworn Boarskin Map,-191.5,46.5,-77.4,3/8/2026 5:07,134,Middle La Noscea
+,-177.1,43.9,-176.5,TRUE,Mysterious Map,-177,44,-176.5,3/8/2026 6:52,134,Middle La Noscea
+,-169,15.6,-400,TRUE,Timeworn Goatskin Map,-169.3,15.7,-400.3,3/7/2026 19:21,134,Middle La Noscea
+,-116.2,43.6,-288,TRUE,Thorne Dynasty Map,-116.4,43.5,-288.2,3/8/2026 16:43,134,Middle La Noscea
+,-99.8,45.8,-140.7,TRUE,Unhidden Leather Map,-99.8,45.8,-140.5,3/8/2026 16:17,134,Middle La Noscea
+,-72.3,12.2,-407.9,TRUE,Timeworn Toadskin Map,-72.1,12.3,-407.8,3/8/2026 2:25,134,Middle La Noscea
+,-15.5,49.9,-94.6,TRUE,Thorne Dynasty Map,-15.3,49.9,-94.4,3/8/2026 16:43,134,Middle La Noscea
+,3.9,57.6,-331.9,TRUE,Timeworn Peisteskin Map,3.9,57.6,-331.9,3/8/2026 5:57,134,Middle La Noscea
+,13.7,28.8,179.1,TRUE,Mysterious Map,13.6,28.8,179.1,3/8/2026 6:53,134,Middle La Noscea
+,49.7,53.3,-119.1,TRUE,Timeworn Leather Map,49.5,53.3,-118.9,3/7/2026 18:37,134,Middle La Noscea
+,55.8,66.1,-293.4,TRUE,Timeworn Leather Map,55.8,66.1,-293.4,3/7/2026 19:42,134,Middle La Noscea
+,67.4,67.9,-218.7,TRUE,Timeworn Boarskin Map,67.5,67.9,-218.7,3/8/2026 5:08,134,Middle La Noscea
+,80.4,58.4,239.1,TRUE,Timeworn Boarskin Map,80.4,58.4,239,3/8/2026 5:06,134,Middle La Noscea
+,134.5,48.5,69.1,TRUE,Timeworn Toadskin Map,134.4,48.5,69,3/8/2026 2:26,134,Middle La Noscea
+,138.9,62.5,303.4,TRUE,Timeworn Leather Map,142.8,-30.3,297.6,3/7/2026 18:37,134,Middle La Noscea
+,143.9,58,-26.9,TRUE,Timeworn Goatskin Map,144.9,59.7,-22.2,3/7/2026 19:21,134,Middle La Noscea
+,190.8,53.7,178.2,TRUE,Timeworn Goatskin Map,190.2,56.4,183.6,3/7/2026 19:20,134,Middle La Noscea
+,-541.3,-4.7,-356.3,TRUE,Timeworn Peisteskin Map,-541.4,-4.6,-356.5,3/8/2026 6:43,156,Mor Dhona
+,-501.2,-3.9,-254.7,TRUE,Timeworn Peisteskin Map,-501.3,-3.9,-254.2,3/8/2026 6:43,156,Mor Dhona
+,-416.4,-3.7,-548.6,TRUE,Mysterious Map,-416.5,-3.7,-548.6,3/8/2026 16:09,156,Mor Dhona
+,-307.1,-11.4,-516.2,TRUE,Timeworn Boarskin Map,-307.2,-11.4,-516.1,3/8/2026 5:47,156,Mor Dhona
+,-203.3,8.6,-667.9,TRUE,Timeworn Toadskin Map,-203.6,8.6,-667.9,3/8/2026 4:56,156,Mor Dhona
+,-201.6,0.2,-528.4,TRUE,Timeworn Boarskin Map,-201.6,0.2,-528.5,3/8/2026 5:45,156,Mor Dhona
+,-160.4,40.1,-193.1,TRUE,Timeworn Peisteskin Map,-160.4,40.1,-193.1,3/8/2026 6:42,156,Mor Dhona
+,112.1,-1.6,-558.6,TRUE,Unhidden Leather Map,111.6,-1.5,-558.7,3/8/2026 16:36,156,Mor Dhona
+,128.7,-14.5,-447.3,TRUE,Timeworn Toadskin Map,128.6,-14.4,-447.2,3/8/2026 4:55,156,Mor Dhona
+,214.8,-17.9,-466.5,TRUE,Timeworn Boarskin Map,214.7,-17.9,-466.7,3/8/2026 5:46,156,Mor Dhona
+,272,8.9,-602.7,TRUE,Timeworn Toadskin Map,272.1,8.8,-602.7,3/8/2026 4:55,156,Mor Dhona
+,487.2,-2.4,-494.5,TRUE,Unhidden Leather Map,487,-2.5,-494.4,3/8/2026 16:36,156,Mor Dhona
+,508.5,-9.3,-383.9,TRUE,Mysterious Map,508.5,-9.3,-383.9,3/8/2026 16:08,156,Mor Dhona
+,-264.9,-54.5,288.8,TRUE,Mysterious Map,-264.9,-54.5,288.8,3/8/2026 6:51,154,North Shroud
+,-244.5,-27.3,203.2,TRUE,Timeworn Toadskin Map,-248.1,-24.4,203.2,3/8/2026 3:02,154,North Shroud
+,-189.4,-45.8,235.4,TRUE,Timeworn Boarskin Map,-189.3,-45.8,235.3,3/8/2026 5:05,154,North Shroud
+,-162.5,-50.4,275.5,TRUE,Timeworn Goatskin Map,-162.3,-50.4,275.4,3/7/2026 19:55,154,North Shroud
+,-101.7,-53.1,362.6,TRUE,Unhidden Leather Map,-101.7,-53.1,362.6,3/8/2026 16:16,154,North Shroud
+,-59.2,-47.3,335.3,TRUE,Timeworn Leather Map,-59.3,-47.3,335.3,3/7/2026 19:42,154,North Shroud
+,-15.6,-50.4,427.4,TRUE,Thorne Dynasty Map,-15.8,-50.4,427.3,3/8/2026 16:41,154,North Shroud
+,-14.2,-55.4,518.6,TRUE,Timeworn Peisteskin Map,-14.2,-55.4,518.5,3/8/2026 5:55,154,North Shroud
+,21.4,-13.7,-23,TRUE,Timeworn Peisteskin Map,21.4,-13.7,-22.9,3/8/2026 5:53,154,North Shroud
+,48.2,-11.2,120.7,TRUE,Timeworn Peisteskin Map,48.2,-11.2,120.8,3/8/2026 5:53,154,North Shroud
+,56.4,-39.8,331.3,TRUE,Timeworn Boarskin Map,56.4,-39.9,331.5,3/8/2026 5:05,154,North Shroud
+,62.7,-38.3,256.7,TRUE,Timeworn Boarskin Map,62.7,-38.3,256.5,3/8/2026 5:05,154,North Shroud
+,124,-27.7,234.4,TRUE,Mysterious Map,123.8,-27.7,234.4,3/8/2026 6:51,154,North Shroud
+,160.3,-27.2,211.4,TRUE,Timeworn Toadskin Map,160.8,-27.1,211.3,3/8/2026 3:01,154,North Shroud
+,223.4,-24.9,276,TRUE,Unhidden Leather Map,223.3,-24.9,276,3/8/2026 16:15,154,North Shroud
+,246.6,-7.3,-3.2,TRUE,Timeworn Leather Map,246.6,-7.3,-3.2,3/7/2026 18:35,154,North Shroud
+,290.6,-25.6,166.4,TRUE,Timeworn Leather Map,290.7,-25.5,166.4,3/7/2026 19:41,154,North Shroud
+,353.8,8.9,234.2,TRUE,Timeworn Goatskin Map,345.2,7.7,234.5,3/7/2026 19:20,154,North Shroud
+,355.1,-4.5,18.1,TRUE,Timeworn Toadskin Map,355.2,-4.5,18.1,3/8/2026 2:24,154,North Shroud
+,415,-5.5,69.8,TRUE,Timeworn Goatskin Map,411.9,-4.7,78,3/7/2026 19:20,154,North Shroud
+,430.6,-3.2,262,TRUE,Thorne Dynasty Map,430.6,-3.2,262,3/8/2026 16:42,154,North Shroud
+,-234.1,74,-138.8,TRUE,Timeworn Peisteskin Map,-234.1,74,-138.8,3/8/2026 6:35,147,Northern Thanalan
+,-93.1,47.2,-18.4,TRUE,Timeworn Boarskin Map,-93,47.2,-18.4,3/8/2026 5:38,147,Northern Thanalan
+,-87.4,66.5,-139.7,TRUE,Timeworn Boarskin Map,-87.4,66.5,-139.8,3/8/2026 5:39,147,Northern Thanalan
+,-71.7,79,-243.3,TRUE,Timeworn Peisteskin Map,-71.7,79,-243.1,3/8/2026 6:35,147,Northern Thanalan
+,-49.7,47,32.4,TRUE,Mysterious Map,-49.7,47,32.4,3/8/2026 16:04,147,Northern Thanalan
+,-41.1,5.8,314.2,TRUE,Mysterious Map,-41.1,5.8,314.2,3/8/2026 16:03,147,Northern Thanalan
+,12.2,24.1,168.9,TRUE,Unhidden Leather Map,12.2,24.1,168.9,3/8/2026 16:33,147,Northern Thanalan
+,17.8,5.3,296.8,TRUE,Unhidden Leather Map,17.8,5.3,296.7,3/8/2026 16:33,147,Northern Thanalan
+,97.4,15,225.6,TRUE,Timeworn Peisteskin Map,97.4,15,225.7,3/8/2026 6:36,147,Northern Thanalan
+,155.5,22.9,106.7,TRUE,Timeworn Boarskin Map,155.4,22.8,106.6,3/8/2026 5:38,147,Northern Thanalan
+,-396,47.2,-268.6,TRUE,Unhidden Leather Map,-395.9,47.2,-268.6,3/8/2026 16:27,180,Outer La Noscea
+,-362.1,58.5,-373.2,TRUE,Timeworn Toadskin Map,-361.2,58.4,-371.5,3/8/2026 4:28,180,Outer La Noscea
+,-392.2,48.3,-328.2,TRUE,Timeworn Goatskin Map,-357.8,53.1,-309.9,3/7/2026 19:37,180,Outer La Noscea
+,-361.9,52,-264,TRUE,Timeworn Leather Map,-346.3,52.3,-261.3,3/7/2026 18:48,180,Outer La Noscea
+,-333.2,63.9,-156.5,TRUE,Thorne Dynasty Map,-333.2,63.9,-156.5,3/8/2026 16:52,180,Outer La Noscea
+,-324.2,61.4,-136,TRUE,Unhidden Leather Map,-324,61.4,-136.1,3/8/2026 16:27,180,Outer La Noscea
+,-310,32.4,-444.1,TRUE,Timeworn Boarskin Map,-310.1,32.5,-444.1,3/8/2026 5:25,180,Outer La Noscea
+,-308,63.7,-319.3,TRUE,Mysterious Map,-308,63.7,-319.3,3/8/2026 15:54,180,Outer La Noscea
+,-288.4,15.1,-531.3,TRUE,Timeworn Toadskin Map,-290.1,15.2,-530.4,3/8/2026 4:26,180,Outer La Noscea
+,-289.1,54,-287.8,TRUE,Timeworn Goatskin Map,-286.3,54.1,-288,3/7/2026 19:45,180,Outer La Noscea
+,-138.5,80.9,-305.4,TRUE,Timeworn Peisteskin Map,-138.3,80.9,-305.4,3/8/2026 6:20,180,Outer La Noscea
+,-64,63.8,-280.7,TRUE,Timeworn Leather Map,-71.5,65.1,-281.4,3/7/2026 18:48,180,Outer La Noscea
+,-52.9,63.8,-219.6,TRUE,Timeworn Leather Map,-56.9,65.1,-221.1,3/7/2026 18:49,180,Outer La Noscea
+,51.5,66.6,-216,TRUE,Timeworn Boarskin Map,52.1,66.6,-216.2,3/8/2026 5:24,180,Outer La Noscea
+,55.4,48.7,-351.2,TRUE,Timeworn Peisteskin Map,55.3,48.7,-351.1,3/8/2026 6:19,180,Outer La Noscea
+,60.2,55.5,-497.6,TRUE,Timeworn Boarskin Map,60.2,55.5,-497.4,3/8/2026 5:27,180,Outer La Noscea
+,66.9,57.5,-315.1,TRUE,Timeworn Goatskin Map,61.4,58.5,-313.9,3/7/2026 19:44,180,Outer La Noscea
+,65,56.1,-460.8,TRUE,Timeworn Peisteskin Map,63.4,54.9,-459.7,3/8/2026 6:20,180,Outer La Noscea
+,68,66.6,-257.7,TRUE,Mysterious Map,68,66.6,-257.7,3/8/2026 15:54,180,Outer La Noscea
+,117.5,72.9,-259.1,TRUE,Thorne Dynasty Map,117.8,72.9,-258.9,3/8/2026 16:53,180,Outer La Noscea
+,192.9,63.8,-279.4,TRUE,Timeworn Toadskin Map,191.1,63.9,-279.4,3/8/2026 4:27,180,Outer La Noscea
+,-736.1,41.9,-312.8,TRUE,Timeworn Loboskin Map,-736.2,41.9,-312.9,3/12/2026 21:10,1190,Shaaloani
+,-444.1,28.5,-352.6,TRUE,Timeworn Br'aaxskin Map,-444.4,28.5,-353,3/12/2026 23:04,1190,Shaaloani
+,-375.5,9.9,186.5,TRUE,Timeworn Loboskin Map,-375.2,9.9,186.9,3/12/2026 21:11,1190,Shaaloani
+,-200.5,24.9,-591.8,TRUE,Timeworn Loboskin Map,-200.5,25,-592,3/12/2026 21:14,1190,Shaaloani
+,-183.5,-19.1,587.2,TRUE,Timeworn Loboskin Map,-183.3,-19.1,587.7,3/12/2026 21:12,1190,Shaaloani
+,-163.1,16.4,-19.5,TRUE,Timeworn Br'aaxskin Map,-163.2,16.4,-19.6,3/12/2026 23:03,1190,Shaaloani
+,-145.8,15.4,-490.9,TRUE,Timeworn Br'aaxskin Map,-146.3,15.4,-490.7,3/12/2026 23:08,1190,Shaaloani
+,-88.2,-17.9,652.7,TRUE,Timeworn Br'aaxskin Map,-88.2,-17.9,652.8,3/12/2026 23:05,1190,Shaaloani
+,24.9,3.1,-329.4,TRUE,Timeworn Loboskin Map,25,3.2,-329.3,3/12/2026 21:16,1190,Shaaloani
+,32.4,3.1,279.2,TRUE,Timeworn Loboskin Map,39.6,3.5,282.8,3/12/2026 21:09,1190,Shaaloani
+,208.8,5,-85.2,TRUE,Timeworn Br'aaxskin Map,208.6,5,-85.1,3/12/2026 23:10,1190,Shaaloani
+,393.2,-15,-652.2,TRUE,Timeworn Br'aaxskin Map,392.1,-14.6,-660.3,3/12/2026 23:07,1190,Shaaloani
+,523.5,16.1,572.3,TRUE,Timeworn Br'aaxskin Map,524.1,16.1,572.2,3/12/2026 23:06,1190,Shaaloani
+,659.9,21.6,239.5,TRUE,Timeworn Loboskin Map,660.1,21.6,239.7,3/12/2026 21:15,1190,Shaaloani
+,700.2,-13.2,-521.9,TRUE,Timeworn Loboskin Map,700.3,-13.2,-521.9,3/12/2026 21:17,1190,Shaaloani
+,704.5,-14.5,-224.9,TRUE,Timeworn Br'aaxskin Map,705,-14.5,-224.8,3/12/2026 23:09,1190,Shaaloani
+,-308.6,0.2,405.5,TRUE,Timeworn Leather Map,-308.7,0.2,406.1,3/7/2026 18:33,153,South Shroud
+,-283.2,13.9,-99.7,TRUE,Unhidden Leather Map,-283.3,13.8,-99.8,3/8/2026 16:13,153,South Shroud
+,-237.2,13,62,TRUE,Thorne Dynasty Map,-237.5,13,61.6,3/8/2026 16:40,153,South Shroud
+,-219.4,3.9,547.2,TRUE,Timeworn Toadskin Map,-219.2,5.7,552.7,3/8/2026 2:22,153,South Shroud
+,-209.1,8.8,8.2,TRUE,Timeworn Leather Map,-209.3,8.8,8.3,3/7/2026 18:32,153,South Shroud
+,-194.2,0.9,422.8,TRUE,Thorne Dynasty Map,-194.2,0.9,422.6,3/8/2026 16:40,153,South Shroud
+,-171.1,-0.3,249.6,TRUE,Unhidden Leather Map,-171.1,-0.4,249.4,3/8/2026 16:14,153,South Shroud
+,-168.8,4.9,125.7,TRUE,Timeworn Toadskin Map,-168.7,4.9,125.2,3/8/2026 2:22,153,South Shroud
+,-104.3,6,-111.6,TRUE,Timeworn Boarskin Map,-104.2,6,-111.4,3/8/2026 5:03,153,South Shroud
+,-66.8,0.8,369,TRUE,Timeworn Boarskin Map,-66.7,0.8,369.1,3/8/2026 5:04,153,South Shroud
+,19,5.5,-96,TRUE,Timeworn Goatskin Map,18.5,5.5,-96,3/7/2026 19:15,153,South Shroud
+,67.7,22.3,152.8,TRUE,Timeworn Peisteskin Map,67.8,22.3,152.7,3/8/2026 5:52,153,South Shroud
+,84.3,9.6,13.6,TRUE,Timeworn Toadskin Map,78.4,11.4,16.1,3/8/2026 2:23,153,South Shroud
+,120.9,17.6,-128.9,TRUE,Mysterious Map,120.9,17.6,-128.7,3/8/2026 6:50,153,South Shroud
+,140.6,29.6,171.7,TRUE,Mysterious Map,140.4,29.5,171.7,3/8/2026 6:49,153,South Shroud
+,200.3,31,-164.2,TRUE,Timeworn Goatskin Map,203.6,32.7,-164.5,3/7/2026 19:16,153,South Shroud
+,254.8,5.5,48,TRUE,Timeworn Boarskin Map,254.8,5.5,48,3/8/2026 5:03,153,South Shroud
+,307.1,10.8,-191.7,TRUE,Timeworn Leather Map,307.2,10.8,-191.8,3/7/2026 18:34,153,South Shroud
+,318.1,-0.2,41.9,TRUE,Timeworn Goatskin Map,318.2,-0.3,41.9,3/7/2026 19:15,153,South Shroud
+,376.2,-2.5,142.2,TRUE,Timeworn Peisteskin Map,376.4,-2.4,142.3,3/8/2026 5:52,153,South Shroud
+,451.4,1.4,171.2,TRUE,Timeworn Peisteskin Map,451.6,1.3,171.3,3/8/2026 5:52,153,South Shroud
+,-429.1,0.1,711.6,TRUE,Timeworn Boarskin Map,-429.2,0.1,711.8,3/8/2026 5:36,146,Southern Thanalan
+,-388.9,-1.8,893.7,TRUE,Timeworn Toadskin Map,-388.9,-1.9,893.8,3/8/2026 4:50,146,Southern Thanalan
+,-343.3,12.6,-276,TRUE,Timeworn Leather Map,-353,13,-275.8,3/7/2026 19:10,146,Southern Thanalan
+,-278.7,4.3,-67.3,TRUE,Timeworn Goatskin Map,-278.6,4.3,-67.4,3/8/2026 2:14,146,Southern Thanalan
+,-272.7,9.3,138.9,TRUE,Timeworn Peisteskin Map,-272.6,9.3,139,3/8/2026 6:31,146,Southern Thanalan
+,-228.9,22,-522.2,TRUE,Timeworn Toadskin Map,-228.9,22,-522.1,3/8/2026 4:47,146,Southern Thanalan
+,-196,0.2,929.1,TRUE,Timeworn Boarskin Map,-196,0.2,929.3,3/8/2026 5:37,146,Southern Thanalan
+,-176,7.6,416.2,TRUE,Timeworn Leather Map,-176,7.6,416,3/7/2026 19:07,146,Southern Thanalan
+,-125.1,9.6,533,TRUE,Thorne Dynasty Map,-125.2,9.5,533.2,3/8/2026 17:00,146,Southern Thanalan
+,-85.5,8.9,-630.3,TRUE,Thorne Dynasty Map,-85.5,9,-630.4,3/8/2026 16:59,146,Southern Thanalan
+,-60.1,18.1,-284.7,TRUE,Unhidden Leather Map,-60.2,18.1,-284.7,3/8/2026 16:31,146,Southern Thanalan
+,-10.5,8.7,375.4,TRUE,Timeworn Boarskin Map,-10.4,8.7,375.3,3/8/2026 5:36,146,Southern Thanalan
+,-8.2,3.3,-665.8,TRUE,Mysterious Map,-8.2,3.3,-665.9,3/8/2026 16:03,146,Southern Thanalan
+,17,15.8,486.2,TRUE,Unhidden Leather Map,17.1,15.9,486.3,3/8/2026 16:33,146,Southern Thanalan
+,39.2,3.8,-366.5,TRUE,Timeworn Goatskin Map,39,3.8,-366.4,3/8/2026 2:12,146,Southern Thanalan
+,49.1,2.5,871.3,TRUE,Mysterious Map,49.3,2.5,871.5,3/8/2026 16:01,146,Southern Thanalan
+,56.6,10,-418,TRUE,Timeworn Leather Map,60.9,10.3,-410.7,3/7/2026 19:05,146,Southern Thanalan
+,125.1,1.1,-675,TRUE,Timeworn Goatskin Map,125.1,1.2,-675.7,3/8/2026 2:12,146,Southern Thanalan
+,142.3,7.3,474.2,TRUE,Timeworn Toadskin Map,142.6,7.4,474.3,3/8/2026 4:46,146,Southern Thanalan
+,162.3,8,-26,TRUE,Timeworn Peisteskin Map,162.3,8,-26,3/8/2026 6:34,146,Southern Thanalan
+,235.6,7.6,820.5,TRUE,Timeworn Peisteskin Map,235.6,7.6,820.5,3/8/2026 6:33,146,Southern Thanalan
+,-571.5,9.8,-235.1,TRUE,Timeworn Saigaskin Map,-572,9.8,-235.4,3/12/2026 19:39,957,Thavnair
+,-337.2,57.9,-677.8,TRUE,Timeworn Kumbhiraskin Map,-337.2,57.9,-678.3,3/12/2026 20:24,957,Thavnair
+,-332.7,8.9,259.6,TRUE,Timeworn Kumbhiraskin Map,-333,8.8,260.3,3/12/2026 20:23,957,Thavnair
+,-131.1,4.1,554.4,TRUE,Timeworn Saigaskin Map,-131.5,4.1,554.8,3/12/2026 19:37,957,Thavnair
+,-116.2,74.6,-431.3,TRUE,Timeworn Saigaskin Map,-116.1,74.7,-431.4,3/12/2026 19:40,957,Thavnair
+,-96.9,37.7,-362.7,TRUE,Timeworn Kumbhiraskin Map,-97.1,37.7,-362.7,3/12/2026 20:22,957,Thavnair
+,-40.9,55.9,68.8,TRUE,Timeworn Saigaskin Map,-40.9,55.9,68.8,3/12/2026 19:42,957,Thavnair
+,-20,49.3,290.7,TRUE,Timeworn Kumbhiraskin Map,-20.1,49,291.2,3/12/2026 20:20,957,Thavnair
+,24.5,25.1,-21.5,TRUE,Timeworn Kumbhiraskin Map,24.6,25.1,-21.4,3/12/2026 20:20,957,Thavnair
+,134.8,77,-664.8,TRUE,Timeworn Saigaskin Map,134.9,77,-664.8,3/12/2026 19:40,957,Thavnair
+,146.6,16.2,-491.1,TRUE,Timeworn Saigaskin Map,146.6,16.2,-491.1,3/12/2026 19:41,957,Thavnair
+,268.3,6.6,373.2,TRUE,Timeworn Kumbhiraskin Map,268.2,6.6,373.4,3/12/2026 20:19,957,Thavnair
+,283.3,8.4,-626.7,TRUE,Timeworn Kumbhiraskin Map,283.4,8.4,-626.7,3/12/2026 20:25,957,Thavnair
+,292.1,21.5,116.1,TRUE,Timeworn Saigaskin Map,291.9,21.5,116.8,3/12/2026 19:36,957,Thavnair
+,423.1,8.5,356.2,TRUE,Timeworn Saigaskin Map,423.5,8.5,356.1,3/12/2026 19:38,957,Thavnair
+,540.6,11,-352.6,TRUE,Timeworn Kumbhiraskin Map,540.6,11,-352.6,3/12/2026 20:21,957,Thavnair
+,-828.2,115.5,208.2,TRUE,Timeworn Gazelleskin Map,-828.9,115.5,207.7,3/8/2026 20:42,622,The Azim Steppe
+,-589.2,22,307.9,TRUE,Timeworn Gaganaskin Map,-589.2,22,308,3/8/2026 20:20,622,The Azim Steppe
+,-543.1,55.3,-274.4,TRUE,Timeworn Gazelleskin Map,-542.7,55.4,-275.1,3/8/2026 20:38,622,The Azim Steppe
+,-540.5,119.2,-85,TRUE,Timeworn Gaganaskin Map,-539,120.3,-86.4,3/8/2026 20:15,622,The Azim Steppe
+,-514.1,8.2,712.3,TRUE,Timeworn Gaganaskin Map,-514.5,8.2,712.4,3/8/2026 20:19,622,The Azim Steppe
+,-323.6,9.6,575.5,TRUE,Timeworn Gazelleskin Map,-321.8,10.5,575.8,3/8/2026 20:41,622,The Azim Steppe
+,-245.3,54.9,178.3,TRUE,Seemingly Special Timeworn Map,-245.4,23.4,178.4,3/8/2026 11:53,622,The Azim Steppe
+,-233.7,84.2,-581,TRUE,Timeworn Gaganaskin Map,-233.8,84.2,-580.8,3/8/2026 20:16,622,The Azim Steppe
+,-129.9,-36.6,107.6,TRUE,Timeworn Thief's Map,-130,2,107.5,3/8/2026 21:03,622,The Azim Steppe
+,-8.8,1.7,555.1,TRUE,Timeworn Gaganaskin Map,-5.7,3.5,557.2,3/8/2026 20:18,622,The Azim Steppe
+,-2.3,-29.7,195.2,TRUE,Timeworn Thief's Map,-2.6,2,195.1,3/8/2026 21:03,622,The Azim Steppe
+,18.8,8,779.8,TRUE,Seemingly Special Timeworn Map,18.9,55.3,779.9,3/8/2026 13:17,622,The Azim Steppe
+,227.3,18,720,TRUE,Timeworn Gaganaskin Map,227.4,18,719.9,3/8/2026 20:18,622,The Azim Steppe
+,289,12.4,-115.9,TRUE,Timeworn Gaganaskin Map,288.9,12.4,-116,3/8/2026 20:17,622,The Azim Steppe
+,388.7,28.7,696.1,TRUE,Timeworn Gazelleskin Map,388.7,28.7,695.9,3/8/2026 20:40,622,The Azim Steppe
+,402.9,26.5,-480,TRUE,Seemingly Special Timeworn Map,402.9,54.9,-479.8,3/8/2026 4:43,622,The Azim Steppe
+,475.8,2.9,30.7,TRUE,Timeworn Gazelleskin Map,485.5,2.8,34.5,3/8/2026 20:40,622,The Azim Steppe
+,654,21.2,358.5,TRUE,Timeworn Gaganaskin Map,653.9,21.2,358.4,3/8/2026 20:17,622,The Azim Steppe
+,-731.9,258.5,-245.7,TRUE,Timeworn Dragonskin Map,-732.1,258.5,-245.9,3/8/2026 19:18,400,The Churning Mists
+,-609.8,257.2,-646.4,TRUE,Timeworn Dragonskin Map,-609.2,257.2,-646.4,3/8/2026 19:24,400,The Churning Mists
+,-605.6,107.1,-118.3,TRUE,Timeworn Dragonskin Map,-605.7,107.1,-118,3/8/2026 19:11,400,The Churning Mists
+,-544.9,125.6,-307.6,TRUE,Timeworn Wyvernskin Map,-545.1,125.6,-307.6,3/8/2026 18:10,400,The Churning Mists
+,-531.1,167.1,661.9,TRUE,Timeworn Wyvernskin Map,-531.6,167.1,661.9,3/8/2026 18:15,400,The Churning Mists
+,-489.5,113.6,-462.1,TRUE,Timeworn Dragonskin Map,-489.9,113.6,-462.5,3/8/2026 19:11,400,The Churning Mists
+,-481.3,42.7,375.5,TRUE,Timeworn Wyvernskin Map,-481.3,42.7,375.4,3/8/2026 18:11,400,The Churning Mists
+,-278.6,-30.2,698.2,TRUE,Timeworn Wyvernskin Map,-278.5,-30.2,698.1,3/8/2026 18:15,400,The Churning Mists
+,-258.8,30.4,557.9,TRUE,Timeworn Dragonskin Map,-259.3,30.4,558.2,3/8/2026 19:14,400,The Churning Mists
+,-227.3,38.4,-63.7,TRUE,Timeworn Archaeoskin Map,-226,39.6,-61.9,3/8/2026 17:46,400,The Churning Mists
+,-210.3,-15.5,242.7,TRUE,Timeworn Archaeoskin Map,-210.3,-15.5,243.2,3/8/2026 17:46,400,The Churning Mists
+,-46.9,-62.8,765,TRUE,Timeworn Dragonskin Map,-46.7,-62.8,765.6,3/8/2026 19:26,400,The Churning Mists
+,12.4,-21.7,90.6,TRUE,Timeworn Wyvernskin Map,12.3,-21.7,90.7,3/8/2026 18:11,400,The Churning Mists
+,39.4,-22.1,154.2,TRUE,Timeworn Archaeoskin Map,39.5,-22.1,154.1,3/8/2026 17:47,400,The Churning Mists
+,58.8,-33.8,-164.5,TRUE,Timeworn Dragonskin Map,58.8,-33.8,-164.5,3/8/2026 19:12,400,The Churning Mists
+,250.1,223.2,-602.4,TRUE,Timeworn Archaeoskin Map,250.1,223.2,-602.5,3/8/2026 17:49,400,The Churning Mists
+,274.5,15.7,748.4,TRUE,Timeworn Dragonskin Map,274.3,15.7,748.3,3/8/2026 19:15,400,The Churning Mists
+,289.6,-36.2,74.1,TRUE,Timeworn Wyvernskin Map,282.3,-36.5,70.3,3/8/2026 18:14,400,The Churning Mists
+,285.9,-34.9,-236.6,TRUE,Timeworn Archaeoskin Map,285.9,-34.9,-236.7,3/8/2026 17:49,400,The Churning Mists
+,392.7,-25.4,-41.9,TRUE,Timeworn Archaeoskin Map,393,-25.4,-42,3/8/2026 17:47,400,The Churning Mists
+,407.6,-35.8,236.2,TRUE,Timeworn Archaeoskin Map,407.8,-35.8,236.2,3/8/2026 17:48,400,The Churning Mists
+,478.9,-23.6,153.9,TRUE,Timeworn Dragonskin Map,479.5,-23.4,154.4,3/8/2026 19:13,400,The Churning Mists
+,492.3,-15,-304.5,TRUE,Timeworn Wyvernskin Map,492.6,-14.9,-304.7,3/8/2026 18:12,400,The Churning Mists
+,589.8,-9.7,-0.9,TRUE,Timeworn Archaeoskin Map,590,-9.7,-0.5,3/8/2026 17:50,400,The Churning Mists
+,626.4,-33.1,327.9,TRUE,Timeworn Wyvernskin Map,626.4,-33.1,327.9,3/8/2026 18:13,400,The Churning Mists
+,779,-25.8,-246,TRUE,Timeworn Wyvernskin Map,778.3,-27.6,-236.9,3/8/2026 18:24,400,The Churning Mists
+,-660.3,-102.9,683.5,TRUE,Timeworn Wyvernskin Map,-660.2,-102.9,683.3,3/8/2026 18:00,398,The Dravanian Forelands
+,-593.7,-71.1,379.2,TRUE,Timeworn Dragonskin Map,-593.8,-71.1,379.2,3/8/2026 19:03,398,The Dravanian Forelands
+,-523.1,-59.2,623.1,TRUE,Timeworn Dragonskin Map,-523.1,-59.2,623.1,3/8/2026 19:06,398,The Dravanian Forelands
+,-517.5,-36.7,246.7,TRUE,Timeworn Archaeoskin Map,-520.9,-35.1,248.7,3/8/2026 17:33,398,The Dravanian Forelands
+,-453.1,-83.6,606.4,TRUE,Timeworn Dragonskin Map,-449.1,-83.1,613,3/8/2026 19:03,398,The Dravanian Forelands
+,-379.3,-30.1,594.8,TRUE,Timeworn Dragonskin Map,-382.8,-28.5,595.5,3/8/2026 19:07,398,The Dravanian Forelands
+,-278.1,-81.6,707.8,TRUE,Timeworn Archaeoskin Map,-274.8,-80.2,713.8,3/8/2026 17:33,398,The Dravanian Forelands
+,-187.4,-65.6,577.9,TRUE,Timeworn Dragonskin Map,-186.6,-65.6,577.8,3/8/2026 19:07,398,The Dravanian Forelands
+,-103.2,-34.8,131.6,TRUE,Timeworn Wyvernskin Map,-103.3,-34.8,131.3,3/8/2026 18:02,398,The Dravanian Forelands
+,-63.6,-34,-158.3,TRUE,Timeworn Archaeoskin Map,-63.7,-34,-158.2,3/8/2026 17:32,398,The Dravanian Forelands
+,-42.3,-129.3,673.4,TRUE,Timeworn Wyvernskin Map,-41.9,-129.4,673.4,3/8/2026 18:01,398,The Dravanian Forelands
+,42.7,-71.6,164.5,TRUE,Timeworn Dragonskin Map,34.6,-70.5,165.5,3/8/2026 19:02,398,The Dravanian Forelands
+,52.8,-120.3,463.5,TRUE,Timeworn Dragonskin Map,52.8,-120.3,463.6,3/8/2026 19:05,398,The Dravanian Forelands
+,60.6,-64.7,585.1,TRUE,Timeworn Archaeoskin Map,60.4,-64.6,585.5,3/8/2026 17:43,398,The Dravanian Forelands
+,73.4,-27.8,81.2,TRUE,Timeworn Wyvernskin Map,73.4,-27.8,81,3/8/2026 18:06,398,The Dravanian Forelands
+,124.7,-3,-484.7,TRUE,Timeworn Wyvernskin Map,124.6,-3,-485,3/8/2026 18:05,398,The Dravanian Forelands
+,245.8,-110.6,412.8,TRUE,Timeworn Dragonskin Map,234.6,-111.1,415.8,3/8/2026 19:04,398,The Dravanian Forelands
+,275.5,-20.2,-546,TRUE,Timeworn Wyvernskin Map,275.2,-20.2,-546.6,3/8/2026 17:57,398,The Dravanian Forelands
+,322,-12,204.9,TRUE,Timeworn Wyvernskin Map,321.6,-12,205.3,3/8/2026 18:05,398,The Dravanian Forelands
+,325.7,-59.5,76.5,TRUE,Timeworn Dragonskin Map,325.7,-59.5,76.4,3/8/2026 19:05,398,The Dravanian Forelands
+,385.4,-79.2,292,TRUE,Timeworn Archaeoskin Map,389.9,-77.4,285.9,3/8/2026 17:40,398,The Dravanian Forelands
+,391.5,-106.6,563,TRUE,Timeworn Wyvernskin Map,391.7,-106.6,563.1,3/8/2026 18:03,398,The Dravanian Forelands
+,645.1,-2.7,-632.6,TRUE,Timeworn Archaeoskin Map,645.1,-2.7,-632.6,3/8/2026 17:38,398,The Dravanian Forelands
+,671.8,-48.4,-141.5,TRUE,Timeworn Archaeoskin Map,671.9,-48.4,-141.7,3/8/2026 17:40,398,The Dravanian Forelands
+,740.4,-34.4,-258.4,TRUE,Timeworn Wyvernskin Map,737.4,-33.9,-251.4,3/8/2026 18:04,398,The Dravanian Forelands
+,779.2,-6,-638.2,TRUE,Timeworn Archaeoskin Map,779.2,-6,-639.2,3/8/2026 17:41,398,The Dravanian Forelands
 ,-516.1,148,161.2,TRUE,Timeworn Wyvernskin Map,-513.3,149.8,156.5,3/12/2026 18:24,399,The Dravanian Hinterlands
+,-381.6,189.5,568,TRUE,Timeworn Wyvernskin Map,-381.8,189,562.6,3/12/2026 18:29,399,The Dravanian Hinterlands
+,-374.3,148,-59.1,TRUE,Timeworn Wyvernskin Map,-374.4,148,-59.3,3/12/2026 18:23,399,The Dravanian Hinterlands
 ,-175.9,175.6,623.6,TRUE,Timeworn Wyvernskin Map,-176,175.6,623.5,3/12/2026 18:24,399,The Dravanian Hinterlands
 ,159.4,71.8,-68.1,TRUE,Timeworn Wyvernskin Map,159.5,71.8,-68.2,3/12/2026 18:25,399,The Dravanian Hinterlands
 ,266.6,115,288.5,TRUE,Timeworn Wyvernskin Map,266.7,115,289,3/12/2026 18:26,399,The Dravanian Hinterlands
-,796.1,144,77.3,TRUE,Timeworn Wyvernskin Map,796.7,144.1,77.1,3/12/2026 18:27,399,The Dravanian Hinterlands
-,-381.6,189.5,568,TRUE,Timeworn Wyvernskin Map,-381.8,189,562.6,3/12/2026 18:29,399,The Dravanian Hinterlands
 ,639,198.2,371.9,TRUE,Timeworn Wyvernskin Map,639.3,198.2,371.9,3/12/2026 18:30,399,The Dravanian Hinterlands
-,668.4,273.3,-537.8,TRUE,Timeworn Zonureskin Map,669.2,275.1,-542.7,3/12/2026 18:33,814,Kholusia
-,550,-54.9,-642.3,TRUE,Timeworn Zonureskin Map,548.5,-53.1,-640.1,3/12/2026 18:34,815,Amh Araeng
-,735,-74.6,-498.2,TRUE,Timeworn Zonureskin Map,735.4,-74.8,-497.8,3/12/2026 18:35,815,Amh Araeng
-,310.9,-22.4,-426.4,TRUE,Timeworn Zonureskin Map,314.8,-21,-426.8,3/12/2026 18:35,815,Amh Araeng
-,630,-32.6,-200,TRUE,Timeworn Zonureskin Map,634,-31.9,-197.1,3/12/2026 18:36,815,Amh Araeng
-,-459.1,-0.3,-357,TRUE,Timeworn Zonureskin Map,-458.9,-0.3,-357,3/12/2026 18:37,815,Amh Araeng
-,-413.7,-63,427.5,TRUE,Timeworn Zonureskin Map,-413.8,-63,427.9,3/12/2026 18:38,815,Amh Araeng
-,270,-39,120,TRUE,Timeworn Zonureskin Map,270.1,-39,119.9,3/12/2026 18:39,815,Amh Araeng
-,440.9,-61.5,462,TRUE,Timeworn Zonureskin Map,441.1,-61.7,462.7,3/12/2026 18:40,815,Amh Araeng
-,-706.1,36.9,-200,TRUE,Timeworn Zonureskin Map,-706.1,36.9,-200,3/12/2026 18:41,816,Il Mheg
-,-550,73.9,-420,TRUE,Timeworn Zonureskin Map,-552,75.6,-417.5,3/12/2026 18:41,816,Il Mheg
-,-430,0.9,-45,TRUE,Timeworn Zonureskin Map,-429.8,0.9,-44.4,3/12/2026 18:42,816,Il Mheg
-,10,59.8,-689.1,TRUE,Timeworn Zonureskin Map,7.7,61.5,-685.7,3/12/2026 18:43,816,Il Mheg
-,-362.6,24.9,302.3,TRUE,Timeworn Zonureskin Map,-361,26.2,297.3,3/12/2026 18:44,816,Il Mheg
-,480,100.4,-870,TRUE,Timeworn Zonureskin Map,480.2,100.5,-870.3,3/12/2026 18:46,816,Il Mheg
-,590,98.9,-550,TRUE,Timeworn Zonureskin Map,590,98.9,-550.2,3/12/2026 18:47,816,Il Mheg
-,183.9,9.9,-451.2,TRUE,Timeworn Zonureskin Map,183.8,9.9,-451.2,3/12/2026 18:47,816,Il Mheg
-,235.4,-22.3,665.7,TRUE,Timeworn Zonureskin Map,235.4,-22.3,665.6,3/12/2026 18:50,817,The Rak'tika Greatwood
-,60,-21.1,550,TRUE,Timeworn Zonureskin Map,60.1,-21.1,550,3/12/2026 18:50,817,The Rak'tika Greatwood
+,796.1,144,77.3,TRUE,Timeworn Wyvernskin Map,796.7,144.1,77.1,3/12/2026 18:27,399,The Dravanian Hinterlands
+,-658.4,26.5,335.9,TRUE,Seemingly Special Timeworn Map,-657.1,45.1,330.3,3/7/2026 5:22,612,The Fringes
+,-605.6,128.9,-448.4,TRUE,Timeworn Gazelleskin Map,-602.9,127.2,-437.9,3/8/2026 20:20,612,The Fringes
+,-515.3,39,484.3,TRUE,Timeworn Gazelleskin Map,-515.4,39,484.3,3/8/2026 20:24,612,The Fringes
+,-335.7,42,-0.8,TRUE,Timeworn Gaganaskin Map,-335.7,42,-0.9,3/8/2026 19:47,612,The Fringes
+,-295.3,2.9,-237.3,TRUE,Seemingly Special Timeworn Map,-295.1,57.8,-237.2,3/7/2026 4:57,612,The Fringes
+,-295.3,23.4,-237.3,TRUE,Seemingly Special Timeworn Map,-293.4,57.4,-235.9,3/8/2026 15:59,612,The Fringes
+,-258.7,46.7,-221.8,TRUE,Timeworn Gaganaskin Map,-258.6,46.7,-222.2,3/8/2026 19:48,612,The Fringes
+,-247.7,60.4,-595.6,TRUE,Timeworn Gaganaskin Map,-247.7,60.4,-595.6,3/8/2026 19:43,612,The Fringes
+,-234.5,55,355.7,TRUE,Timeworn Gaganaskin Map,-234.3,54.9,355.6,3/8/2026 19:47,612,The Fringes
+,97.2,102.3,-465.1,TRUE,Timeworn Gazelleskin Map,97.4,102.3,-465.1,3/8/2026 20:21,612,The Fringes
+,116.3,48.9,602,TRUE,Timeworn Gaganaskin Map,119.4,50.6,599.6,3/8/2026 19:46,612,The Fringes
+,214.2,96,-248.1,TRUE,Timeworn Gaganaskin Map,214.3,96,-248.3,3/8/2026 19:45,612,The Fringes
+,219,45.2,-66.1,TRUE,Seemingly Special Timeworn Map,219.2,94.5,-65.9,3/8/2026 12:13,612,The Fringes
+,353,66.2,-565.5,TRUE,Timeworn Gaganaskin Map,352.9,66.2,-565.5,3/8/2026 19:44,612,The Fringes
+,505.6,68.3,-33.9,TRUE,Seemingly Special Timeworn Map,505.6,72,-34,3/7/2026 4:20,612,The Fringes
+,540.3,94.9,272.9,TRUE,Timeworn Gaganaskin Map,540.3,94.9,272.9,3/8/2026 19:45,612,The Fringes
+,573.7,119,499.8,TRUE,Timeworn Gazelleskin Map,573.7,119,499.7,3/8/2026 20:22,612,The Fringes
+,-856.8,79.6,-257.5,TRUE,Timeworn Gaganaskin Map,-857.2,79.6,-257.6,3/8/2026 19:54,621,The Lochs
+,-776.8,114.9,-734.8,TRUE,Seemingly Special Timeworn Map,-777,79.3,-734.9,3/8/2026 3:36,621,The Lochs
+,-772.1,78.4,-571.6,TRUE,Timeworn Gaganaskin Map,-772.1,78.4,-571.6,3/8/2026 19:54,621,The Lochs
+,-643.7,39.1,-187.2,TRUE,Timeworn Gazelleskin Map,-643.8,39.1,-187.3,3/8/2026 20:30,621,The Lochs
+,-561,7.7,118.4,TRUE,Timeworn Gaganaskin Map,-561,7.7,118.4,3/8/2026 19:59,621,The Lochs
+,-340.8,7.3,-73.1,TRUE,Timeworn Gaganaskin Map,-340.9,7.3,-73.2,3/8/2026 19:55,621,The Lochs
+,-276.8,38.6,361.2,TRUE,Timeworn Gazelleskin Map,-278.3,39.8,359.7,3/8/2026 20:29,621,The Lochs
+,-217.8,-277.3,-114.2,TRUE,Timeworn Thief's Map,-217.6,-0.3,-114.2,3/8/2026 21:25,621,The Lochs
+,-161.2,6,-356.2,TRUE,Timeworn Gaganaskin Map,-160.8,6,-356.9,3/8/2026 19:56,621,The Lochs
+,-91,26.6,95.1,TRUE,Seemingly Special Timeworn Map,-90.7,0.1,95.1,3/8/2026 12:31,621,The Lochs
+,-0.9,-281.6,-282.8,TRUE,Timeworn Thief's Map,-0.75,-282.8,-282.9,3/8/2026 21:26,621,The Lochs
+,34.6,-249.1,-12.9,TRUE,Timeworn Thief's Map,42.1,-0.2,-23.7,3/8/2026 21:16,621,The Lochs
+,103.5,-343.7,207.7,TRUE,Timeworn Thief's Map,103.6,-349.1,207.9,3/8/2026 21:44,621,The Lochs
+,154.3,23.7,529.8,TRUE,Seemingly Special Timeworn Map,153.9,9,529.6,3/8/2026 11:58,621,The Lochs
+,185.5,55.3,-679.8,TRUE,Seemingly Special Timeworn Map,188.7,7.3,-682.5,3/8/2026 13:24,621,The Lochs
+,185.5,72.2,-679.8,TRUE,Seemingly Special Timeworn Map,189.6,9.1,-683.1,3/7/2026 4:28,621,The Lochs
+,272.1,11.2,-455.8,TRUE,Timeworn Gaganaskin Map,272.4,11.2,-455.9,3/8/2026 19:56,621,The Lochs
+,279.5,20.9,594.1,TRUE,Timeworn Gaganaskin Map,279.5,20.9,594.1,3/8/2026 19:58,621,The Lochs
+,333.6,14.6,264.3,TRUE,Timeworn Gaganaskin Map,333.6,14.6,264.4,3/8/2026 19:57,621,The Lochs
+,415.7,3,-197,TRUE,Seemingly Special Timeworn Map,415.3,66.4,-196.9,3/8/2026 15:07,621,The Lochs
+,522.9,-0.2,-749.3,TRUE,Seemingly Special Timeworn Map,522.9,8,-749.2,3/8/2026 12:36,621,The Lochs
+,-666.6,64.5,-480,TRUE,Timeworn Gaganaskin Map,-666.6,64.5,-480,3/8/2026 19:49,620,The Peaks
+,-643.7,7.6,554.5,TRUE,Seemingly Special Timeworn Map,-644,262.5,554.3,3/8/2026 13:35,620,The Peaks
+,-476.1,56.7,-574.9,TRUE,Timeworn Gaganaskin Map,-483.5,57,-570.7,3/8/2026 19:49,620,The Peaks
+,-458,262.5,-779.2,TRUE,Seemingly Special Timeworn Map,-458.8,57.5,-779.2,3/8/2026 13:42,620,The Peaks
+,-447.8,297.5,239.9,TRUE,Timeworn Gaganaskin Map,-448.4,297.5,239.7,3/8/2026 19:53,620,The Peaks
+,-420.9,263,632.7,TRUE,Timeworn Gaganaskin Map,-420.6,264.8,636.2,3/8/2026 19:53,620,The Peaks
+,-301,307.1,73.8,TRUE,Timeworn Gazelleskin Map,-301.2,307.1,73.6,3/8/2026 20:28,620,The Peaks
+,-284.9,232,581.4,TRUE,Seemingly Special Timeworn Map,-284.9,263.6,581.4,3/8/2026 14:20,620,The Peaks
+,-262.3,77.8,-602.3,TRUE,Timeworn Gazelleskin Map,-263,77.7,-602,3/8/2026 20:25,620,The Peaks
+,-171.5,291,339.4,TRUE,Timeworn Gaganaskin Map,-172,291,339.2,3/8/2026 19:52,620,The Peaks
+,-12.9,110.6,-421.9,TRUE,Timeworn Gaganaskin Map,-12.7,110.7,-421.9,3/8/2026 19:50,620,The Peaks
+,127.4,306.7,508.2,TRUE,Timeworn Gazelleskin Map,127.4,306.7,508.4,3/8/2026 20:28,620,The Peaks
+,229.3,131.3,-385,TRUE,Timeworn Gazelleskin Map,229.8,131.3,-384.8,3/8/2026 20:25,620,The Peaks
+,284.9,331.8,550.3,TRUE,Timeworn Gaganaskin Map,284.9,331.8,550.4,3/8/2026 19:52,620,The Peaks
+,333.3,136.8,-306.3,TRUE,Timeworn Gaganaskin Map,333.2,136.8,-306.3,3/8/2026 19:50,620,The Peaks
+,585.6,223.2,-581.2,TRUE,Seemingly Special Timeworn Map,585.6,232.4,-581.2,3/8/2026 14:14,620,The Peaks
+,-762.2,5.1,616.5,TRUE,Timeworn Gliderskin Map,-755.6,5.8,613.1,3/12/2026 17:10,817,The Rak'tika Greatwood
+,-747,9.9,-8.5,TRUE,Timeworn Gliderskin Map,-747.6,10,-8.6,3/12/2026 17:18,817,The Rak'tika Greatwood
+,-500,-0.3,580,TRUE,Timeworn Gliderskin Map,-500,-0.3,580,3/12/2026 17:15,817,The Rak'tika Greatwood
 ,-492.6,14.2,-94.5,TRUE,Timeworn Zonureskin Map,-493,14.2,-94.9,3/12/2026 18:51,817,The Rak'tika Greatwood
-,170,-5.1,310,TRUE,Timeworn Zonureskin Map,170.2,-5.1,310,3/12/2026 18:52,817,The Rak'tika Greatwood
 ,-399,7.3,128.8,TRUE,Timeworn Zonureskin Map,-399.1,7.3,128.8,3/12/2026 18:53,817,The Rak'tika Greatwood
-,690,19.8,50,TRUE,Timeworn Zonureskin Map,694.4,21.6,49.5,3/12/2026 18:54,817,The Rak'tika Greatwood
-,647.5,-40.7,-219.9,TRUE,Timeworn Zonureskin Map,646.5,-38.9,-222.5,3/12/2026 18:55,817,The Rak'tika Greatwood
+,-310,7.2,500,TRUE,Timeworn Gliderskin Map,-309.9,7.2,500,3/12/2026 17:15,817,The Rak'tika Greatwood
+,-271.9,6,93.3,TRUE,Timeworn Gliderskin Map,-276.6,7,94.5,3/12/2026 17:18,817,The Rak'tika Greatwood
+,-32.5,0.8,-352.7,TRUE,Timeworn Gliderskin Map,-32.6,0.9,-352.7,3/12/2026 17:14,817,The Rak'tika Greatwood
+,60,-21.1,550,TRUE,Timeworn Zonureskin Map,60.1,-21.1,550,3/12/2026 18:50,817,The Rak'tika Greatwood
 ,150,-1.1,-300,TRUE,Timeworn Zonureskin Map,149.8,-1.1,-300,3/12/2026 18:55,817,The Rak'tika Greatwood
+,170,-5.1,310,TRUE,Timeworn Zonureskin Map,170.2,-5.1,310,3/12/2026 18:52,817,The Rak'tika Greatwood
+,235.4,-22.3,665.7,TRUE,Timeworn Zonureskin Map,235.4,-22.3,665.6,3/12/2026 18:50,817,The Rak'tika Greatwood
+,432.8,4.6,-496.4,TRUE,Timeworn Gliderskin Map,435.9,6.3,-498.7,3/12/2026 17:13,817,The Rak'tika Greatwood
+,527.3,24.3,137,TRUE,Timeworn Gliderskin Map,519.5,23.7,140.3,3/12/2026 17:16,817,The Rak'tika Greatwood
+,647.5,-40.7,-219.9,TRUE,Timeworn Zonureskin Map,646.5,-38.9,-222.5,3/12/2026 18:55,817,The Rak'tika Greatwood
+,690,19.8,50,TRUE,Timeworn Zonureskin Map,694.4,21.6,49.5,3/12/2026 18:54,817,The Rak'tika Greatwood
+,-809.9,8.6,-319.2,TRUE,Timeworn Gazelleskin Map,-807.7,9.9,-319.8,3/8/2026 20:31,613,The Ruby Sea
+,-688.2,94.5,413.5,TRUE,Seemingly Special Timeworn Map,-686.9,26.5,412.4,3/8/2026 12:26,613,The Ruby Sea
+,-688.2,57.8,413.5,TRUE,Seemingly Special Timeworn Map,-683.6,26.5,408.9,3/7/2026 5:08,613,The Ruby Sea
+,-614.9,7,186.4,TRUE,Timeworn Gaganaskin Map,-614.8,7,186.4,3/8/2026 20:05,613,The Ruby Sea
+,-517,33.8,-724,TRUE,Timeworn Gaganaskin Map,-511.3,36.8,-722.6,3/8/2026 20:00,613,The Ruby Sea
+,-224.2,7.6,-591.6,TRUE,Seemingly Special Timeworn Map,-224,2.9,-591.5,3/7/2026 4:48,613,The Ruby Sea
+,-224.2,4.7,-591.6,TRUE,Seemingly Special Timeworn Map,-223.9,2.9,-591.6,3/8/2026 15:00,613,The Ruby Sea
+,-209.1,-150.4,210.6,TRUE,Timeworn Thief's Map,-209,-151.8,210.7,3/8/2026 21:47,613,The Ruby Sea
+,-147.4,94.5,751.7,TRUE,Seemingly Special Timeworn Map,-147.8,9.5,752.1,3/8/2026 15:42,613,The Ruby Sea
+,-126.1,-190.6,-155.1,TRUE,Timeworn Thief's Map,-124.3,-192.1,-156.4,3/8/2026 21:22,613,The Ruby Sea
+,-28.2,3,-758.4,TRUE,Timeworn Gaganaskin Map,-38.2,3.8,-757.3,3/8/2026 20:00,613,The Ruby Sea
+,77.6,15.9,576.7,TRUE,Timeworn Gaganaskin Map,77.6,15.9,576.6,3/8/2026 20:04,613,The Ruby Sea
+,189,-112.4,69,TRUE,Timeworn Thief's Map,188,-125.7,71,3/8/2026 21:52,613,The Ruby Sea
+,315.4,57.5,426.9,TRUE,Seemingly Special Timeworn Map,314.9,1.2,427.6,3/8/2026 13:52,613,The Ruby Sea
+,356.7,-74.8,-337.1,TRUE,Timeworn Thief's Map,356.7,-74.8,-337.1,3/9/2026 12:54,613,The Ruby Sea
+,436.2,16.2,849,TRUE,Timeworn Gaganaskin Map,436,16.3,849.3,3/8/2026 20:03,613,The Ruby Sea
+,456.3,8.1,199,TRUE,Seemingly Special Timeworn Map,456.3,1,198.9,3/8/2026 12:49,613,The Ruby Sea
+,500.2,38.3,59.9,TRUE,Timeworn Gaganaskin Map,499.9,38.3,60,3/8/2026 20:02,613,The Ruby Sea
+,544.3,57.8,-628.1,TRUE,Seemingly Special Timeworn Map,543.5,105.8,-628.8,3/8/2026 16:07,613,The Ruby Sea
+,570.9,70.4,-151.5,TRUE,Timeworn Gazelleskin Map,571.7,70.6,-151.4,3/8/2026 20:33,613,The Ruby Sea
+,651.5,-100.6,441.2,TRUE,Timeworn Thief's Map,650.4,-106.3,443,3/8/2026 21:45,613,The Ruby Sea
+,747,46.2,486.3,TRUE,Timeworn Gaganaskin Map,734.7,45.8,486.2,3/8/2026 20:03,613,The Ruby Sea
+,847.4,48.1,-134,TRUE,Timeworn Gaganaskin Map,847.5,48.1,-134,3/8/2026 20:02,613,The Ruby Sea
+,-793.2,-90,-763.9,TRUE,Timeworn Dragonskin Map,-793.7,-90,-764.1,3/8/2026 19:36,401,The Sea of Clouds
+,-633.5,-207.3,206.1,TRUE,Timeworn Wyvernskin Map,-633.6,-207.3,206.1,3/8/2026 18:46,401,The Sea of Clouds
+,-605.1,-230.2,827.6,TRUE,Timeworn Dragonskin Map,-605.3,-230.2,828.1,3/8/2026 19:41,401,The Sea of Clouds
+,-602,-59.1,-231.4,TRUE,Timeworn Wyvernskin Map,-602.2,-59.2,-230.8,3/8/2026 18:28,401,The Sea of Clouds
+,-450.2,-56,-601.3,TRUE,Timeworn Wyvernskin Map,-450.2,-56,-601.3,3/8/2026 18:27,401,The Sea of Clouds
+,-436.1,198.3,-46.2,TRUE,Timeworn Wyvernskin Map,-436.2,198.3,-46.3,3/8/2026 18:28,401,The Sea of Clouds
+,-407.2,-154.2,217.9,TRUE,Timeworn Dragonskin Map,-407.3,-154.2,218.1,3/8/2026 19:30,401,The Sea of Clouds
+,-265.6,94,-292.2,TRUE,Timeworn Dragonskin Map,-265.5,94,-292.5,3/8/2026 19:43,401,The Sea of Clouds
+,-183.6,-166,619.4,TRUE,Timeworn Dragonskin Map,-184.5,-164.7,617.8,3/8/2026 19:30,401,The Sea of Clouds
+,-95.1,9.1,-861.2,TRUE,Timeworn Dragonskin Map,-95.1,9.1,-861.2,3/8/2026 19:37,401,The Sea of Clouds
+,-58.7,-137,479.5,TRUE,Timeworn Dragonskin Map,-58.2,-137,479.1,3/8/2026 19:30,401,The Sea of Clouds
+,13.8,12.8,-589,TRUE,Timeworn Dragonskin Map,13.7,12.8,-588.9,3/8/2026 19:28,401,The Sea of Clouds
+,226.9,-121.6,652.8,TRUE,Timeworn Wyvernskin Map,226.8,-121.6,653,3/8/2026 18:31,401,The Sea of Clouds
+,263.1,109.9,34.3,TRUE,Timeworn Wyvernskin Map,263.5,109.8,34.3,3/8/2026 18:29,401,The Sea of Clouds
+,331.1,108.5,77.7,TRUE,Timeworn Dragonskin Map,331.4,108.5,77.4,3/8/2026 19:31,401,The Sea of Clouds
+,455.9,112.1,-182.2,TRUE,Timeworn Dragonskin Map,455.9,112.1,-182.1,3/8/2026 19:32,401,The Sea of Clouds
+,630.9,-156.1,742.6,TRUE,Timeworn Wyvernskin Map,631.7,-156.3,742.8,3/8/2026 18:31,401,The Sea of Clouds
+,638.8,-98.8,-604.8,TRUE,Timeworn Wyvernskin Map,638.8,-98.8,-604.8,3/8/2026 18:49,401,The Sea of Clouds
+,729.1,-11.4,-350.4,TRUE,Timeworn Wyvernskin Map,728.9,-11.4,-349.9,3/8/2026 18:51,401,The Sea of Clouds
+,742.9,19.6,-89.3,TRUE,Timeworn Wyvernskin Map,743.1,19.6,-89.3,3/8/2026 18:30,401,The Sea of Clouds
+,-441.8,167.7,-491.4,TRUE,Timeworn Zonureskin Map,-441.8,167.7,-491.4,3/12/2026 18:59,818,The Tempest
 ,-380,122.4,-324.7,TRUE,Timeworn Zonureskin Map,-380.2,122.4,-324.8,3/12/2026 18:58,818,The Tempest
 ,-263.9,125.5,-146.4,TRUE,Timeworn Zonureskin Map,-263.7,125.5,-146.1,3/12/2026 18:58,818,The Tempest
-,-441.8,167.7,-491.4,TRUE,Timeworn Zonureskin Map,-441.8,167.7,-491.4,3/12/2026 18:59,818,The Tempest
+,-130,304.8,10,TRUE,Timeworn Gliderskin Map,-130.2,304.8,10,3/12/2026 17:54,818,The Tempest
 ,-120,413.1,-660,TRUE,Timeworn Zonureskin Map,-119.9,413.2,-660.1,3/12/2026 18:59,818,The Tempest
+,130,198.9,-90,TRUE,Timeworn Gliderskin Map,126.1,200.6,-88.8,3/12/2026 17:57,818,The Tempest
+,180,281.7,70,TRUE,Timeworn Gliderskin Map,179.7,281.7,69.9,3/12/2026 17:53,818,The Tempest
 ,200,363.3,-500,TRUE,Timeworn Zonureskin Map,199.8,363.4,-500.1,3/12/2026 19:00,818,The Tempest
-,793,414,-184.8,TRUE,Timeworn Zonureskin Map,800.6,414.3,-181.1,3/12/2026 19:01,818,The Tempest
-,556.6,446,-814.6,TRUE,Timeworn Zonureskin Map,556.6,446,-814.5,3/12/2026 19:02,818,The Tempest
+,230.8,412.5,-802.1,TRUE,Timeworn Gliderskin Map,230.7,412.6,-802.3,3/12/2026 17:21,818,The Tempest
+,350,-229.8,430,TRUE,Timeworn Gliderskin Map,350,-229.8,430,3/12/2026 17:47,818,The Tempest
 ,433.9,357.8,-25.6,TRUE,Timeworn Zonureskin Map,433.9,357.8,-25.6,3/12/2026 19:22,818,The Tempest
-,271.6,-10.7,74.7,TRUE,Timeworn Saigaskin Map,271.5,-10.7,74.7,3/12/2026 19:25,956,Labyrinthos
-,-658.9,1.1,-151.2,TRUE,Timeworn Saigaskin Map,-659,1.1,-151.2,3/12/2026 19:26,956,Labyrinthos
-,154.5,-5.2,637.1,TRUE,Timeworn Saigaskin Map,154.9,-5.2,637.5,3/12/2026 19:27,956,Labyrinthos
-,-479.8,-23.6,741.6,TRUE,Timeworn Saigaskin Map,-480,-23.6,741.6,3/12/2026 19:28,956,Labyrinthos
-,-343.2,176.3,-707.3,TRUE,Timeworn Saigaskin Map,-343.2,176.4,-707.7,3/12/2026 19:31,956,Labyrinthos
-,510.5,104.9,77.6,TRUE,Timeworn Saigaskin Map,510.7,104.9,77.7,3/12/2026 19:32,956,Labyrinthos
-,-57.4,78.5,-499.4,TRUE,Timeworn Saigaskin Map,-57.6,78.5,-499.6,3/12/2026 19:33,956,Labyrinthos
-,434.1,102.3,-272.8,TRUE,Timeworn Saigaskin Map,434.7,102.3,-272.5,3/12/2026 19:34,956,Labyrinthos
-,292.1,21.5,116.1,TRUE,Timeworn Saigaskin Map,291.9,21.5,116.8,3/12/2026 19:36,957,Thavnair
-,-131.1,4.1,554.4,TRUE,Timeworn Saigaskin Map,-131.5,4.1,554.8,3/12/2026 19:37,957,Thavnair
-,423.1,8.5,356.2,TRUE,Timeworn Saigaskin Map,423.5,8.5,356.1,3/12/2026 19:38,957,Thavnair
-,-571.5,9.8,-235.1,TRUE,Timeworn Saigaskin Map,-572,9.8,-235.4,3/12/2026 19:39,957,Thavnair
-,134.8,77,-664.8,TRUE,Timeworn Saigaskin Map,134.9,77,-664.8,3/12/2026 19:40,957,Thavnair
-,-116.2,74.6,-431.3,TRUE,Timeworn Saigaskin Map,-116.1,74.7,-431.4,3/12/2026 19:40,957,Thavnair
-,146.6,16.2,-491.1,TRUE,Timeworn Saigaskin Map,146.6,16.2,-491.1,3/12/2026 19:41,957,Thavnair
-,-40.9,55.9,68.8,TRUE,Timeworn Saigaskin Map,-40.9,55.9,68.8,3/12/2026 19:42,957,Thavnair
-,-695.7,23.1,-621.3,TRUE,Timeworn Saigaskin Map,-695.7,23.1,-621.5,3/12/2026 19:45,958,Garlemald
-,127.3,-13.7,326.4,TRUE,Timeworn Saigaskin Map,127.3,-13.7,326.4,3/12/2026 19:46,958,Garlemald
-,-163.7,10.6,-82.9,TRUE,Timeworn Saigaskin Map,-163.7,10.6,-82.8,3/12/2026 19:47,958,Garlemald
-,553.7,11.8,-805.8,TRUE,Timeworn Saigaskin Map,553.6,11.8,-805.7,3/12/2026 19:48,958,Garlemald
-,389.6,-19.5,374,TRUE,Timeworn Saigaskin Map,389.1,-18.7,379.3,3/12/2026 19:50,958,Garlemald
-,234.5,6.2,-4.7,TRUE,Timeworn Saigaskin Map,234.5,6.2,-4.5,3/12/2026 19:50,958,Garlemald
-,-179.9,6.8,587.7,TRUE,Timeworn Saigaskin Map,-179.8,6.8,587.6,3/12/2026 19:51,958,Garlemald
-,-413.8,17.1,51.7,TRUE,Timeworn Saigaskin Map,-413.7,17.1,51.9,3/12/2026 19:52,958,Garlemald
-,390.7,136.4,799.8,TRUE,Timeworn Saigaskin Map,390.6,136.4,799.7,3/12/2026 19:54,959,Mare Lamentorum
-,167.9,36.4,240.4,TRUE,Timeworn Saigaskin Map,170,36.8,245.7,3/12/2026 19:55,959,Mare Lamentorum
-,-44.3,80.7,-49.7,TRUE,Timeworn Saigaskin Map,-44.4,80.7,-49.8,3/12/2026 19:56,959,Mare Lamentorum
-,-98.2,85.6,619.7,TRUE,Timeworn Saigaskin Map,-98,85.5,620.3,3/12/2026 19:56,959,Mare Lamentorum
-,393.1,113.7,508.4,TRUE,Timeworn Saigaskin Map,393.3,113.8,508.3,3/12/2026 19:57,959,Mare Lamentorum
-,-236.3,88.5,55.8,TRUE,Timeworn Saigaskin Map,-240,90.5,53.1,3/12/2026 19:58,959,Mare Lamentorum
-,689.1,144.2,127.5,TRUE,Timeworn Saigaskin Map,689.2,144.2,127.5,3/12/2026 19:59,959,Mare Lamentorum
-,174.3,118.5,-127.2,TRUE,Timeworn Saigaskin Map,173.9,118.5,-127.4,3/12/2026 20:00,959,Mare Lamentorum
-,32.5,273.3,-758.3,TRUE,Timeworn Saigaskin Map,32.3,273.4,-758.7,3/12/2026 20:01,960,Ultima Thule
-,264,289.7,-378.5,TRUE,Timeworn Saigaskin Map,263.9,289.7,-378.6,3/12/2026 20:02,960,Ultima Thule
-,-704.2,64.8,143.9,TRUE,Timeworn Saigaskin Map,-704.7,64.6,144.3,3/12/2026 20:03,960,Ultima Thule
-,-549.3,74.6,606.7,TRUE,Timeworn Saigaskin Map,-549.2,74.6,607,3/12/2026 20:04,960,Ultima Thule
-,-567.4,66.1,-72.6,TRUE,Timeworn Saigaskin Map,-567.5,66,-72.4,3/12/2026 20:05,960,Ultima Thule
-,24.5,57.1,462.4,TRUE,Timeworn Saigaskin Map,24.6,57.1,462.5,3/12/2026 20:05,960,Ultima Thule
-,505.6,296.8,-392.3,TRUE,Timeworn Saigaskin Map,506.7,299.1,-394.1,3/12/2026 20:07,960,Ultima Thule
-,-236.5,84,791.2,TRUE,Timeworn Saigaskin Map,-236.5,84,791.3,3/12/2026 20:08,960,Ultima Thule
-,-143.9,-23.9,-167.1,TRUE,Timeworn Kumbhiraskin Map,-143.8,-23.9,-167,3/12/2026 20:09,956,Labyrinthos
-,162.4,-24.7,410.1,TRUE,Timeworn Kumbhiraskin Map,162.7,-24.7,410.7,3/12/2026 20:09,956,Labyrinthos
-,-733.9,-2,-26.8,TRUE,Timeworn Kumbhiraskin Map,-734.3,-1.9,-27,3/12/2026 20:10,956,Labyrinthos
-,20.5,-6.5,805.5,TRUE,Timeworn Kumbhiraskin Map,20.5,-6.4,805.4,3/12/2026 20:12,956,Labyrinthos
-,138.4,80.7,-528.5,TRUE,Timeworn Kumbhiraskin Map,138.4,80.7,-528.3,3/12/2026 20:14,956,Labyrinthos
-,-651.6,-25.4,449.1,TRUE,Timeworn Kumbhiraskin Map,-651.5,-25.4,449,3/12/2026 20:15,956,Labyrinthos
-,518.3,164.4,-350.4,TRUE,Timeworn Kumbhiraskin Map,521.7,165.5,-352.8,3/12/2026 20:18,956,Labyrinthos
-,174.5,-19.5,16.7,TRUE,Timeworn Kumbhiraskin Map,174.5,-19.5,16.7,3/12/2026 20:19,956,Labyrinthos
-,268.3,6.6,373.2,TRUE,Timeworn Kumbhiraskin Map,268.2,6.6,373.4,3/12/2026 20:19,957,Thavnair
-,24.5,25.1,-21.5,TRUE,Timeworn Kumbhiraskin Map,24.6,25.1,-21.4,3/12/2026 20:20,957,Thavnair
-,-20,49.3,290.7,TRUE,Timeworn Kumbhiraskin Map,-20.1,49,291.2,3/12/2026 20:20,957,Thavnair
-,540.6,11,-352.6,TRUE,Timeworn Kumbhiraskin Map,540.6,11,-352.6,3/12/2026 20:21,957,Thavnair
-,-96.9,37.7,-362.7,TRUE,Timeworn Kumbhiraskin Map,-97.1,37.7,-362.7,3/12/2026 20:22,957,Thavnair
-,-332.7,8.9,259.6,TRUE,Timeworn Kumbhiraskin Map,-333,8.8,260.3,3/12/2026 20:23,957,Thavnair
-,-337.2,57.9,-677.8,TRUE,Timeworn Kumbhiraskin Map,-337.2,57.9,-678.3,3/12/2026 20:24,957,Thavnair
-,283.3,8.4,-626.7,TRUE,Timeworn Kumbhiraskin Map,283.4,8.4,-626.7,3/12/2026 20:25,957,Thavnair
-,195.7,23.6,-451.2,TRUE,Timeworn Kumbhiraskin Map,195.1,23.6,-451.3,3/12/2026 20:26,958,Garlemald
-,639.4,15.8,-574.9,TRUE,Timeworn Kumbhiraskin Map,639.5,15.9,-574.9,3/12/2026 20:26,958,Garlemald
-,-253.4,10.8,-464.5,TRUE,Timeworn Kumbhiraskin Map,-253.4,10.8,-464.5,3/12/2026 20:28,958,Garlemald
-,649.2,13.3,-207.9,TRUE,Timeworn Kumbhiraskin Map,649.9,13.5,-207.7,3/12/2026 20:29,958,Garlemald
-,-265.4,12.9,-180.4,TRUE,Timeworn Kumbhiraskin Map,-265.4,12.9,-180.4,3/12/2026 20:30,958,Garlemald
-,-482,45.7,212.2,TRUE,Timeworn Kumbhiraskin Map,-482.1,45.8,212.4,3/12/2026 20:30,958,Garlemald
-,335.7,-8.8,250.5,TRUE,Timeworn Kumbhiraskin Map,336.4,-8.8,250.6,3/12/2026 20:31,958,Garlemald
-,393.7,-18.8,697.7,TRUE,Timeworn Kumbhiraskin Map,393.8,-18.8,698.2,3/12/2026 20:32,958,Garlemald
-,668.3,146,423.1,TRUE,Timeworn Kumbhiraskin Map,668.2,146,423.1,3/12/2026 20:33,959,Mare Lamentorum
-,210.7,83.6,592.5,TRUE,Timeworn Kumbhiraskin Map,210.4,83.7,592.6,3/12/2026 20:34,959,Mare Lamentorum
-,-217.1,122.7,-103.7,TRUE,Timeworn Kumbhiraskin Map,-217.3,122.9,-104,3/12/2026 20:35,959,Mare Lamentorum
-,-134.1,62.3,213.6,TRUE,Timeworn Kumbhiraskin Map,-134.2,60.7,207.2,3/12/2026 20:35,959,Mare Lamentorum
-,-463.6,129.3,258.8,TRUE,Timeworn Kumbhiraskin Map,-463.4,129.3,258.8,3/12/2026 20:36,959,Mare Lamentorum
-,-278.8,117,648.8,TRUE,Timeworn Kumbhiraskin Map,-278.8,117,648.8,3/12/2026 20:36,959,Mare Lamentorum
-,451.9,103.6,174.8,TRUE,Timeworn Kumbhiraskin Map,450.8,103.3,171.5,3/12/2026 20:37,959,Mare Lamentorum
-,66.3,111.3,741.3,TRUE,Timeworn Kumbhiraskin Map,66.1,111.5,741.6,3/12/2026 20:38,959,Mare Lamentorum
-,264.1,391.6,701.9,TRUE,Timeworn Kumbhiraskin Map,263.7,391.6,702.5,3/12/2026 20:39,960,Ultima Thule
-,-0.8,61.7,744.2,TRUE,Timeworn Kumbhiraskin Map,-1.2,61.7,744.3,3/12/2026 20:39,960,Ultima Thule
+,490,379.6,-470,TRUE,Timeworn Gliderskin Map,490.1,379.6,-469.8,3/12/2026 17:56,818,The Tempest
+,556.6,446,-814.6,TRUE,Timeworn Zonureskin Map,556.6,446,-814.5,3/12/2026 19:02,818,The Tempest
+,708.7,393.4,-296.6,TRUE,Timeworn Gliderskin Map,709,393.4,-296.2,3/12/2026 17:56,818,The Tempest
+,740,403.3,50,TRUE,Timeworn Gliderskin Map,739.8,403.3,50,3/12/2026 17:55,818,The Tempest
+,793,414,-184.8,TRUE,Timeworn Zonureskin Map,800.6,414.3,-181.1,3/12/2026 19:01,818,The Tempest
 ,-765.3,68.8,-119.9,TRUE,Timeworn Kumbhiraskin Map,-765.5,68.8,-120.1,3/12/2026 20:41,960,Ultima Thule
-,408.6,286.2,-603.2,TRUE,Timeworn Kumbhiraskin Map,408.6,286.2,-603.3,3/12/2026 20:43,960,Ultima Thule
-,214.7,234.8,-211.2,TRUE,Timeworn Kumbhiraskin Map,214.6,234.8,-211,3/12/2026 20:44,960,Ultima Thule
+,-704.2,64.8,143.9,TRUE,Timeworn Saigaskin Map,-704.7,64.6,144.3,3/12/2026 20:03,960,Ultima Thule
 ,-665.9,81,462.8,TRUE,Timeworn Kumbhiraskin Map,-666.3,81.1,463.1,3/12/2026 20:45,960,Ultima Thule
-,-178.1,73.4,277.1,TRUE,Timeworn Kumbhiraskin Map,-178.1,73.4,277.1,3/12/2026 20:46,960,Ultima Thule
+,-567.4,66.1,-72.6,TRUE,Timeworn Saigaskin Map,-567.5,66,-72.4,3/12/2026 20:05,960,Ultima Thule
+,-549.3,74.6,606.7,TRUE,Timeworn Saigaskin Map,-549.2,74.6,607,3/12/2026 20:04,960,Ultima Thule
 ,-436.6,264.5,-403.3,TRUE,Timeworn Kumbhiraskin Map,-435,265.5,-398.5,3/12/2026 20:47,960,Ultima Thule
-,286.7,7,142.8,TRUE,Timeworn Ophiotauroskin Map,286.8,7,142.8,3/12/2026 20:48,961,Elpis
-,54,7.3,158.1,TRUE,Timeworn Ophiotauroskin Map,54,7.2,158.1,3/12/2026 20:49,961,Elpis
-,-230.3,-44.7,478.5,TRUE,Timeworn Ophiotauroskin Map,-226.5,-43.9,474.5,3/12/2026 20:49,961,Elpis
-,378.4,147.7,-196.2,TRUE,Timeworn Ophiotauroskin Map,378.5,147.7,-196.3,3/12/2026 20:54,961,Elpis
-,422.3,150.7,-598.2,TRUE,Timeworn Ophiotauroskin Map,422.3,150.7,-598.3,3/12/2026 20:55,961,Elpis
-,-423.9,312.2,-635.2,TRUE,Timeworn Ophiotauroskin Map,-424.1,312.2,-635.2,3/12/2026 20:57,961,Elpis
-,-480.3,-33.8,584.6,TRUE,Timeworn Ophiotauroskin Map,-480.3,-33.8,584.4,3/12/2026 20:59,961,Elpis
-,784.1,152.1,-145.1,TRUE,Timeworn Ophiotauroskin Map,784.3,152.2,-145.2,3/12/2026 21:08,961,Elpis
-,32.4,3.1,279.2,TRUE,Timeworn Loboskin Map,39.6,3.5,282.8,3/12/2026 21:09,1190,Shaaloani
-,-736.1,41.9,-312.8,TRUE,Timeworn Loboskin Map,-736.2,41.9,-312.9,3/12/2026 21:10,1190,Shaaloani
-,-375.5,9.9,186.5,TRUE,Timeworn Loboskin Map,-375.2,9.9,186.9,3/12/2026 21:11,1190,Shaaloani
-,-183.5,-19.1,587.2,TRUE,Timeworn Loboskin Map,-183.3,-19.1,587.7,3/12/2026 21:12,1190,Shaaloani
-,-200.5,24.9,-591.8,TRUE,Timeworn Loboskin Map,-200.5,25,-592,3/12/2026 21:14,1190,Shaaloani
-,659.9,21.6,239.5,TRUE,Timeworn Loboskin Map,660.1,21.6,239.7,3/12/2026 21:15,1190,Shaaloani
-,24.9,3.1,-329.4,TRUE,Timeworn Loboskin Map,25,3.2,-329.3,3/12/2026 21:16,1190,Shaaloani
-,700.2,-13.2,-521.9,TRUE,Timeworn Loboskin Map,700.3,-13.2,-521.9,3/12/2026 21:17,1190,Shaaloani
-,-148,16.8,658.9,TRUE,Timeworn Loboskin Map,-148,16.8,659.1,3/12/2026 21:19,1191,Heritage Found
-,235.3,90.9,703.8,TRUE,Timeworn Loboskin Map,235.4,90.9,703.8,3/12/2026 21:20,1191,Heritage Found
-,197.9,94.9,183.8,TRUE,Timeworn Loboskin Map,197.5,96.6,179.9,3/12/2026 21:20,1191,Heritage Found
-,-537.9,5.9,96.9,TRUE,Timeworn Loboskin Map,-538.2,5.8,97,3/12/2026 21:21,1191,Heritage Found
-,-132.6,24.1,-790.1,TRUE,Timeworn Loboskin Map,-132.5,24.1,-790.2,3/12/2026 21:23,1191,Heritage Found
-,-280.5,61,-276.5,TRUE,Timeworn Loboskin Map,-280.5,61,-276.7,3/12/2026 21:23,1191,Heritage Found
-,222.2,84.9,-426,TRUE,Timeworn Loboskin Map,222.1,84.9,-426,3/12/2026 21:24,1191,Heritage Found
-,643.1,125.9,-580,TRUE,Timeworn Loboskin Map,643,125.8,-580,3/12/2026 21:25,1191,Heritage Found
-,-558.4,-8.9,-489.5,TRUE,Timeworn Loboskin Map,-558.2,-8.9,-489.5,3/12/2026 21:27,1187,Urqopacha
-,-117.6,-73.8,-144.1,TRUE,Timeworn Loboskin Map,-111.7,-73.3,-138.7,3/12/2026 21:28,1187,Urqopacha
-,13.5,10.5,117.3,TRUE,Timeworn Loboskin Map,13.7,10.5,117.7,3/12/2026 21:29,1187,Urqopacha
-,314.9,-156.1,-560.5,TRUE,Timeworn Loboskin Map,312,-155.5,-554.8,3/12/2026 21:29,1187,Urqopacha
-,653.2,121.3,225.2,TRUE,Timeworn Loboskin Map,653.5,121.3,225.8,3/12/2026 21:31,1187,Urqopacha
-,490.6,-94,-22.2,TRUE,Timeworn Loboskin Map,490.4,-94.1,-22.5,3/12/2026 21:31,1187,Urqopacha
-,-375.1,90.2,38.5,TRUE,Timeworn Loboskin Map,-375.2,90.2,38.5,3/12/2026 21:32,1187,Urqopacha
+,-236.5,84,791.2,TRUE,Timeworn Saigaskin Map,-236.5,84,791.3,3/12/2026 20:08,960,Ultima Thule
+,-178.1,73.4,277.1,TRUE,Timeworn Kumbhiraskin Map,-178.1,73.4,277.1,3/12/2026 20:46,960,Ultima Thule
+,-0.8,61.7,744.2,TRUE,Timeworn Kumbhiraskin Map,-1.2,61.7,744.3,3/12/2026 20:39,960,Ultima Thule
+,24.5,57.1,462.4,TRUE,Timeworn Saigaskin Map,24.6,57.1,462.5,3/12/2026 20:05,960,Ultima Thule
+,32.5,273.3,-758.3,TRUE,Timeworn Saigaskin Map,32.3,273.4,-758.7,3/12/2026 20:01,960,Ultima Thule
+,214.7,234.8,-211.2,TRUE,Timeworn Kumbhiraskin Map,214.6,234.8,-211,3/12/2026 20:44,960,Ultima Thule
+,264.1,391.6,701.9,TRUE,Timeworn Kumbhiraskin Map,263.7,391.6,702.5,3/12/2026 20:39,960,Ultima Thule
+,264,289.7,-378.5,TRUE,Timeworn Saigaskin Map,263.9,289.7,-378.6,3/12/2026 20:02,960,Ultima Thule
+,408.6,286.2,-603.2,TRUE,Timeworn Kumbhiraskin Map,408.6,286.2,-603.3,3/12/2026 20:43,960,Ultima Thule
+,505.6,296.8,-392.3,TRUE,Timeworn Saigaskin Map,506.7,299.1,-394.1,3/12/2026 20:07,960,Ultima Thule
+,-603.5,-3.4,14.9,TRUE,Seemingly Special Timeworn Map,-603.7,-1.5,14.8,3/8/2026 6:14,139,Upper La Noscea
+,-586.1,-1.9,-12.9,TRUE,Timeworn Toadskin Map,-586.5,-1.9,-12.9,3/8/2026 3:12,139,Upper La Noscea
+,-488.4,-2.4,17.8,TRUE,Timeworn Boarskin Map,-488.4,-2.4,17.8,3/8/2026 5:22,139,Upper La Noscea
+,-463.1,-11.8,220,TRUE,Timeworn Toadskin Map,-463.5,-11.7,220,3/8/2026 3:07,139,Upper La Noscea
+,-394.4,37.3,22.4,TRUE,Timeworn Peisteskin Map,-394.2,37.4,22.3,3/8/2026 6:17,139,Upper La Noscea
+,-365.6,48.1,-13.8,TRUE,Mysterious Map,-365.7,47.3,-13.6,3/8/2026 15:52,139,Upper La Noscea
+,-370.5,-0.2,195.1,TRUE,Timeworn Goatskin Map,-363.8,0.6,194.1,3/7/2026 19:34,139,Upper La Noscea
+,-350.4,-0.8,143.9,TRUE,Timeworn Leather Map,-350.5,-0.8,143.9,3/7/2026 18:46,139,Upper La Noscea
+,258.8,-2.5,74.6,TRUE,Unhidden Leather Map,259,-2.6,74.5,3/8/2026 16:26,139,Upper La Noscea
+,291.3,41.1,-190.3,TRUE,Timeworn Peisteskin Map,291.2,41.1,-190.4,3/8/2026 6:18,139,Upper La Noscea
+,293.9,-2.6,110.6,TRUE,Timeworn Goatskin Map,293.7,-2.6,110.6,3/7/2026 19:36,139,Upper La Noscea
+,323.1,-2.7,7.3,TRUE,Timeworn Boarskin Map,323.1,-2.7,7.2,3/8/2026 5:21,139,Upper La Noscea
+,334.4,-1.5,204,TRUE,Thorne Dynasty Map,334.5,-1.5,203.8,3/8/2026 16:50,139,Upper La Noscea
+,335.4,11.5,-62.7,TRUE,Unhidden Leather Map,335.4,11.5,-62.7,3/8/2026 16:25,139,Upper La Noscea
+,346.5,27,-151.2,TRUE,Timeworn Toadskin Map,340.4,28.3,-155.1,3/8/2026 3:10,139,Upper La Noscea
+,366.3,-3.2,26.3,TRUE,Thorne Dynasty Map,366.3,-3.4,26.2,3/8/2026 16:51,139,Upper La Noscea
+,414.9,-1.4,184.3,TRUE,Timeworn Leather Map,415.3,-1.5,184.4,3/7/2026 18:47,139,Upper La Noscea
+,454.9,-2.7,170.4,TRUE,Mysterious Map,454.7,-2.8,170.5,3/8/2026 15:53,139,Upper La Noscea
+,585.4,-1.9,121.3,TRUE,Timeworn Goatskin Map,586.1,-2.1,121.2,3/7/2026 19:35,139,Upper La Noscea
+,688.5,-1,163.2,TRUE,Timeworn Leather Map,689,-1,163.3,3/7/2026 18:45,139,Upper La Noscea
+,731.6,4.2,170.5,TRUE,Timeworn Boarskin Map,731.6,4.2,170.5,3/8/2026 5:23,139,Upper La Noscea
 ,-775.3,54.7,123.8,TRUE,Timeworn Loboskin Map,-775.5,54.7,123.8,3/12/2026 21:33,1187,Urqopacha
-,854.7,21.9,-13,TRUE,Timeworn Loboskin Map,854.7,21.9,-13.1,3/12/2026 21:35,1188,Kozama'uka
-,206.6,9.2,-713.3,TRUE,Timeworn Loboskin Map,206.5,9.2,-713.4,3/12/2026 21:36,1188,Kozama'uka
-,-186.4,0.5,-105.9,TRUE,Timeworn Loboskin Map,-183.6,1.4,-110.4,3/12/2026 21:37,1188,Kozama'uka
-,-504.3,0.5,-683.3,TRUE,Timeworn Loboskin Map,-504.2,0.4,-683.1,3/12/2026 21:38,1188,Kozama'uka
-,723.2,117.9,362.5,TRUE,Timeworn Loboskin Map,723.2,117.9,362.5,3/12/2026 22:06,1188,Kozama'uka
-,248.5,115.1,741.3,TRUE,Timeworn Loboskin Map,248,115.2,741.7,3/12/2026 22:07,1188,Kozama'uka
-,153,111.8,238.9,TRUE,Timeworn Loboskin Map,152.9,111.8,238.4,3/12/2026 22:08,1188,Kozama'uka
-,-716,132.4,232.5,TRUE,Timeworn Loboskin Map,-713.7,134.3,232.5,3/12/2026 22:09,1188,Kozama'uka
-,127.7,10.7,-535,TRUE,Timeworn Loboskin Map,127.7,10.7,-535,3/12/2026 22:11,1189,Yak T'el
-,339.1,18.1,-318.1,TRUE,Timeworn Loboskin Map,339.3,18,-317.9,3/12/2026 22:11,1189,Yak T'el
-,-607.8,-163.9,279.5,TRUE,Timeworn Loboskin Map,-608.1,-163.9,279.5,3/12/2026 22:43,1189,Yak T'el
-,-222.7,7,-65.3,TRUE,Timeworn Loboskin Map,-222.4,7.1,-65.7,3/12/2026 22:44,1189,Yak T'el
-,-496.2,41.2,-648.3,TRUE,Timeworn Loboskin Map,-495.2,42.9,-643.9,3/12/2026 22:45,1189,Yak T'el
-,351.3,-158.9,219.4,TRUE,Timeworn Loboskin Map,351.5,-158.8,219.6,3/12/2026 22:48,1189,Yak T'el
-,799.1,39.6,-133.5,TRUE,Timeworn Loboskin Map,799.4,39.7,-133.8,3/12/2026 22:49,1189,Yak T'el
-,-371.9,-161.4,816.8,TRUE,Timeworn Loboskin Map,-378.2,-160.2,818.5,3/12/2026 23:03,1189,Yak T'el
-,-163.1,16.4,-19.5,TRUE,Timeworn Br'aaxskin Map,-163.2,16.4,-19.6,3/12/2026 23:03,1190,Shaaloani
-,-444.1,28.5,-352.6,TRUE,Timeworn Br'aaxskin Map,-444.4,28.5,-353,3/12/2026 23:04,1190,Shaaloani
-,-88.2,-17.9,652.7,TRUE,Timeworn Br'aaxskin Map,-88.2,-17.9,652.8,3/12/2026 23:05,1190,Shaaloani
-,523.5,16.1,572.3,TRUE,Timeworn Br'aaxskin Map,524.1,16.1,572.2,3/12/2026 23:06,1190,Shaaloani
-,393.2,-15,-652.2,TRUE,Timeworn Br'aaxskin Map,392.1,-14.6,-660.3,3/12/2026 23:07,1190,Shaaloani
-,-145.8,15.4,-490.9,TRUE,Timeworn Br'aaxskin Map,-146.3,15.4,-490.7,3/12/2026 23:08,1190,Shaaloani
-,704.5,-14.5,-224.9,TRUE,Timeworn Br'aaxskin Map,705,-14.5,-224.8,3/12/2026 23:09,1190,Shaaloani
-,208.8,5,-85.2,TRUE,Timeworn Br'aaxskin Map,208.6,5,-85.1,3/12/2026 23:10,1190,Shaaloani
-,239.1,115.8,467.9,TRUE,Timeworn Br'aaxskin Map,239,115.8,468,3/12/2026 23:10,1191,Heritage Found
-,-231,-5.1,717.2,TRUE,Timeworn Br'aaxskin Map,-231,-5.1,717.2,3/12/2026 23:11,1191,Heritage Found
-,-211.3,28.8,38,TRUE,Timeworn Br'aaxskin Map,-211.3,28.9,37.6,3/12/2026 23:12,1191,Heritage Found
-,-241.6,21.3,-419.3,TRUE,Timeworn Br'aaxskin Map,-242.6,21.2,-426.9,3/12/2026 23:12,1191,Heritage Found
-,719.3,148,205.6,TRUE,Timeworn Br'aaxskin Map,719.7,148,205.8,3/13/2026 2:12,1191,Heritage Found
-,-623.5,21,-11.4,TRUE,Timeworn Br'aaxskin Map,-623.4,21,-11.4,3/13/2026 2:15,1191,Heritage Found
-,34.5,92.4,-117,TRUE,Timeworn Br'aaxskin Map,34.7,92.4,-117.1,3/13/2026 2:15,1191,Heritage Found
-,484.9,131.4,-653.3,TRUE,Timeworn Br'aaxskin Map,485.1,131.4,-653.5,3/13/2026 2:16,1191,Heritage Found
-,639.2,123.4,380,TRUE,Timeworn Br'aaxskin Map,643.4,124,374.7,3/13/2026 2:17,1187,Urqopacha
+,-558.4,-8.9,-489.5,TRUE,Timeworn Loboskin Map,-558.2,-8.9,-489.5,3/12/2026 21:27,1187,Urqopacha
 ,-391.7,-45.4,-365,TRUE,Timeworn Br'aaxskin Map,-391.8,-45.4,-365.1,3/13/2026 2:18,1187,Urqopacha
-,14.7,23.9,228,TRUE,Timeworn Br'aaxskin Map,14.8,23.9,228.2,3/13/2026 2:19,1187,Urqopacha
+,-375.1,90.2,38.5,TRUE,Timeworn Loboskin Map,-375.2,90.2,38.5,3/12/2026 21:32,1187,Urqopacha
 ,-286.6,69.4,457.8,TRUE,Timeworn Br'aaxskin Map,-286.5,69.3,457.7,3/13/2026 2:20,1187,Urqopacha
 ,-228.9,62.6,96.7,TRUE,Timeworn Br'aaxskin Map,-228.9,62.6,96.4,3/13/2026 2:20,1187,Urqopacha
+,-117.6,-73.8,-144.1,TRUE,Timeworn Loboskin Map,-111.7,-73.3,-138.7,3/12/2026 21:28,1187,Urqopacha
+,13.5,10.5,117.3,TRUE,Timeworn Loboskin Map,13.7,10.5,117.7,3/12/2026 21:29,1187,Urqopacha
+,14.7,23.9,228,TRUE,Timeworn Br'aaxskin Map,14.8,23.9,228.2,3/13/2026 2:19,1187,Urqopacha
+,314.9,-156.1,-560.5,TRUE,Timeworn Loboskin Map,312,-155.5,-554.8,3/12/2026 21:29,1187,Urqopacha
 ,373.8,63.8,130.1,TRUE,Timeworn Br'aaxskin Map,378.3,65.1,130.3,3/13/2026 2:21,1187,Urqopacha
+,490.6,-94,-22.2,TRUE,Timeworn Loboskin Map,490.4,-94.1,-22.5,3/12/2026 21:31,1187,Urqopacha
 ,638.5,109.3,560.2,TRUE,Timeworn Br'aaxskin Map,635.9,110.8,556.3,3/13/2026 2:22,1187,Urqopacha
-,771.1,41.2,-760,TRUE,Timeworn Br'aaxskin Map,771.1,41.2,-760,3/13/2026 2:23,1188,Kozama'uka
-,497.3,10.7,-326.1,TRUE,Timeworn Br'aaxskin Map,497.1,10.7,-325.8,3/13/2026 2:24,1188,Kozama'uka
-,-75,20.3,-724.8,TRUE,Timeworn Br'aaxskin Map,-75.3,20.3,-725,3/13/2026 2:25,1188,Kozama'uka
-,-727.4,61.4,-103.2,TRUE,Timeworn Br'aaxskin Map,-727.9,61.4,-102.7,3/13/2026 2:26,1188,Kozama'uka
-,-621.9,129.5,620.4,TRUE,Timeworn Br'aaxskin Map,-621.9,129.5,620.2,3/13/2026 2:27,1188,Kozama'uka
-,-129,118.7,51.6,TRUE,Timeworn Br'aaxskin Map,-128.9,118.7,51.5,3/13/2026 2:28,1188,Kozama'uka
-,824,23.4,11.7,TRUE,Timeworn Br'aaxskin Map,823.9,23.4,11.7,3/13/2026 2:29,1188,Kozama'uka
-,540.5,122.5,732.1,TRUE,Timeworn Br'aaxskin Map,540.5,122.5,732.1,3/13/2026 2:30,1188,Kozama'uka
-,64,-164.6,717.4,TRUE,Timeworn Br'aaxskin Map,56.5,-164.9,720.1,3/13/2026 2:31,1189,Yak T'el
-,-301.7,-169.5,268.9,TRUE,Timeworn Br'aaxskin Map,-301.8,-169.5,268.8,3/13/2026 2:32,1189,Yak T'el
+,639.2,123.4,380,TRUE,Timeworn Br'aaxskin Map,643.4,124,374.7,3/13/2026 2:17,1187,Urqopacha
+,653.2,121.3,225.2,TRUE,Timeworn Loboskin Map,653.5,121.3,225.8,3/12/2026 21:31,1187,Urqopacha
+,-459.3,-37.9,719,TRUE,Mysterious Map,-464.4,-37.8,717.5,3/8/2026 15:47,138,Western La Noscea
+,-343.5,-39.2,-220.8,TRUE,Timeworn Peisteskin Map,-343.7,-39.2,-220.8,3/8/2026 6:08,138,Western La Noscea
+,-300.5,-38.5,612.2,TRUE,Unhidden Leather Map,-300.5,-38.5,612.4,3/8/2026 16:24,138,Western La Noscea
+,-243.2,-38.2,485.7,TRUE,Timeworn Toadskin Map,-244,-38.4,491.7,3/8/2026 2:30,138,Western La Noscea
+,-236.2,-39.9,680,TRUE,Timeworn Boarskin Map,-235.9,-39.6,676.8,3/8/2026 5:20,138,Western La Noscea
+,-189.4,-42.1,-295,TRUE,Timeworn Peisteskin Map,-189.4,-42.2,-294.9,3/8/2026 6:07,138,Western La Noscea
+,-140.4,-32.7,-116.8,TRUE,Timeworn Peisteskin Map,-140.4,-32.7,-116.8,3/8/2026 6:07,138,Western La Noscea
+,-125,-24.4,51.2,TRUE,Timeworn Boarskin Map,-125,-24.4,51.2,3/8/2026 5:17,138,Western La Noscea
+,12.5,-23.2,101.1,TRUE,Timeworn Toadskin Map,12.3,-23.2,101.1,3/8/2026 3:05,138,Western La Noscea
+,90.2,-11.3,9,TRUE,Timeworn Goatskin Map,89.6,-11.3,9,3/7/2026 19:30,138,Western La Noscea
+,159.8,-11.9,106.2,TRUE,Timeworn Leather Map,155.1,-11.1,104.1,3/7/2026 18:44,138,Western La Noscea
+,52.4,-6.5,-36.6,TRUE,Unhidden Leather Map,251.7,-5.2,209.9,3/8/2026 16:25,138,Western La Noscea
+,263.2,-16,142.6,TRUE,Thorne Dynasty Map,263.2,-16,142.7,3/8/2026 16:49,138,Western La Noscea
+,322.3,-19.8,159.1,TRUE,Timeworn Toadskin Map,322.3,-19.8,159.2,3/8/2026 3:05,138,Western La Noscea
+,404.5,18.5,21.2,TRUE,Timeworn Goatskin Map,404.4,18.5,21.3,3/7/2026 19:29,138,Western La Noscea
+,451.3,5.3,277,TRUE,Timeworn Leather Map,451.8,5.4,277.3,3/7/2026 18:44,138,Western La Noscea
+,460,8.3,425.6,TRUE,Timeworn Boarskin Map,460,8.3,425.6,3/8/2026 5:19,138,Western La Noscea
+,565.3,39.4,301.5,TRUE,Mysterious Map,569.5,41.7,297.2,3/8/2026 15:49,138,Western La Noscea
+,611.5,8.7,440.6,TRUE,Thorne Dynasty Map,611.7,8.7,440.9,3/8/2026 16:50,138,Western La Noscea
+,638.6,40.3,333.2,TRUE,Timeworn Leather Map,628,40.3,330.7,3/7/2026 18:43,138,Western La Noscea
+,730.4,25.7,440.7,TRUE,Timeworn Goatskin Map,733.2,27.3,436.9,3/7/2026 19:33,138,Western La Noscea
+,-533.8,51.6,-778.5,TRUE,Timeworn Peisteskin Map,-533.7,51.6,-778.4,3/8/2026 6:22,140,Western Thanalan
+,-460.3,22.8,-474.6,TRUE,Timeworn Goatskin Map,-465.9,23,-474.6,3/7/2026 19:59,140,Western Thanalan
+,-362,15.8,-719.6,TRUE,Timeworn Toadskin Map,-362,15.8,-719.8,3/8/2026 4:32,140,Western Thanalan
+,-289.1,18.2,-180.3,TRUE,Timeworn Boarskin Map,-289.1,18.2,-180.1,3/8/2026 5:29,140,Western Thanalan
+,-276.5,15,-739,TRUE,Timeworn Peisteskin Map,-276.6,15,-738.8,3/8/2026 6:22,140,Western Thanalan
+,-250.3,15.8,-338.9,TRUE,Timeworn Leather Map,-250.3,15.8,-339,3/7/2026 18:51,140,Western Thanalan
+,-151,15.7,-248.8,TRUE,Timeworn Toadskin Map,-149.9,15.6,-249.2,3/8/2026 4:30,140,Western Thanalan
+,-130.1,46.4,385.6,TRUE,Unhidden Leather Map,-130.2,46.4,385.6,3/8/2026 16:29,140,Western Thanalan
+,-96.8,52.3,241.5,TRUE,Mysterious Map,-96.8,52.3,241.5,3/8/2026 15:56,140,Western Thanalan
+,-72,53.4,328.4,TRUE,Timeworn Peisteskin Map,-72.2,53.4,328.6,3/8/2026 6:25,140,Western Thanalan
+,-51.2,15.4,136.5,TRUE,Thorne Dynasty Map,-51.7,15.4,136.8,3/8/2026 16:54,140,Western Thanalan
+,7.7,21.3,90.2,TRUE,Mysterious Map,7.7,21.3,90.4,3/8/2026 15:55,140,Western Thanalan
+,27.7,51.5,212.6,TRUE,Timeworn Boarskin Map,27.7,51.5,212.6,3/8/2026 5:28,140,Western Thanalan
+,72.5,58,-25.1,TRUE,Timeworn Boarskin Map,72.6,58,-25.1,3/8/2026 5:28,140,Western Thanalan
+,91.6,16.6,129.5,TRUE,Timeworn Leather Map,91.6,16.6,129.6,3/7/2026 18:49,140,Western Thanalan
+,114.3,53.5,-137.5,TRUE,Unhidden Leather Map,114.3,53.5,-137.5,3/8/2026 16:28,140,Western Thanalan
+,140.4,57.2,270.1,TRUE,Timeworn Leather Map,140.4,57.2,270,3/7/2026 18:50,140,Western Thanalan
+,160.6,49.6,113.5,TRUE,Timeworn Goatskin Map,157.2,51.4,111.5,3/7/2026 20:00,140,Western Thanalan
+,202.6,55.5,-192.2,TRUE,Timeworn Toadskin Map,203,55.5,-192.2,3/8/2026 4:30,140,Western Thanalan
+,249.5,51.4,41.8,TRUE,Thorne Dynasty Map,249.8,51.4,41.9,3/8/2026 16:54,140,Western Thanalan
+,276.9,62.7,-220.1,TRUE,Timeworn Goatskin Map,270.2,63.5,-220.1,3/7/2026 19:45,140,Western Thanalan
 ,-790.4,31.8,-92.2,TRUE,Timeworn Br'aaxskin Map,-790.4,31.9,-92.2,3/13/2026 2:33,1189,Yak T'el
-,760.9,35.6,-448.5,TRUE,Timeworn Br'aaxskin Map,761,35.6,-448.5,3/13/2026 2:35,1189,Yak T'el
-,485.3,11.2,22.8,TRUE,Timeworn Br'aaxskin Map,485,11.3,23.3,3/13/2026 2:36,1189,Yak T'el
+,-607.8,-163.9,279.5,TRUE,Timeworn Loboskin Map,-608.1,-163.9,279.5,3/12/2026 22:43,1189,Yak T'el
 ,-511.3,-153.8,588.9,TRUE,Timeworn Br'aaxskin Map,-511.3,-153.8,589,3/13/2026 2:38,1189,Yak T'el
-,163.3,-159.9,-24.6,TRUE,Timeworn Br'aaxskin Map,163.4,-159.9,-24.6,3/13/2026 2:39,1189,Yak T'el
+,-496.2,41.2,-648.3,TRUE,Timeworn Loboskin Map,-495.2,42.9,-643.9,3/12/2026 22:45,1189,Yak T'el
+,-371.9,-161.4,816.8,TRUE,Timeworn Loboskin Map,-378.2,-160.2,818.5,3/12/2026 23:03,1189,Yak T'el
+,-301.7,-169.5,268.9,TRUE,Timeworn Br'aaxskin Map,-301.8,-169.5,268.8,3/13/2026 2:32,1189,Yak T'el
+,-222.7,7,-65.3,TRUE,Timeworn Loboskin Map,-222.4,7.1,-65.7,3/12/2026 22:44,1189,Yak T'el
 ,56.5,8.2,-781.7,TRUE,Timeworn Br'aaxskin Map,56.4,8.2,-782.2,3/13/2026 2:40,1189,Yak T'el
-,851.2,40.3,332.3,TRUE,Timeworn Gargantuaskin Map,851.3,40.3,332.7,3/13/2026 2:41,1192,Living Memory
-,678.9,7.7,694.9,TRUE,Timeworn Gargantuaskin Map,678.7,7.7,695.4,3/13/2026 2:42,1192,Living Memory
-,-61.1,38,81,TRUE,Timeworn Gargantuaskin Map,-66,38.5,75.5,3/13/2026 2:44,1192,Living Memory
-,480.7,25.2,-166.4,TRUE,Timeworn Gargantuaskin Map,480.7,25.2,-166.4,3/13/2026 2:44,1192,Living Memory
-,-147.3,38.3,-279.7,TRUE,Timeworn Gargantuaskin Map,-147.3,38.2,-279.7,3/13/2026 2:45,1192,Living Memory
-,-608.9,-5,-535.5,TRUE,Timeworn Gargantuaskin Map,-608.7,-5,-535.7,3/13/2026 2:46,1192,Living Memory
-,-549.7,-0.4,728.3,TRUE,Timeworn Gargantuaskin Map,-549.7,-0.4,728.6,3/13/2026 2:47,1192,Living Memory
-,179.3,39.9,-728.8,TRUE,Timeworn Gargantuaskin Map,172.9,39.3,-724,3/13/2026 2:58,1192,Living Memory
+,64,-164.6,717.4,TRUE,Timeworn Br'aaxskin Map,56.5,-164.9,720.1,3/13/2026 2:31,1189,Yak T'el
+,127.7,10.7,-535,TRUE,Timeworn Loboskin Map,127.7,10.7,-535,3/12/2026 22:11,1189,Yak T'el
+,163.3,-159.9,-24.6,TRUE,Timeworn Br'aaxskin Map,163.4,-159.9,-24.6,3/13/2026 2:39,1189,Yak T'el
+,339.1,18.1,-318.1,TRUE,Timeworn Loboskin Map,339.3,18,-317.9,3/12/2026 22:11,1189,Yak T'el
+,351.3,-158.9,219.4,TRUE,Timeworn Loboskin Map,351.5,-158.8,219.6,3/12/2026 22:48,1189,Yak T'el
+,485.3,11.2,22.8,TRUE,Timeworn Br'aaxskin Map,485,11.3,23.3,3/13/2026 2:36,1189,Yak T'el
+,760.9,35.6,-448.5,TRUE,Timeworn Br'aaxskin Map,761,35.6,-448.5,3/13/2026 2:35,1189,Yak T'el
+,799.1,39.6,-133.5,TRUE,Timeworn Loboskin Map,799.4,39.7,-133.8,3/12/2026 22:49,1189,Yak T'el
+,-662,-83.7,-240.7,TRUE,Timeworn Thief's Map,-662.2,-92.1,-241.1,3/8/2026 21:54,614,Yanxia
+,-614,-88.9,577.5,TRUE,Timeworn Thief's Map,-612.5,-97.2,577.2,3/8/2026 21:56,614,Yanxia
+,-475.6,-110.1,-613.9,TRUE,Timeworn Thief's Map,-476.1,-111.9,-614,3/9/2026 12:54,614,Yanxia
+,-467.6,14.2,-134.5,TRUE,Timeworn Gazelleskin Map,-467.4,14.2,-134.6,3/8/2026 20:34,614,Yanxia
+,-412.3,9.1,435.4,TRUE,Seemingly Special Timeworn Map,-412.7,45.1,436,3/8/2026 12:07,614,Yanxia
+,-273.4,40.3,301.7,TRUE,Timeworn Gaganaskin Map,-273.4,40.3,301.7,3/8/2026 20:15,614,Yanxia
+,-214.8,63.7,-306.9,TRUE,Timeworn Gaganaskin Map,-214.9,63.7,-306.9,3/8/2026 20:07,614,Yanxia
+,-72.7,69.2,-793,TRUE,Timeworn Gazelleskin Map,-72.8,69.2,-793,3/8/2026 20:35,614,Yanxia
+,-1.6,61.6,-638.5,TRUE,Timeworn Gaganaskin Map,-1.8,61.6,-638.6,3/8/2026 20:08,614,Yanxia
+,12.3,77.2,-378.4,TRUE,Timeworn Gazelleskin Map,12.4,77.3,-377.7,3/8/2026 20:35,614,Yanxia
+,37.6,69.9,317,TRUE,Seemingly Special Timeworn Map,37.5,4.7,316.9,3/8/2026 14:49,614,Yanxia
+,44.4,-47.1,677.1,TRUE,Timeworn Thief's Map,44.4,-0.6,677,3/8/2026 20:55,614,Yanxia
+,124.7,37.7,14.2,TRUE,Timeworn Gaganaskin Map,124.8,37.7,14.2,3/8/2026 20:13,614,Yanxia
+,139,8.7,698.8,TRUE,Timeworn Gaganaskin Map,138.9,8.7,699,3/8/2026 20:14,614,Yanxia
+,187.5,19.9,-593.5,TRUE,Timeworn Gaganaskin Map,187.7,19.8,-593.7,3/8/2026 20:08,614,Yanxia
+,447.1,92.2,89,TRUE,Timeworn Gaganaskin Map,446.9,92.2,88.9,3/8/2026 20:13,614,Yanxia
+,479.3,12.5,355.7,TRUE,Timeworn Gazelleskin Map,487.5,12.2,361.5,3/8/2026 20:37,614,Yanxia
+,519.9,31.5,701.8,TRUE,Timeworn Gazelleskin Map,519.9,31.5,701.7,3/8/2026 20:38,614,Yanxia
+,525.5,68,-799.6,TRUE,Seemingly Special Timeworn Map,525.5,20.6,-799.7,3/7/2026 2:07,614,Yanxia
+,570.7,22.8,-675.8,TRUE,Timeworn Gaganaskin Map,570.6,22.8,-675.8,3/8/2026 20:09,614,Yanxia

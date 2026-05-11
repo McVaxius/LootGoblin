@@ -184,27 +184,6 @@ public class MainWindow : Window, IDisposable
         ImGui.SameLine();
         ImGui.Text(partyCount > 0 ? $"{partyCount} members" : "Solo");
 
-        var foodStatus = plugin.FoodService.FoodStatus;
-        if (!string.IsNullOrWhiteSpace(foodStatus))
-        {
-            var foodColor =
-                foodStatus.StartsWith("Well Fed", StringComparison.OrdinalIgnoreCase) ||
-                foodStatus.StartsWith("Ate ", StringComparison.OrdinalIgnoreCase)
-                    ? ColorGreen
-                    : foodStatus.StartsWith("Paused", StringComparison.OrdinalIgnoreCase) ||
-                      foodStatus.StartsWith("Bot disabled", StringComparison.OrdinalIgnoreCase)
-                        ? ColorGrey
-                        : foodStatus.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) ||
-                          foodStatus.StartsWith("Out of", StringComparison.OrdinalIgnoreCase) ||
-                          foodStatus.StartsWith("No food", StringComparison.OrdinalIgnoreCase)
-                            ? ColorRed
-                            : ColorYellow;
-
-            ImGui.Text("Food: ");
-            ImGui.SameLine();
-            ImGui.TextColored(foodColor, foodStatus);
-        }
-
         // Summon Chocobo status
         if (plugin.Configuration.SummonChocobo && loggedIn)
         {

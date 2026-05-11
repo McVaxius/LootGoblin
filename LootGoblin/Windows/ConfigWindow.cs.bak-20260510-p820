@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 using LootGoblin.Services;
-using Lumina.Excel.Sheets;
 
 namespace LootGoblin.Windows;
 
@@ -20,9 +18,6 @@ public class ConfigWindow : Window, IDisposable
     private readonly Configuration configuration;
     private readonly Plugin plugin;
     private string mountSearch = "";
-    private string foodSearch = "";
-    private readonly List<(uint Id, string Name)> foodItems = new();
-    private bool foodItemsLoaded = false;
 
     public ConfigWindow(Plugin plugin) : base("Loot Goblin Settings###LootGoblinConfig")
     {
@@ -36,35 +31,6 @@ public class ConfigWindow : Window, IDisposable
     }
 
     public void Dispose() { }
-
-    private void EnsureFoodItemsLoaded()
-    {
-        if (foodItemsLoaded) return;
-        foodItemsLoaded = true;
-
-        try
-        {
-            var itemSheet = Plugin.DataManager.GetExcelSheet<Item>();
-            if (itemSheet == null) return;
-
-            foreach (var item in itemSheet)
-            {
-                if (item.RowId == 0) continue;
-                if (item.ItemUICategory.RowId != 46) continue;
-
-                var name = item.Name.ToString();
-                if (string.IsNullOrWhiteSpace(name)) continue;
-
-                foodItems.Add((item.RowId, name));
-            }
-
-            Plugin.Log.Information($"[ConfigWindow] Loaded {foodItems.Count} food items from Lumina");
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Error($"[ConfigWindow] Failed to load food items: {ex.Message}");
-        }
-    }
 
     public override void PreDraw()
     {
@@ -302,9 +268,6 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Disable Pandora's Box through Dalamud.");
 
-        DrawFoodSection();
-        ImGui.Spacing();
-
         var summonChocobo = configuration.SummonChocobo;
         if (ImGui.Checkbox("Summon Chocobo", ref summonChocobo))
         {
@@ -417,153 +380,6 @@ public class ConfigWindow : Window, IDisposable
             ImGui.EndChild();
             ImGui.EndCombo();
         }
-    }
-
-    private void DrawFoodSection()
-    {
-        EnsureFoodItemsLoaded();
-        BackfillLegacyFoodSelection();
-
-        ImGui.Text("Food");
-
-        var foodId = configuration.FeedMeItemId;
-        var foodName = configuration.FeedMeItem;
-        if (DrawItemSearchDropdown("Food", ref foodSearch, foodItems, ref foodId, ref foodName))
-        {
-            configuration.FeedMeItemId = foodId;
-            configuration.FeedMeItem = foodName;
-            plugin.FoodService.InvalidateFoodCache();
-            configuration.Save();
-        }
-
-        if (configuration.FeedMeItemId > 0)
-        {
-            var qualityLabel = configuration.FeedMeUseHighQuality ? "HQ" : "NQ";
-            ImGui.Text($"  Selected: {configuration.FeedMeItem} [{qualityLabel}] ({configuration.FeedMeItemId})");
-
-            var useHighQuality = configuration.FeedMeUseHighQuality;
-            if (ImGui.Checkbox("Use HQ food", ref useHighQuality))
-            {
-                configuration.FeedMeUseHighQuality = useHighQuality;
-                plugin.FoodService.InvalidateFoodCache();
-                configuration.Save();
-            }
-
-            if (ImGui.SmallButton("Clear Food"))
-            {
-                configuration.FeedMeItemId = 0;
-                configuration.FeedMeItem = "";
-                configuration.FeedMeUseHighQuality = false;
-                foodSearch = "";
-                plugin.FoodService.InvalidateFoodCache();
-                configuration.Save();
-            }
-        }
-        else
-        {
-            ImGui.TextDisabled("  No food selected.");
-        }
-
-        var feedMeSearch = configuration.FeedMeSearch;
-        if (ImGui.Checkbox("Search for Food if Depleted", ref feedMeSearch))
-        {
-            configuration.FeedMeSearch = feedMeSearch;
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("If selected food runs out, search inventory for a fallback food from the FrenRider priority list.");
-    }
-
-    private void BackfillLegacyFoodSelection()
-    {
-        if (configuration.FeedMeItemId > 0)
-        {
-            if (!string.IsNullOrWhiteSpace(configuration.FeedMeItem)) return;
-
-            var selected = foodItems.FirstOrDefault(item => item.Id == (uint)configuration.FeedMeItemId);
-            if (selected.Id == 0)
-            {
-                var itemName = GameHelpers.LookupItemName((uint)configuration.FeedMeItemId);
-                if (string.IsNullOrWhiteSpace(itemName)) return;
-
-                selected = ((uint)configuration.FeedMeItemId, itemName);
-            }
-
-            configuration.FeedMeItem = selected.Name;
-            plugin.FoodService.InvalidateFoodCache();
-            configuration.Save();
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(configuration.FeedMeItem)) return;
-
-        var match = foodItems.FirstOrDefault(item =>
-            item.Name.Equals(configuration.FeedMeItem.Trim(), StringComparison.OrdinalIgnoreCase));
-        if (match.Id == 0) return;
-
-        configuration.FeedMeItemId = (int)match.Id;
-        configuration.FeedMeItem = match.Name;
-        plugin.FoodService.InvalidateFoodCache();
-        configuration.Save();
-    }
-
-    private static bool DrawItemSearchDropdown(
-        string label,
-        ref string search,
-        List<(uint Id, string Name)> items,
-        ref int selectedId,
-        ref string selectedName)
-    {
-        var changed = false;
-        var displayText = selectedId > 0 ? $"{selectedName} ({selectedId})" : $"Select {label}...";
-
-        ImGui.SetNextItemWidth(300);
-        if (ImGui.BeginCombo($"##{label}Select", displayText))
-        {
-            ImGui.SetNextItemWidth(280);
-            ImGui.InputText($"Search##{label}", ref search, 128);
-            ImGui.Separator();
-
-            const int maxResults = 20;
-            var shown = 0;
-
-            if (!string.IsNullOrWhiteSpace(search) && search.Length >= 2)
-            {
-                var searchTerm = search.Trim();
-                var searchLower = searchTerm.ToLowerInvariant();
-                var isNumeric = uint.TryParse(searchTerm, out _);
-
-                for (var i = 0; i < items.Count && shown < maxResults; i++)
-                {
-                    var item = items[i];
-                    var match = isNumeric
-                        ? item.Id.ToString().Contains(searchTerm, StringComparison.Ordinal)
-                        : item.Name.ToLowerInvariant().Contains(searchLower);
-
-                    if (!match) continue;
-                    shown++;
-
-                    var isSelected = (int)item.Id == selectedId;
-                    if (ImGui.Selectable($"{item.Name} ({item.Id})##{label}{i}", isSelected))
-                    {
-                        selectedId = (int)item.Id;
-                        selectedName = item.Name;
-                        changed = true;
-                    }
-                }
-
-                if (shown == 0)
-                    ImGui.TextDisabled("No results.");
-            }
-            else
-            {
-                ImGui.TextDisabled("Type at least 2 characters to search.");
-            }
-
-            ImGui.EndCombo();
-        }
-
-        return changed;
     }
 
     private void DrawCommandTriggerList(string label, List<string> commands, string[] defaults)

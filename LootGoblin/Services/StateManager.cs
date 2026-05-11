@@ -167,6 +167,8 @@ public class StateManager : IDisposable
     private const float CapturedLocationMatchXZRange = 10.0f;
     private const float UnderwaterBounceTriggerXZRange = 10.0f;
     private const float UnderwaterFlagApproachArrivalXZRange = 5.0f;
+    private const uint LochsTerritoryId = 621;
+    private const float LochsDivingFlagApproachDepthOffset = 50.0f;
     private const float PortalRunawayDistanceIncrease = 2.0f;
     private const int UnderwaterBounceAutomoveHoldMs = 250;
     private const int UnderwaterBounceDescentHoldMs = 1000;
@@ -2428,7 +2430,21 @@ public class StateManager : IDisposable
         if (targets.LandingTarget == Vector3.Zero || currentPos == Vector3.Zero)
             return Vector3.Zero;
 
-        return new Vector3(targets.LandingTarget.X, currentPos.Y, targets.LandingTarget.Z);
+        var approachY = currentPos.Y;
+        if (ShouldUseLochsDivingFlagApproachOffset())
+        {
+            approachY -= LochsDivingFlagApproachDepthOffset;
+            basis += " + Lochs dive-depth offset";
+        }
+
+        return new Vector3(targets.LandingTarget.X, approachY, targets.LandingTarget.Z);
+    }
+
+    private bool ShouldUseLochsDivingFlagApproachOffset()
+    {
+        return Plugin.Condition[ConditionFlag.Diving]
+            && Plugin.ClientState.TerritoryType == LochsTerritoryId
+            && CurrentLocation?.TerritoryId == LochsTerritoryId;
     }
 
     private bool ShouldReissueUnderwaterFlagApproach(DateTime now)
@@ -2551,7 +2567,7 @@ public class StateManager : IDisposable
                 {
                     underwaterFlagApproachLogged = true;
                     LogThiefWaterInfo(
-                        $"[Underwater] Approaching thief-map flag X/Z at dive altitude via {basis} for {destinationText} - {zoneName}; " +
+                        $"[Underwater] Approaching thief-map flag X/Z at approach Y via {basis} for {destinationText} - {zoneName}; " +
                         $"target={FormatVectorCompact(underwaterTargetPosition)}");
                 }
             }
@@ -2582,7 +2598,7 @@ public class StateManager : IDisposable
                     underwaterFlagApproachIssued = true;
                     lastUnderwaterFlagApproachTime = now;
                     _plugin.AddDebugLog(
-                        $"[Underwater] Flying horizontally to thief-map flag X/Z at current dive Y; " +
+                        $"[Underwater] Flying horizontally to thief-map flag X/Z at approach Y; " +
                         $"xzDistance={approachXZ:F1}y; target={FormatVectorCompact(underwaterTargetPosition)}");
                 }
 
