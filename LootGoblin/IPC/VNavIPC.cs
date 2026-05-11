@@ -12,6 +12,7 @@ public class VNavIPC : IDisposable
     private readonly IDalamudPluginInterface _pluginInterface;
     private readonly IPluginLog _log;
     private readonly Plugin _plugin;
+    private bool isRunningIpcFailureLogged;
 
     public bool IsAvailable { get; private set; }
     public bool IsNavigating { get; private set; }
@@ -26,6 +27,37 @@ public class VNavIPC : IDisposable
     }
 
     public void Dispose() { }
+
+    public bool? TryIsRunning()
+    {
+        if (!IsAvailable)
+            return null;
+
+        Exception? lastException = null;
+        foreach (var ipcName in new[] { "NavmeshManager.IsRunning", "vnavmesh.Path.IsRunning" })
+        {
+            try
+            {
+                return _pluginInterface.GetIpcSubscriber<bool>(ipcName).InvokeFunc();
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+            }
+        }
+
+        if (!isRunningIpcFailureLogged)
+        {
+            isRunningIpcFailureLogged = true;
+            var detail = lastException == null
+                ? "unknown error"
+                : $"{lastException.GetType().Name}: {lastException.Message}";
+            _plugin.AddDebugLog($"[VNavIPC] Could not read vnavmesh running state via IPC: {detail}");
+            _log.Debug($"[VNavIPC] Could not read vnavmesh running state via IPC: {detail}");
+        }
+
+        return null;
+    }
 
     public void CheckAvailability(bool logStatus = true)
     {

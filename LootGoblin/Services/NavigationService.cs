@@ -95,9 +95,9 @@ public class NavigationService : IDisposable
         SetState(NavigationState.Teleporting, $"Teleporting to {name}...");
     }
 
-    public void FlyToPosition(Vector3 position)
+    public void FlyToPosition(Vector3 position, bool force = false)
     {
-        if (IsActivePositionNavigation(PositionNavigationKind.FlyTo, position))
+        if (!force && IsActivePositionNavigation(PositionNavigationKind.FlyTo, position))
             return;
 
         // Re-check availability in case vnavmesh loaded after LootGoblin startup

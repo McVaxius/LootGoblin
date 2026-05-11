@@ -139,7 +139,7 @@ public class StateManager : IDisposable
     private DateTime lastInteractionTime = DateTime.MinValue; // Throttle chest/portal interaction attempts
     private bool autoMoveActive; // Track if automove is currently on
     private bool pendingDungeonMapFlagClear; // Clear the overworld flag once dungeon entry has settled
-    private bool treasureHighLowHandledThisOpen; // Prevent callback spam while puzzle addon stays open
+    private bool treasureHighLowHandledThisOpen; // Track one detection log while puzzle addon stays open
     private bool betweenAreasMovementStopped; // Stop LootGoblin-owned movement once per loading screen
     
     // Map opening validation variables
@@ -167,6 +167,9 @@ public class StateManager : IDisposable
     private const float CapturedLocationMatchXZRange = 10.0f;
     private const float UnderwaterBounceTriggerXZRange = 10.0f;
     private const float UnderwaterFlagApproachArrivalXZRange = 5.0f;
+    private const float UnderwaterFlagApproachProgressMargin = 0.5f;
+    private const float UnderwaterFlagApproachStallMovementThreshold = 0.5f;
+    private const float UnderwaterFlagApproachTargetYRefreshThreshold = 5.0f;
     private const uint LochsTerritoryId = 621;
     private const float LochsDivingFlagApproachDepthOffset = 50.0f;
     private const float PortalRunawayDistanceIncrease = 2.0f;
@@ -174,6 +177,11 @@ public class StateManager : IDisposable
     private const int UnderwaterBounceDescentHoldMs = 1000;
     private static readonly TimeSpan UnderwaterBounceDescentInterval = TimeSpan.FromSeconds(1.25);
     private static readonly TimeSpan UnderwaterFlagApproachReissueInterval = TimeSpan.FromSeconds(3.0);
+    private static readonly TimeSpan UnderwaterFlagApproachReissueStopDelay = TimeSpan.FromMilliseconds(150);
+    private static readonly TimeSpan UnderwaterFlagApproachStallTimeout = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan UnderwaterFlagApproachForceReflyCooldown = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan UnderwaterFlagApproachHeartbeatInterval = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan UnderwaterFlagApproachPendingWaitLogInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan UnderwaterTriggerLoopLogInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan ThiefWaterRecoveryLogInterval = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan PortalMountCommandInterval = TimeSpan.FromSeconds(3.0);
@@ -321,12 +329,29 @@ public class StateManager : IDisposable
     private DateTime lastUnderwaterBounceDescentStart = DateTime.MinValue;
     private bool underwaterBounceHoldLogged;
     private bool underwaterBounceSuppressedVnavLogged;
-    private bool underwaterBounceReenterLogged;
     private bool underwaterFlagApproachIssued;
     private bool underwaterFlagApproachLogged;
     private bool underwaterBounceHandoffLogged;
     private bool thiefWaterRemountRecoveryActive;
+    private bool thiefWaterRemountRecoveryZoneWaitActive;
     private DateTime lastUnderwaterFlagApproachTime = DateTime.MinValue;
+    private Vector3 lastUnderwaterFlagApproachTarget = Vector3.Zero;
+    private double bestUnderwaterFlagApproachXZ = double.MaxValue;
+    private DateTime lastUnderwaterFlagApproachProgressTime = DateTime.MinValue;
+    private DateTime lastUnderwaterFlagApproachHeartbeatTime = DateTime.MinValue;
+    private Vector3 lastUnderwaterFlagApproachSamplePosition = Vector3.Zero;
+    private DateTime lastUnderwaterFlagApproachSampleTime = DateTime.MinValue;
+    private DateTime lastUnderwaterFlagApproachForceReflyTime = DateTime.MinValue;
+    private int underwaterFlagApproachReissueCount;
+    private Vector3 pendingUnderwaterFlagApproachTarget = Vector3.Zero;
+    private string pendingUnderwaterFlagApproachReason = string.Empty;
+    private double pendingUnderwaterFlagApproachXZ = double.MaxValue;
+    private DateTime pendingUnderwaterFlagApproachScheduledAt = DateTime.MinValue;
+    private NavigationState pendingUnderwaterFlagApproachPriorNavState = NavigationState.Idle;
+    private DateTime lastUnderwaterFlagApproachPendingWaitLogTime = DateTime.MinValue;
+    private DateTime lastUnderwaterFlagApproachDisabledLogTime = DateTime.MinValue;
+    private DateTime lastUnderwaterFlagApproachObjectDeferredLogTime = DateTime.MinValue;
+    private bool underwaterFlagApproachSurfacedFallbackActive;
     private DateTime lastUnderwaterTriggerLoopLogTime = DateTime.MinValue;
     private DateTime lastThiefWaterRecoveryLogTime = DateTime.MinValue;
 
@@ -462,7 +487,11 @@ public class StateManager : IDisposable
         }
 
         var allowCycling = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations or BotState.AlexandriteFarming;
-        if (!_plugin.Configuration.Enabled && !allowCycling) return;
+        if (!_plugin.Configuration.Enabled && !allowCycling)
+        {
+            LogUnderwaterFlagApproachDisabledAbandoned(DateTime.Now);
+            return;
+        }
         if (IsPaused) return;
         if (State == BotState.Idle || State == BotState.Error) return;
 
@@ -626,6 +655,7 @@ public class StateManager : IDisposable
             || descentInProgress
             || descentMode
             || underwaterTargetPosition != Vector3.Zero
+            || HasPendingUnderwaterFlagApproachReissue()
             || _plugin.NavigationService.State != NavigationState.Idle;
 
         if (descentInProgress || descentMode)
@@ -647,6 +677,9 @@ public class StateManager : IDisposable
         underwaterFlagApproachIssued = false;
         underwaterFlagApproachLogged = false;
         lastUnderwaterFlagApproachTime = DateTime.MinValue;
+        ResetUnderwaterFlagApproachProgressState();
+        ResetPendingUnderwaterFlagApproachReissue();
+        underwaterFlagApproachSurfacedFallbackActive = false;
         betweenAreasMovementStopped = true;
 
         if (hadMovement)
@@ -1234,7 +1267,7 @@ public class StateManager : IDisposable
         if (isDiving && CanUseUnderwaterNavigation() && !activeKeyItemRecoveryUnderwaterLogged)
         {
             activeKeyItemRecoveryUnderwaterLogged = true;
-            _plugin.AddDebugLog("[Underwater] Active thief-map recovery is already Diving; resuming trigger descent/dig flow.");
+            _plugin.AddDebugLog("[Underwater] Active thief-map recovery is already Diving; routing by target range.");
         }
     }
 
@@ -1800,12 +1833,15 @@ public class StateManager : IDisposable
         lastUnderwaterBounceDescentStart = DateTime.MinValue;
         underwaterBounceHoldLogged = false;
         underwaterBounceSuppressedVnavLogged = false;
-        underwaterBounceReenterLogged = false;
         underwaterFlagApproachIssued = false;
         underwaterFlagApproachLogged = false;
         underwaterBounceHandoffLogged = false;
         thiefWaterRemountRecoveryActive = false;
+        thiefWaterRemountRecoveryZoneWaitActive = false;
         lastUnderwaterFlagApproachTime = DateTime.MinValue;
+        ResetUnderwaterFlagApproachProgressState();
+        ResetPendingUnderwaterFlagApproachReissue();
+        underwaterFlagApproachSurfacedFallbackActive = false;
         lastUnderwaterTriggerLoopLogTime = DateTime.MinValue;
         lastThiefWaterRecoveryLogTime = DateTime.MinValue;
         underwaterTargetPosition = Vector3.Zero;
@@ -2259,6 +2295,12 @@ public class StateManager : IDisposable
             || Plugin.Condition[ConditionFlag.Mounting71];
     }
 
+    private bool IsMountedOrActualInFlight()
+    {
+        return _plugin.NavigationService.IsMounted()
+            || Plugin.Condition[ConditionFlag.InFlight];
+    }
+
     private void LogThiefWaterInfo(string message)
     {
         _plugin.AddDebugLog(message);
@@ -2275,18 +2317,50 @@ public class StateManager : IDisposable
         LogThiefWaterInfo(message);
     }
 
+    private bool CanResumeThiefWaterTravelAfterRemount(out List<string> outOfZoneNames)
+    {
+        var party = _plugin.PartyService;
+        party.UpdatePartyStatus();
+        outOfZoneNames = party.PartyMembers
+            .Where(member => !member.IsInSameZone)
+            .Select(member => string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+
+        return outOfZoneNames.Count == 0;
+    }
+
+    private string BuildThiefWaterRemountZoneWaitDetail(IReadOnlyCollection<string> outOfZoneNames)
+    {
+        var total = _plugin.PartyService.PartyMembers.Count;
+        var loaded = Math.Max(0, total - outOfZoneNames.Count);
+        var missingText = outOfZoneNames.Count == 0
+            ? "none"
+            : string.Join(", ", outOfZoneNames);
+
+        return $"Thief-map remount: waiting for party zone load ({loaded}/{total} in zone; missing: {missingText})...";
+    }
+
+    private void ResumeThiefWaterTravelAfterRemount(string detail)
+    {
+        thiefWaterRemountRecoveryZoneWaitActive = false;
+        lastDivingCheck = DateTime.MinValue;
+        TransitionTo(BotState.Flying, detail);
+    }
+
     private bool TryRecoverThiefWaterTravelPosture(
         bool isDiving,
         Vector3 currentPos,
         Vector3 landingTarget,
         string targetBasis,
         string destinationText,
-        string zoneName)
+        string zoneName,
+        bool alreadyDivingNewMapTarget = false)
     {
         if (!CanUseUnderwaterNavigation()
             || currentLandingMode != OverworldLandingMode.UnderwaterBounce
-            || isDiving
             || IsMountedOrMounting()
+            || Plugin.Condition[ConditionFlag.InFlight]
             || currentPos == Vector3.Zero
             || landingTarget == Vector3.Zero)
         {
@@ -2297,10 +2371,16 @@ public class StateManager : IDisposable
         if (xzDist <= UnderwaterBounceTriggerXZRange || xzDist <= MapDigXZRange)
             return false;
 
+        var postureMessage = isDiving
+            ? (alreadyDivingNewMapTarget
+                ? "[Underwater] Already diving far from new thief-map target; remounting before travel."
+                : "[Underwater] Already diving far from thief-map target; remounting before travel.")
+            : "[Underwater] Diving lost far from thief-map target; suppressing on-foot flyto.";
+
         LogThiefWaterInfoRateLimited(
             ref lastThiefWaterRecoveryLogTime,
             ThiefWaterRecoveryLogInterval,
-            $"[Underwater] Diving lost far from thief-map target; suppressing on-foot flyto. " +
+            $"{postureMessage} " +
             $"xz={xzDist:F1}y; current={FormatVectorCompact(currentPos)}; " +
             $"landingTarget={FormatVectorCompact(landingTarget)}; basis={targetBasis}; " +
             $"{destinationText} - {zoneName}.");
@@ -2315,9 +2395,11 @@ public class StateManager : IDisposable
         lastDivingCheck = DateTime.MinValue;
 
         LogThiefWaterInfo(
-            $"[Underwater] Remount recovery started for thief-map travel; " +
+            $"[Underwater] Remount recovery started for {(isDiving ? "already-diving" : "lost-diving")} thief-map travel; " +
             $"will not path on foot/swimming at {xzDist:F1}y from target.");
-        TransitionTo(BotState.Mounting, "Thief-map water recovery: remounting before travel...");
+        TransitionTo(BotState.Mounting, isDiving
+            ? "Thief-map water travel: remounting before far target..."
+            : "Thief-map water recovery: remounting before travel...");
         return true;
     }
 
@@ -2378,6 +2460,12 @@ public class StateManager : IDisposable
         {
             basis = "underwater disabled for non-thief map";
             return Vector3.Zero;
+        }
+
+        if (currentEntry != null && currentEntry.HasRealXYZ)
+        {
+            basis = "stored RealXYZ";
+            return new Vector3(currentEntry.RealX, currentEntry.RealY, currentEntry.RealZ);
         }
 
         if (currentEntry != null && destinationIndex > 0)
@@ -2447,18 +2535,609 @@ public class StateManager : IDisposable
             && CurrentLocation?.TerritoryId == LochsTerritoryId;
     }
 
-    private bool ShouldReissueUnderwaterFlagApproach(DateTime now)
+    private void ResetUnderwaterFlagApproachProgressState()
     {
-        if (!underwaterFlagApproachIssued)
+        lastUnderwaterFlagApproachTarget = Vector3.Zero;
+        bestUnderwaterFlagApproachXZ = double.MaxValue;
+        lastUnderwaterFlagApproachProgressTime = DateTime.MinValue;
+        lastUnderwaterFlagApproachHeartbeatTime = DateTime.MinValue;
+        lastUnderwaterFlagApproachSamplePosition = Vector3.Zero;
+        lastUnderwaterFlagApproachSampleTime = DateTime.MinValue;
+        lastUnderwaterFlagApproachForceReflyTime = DateTime.MinValue;
+        underwaterFlagApproachReissueCount = 0;
+        lastUnderwaterFlagApproachObjectDeferredLogTime = DateTime.MinValue;
+    }
+
+    private bool HasPendingUnderwaterFlagApproachReissue()
+    {
+        return pendingUnderwaterFlagApproachTarget != Vector3.Zero
+            && pendingUnderwaterFlagApproachScheduledAt != DateTime.MinValue;
+    }
+
+    private void ResetPendingUnderwaterFlagApproachReissue()
+    {
+        pendingUnderwaterFlagApproachTarget = Vector3.Zero;
+        pendingUnderwaterFlagApproachReason = string.Empty;
+        pendingUnderwaterFlagApproachXZ = double.MaxValue;
+        pendingUnderwaterFlagApproachScheduledAt = DateTime.MinValue;
+        pendingUnderwaterFlagApproachPriorNavState = NavigationState.Idle;
+        lastUnderwaterFlagApproachPendingWaitLogTime = DateTime.MinValue;
+        lastUnderwaterFlagApproachDisabledLogTime = DateTime.MinValue;
+    }
+
+    private bool HasActiveUnderwaterFlagApproach()
+    {
+        return CanUseUnderwaterNavigation()
+            && currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            && (wasDiving
+                || underwaterFlagApproachIssued
+                || underwaterTargetPosition != Vector3.Zero
+                || HasPendingUnderwaterFlagApproachReissue()
+                || underwaterFlagApproachSurfacedFallbackActive);
+    }
+
+    private bool HasLoggableUnderwaterFlagApproach()
+    {
+        return CanUseUnderwaterNavigation()
+            && currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            && State is not BotState.Idle
+            && (underwaterTargetPosition != Vector3.Zero
+                || HasPendingUnderwaterFlagApproachReissue());
+    }
+
+    private static string FormatVnavRunning(bool? vnavRunning)
+    {
+        return vnavRunning.HasValue
+            ? (vnavRunning.Value ? "true" : "false")
+            : "unknown";
+    }
+
+    private bool CanContinueUnderwaterFlagApproach(DateTime now)
+    {
+        if (_plugin.Configuration.Enabled
+            && State is not (BotState.Idle or BotState.Error or BotState.Completed))
+        {
             return true;
+        }
+
+        if (!_plugin.Configuration.Enabled && HasActiveUnderwaterFlagApproach())
+            LogUnderwaterFlagApproachDisabledAbandoned(now);
+
+        return false;
+    }
+
+    private void LogUnderwaterFlagApproachDisabledAbandoned(DateTime now)
+    {
+        if (!HasLoggableUnderwaterFlagApproach())
+            return;
+
+        if (now - lastUnderwaterFlagApproachDisabledLogTime < ThiefWaterRecoveryLogInterval)
+            return;
+
+        lastUnderwaterFlagApproachDisabledLogTime = now;
+        var vnavRunning = _plugin.VNavIPC.TryIsRunning();
+        LogThiefWaterInfo(
+            $"[Underwater] Active thief-map flag approach abandoned because LootGoblin is disabled; " +
+            $"state={State}; nav={_plugin.NavigationService.State}; vnavRunning={FormatVnavRunning(vnavRunning)}; " +
+            $"target={FormatVectorCompact(underwaterTargetPosition)}; pending={FormatUnderwaterFlagApproachPending(now)}.");
+    }
+
+    private string FormatUnderwaterFlagApproachBestXZ()
+    {
+        return bestUnderwaterFlagApproachXZ == double.MaxValue
+            ? "n/a"
+            : $"{bestUnderwaterFlagApproachXZ:F1}y";
+    }
+
+    private string FormatUnderwaterFlagApproachPending(DateTime now)
+    {
+        if (!HasPendingUnderwaterFlagApproachReissue())
+            return "none";
+
+        var queuedXzText = pendingUnderwaterFlagApproachXZ == double.MaxValue
+            ? "n/a"
+            : $"{pendingUnderwaterFlagApproachXZ:F1}y";
+        var dueInMs = Math.Max(0.0, (pendingUnderwaterFlagApproachScheduledAt - now).TotalMilliseconds);
+
+        return
+            $"{pendingUnderwaterFlagApproachReason}; " +
+            $"target={FormatVectorCompact(pendingUnderwaterFlagApproachTarget)}; " +
+            $"queuedXZ={queuedXzText}; " +
+            $"scheduled={pendingUnderwaterFlagApproachScheduledAt:HH:mm:ss.fff}; " +
+            $"dueIn={dueInMs:F0}ms; " +
+            $"priorNav={pendingUnderwaterFlagApproachPriorNavState}";
+    }
+
+    private void LogUnderwaterFlagApproachEvent(
+        DateTime now,
+        string action,
+        string reason,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance,
+        NavigationState navState,
+        bool? vnavRunning = null)
+    {
+        vnavRunning ??= _plugin.VNavIPC.TryIsRunning();
+        LogThiefWaterInfo(
+            $"[Underwater] Thief-map flag approach {action}: reason={reason}; issue=#{underwaterFlagApproachReissueCount}; " +
+            $"state={State}; isDiving={Plugin.Condition[ConditionFlag.Diving]}; " +
+            $"current={FormatVectorCompact(currentPos)}; target={FormatVectorCompact(target)}; " +
+            $"xz={xzDistance:F1}y; bestXZ={FormatUnderwaterFlagApproachBestXZ()}; nav={navState}; vnavRunning={FormatVnavRunning(vnavRunning)}; " +
+            $"pending={FormatUnderwaterFlagApproachPending(now)}.");
+    }
+
+    private void LogUnderwaterFlagApproachHeartbeat(
+        DateTime now,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance,
+        NavigationState navState,
+        bool? vnavRunning = null)
+    {
+        if (xzDistance <= UnderwaterFlagApproachArrivalXZRange
+            || now - lastUnderwaterFlagApproachHeartbeatTime < UnderwaterFlagApproachHeartbeatInterval)
+        {
+            return;
+        }
+
+        lastUnderwaterFlagApproachHeartbeatTime = now;
+        LogUnderwaterFlagApproachEvent(now, "heartbeat", "approach", currentPos, target, xzDistance, navState, vnavRunning);
+    }
+
+    private void PauseUnderwaterBounceDescentUntilFlagArrival()
+    {
+        if (!descentInProgress)
+            return;
+
+        CommandHelper.SendCommand("/automove off");
+        GameHelpers.KeyRelease(VirtualKey.W);
+        GameHelpers.KeyRelease(VirtualKey.CONTROL);
+        GameHelpers.KeyRelease(VirtualKey.SPACE);
+        descentInProgress = false;
+        lastUnderwaterBounceDescentStart = DateTime.MinValue;
+        _plugin.AddDebugLog("[Underwater] Paused thief-map descent until flag X/Z arrival.");
+    }
+
+    private void TrackUnderwaterFlagApproachProgress(DateTime now, Vector3 target, double xzDistance)
+    {
+        if (target == Vector3.Zero)
+            return;
+
+        if (lastUnderwaterFlagApproachTarget == Vector3.Zero
+            || Vector3.Distance(lastUnderwaterFlagApproachTarget, target) >= 1.0f)
+        {
+            lastUnderwaterFlagApproachTarget = target;
+            bestUnderwaterFlagApproachXZ = xzDistance;
+            lastUnderwaterFlagApproachProgressTime = now;
+            ResetUnderwaterFlagApproachStallSample();
+            return;
+        }
+
+        if (bestUnderwaterFlagApproachXZ == double.MaxValue
+            || xzDistance <= bestUnderwaterFlagApproachXZ - UnderwaterFlagApproachProgressMargin)
+        {
+            bestUnderwaterFlagApproachXZ = xzDistance;
+            lastUnderwaterFlagApproachProgressTime = now;
+        }
+    }
+
+    private void ResetUnderwaterFlagApproachStallSample()
+    {
+        lastUnderwaterFlagApproachSamplePosition = Vector3.Zero;
+        lastUnderwaterFlagApproachSampleTime = DateTime.MinValue;
+    }
+
+    private void SetUnderwaterFlagApproachStallSample(DateTime now, Vector3 currentPos)
+    {
+        lastUnderwaterFlagApproachSamplePosition = currentPos;
+        lastUnderwaterFlagApproachSampleTime = now;
+    }
+
+    private static bool IsWithinUnderwaterFlagApproachStallThreshold(Vector3 currentPos, Vector3 samplePos)
+    {
+        return Math.Abs(currentPos.X - samplePos.X) < UnderwaterFlagApproachStallMovementThreshold
+            && Math.Abs(currentPos.Y - samplePos.Y) < UnderwaterFlagApproachStallMovementThreshold
+            && Math.Abs(currentPos.Z - samplePos.Z) < UnderwaterFlagApproachStallMovementThreshold;
+    }
+
+    private bool CanRecoverActiveUnderwaterFlagApproach()
+    {
+        if (!_plugin.Configuration.Enabled
+            || State is BotState.Idle or BotState.Error or BotState.Completed
+            || !Plugin.Condition[ConditionFlag.Diving]
+            || HasPendingUnderwaterFlagApproachReissue()
+            || descentInProgress
+            || descentMode
+            || dismountAttemptStart != DateTime.MinValue)
+        {
+            return false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51])
+            return false;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null || player.IsCasting || Plugin.Condition[ConditionFlag.Casting])
+            return false;
+
+        return !Plugin.Condition[ConditionFlag.Occupied]
+            && !Plugin.Condition[ConditionFlag.OccupiedInQuestEvent]
+            && !Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent]
+            && !Plugin.Condition[ConditionFlag.Occupied33]
+            && !Plugin.Condition[ConditionFlag.Occupied39]
+            && !Plugin.Condition[ConditionFlag.WatchingCutscene];
+    }
+
+    private void IssueActiveUnderwaterFlagApproach(
+        DateTime now,
+        string reason,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance,
+        bool force)
+    {
+        if (!CanContinueUnderwaterFlagApproach(now))
+            return;
+
+        _plugin.NavigationService.FlyToPosition(target, force: force);
+        underwaterFlagApproachIssued = true;
+        lastUnderwaterFlagApproachTime = now;
+        lastUnderwaterFlagApproachProgressTime = now;
+        underwaterFlagApproachReissueCount++;
+        SetUnderwaterFlagApproachStallSample(now, currentPos);
+        LogUnderwaterFlagApproachEvent(
+            now,
+            force ? "force flyto issued" : "flyto issued",
+            reason,
+            currentPos,
+            target,
+            xzDistance,
+            _plugin.NavigationService.State);
+    }
+
+    private bool TryRecoverActiveUnderwaterFlagApproachStall(
+        DateTime now,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance)
+    {
+        if (target == Vector3.Zero || xzDistance <= UnderwaterFlagApproachArrivalXZRange)
+        {
+            ResetUnderwaterFlagApproachStallSample();
+            return false;
+        }
+
+        if (!underwaterFlagApproachIssued)
+        {
+            SetUnderwaterFlagApproachStallSample(now, currentPos);
+            return false;
+        }
+
+        if (lastUnderwaterFlagApproachSampleTime == DateTime.MinValue)
+        {
+            SetUnderwaterFlagApproachStallSample(now, currentPos);
+            return false;
+        }
+
+        if (!IsWithinUnderwaterFlagApproachStallThreshold(currentPos, lastUnderwaterFlagApproachSamplePosition))
+        {
+            SetUnderwaterFlagApproachStallSample(now, currentPos);
+            return false;
+        }
+
+        if (now - lastUnderwaterFlagApproachSampleTime < UnderwaterFlagApproachStallTimeout
+            || now - lastUnderwaterFlagApproachForceReflyTime < UnderwaterFlagApproachForceReflyCooldown
+            || !CanRecoverActiveUnderwaterFlagApproach())
+        {
+            return false;
+        }
+
+        lastUnderwaterFlagApproachForceReflyTime = now;
+        IssueActiveUnderwaterFlagApproach(
+            now,
+            "underwater approach stalled",
+            currentPos,
+            target,
+            xzDistance,
+            force: true);
+        return true;
+    }
+
+    private string? GetUnderwaterFlagApproachRetryReason(
+        DateTime now,
+        NavigationState navState,
+        bool targetYRefreshed,
+        string? forcedReason = null)
+    {
+        if (HasPendingUnderwaterFlagApproachReissue())
+            return null;
+
+        if (!CanContinueUnderwaterFlagApproach(now))
+            return null;
+
+        if (!string.IsNullOrEmpty(forcedReason))
+            return forcedReason;
+
+        if (!underwaterFlagApproachIssued)
+            return "initial";
+
+        if (targetYRefreshed)
+            return "target-y-refresh";
+
+        if (navState == NavigationState.Error
+            && now - lastUnderwaterFlagApproachTime >= UnderwaterFlagApproachReissueInterval)
+        {
+            return "nav error";
+        }
+
+        if (navState == NavigationState.Idle
+            && now - lastUnderwaterFlagApproachTime >= UnderwaterFlagApproachReissueInterval)
+        {
+            return "nav idle";
+        }
+
+        if (lastUnderwaterFlagApproachProgressTime != DateTime.MinValue
+            && now - lastUnderwaterFlagApproachProgressTime >= UnderwaterFlagApproachStallTimeout)
+        {
+            return "stalled";
+        }
+
+        return null;
+    }
+
+    private void ScheduleUnderwaterFlagApproachReissue(
+        DateTime now,
+        string reason,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance,
+        NavigationState navState)
+    {
+        if (!CanContinueUnderwaterFlagApproach(now))
+            return;
+
+        if (Plugin.Condition[ConditionFlag.Diving])
+        {
+            IssueActiveUnderwaterFlagApproach(now, reason, currentPos, target, xzDistance, force: true);
+            return;
+        }
+
+        if (HasPendingUnderwaterFlagApproachReissue())
+        {
+            LogUnderwaterFlagApproachEvent(now, "pending wait", reason, currentPos, pendingUnderwaterFlagApproachTarget, xzDistance, navState);
+            return;
+        }
+
+        pendingUnderwaterFlagApproachTarget = target;
+        pendingUnderwaterFlagApproachReason = reason;
+        pendingUnderwaterFlagApproachXZ = xzDistance;
+        pendingUnderwaterFlagApproachScheduledAt = now + UnderwaterFlagApproachReissueStopDelay;
+        pendingUnderwaterFlagApproachPriorNavState = navState;
+        lastUnderwaterFlagApproachPendingWaitLogTime = DateTime.MinValue;
+
+        LogUnderwaterFlagApproachEvent(now, "retry scheduled", reason, currentPos, target, xzDistance, navState);
+        _plugin.NavigationService.StopNavigation();
+        autoMoveActive = false;
+        LogUnderwaterFlagApproachEvent(now, "stop issued", reason, currentPos, target, xzDistance, _plugin.NavigationService.State);
+        lastUnderwaterFlagApproachPendingWaitLogTime = now;
+        LogUnderwaterFlagApproachEvent(now, "pending wait", reason, currentPos, target, xzDistance, _plugin.NavigationService.State);
+    }
+
+    private bool TryHandlePendingUnderwaterFlagApproachReissue(
+        DateTime now,
+        Vector3 currentPos,
+        Vector3 latestTarget,
+        double latestXZDistance)
+    {
+        if (!HasPendingUnderwaterFlagApproachReissue())
+            return false;
+
+        if (!CanContinueUnderwaterFlagApproach(now))
+        {
+            ResetPendingUnderwaterFlagApproachReissue();
+            return true;
+        }
+
+        if (latestTarget != Vector3.Zero
+            && Vector3.Distance(pendingUnderwaterFlagApproachTarget, latestTarget) >= 1.0f)
+        {
+            pendingUnderwaterFlagApproachTarget = latestTarget;
+            pendingUnderwaterFlagApproachXZ = latestXZDistance;
+            if (!pendingUnderwaterFlagApproachReason.Contains("target-y-refresh", StringComparison.Ordinal))
+                pendingUnderwaterFlagApproachReason += "+target-y-refresh";
+
+            LogUnderwaterFlagApproachEvent(
+                now,
+                "pending target refreshed",
+                pendingUnderwaterFlagApproachReason,
+                currentPos,
+                pendingUnderwaterFlagApproachTarget,
+                latestXZDistance,
+                _plugin.NavigationService.State);
+        }
+
+        var pendingTarget = pendingUnderwaterFlagApproachTarget;
+        var currentXZDistance = pendingTarget == Vector3.Zero
+            ? latestXZDistance
+            : CalculateXZDistance(currentPos, pendingTarget);
+
+        if (now < pendingUnderwaterFlagApproachScheduledAt)
+        {
+            if (now - lastUnderwaterFlagApproachPendingWaitLogTime >= UnderwaterFlagApproachPendingWaitLogInterval)
+            {
+                lastUnderwaterFlagApproachPendingWaitLogTime = now;
+                LogUnderwaterFlagApproachEvent(
+                    now,
+                    "pending wait",
+                    pendingUnderwaterFlagApproachReason,
+                    currentPos,
+                    pendingTarget,
+                    currentXZDistance,
+                    _plugin.NavigationService.State);
+            }
+
+            return true;
+        }
+
+        var pendingReason = pendingUnderwaterFlagApproachReason;
+        _plugin.NavigationService.FlyToPosition(pendingTarget);
+        underwaterFlagApproachIssued = true;
+        lastUnderwaterFlagApproachTime = now;
+        lastUnderwaterFlagApproachProgressTime = now;
+        underwaterFlagApproachReissueCount++;
+        LogUnderwaterFlagApproachEvent(
+            now,
+            "retry fired",
+            pendingReason,
+            currentPos,
+            pendingTarget,
+            currentXZDistance,
+            _plugin.NavigationService.State);
+        ResetPendingUnderwaterFlagApproachReissue();
+        return true;
+    }
+
+    private void FireUnderwaterFlagApproachImmediately(
+        DateTime now,
+        string reason,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance)
+    {
+        if (!CanContinueUnderwaterFlagApproach(now))
+            return;
+
+        _plugin.NavigationService.FlyToPosition(target);
+        underwaterFlagApproachIssued = true;
+        lastUnderwaterFlagApproachTime = now;
+        lastUnderwaterFlagApproachProgressTime = now;
+        underwaterFlagApproachReissueCount++;
+        LogUnderwaterFlagApproachEvent(
+            now,
+            "flyto issued",
+            reason,
+            currentPos,
+            target,
+            xzDistance,
+            _plugin.NavigationService.State);
+    }
+
+    private void IssueUnderwaterFlagApproach(
+        DateTime now,
+        string reason,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance)
+    {
+        if (!CanContinueUnderwaterFlagApproach(now))
+            return;
 
         var navState = _plugin.NavigationService.State;
-        return (navState == NavigationState.Idle || navState == NavigationState.Error)
-            && now - lastUnderwaterFlagApproachTime >= UnderwaterFlagApproachReissueInterval;
+        var shouldSchedule = underwaterFlagApproachIssued
+            || navState != NavigationState.Idle
+            || reason != "initial";
+
+        if (shouldSchedule)
+        {
+            ScheduleUnderwaterFlagApproachReissue(now, reason, currentPos, target, xzDistance, navState);
+            return;
+        }
+
+        FireUnderwaterFlagApproachImmediately(now, reason, currentPos, target, xzDistance);
+    }
+
+    private bool TryRefreshUnderwaterFlagApproachTargetY(Vector3 currentPos, out string basis, out string destinationText, out string zoneName)
+    {
+        var refreshedTarget = ResolveUnderwaterFlagApproachTarget(currentPos, out basis, out destinationText, out zoneName);
+        if (refreshedTarget == Vector3.Zero)
+            return false;
+
+        if (underwaterTargetPosition == Vector3.Zero)
+        {
+            underwaterTargetPosition = refreshedTarget;
+            return false;
+        }
+
+        if (Math.Abs(refreshedTarget.Y - underwaterTargetPosition.Y) < UnderwaterFlagApproachTargetYRefreshThreshold)
+            return false;
+
+        underwaterTargetPosition = refreshedTarget;
+        return true;
+    }
+
+    private bool TryHandleSurfacedUnderwaterFlagApproachFallback(DateTime now, Vector3 currentPos)
+    {
+        var targets = ResolveOverworldNavigationTargets();
+        var destination = targets.LandingTarget;
+        if (destination == Vector3.Zero)
+        {
+            ResetPendingUnderwaterFlagApproachReissue();
+            EnsureUnderwaterBounceDescent(now, currentPos);
+            StateDetail = "Descending for underwater thief-map trigger...";
+            return true;
+        }
+
+        var destinationXZ = CalculateXZDistance(currentPos, destination);
+        if (destinationXZ <= UnderwaterFlagApproachArrivalXZRange)
+        {
+            underwaterFlagApproachSurfacedFallbackActive = false;
+            underwaterTargetPosition = Vector3.Zero;
+            ResetPendingUnderwaterFlagApproachReissue();
+
+            if (!underwaterBounceHandoffLogged)
+            {
+                underwaterBounceHandoffLogged = true;
+                LogThiefWaterInfo(
+                    $"[Underwater] Reached thief-map flag X/Z; handing off to descent/dig loop at " +
+                    $"{FormatVectorCompact(currentPos)}.");
+            }
+
+            SuppressUnderwaterBounceVnav();
+            var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
+            var digIssued = TryDigWhileDiving("[Underwater] thief-map trigger");
+            LogUnderwaterTriggerLoop(now, currentPos, destinationXZ, descentPulseIssued, digIssued);
+            StateDetail = "Descending for underwater thief-map trigger...";
+            return true;
+        }
+
+        var fallbackTarget = new Vector3(destination.X, currentPos.Y, destination.Z);
+        var startingFallback = !underwaterFlagApproachSurfacedFallbackActive || underwaterTargetPosition == Vector3.Zero;
+        var targetYRefreshed = !startingFallback
+            && Math.Abs(fallbackTarget.Y - underwaterTargetPosition.Y) >= UnderwaterFlagApproachTargetYRefreshThreshold;
+
+        underwaterFlagApproachSurfacedFallbackActive = true;
+        underwaterTargetPosition = fallbackTarget;
+        TrackUnderwaterFlagApproachProgress(now, underwaterTargetPosition, destinationXZ);
+        PauseUnderwaterBounceDescentUntilFlagArrival();
+
+        var navState = _plugin.NavigationService.State;
+        var vnavRunning = _plugin.VNavIPC.TryIsRunning();
+        LogUnderwaterFlagApproachHeartbeat(now, currentPos, underwaterTargetPosition, destinationXZ, navState, vnavRunning);
+        if (TryHandlePendingUnderwaterFlagApproachReissue(now, currentPos, underwaterTargetPosition, destinationXZ))
+        {
+            StateDetail = $"Moving to surfaced thief-map flag X/Z... ({destinationXZ:F1}y)";
+            return true;
+        }
+
+        var retryReason = GetUnderwaterFlagApproachRetryReason(
+            now,
+            navState,
+            targetYRefreshed,
+            startingFallback ? "surfaced fallback" : null);
+
+        if (retryReason != null)
+            IssueUnderwaterFlagApproach(now, retryReason, currentPos, underwaterTargetPosition, destinationXZ);
+
+        StateDetail = $"Moving to surfaced thief-map flag X/Z... ({destinationXZ:F1}y)";
+        return true;
     }
 
     private void SuppressUnderwaterBounceVnav()
     {
+        if (Plugin.Condition[ConditionFlag.Diving])
+            return;
+
         if (_plugin.NavigationService.State == NavigationState.Idle)
             return;
 
@@ -2517,6 +3196,89 @@ public class StateManager : IDisposable
             $"descentPulse={descentPulseIssued}; digIssued={digIssued}.");
     }
 
+    private bool TryGetDeferredUnderwaterBounceObjectSummary(Vector3 currentPos, out string summary)
+    {
+        summary = string.Empty;
+        IGameObject? nearestObject = null;
+        var nearestObjectKind = string.Empty;
+        var nearestDistance = float.MaxValue;
+
+        foreach (var obj in Plugin.ObjectTable)
+        {
+            if (obj == null)
+                continue;
+
+            var isPortal = string.Equals(obj.Name.TextValue, "Teleportation Portal", StringComparison.Ordinal);
+            if (!isPortal && !ChestDetectionService.IsCofferObject(obj))
+                continue;
+
+            var distance = Vector3.Distance(currentPos, obj.Position);
+            if (distance >= nearestDistance)
+                continue;
+
+            nearestObject = obj;
+            nearestObjectKind = isPortal ? "portal" : "coffer";
+            nearestDistance = distance;
+        }
+
+        if (nearestObject == null)
+            return false;
+
+        summary =
+            $"{nearestObjectKind} '{nearestObject.Name.TextValue}' targetable={nearestObject.IsTargetable} " +
+            $"at {nearestDistance:F1}y, XYZ {FormatVectorCompact(nearestObject.Position)}";
+        return true;
+    }
+
+    private void LogDeferredUnderwaterBounceObjectHandoff(
+        DateTime now,
+        Vector3 currentPos,
+        Vector3 target,
+        double approachXZ)
+    {
+        if (now - lastUnderwaterFlagApproachObjectDeferredLogTime < ThiefWaterRecoveryLogInterval)
+            return;
+
+        if (!TryGetDeferredUnderwaterBounceObjectSummary(currentPos, out var objectSummary))
+            return;
+
+        lastUnderwaterFlagApproachObjectDeferredLogTime = now;
+        LogThiefWaterInfo(
+            $"[Underwater] Deferred visible {objectSummary} until thief-map flag X/Z arrival; " +
+            $"flagXZ={approachXZ:F1}y > {UnderwaterFlagApproachArrivalXZRange:F1}y; " +
+            $"current={FormatVectorCompact(currentPos)}; target={FormatVectorCompact(target)}.");
+    }
+
+    private bool TryHandleUnderwaterBounceObjectHandoff(out bool yieldToOpeningChest)
+    {
+        yieldToOpeningChest = false;
+
+        if (!underwaterBounceHandoffLogged)
+            return false;
+
+        var portal = FindNearestPortal();
+        if (portal != null)
+        {
+            _plugin.AddDebugLog("[Underwater] Portal detected after thief-map flag arrival - switching to portal interaction.");
+            CheckForPortalAfterChest();
+            return true;
+        }
+
+        var chest = _plugin.ChestDetectionService.FindNearestCoffer();
+        if (chest == null)
+            return false;
+
+        if (State == BotState.OpeningChest)
+        {
+            yieldToOpeningChest = true;
+            return false;
+        }
+
+        _plugin.AddDebugLog("[Underwater] Coffer detected after thief-map flag arrival - transitioning to chest flow.");
+        TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+        return true;
+    }
+
     private bool TryHandleUnderwaterBounceTriggerFlow(bool isDiving, bool includeNearTarget = true)
     {
         if (!IsUnderwaterBounceTriggerFlow(includeNearTarget))
@@ -2525,84 +3287,104 @@ public class StateManager : IDisposable
         if (TryHandleConfirmedDutyEntry("[Underwater]"))
             return true;
 
-        var portal = FindNearestPortal();
-        if (portal != null)
-        {
-            _plugin.AddDebugLog("[Underwater] Portal detected during thief-map trigger - switching to portal interaction.");
-            CheckForPortalAfterChest();
-            return true;
-        }
-
-        var chest = _plugin.ChestDetectionService.FindNearestCoffer();
-        if (chest != null)
-        {
-            if (State == BotState.OpeningChest)
-                return false;
-
-            _plugin.AddDebugLog("[Underwater] Coffer detected during thief-map trigger - transitioning to chest flow.");
-            TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
-            return true;
-        }
-
         var now = DateTime.Now;
         var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        if (currentPos == Vector3.Zero)
+        {
+            StateDetail = "Waiting for underwater thief-map player position...";
+            return true;
+        }
+
+        if (underwaterBounceHandoffLogged)
+        {
+            if (TryHandleUnderwaterBounceObjectHandoff(out var yieldToOpeningChest))
+                return true;
+
+            if (yieldToOpeningChest)
+                return false;
+        }
 
         if (isDiving)
         {
+            if (underwaterFlagApproachSurfacedFallbackActive)
+            {
+                underwaterFlagApproachSurfacedFallbackActive = false;
+                underwaterTargetPosition = Vector3.Zero;
+                underwaterFlagApproachIssued = false;
+                underwaterFlagApproachLogged = false;
+                lastUnderwaterFlagApproachTime = DateTime.MinValue;
+                ResetUnderwaterFlagApproachProgressState();
+                ResetPendingUnderwaterFlagApproachReissue();
+                _plugin.AddDebugLog("[Underwater] Diving resumed during surfaced fallback - switching back to underwater flag approach.");
+            }
+
             if (!wasDiving)
             {
                 LogThiefWaterInfo("[Underwater] Diving state detected - swimming to flag X/Z before thief-map trigger descent");
                 wasDiving = true;
             }
 
-            if (underwaterTargetPosition == Vector3.Zero)
-            {
-                underwaterTargetPosition = ResolveUnderwaterFlagApproachTarget(
-                    currentPos,
-                    out var basis,
-                    out var destinationText,
-                    out var zoneName);
+            var targetYRefreshed = TryRefreshUnderwaterFlagApproachTargetY(
+                currentPos,
+                out var basis,
+                out var destinationText,
+                out var zoneName);
 
-                if (underwaterTargetPosition != Vector3.Zero && !underwaterFlagApproachLogged)
-                {
-                    underwaterFlagApproachLogged = true;
-                    LogThiefWaterInfo(
-                        $"[Underwater] Approaching thief-map flag X/Z at approach Y via {basis} for {destinationText} - {zoneName}; " +
-                        $"target={FormatVectorCompact(underwaterTargetPosition)}");
-                }
+            if (underwaterTargetPosition != Vector3.Zero && !underwaterFlagApproachLogged)
+            {
+                underwaterFlagApproachLogged = true;
+                LogThiefWaterInfo(
+                    $"[Underwater] Approaching thief-map flag X/Z at approach Y via {basis} for {destinationText} - {zoneName}; " +
+                    $"target={FormatVectorCompact(underwaterTargetPosition)}");
             }
 
             if (underwaterTargetPosition == Vector3.Zero)
             {
+                ResetPendingUnderwaterFlagApproachReissue();
+                ResetUnderwaterFlagApproachStallSample();
                 StateDetail = "Waiting for underwater thief-map flag target...";
                 return true;
             }
 
             var approachXZ = CalculateXZDistance(currentPos, underwaterTargetPosition);
+            TrackUnderwaterFlagApproachProgress(now, underwaterTargetPosition, approachXZ);
+
             if (approachXZ > UnderwaterFlagApproachArrivalXZRange)
             {
-                if (descentInProgress)
-                {
-                    CommandHelper.SendCommand("/automove off");
-                    GameHelpers.KeyRelease(VirtualKey.W);
-                    GameHelpers.KeyRelease(VirtualKey.CONTROL);
-                    GameHelpers.KeyRelease(VirtualKey.SPACE);
-                    descentInProgress = false;
-                    lastUnderwaterBounceDescentStart = DateTime.MinValue;
-                    _plugin.AddDebugLog("[Underwater] Paused thief-map descent until flag X/Z arrival.");
-                }
+                PauseUnderwaterBounceDescentUntilFlagArrival();
 
-                if (ShouldReissueUnderwaterFlagApproach(now))
+                var navState = _plugin.NavigationService.State;
+                var vnavRunning = _plugin.VNavIPC.TryIsRunning();
+                LogUnderwaterFlagApproachHeartbeat(now, currentPos, underwaterTargetPosition, approachXZ, navState, vnavRunning);
+                ResetPendingUnderwaterFlagApproachReissue();
+
+                if (!underwaterFlagApproachIssued)
                 {
-                    _plugin.NavigationService.FlyToPosition(underwaterTargetPosition);
-                    underwaterFlagApproachIssued = true;
-                    lastUnderwaterFlagApproachTime = now;
-                    _plugin.AddDebugLog(
-                        $"[Underwater] Flying horizontally to thief-map flag X/Z at approach Y; " +
-                        $"xzDistance={approachXZ:F1}y; target={FormatVectorCompact(underwaterTargetPosition)}");
+                    IssueActiveUnderwaterFlagApproach(
+                        now,
+                        "initial",
+                        currentPos,
+                        underwaterTargetPosition,
+                        approachXZ,
+                        force: false);
+                }
+                else if (targetYRefreshed)
+                {
+                    IssueActiveUnderwaterFlagApproach(
+                        now,
+                        "target-y-refresh",
+                        currentPos,
+                        underwaterTargetPosition,
+                        approachXZ,
+                        force: true);
+                }
+                else
+                {
+                    TryRecoverActiveUnderwaterFlagApproachStall(now, currentPos, underwaterTargetPosition, approachXZ);
                 }
 
                 StateDetail = $"Swimming to underwater flag X/Z... ({approachXZ:F1}y)";
+                LogDeferredUnderwaterBounceObjectHandoff(now, currentPos, underwaterTargetPosition, approachXZ);
                 return true;
             }
 
@@ -2614,21 +3396,37 @@ public class StateManager : IDisposable
                     $"{FormatVectorCompact(currentPos)}.");
             }
 
-            SuppressUnderwaterBounceVnav();
+            ResetPendingUnderwaterFlagApproachReissue();
+            ResetUnderwaterFlagApproachStallSample();
+
+            if (TryHandleUnderwaterBounceObjectHandoff(out var yieldToOpeningChest))
+                return true;
+
+            if (yieldToOpeningChest)
+                return false;
+
             var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
             var digIssued = TryDigWhileDiving("[Underwater] thief-map trigger");
             LogUnderwaterTriggerLoop(now, currentPos, approachXZ, descentPulseIssued, digIssued);
             StateDetail = "Holding underwater thief-map trigger...";
             return true;
         }
-        else if (wasDiving)
+
+        var hadUnderwaterApproach = wasDiving
+            || underwaterFlagApproachIssued
+            || underwaterTargetPosition != Vector3.Zero
+            || HasPendingUnderwaterFlagApproachReissue()
+            || underwaterFlagApproachSurfacedFallbackActive;
+
+        if (hadUnderwaterApproach)
         {
+            if (!underwaterFlagApproachSurfacedFallbackActive)
+                LogThiefWaterInfo("[Underwater] Diving lost; using surfaced fallback");
+
             wasDiving = false;
-            if (!underwaterBounceReenterLogged)
-            {
-                underwaterBounceReenterLogged = true;
-                _plugin.AddDebugLog("[Underwater] Re-entering descent after leaving Diving before trigger");
-            }
+            ResetUnderwaterFlagApproachStallSample();
+            if (TryHandleSurfacedUnderwaterFlagApproachFallback(now, currentPos))
+                return true;
         }
 
         if (!isDiving)
@@ -2640,7 +3438,6 @@ public class StateManager : IDisposable
             : "Descending for underwater thief-map trigger...";
         return true;
     }
-
     // ─── State Ticks ─────────────────────────────────────────────────────────
 
     private void StartPortalRetryWindow()
@@ -4056,12 +4853,42 @@ public class StateManager : IDisposable
             return;
         }
 
-        var nav = _plugin.NavigationService;
-        if (nav.IsMounted() || nav.IsFlying())
+        if (IsMountedOrActualInFlight())
         {
-            _plugin.AddDebugLog($"{logPrefix} Already mounted or flying - skipping mount setup.");
+            _plugin.AddDebugLog($"{logPrefix} Already mounted or actually in flight - skipping mount setup.");
             TransitionTo(BotState.Flying, mountedTransitionDetail);
             return;
+        }
+
+        var isDiving = Plugin.Condition[ConditionFlag.Diving];
+        if (isDiving && CanUseUnderwaterNavigation() && currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+        {
+            var targets = ResolveOverworldNavigationTargets();
+            var landingTarget = targets.LandingTarget != Vector3.Zero
+                ? targets.LandingTarget
+                : flagPos;
+            var targetXZ = CalculateXZDistance(playerPos, landingTarget);
+
+            if (TryRecoverThiefWaterTravelPosture(
+                    isDiving,
+                    playerPos,
+                    landingTarget,
+                    targets.Basis,
+                    targets.DestinationText,
+                    targets.ZoneName,
+                    alreadyDivingNewMapTarget: true))
+            {
+                return;
+            }
+
+            if (targetXZ <= UnderwaterBounceTriggerXZRange)
+            {
+                LogThiefWaterInfo(
+                    $"{logPrefix} Already diving within thief-map trigger range; resuming underwater approach. " +
+                    $"xz={targetXZ:F1}y; target={FormatVectorCompact(landingTarget)}; basis={targets.Basis}.");
+                TransitionTo(BotState.Flying, "Already diving near thief-map target - swimming to flag...");
+                return;
+            }
         }
 
         if (!allowSameZoneTeleport)
@@ -4261,13 +5088,26 @@ public class StateManager : IDisposable
 
         if (nav.IsMounted())
         {
+            var thiefWaterRemountRecovered = thiefWaterRemountRecoveryActive;
+
             // Successfully mounted - reset counters and proceed
             mountAttemptStart = DateTime.MinValue;
             mountAttempts = 0;
-            if (thiefWaterRemountRecoveryActive)
+            if (thiefWaterRemountRecovered)
             {
                 thiefWaterRemountRecoveryActive = false;
-                LogThiefWaterInfo("[Underwater] Remount recovery succeeded; resuming thief-map travel.");
+                if (CanResumeThiefWaterTravelAfterRemount(out var outOfZoneNames))
+                {
+                    LogThiefWaterInfo("[Underwater] Remount recovery succeeded; all party members are in zone, bypassing mount wait for thief-map travel.");
+                    ResumeThiefWaterTravelAfterRemount("Thief-map remount recovered - flying to location...");
+                    return;
+                }
+
+                thiefWaterRemountRecoveryZoneWaitActive = true;
+                var missingText = string.Join(", ", outOfZoneNames);
+                LogThiefWaterInfo($"[Underwater] Remount recovery succeeded; waiting for party members to load into zone before thief-map travel: {missingText}.");
+                TransitionTo(BotState.WaitingForParty, BuildThiefWaterRemountZoneWaitDetail(outOfZoneNames));
+                return;
             }
             
             var partySize = Plugin.PartyList.Length;
@@ -4328,6 +5168,7 @@ public class StateManager : IDisposable
             if (thiefWaterRemountRecoveryActive)
             {
                 thiefWaterRemountRecoveryActive = false;
+                thiefWaterRemountRecoveryZoneWaitActive = false;
                 _plugin.NavigationService.StopNavigation();
                 LogThiefWaterInfo("[Underwater] Remount recovery failed after 5 attempts; stopping before unsafe on-foot/swim travel.");
                 TransitionTo(BotState.Error, "Thief-map water remount recovery failed after 5 attempts. Manual intervention required.");
@@ -4342,6 +5183,23 @@ public class StateManager : IDisposable
     private void TickWaitingForParty()
     {
         _plugin.PartyService.UpdatePartyStatus();
+
+        if (thiefWaterRemountRecoveryZoneWaitActive)
+        {
+            if (CanResumeThiefWaterTravelAfterRemount(out var outOfZoneNames))
+            {
+                LogThiefWaterInfo("[Underwater] Thief-map remount zone wait complete; bypassing party mount wait and resuming travel.");
+                ResumeThiefWaterTravelAfterRemount("Party loaded into zone - flying to thief-map location...");
+                return;
+            }
+
+            var missingText = string.Join(", ", outOfZoneNames);
+            StateDetail = BuildThiefWaterRemountZoneWaitDetail(outOfZoneNames);
+            LogLandingPartyWaitOnce(
+                $"ThiefWaterRemountZone:block:{string.Join("|", outOfZoneNames)}",
+                $"[PartyWait][ThiefWaterRemountZone] Waiting for out-of-zone party members before thief-map travel: {missingText}");
+            return;
+        }
 
         if (_plugin.PartyService.AllMembersMounted)
         {
@@ -4374,6 +5232,7 @@ public class StateManager : IDisposable
         var nav = _plugin.NavigationService;
         var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         var activeNavTargets = ResolveOverworldNavigationTargets();
+
         if (TryRecoverThiefWaterTravelPosture(
                 isDiving,
                 currentPos,
@@ -4385,7 +5244,15 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (TryHandleUnderwaterBounceTriggerFlow(isDiving, includeNearTarget: false))
+        var mountedFarThiefTravel =
+            currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            && CanUseUnderwaterNavigation()
+            && IsMountedOrActualInFlight()
+            && currentPos != Vector3.Zero
+            && activeNavTargets.LandingTarget != Vector3.Zero
+            && CalculateXZDistance(currentPos, activeNavTargets.LandingTarget) > UnderwaterBounceTriggerXZRange;
+
+        if (!mountedFarThiefTravel && TryHandleUnderwaterBounceTriggerFlow(isDiving, includeNearTarget: false))
             return;
 
         if (isDiving && !wasDiving)
@@ -4410,11 +5277,16 @@ public class StateManager : IDisposable
             underwaterTargetPosition = ResolveUnderwaterTargetPosition(currentEntry, destinationIndex, out var underwaterTargetBasis);
             _plugin.AddDebugLog($"[Underwater] Using {underwaterTargetBasis} for {destinationText} - {zoneName}");
 
-            // Stop current navigation and fly directly to target
-            _plugin.NavigationService.StopNavigation();
+            // Reissue directly while diving; do not stop vnav during Condition 81.
             if (underwaterTargetPosition != Vector3.Zero)
             {
-                _plugin.NavigationService.FlyToPosition(underwaterTargetPosition);
+                IssueActiveUnderwaterFlagApproach(
+                    DateTime.Now,
+                    "initial",
+                    currentPos,
+                    underwaterTargetPosition,
+                    CalculateXZDistance(currentPos, underwaterTargetPosition),
+                    force: true);
                 StateDetail = $"[Underwater {destinationText}] Flying to {zoneName} XYZ: {CommandHelper.FormatVector(underwaterTargetPosition)}";
             }
             return;
@@ -4712,11 +5584,17 @@ public class StateManager : IDisposable
             underwaterTargetPosition = ResolveUnderwaterTargetPosition(currentEntry, destinationIndex, out var underwaterTargetBasis);
             _plugin.AddDebugLog($"[Underwater] Using {underwaterTargetBasis} for {destinationText} - {zoneName}");
 
-            // Stop current navigation and fly directly to target
-            _plugin.NavigationService.StopNavigation();
+            // Reissue directly while diving; do not stop vnav during Condition 81.
             if (underwaterTargetPosition != Vector3.Zero)
             {
-                _plugin.NavigationService.FlyToPosition(underwaterTargetPosition);
+                var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+                IssueActiveUnderwaterFlagApproach(
+                    DateTime.Now,
+                    "initial",
+                    playerPos,
+                    underwaterTargetPosition,
+                    CalculateXZDistance(playerPos, underwaterTargetPosition),
+                    force: true);
             }
             return;
         }
@@ -7896,21 +8774,18 @@ public class StateManager : IDisposable
         if (!treasureHighLowHandledThisOpen)
         {
             _plugin.AddDebugLog(
-                "[CardGame] TreasureHighLow detected - scheduling Open Chest callbacks (-2 then 1).");
+                "[CardGame] TreasureHighLow detected - scheduling Open Chest callbacks (-2 then -1 until addon closes).");
+            treasureHighLowHandledThisOpen = true;
+        }
 
-            if (GameHelpers.QueueTwoStepAddonCallbackSequence(
-                    addonName,
-                    true,
-                    TreasureHighLowSecondCallbackDelay,
-                    new object[] { -2 },
-                    new object[] { 1 }))
-            {
-                treasureHighLowHandledThisOpen = true;
-            }
-            else
-            {
-                _plugin.AddDebugLog("[CardGame] Failed to queue TreasureHighLow skip sequence.");
-            }
+        if (!GameHelpers.QueueTwoStepAddonCallbackSequence(
+                addonName,
+                true,
+                TreasureHighLowSecondCallbackDelay,
+                new object[] { -2 },
+                new object[] { -1 }))
+        {
+            _plugin.AddDebugLog("[CardGame] Failed to queue TreasureHighLow skip sequence.");
         }
 
         StateDetail = "Waiting for Higher/Lower puzzle to close...";
@@ -9010,21 +9885,6 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog($"[MapFlag] Cleared overworld flag after treasure dungeon entry (verified={cleared})");
     }
 
-    private Vector3 BuildThiefPreDiveNavigationTarget(Vector3 landingTarget)
-    {
-        if (landingTarget == Vector3.Zero)
-            return Vector3.Zero;
-
-        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-        var currentLocationY = CurrentLocation?.Y ?? landingTarget.Y;
-        var baseY = playerPos == Vector3.Zero
-            ? currentLocationY
-            : Math.Max(currentLocationY, playerPos.Y);
-        var travelY = Math.Max(baseY + 50f, landingTarget.Y + 50f);
-
-        return new Vector3(landingTarget.X, travelY, landingTarget.Z);
-    }
-
     private (Vector3 NavigationTarget, Vector3 LandingTarget, string Basis, string DestinationText, string ZoneName, bool UseNavStateForLanding)
         ResolveOverworldNavigationTargets()
     {
@@ -9038,15 +9898,15 @@ public class StateManager : IDisposable
         var zoneName = dbEntry?.ZoneName ?? CurrentLocation.ZoneName ?? "Unknown";
         var canUseUnderwaterNavigation = CanUseUnderwaterNavigation();
 
-        if (dbEntry != null && destinationIndex > 0)
+        if (canUseUnderwaterNavigation && currentLandingMode == OverworldLandingMode.UnderwaterBounce)
         {
-            if (dbEntry.HasRealXYZ && !canUseUnderwaterNavigation)
+            if (dbEntry != null && dbEntry.HasRealXYZ)
             {
                 var realTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
-                return (realTarget, realTarget, "stored RealXYZ", destinationText, zoneName, true);
+                return (realTarget, realTarget, "stored RealXYZ", destinationText, zoneName, false);
             }
 
-            if (canUseUnderwaterNavigation && currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+            if (dbEntry != null && destinationIndex > 0)
             {
                 var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
                 if (specialNav != null)
@@ -9055,31 +9915,28 @@ public class StateManager : IDisposable
                     return (
                         new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ),
                         specialMainTarget,
-                        "special pre-dive",
+                        "special navigation",
                         destinationText,
                         zoneName,
                         false);
                 }
+            }
 
-                if (dbEntry.HasRealXYZ)
-                {
-                    var realTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
-                    return (
-                        BuildThiefPreDiveNavigationTarget(realTarget),
-                        realTarget,
-                        "stored RealXYZ pre-dive",
-                        destinationText,
-                        zoneName,
-                        false);
-                }
+            return (
+                rawGroundTarget,
+                rawGroundTarget,
+                "fallback flag XYZ",
+                destinationText,
+                zoneName,
+                false);
+        }
 
-                return (
-                    BuildThiefPreDiveNavigationTarget(rawGroundTarget),
-                    rawGroundTarget,
-                    "thief pre-dive fallback +50Y",
-                    destinationText,
-                    zoneName,
-                    false);
+        if (dbEntry != null && destinationIndex > 0)
+        {
+            if (dbEntry.HasRealXYZ && !canUseUnderwaterNavigation)
+            {
+                var realTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
+                return (realTarget, realTarget, "stored RealXYZ", destinationText, zoneName, true);
             }
 
             if (dbEntry.HasRealXYZ)
