@@ -301,11 +301,13 @@ public class MapLocationDatabase
     }
 
     /// <summary>
-    /// Download community data from GitHub. Only updates entries where local RealXYZ is missing.
+    /// Download community data from GitHub and replace the local community file.
     /// </summary>
-    public async Task DownloadCommunityDataAsync()
+    public async Task<bool> DownloadCommunityDataAsync()
     {
-        if (IsDownloading) return;
+        if (IsDownloading)
+            return false;
+
         IsDownloading = true;
         LastDownloadResult = "Downloading...";
 
@@ -320,56 +322,31 @@ public class MapLocationDatabase
             {
                 LastDownloadResult = "No data received";
                 _plugin.AddDebugLog("[MapLocDB] Download: no data received");
-                return;
+                return false;
             }
 
-            int updated = 0;
-            int added = 0;
+            var previousEntries = _communityEntries;
+            _communityEntries = remoteEntries;
+            AssignIndices();
 
-            foreach (var remote in remoteEntries)
+            if (!SaveCommunity())
             {
-                bool found = false;
-                for (int i = 0; i < _communityEntries.Count; i++)
-                {
-                    var local = _communityEntries[i];
-                    if (local.TerritoryId != remote.TerritoryId) continue;
-                    var dx = local.FlagX - remote.FlagX;
-                    var dz = local.FlagZ - remote.FlagZ;
-                    if (Math.Sqrt(dx * dx + dz * dz) <= 10.0)
-                    {
-                        found = true;
-                        // Only update if local is missing data that remote has
-                        if (!local.HasRealXYZ && remote.HasRealXYZ)
-                        {
-                            local.RealX = remote.RealX;
-                            local.RealY = remote.RealY;
-                            local.RealZ = remote.RealZ;
-                            local.HasRealXYZ = true;
-                            updated++;
-                        }
-                        if (string.IsNullOrEmpty(local.AetheryteName) && !string.IsNullOrEmpty(remote.AetheryteName))
-                        {
-                            local.AetheryteName = remote.AetheryteName;
-                        }
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    _communityEntries.Add(remote);
-                    added++;
-                }
+                _communityEntries = previousEntries;
+                AssignIndices();
+                LastDownloadResult = "Error: failed to save community locs";
+                _plugin.AddDebugLog("[MapLocDB] Download failed: could not save replaced community data");
+                return false;
             }
 
-            SaveCommunity();
-            LastDownloadResult = $"OK: +{added} new, {updated} updated RealXYZ (total: {_communityEntries.Count})";
-            _plugin.AddDebugLog($"[MapLocDB] Download complete: {added} added, {updated} RealXYZ updated, total {_communityEntries.Count}");
+            LastDownloadResult = $"OK: replaced {_communityEntries.Count} community locs from GitHub";
+            _plugin.AddDebugLog($"[MapLocDB] Download complete: replaced {_communityEntries.Count} community locs from GitHub");
+            return true;
         }
         catch (Exception ex)
         {
             LastDownloadResult = $"Error: {ex.Message}";
             _plugin.AddDebugLog($"[MapLocDB] Download failed: {ex.GetType().Name}: {ex.Message}");
+            return false;
         }
         finally
         {
@@ -484,17 +461,17 @@ public class MapLocationDatabase
         return new();
     }
 
-    private void SaveCommunity()
+    private bool SaveCommunity()
     {
-        SaveFile(_communityFilePath, _communityEntries);
+        return SaveFile(_communityFilePath, _communityEntries);
     }
 
-    private void SaveUser()
+    private bool SaveUser()
     {
-        SaveFile(_userFilePath, _userEntries);
+        return SaveFile(_userFilePath, _userEntries);
     }
 
-    private void SaveFile(string path, List<MapLocationEntry> entries)
+    private bool SaveFile(string path, List<MapLocationEntry> entries)
     {
         try
         {
@@ -503,10 +480,12 @@ public class MapLocationDatabase
                 Directory.CreateDirectory(dir);
             var json = JsonSerializer.Serialize(entries, JsonOptions);
             File.WriteAllText(path, json);
+            return true;
         }
         catch (Exception ex)
         {
             _log.Error($"Failed to save MapLocDB: {ex.Message}");
+            return false;
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -248,11 +249,40 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLogin()
     {
-        if (Configuration.AutoUpdateLocOnLogin)
+        if (!Configuration.AutoUpdateLocOnLogin)
+            return;
+
+        var currentVersion = GetCurrentPluginVersion();
+        if (string.Equals(Configuration.LastCommunityLocationsRefreshPluginVersion, currentVersion, StringComparison.Ordinal))
         {
-            AddDebugLog("[MapLocDB] Auto-updating community data on login...");
-            _ = MapLocationDatabase.DownloadCommunityDataAsync();
+            AddDebugLog($"[MapLocDB] Community data already refreshed for plugin v{currentVersion}");
+            return;
         }
+
+        AddDebugLog($"[MapLocDB] Auto-updating community data for plugin v{currentVersion}...");
+        _ = DownloadCommunityLocationsForCurrentVersionAsync();
+    }
+
+    public async Task<bool> DownloadCommunityLocationsForCurrentVersionAsync()
+    {
+        var currentVersion = GetCurrentPluginVersion();
+        var success = await MapLocationDatabase.DownloadCommunityDataAsync();
+
+        if (!success)
+        {
+            AddDebugLog($"[MapLocDB] Community refresh version remains '{Configuration.LastCommunityLocationsRefreshPluginVersion}'");
+            return false;
+        }
+
+        Configuration.LastCommunityLocationsRefreshPluginVersion = currentVersion;
+        Configuration.Save();
+        AddDebugLog($"[MapLocDB] Community refresh marked complete for plugin v{currentVersion}");
+        return true;
+    }
+
+    private static string GetCurrentPluginVersion()
+    {
+        return typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0.0.0.0";
     }
 
     private void OnFrameworkUpdate(IFramework framework)

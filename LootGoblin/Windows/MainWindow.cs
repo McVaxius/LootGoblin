@@ -749,7 +749,7 @@ public class MainWindow : Window, IDisposable
             {
                 if (ImGui.Button("Download Updated Locs"))
                 {
-                    _ = db.DownloadCommunityDataAsync();
+                    _ = plugin.DownloadCommunityLocationsForCurrentVersionAsync();
                 }
                 if (!string.IsNullOrEmpty(db.LastDownloadResult))
                 {

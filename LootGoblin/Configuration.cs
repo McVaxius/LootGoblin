@@ -91,6 +91,7 @@ public class Configuration : IPluginConfiguration
 
     // Map Location Database
     public bool AutoUpdateLocOnLogin { get; set; } = true;
+    public string LastCommunityLocationsRefreshPluginVersion { get; set; } = "";
 
     // XYZ Cycling
     public bool CycleGroundOnly { get; set; } = false;
