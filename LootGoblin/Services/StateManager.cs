@@ -183,6 +183,7 @@ public class StateManager : IDisposable
     private static readonly TimeSpan UnderwaterFlagApproachHeartbeatInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan UnderwaterFlagApproachPendingWaitLogInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan UnderwaterTriggerLoopLogInterval = TimeSpan.FromSeconds(3.0);
+    private static readonly TimeSpan ThiefMapDigSuppressionLogInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan ThiefWaterRecoveryLogInterval = TimeSpan.FromSeconds(5.0);
     private static readonly HashSet<int> LochsThiefDiveSpecialDestinationIndices = new() { 534, 536, 537, 538 };
     private static readonly TimeSpan PortalMountCommandInterval = TimeSpan.FromSeconds(3.0);
@@ -356,6 +357,7 @@ public class StateManager : IDisposable
     private DateTime lastUnderwaterFlagApproachObjectDeferredLogTime = DateTime.MinValue;
     private bool underwaterFlagApproachSurfacedFallbackActive;
     private DateTime lastUnderwaterTriggerLoopLogTime = DateTime.MinValue;
+    private DateTime lastThiefMapDigSuppressedLogTime = DateTime.MinValue;
     private DateTime lastThiefWaterRecoveryLogTime = DateTime.MinValue;
 
     // Cycling mode state
@@ -1848,6 +1850,7 @@ public class StateManager : IDisposable
         ResetPendingUnderwaterFlagApproachReissue();
         underwaterFlagApproachSurfacedFallbackActive = false;
         lastUnderwaterTriggerLoopLogTime = DateTime.MinValue;
+        lastThiefMapDigSuppressedLogTime = DateTime.MinValue;
         lastThiefWaterRecoveryLogTime = DateTime.MinValue;
         underwaterTargetPosition = Vector3.Zero;
         wasDiving = false;
@@ -2146,6 +2149,78 @@ public class StateManager : IDisposable
         digIssuedAt = lastDigTime;
         _plugin.AddDebugLog($"{reason}: issued /gaction dig while diving.");
         return true;
+    }
+
+    private bool TryDigThiefMapWhileDivingAtGate(
+        string reason,
+        DateTime now,
+        Vector3 currentPos,
+        Vector3 activeTarget,
+        double xzDistance)
+    {
+        if (!CanUseUnderwaterNavigation())
+            return TryDigWhileDiving(reason);
+
+        if (!Plugin.Condition[ConditionFlag.Diving])
+            return false;
+
+        if (IsWithinThiefMapDigGate(activeTarget, xzDistance)
+            || IsExplicitThiefMapDescentFallbackDig(activeTarget, xzDistance))
+        {
+            return TryDigWhileDiving(reason);
+        }
+
+        LogSuppressedThiefMapDig(now, reason, currentPos, activeTarget, xzDistance);
+        return false;
+    }
+
+    private static bool IsWithinThiefMapDigGate(Vector3 activeTarget, double xzDistance)
+    {
+        return activeTarget != Vector3.Zero
+            && xzDistance <= UnderwaterFlagApproachArrivalXZRange;
+    }
+
+    private bool IsExplicitThiefMapDescentFallbackDig(Vector3 activeTarget, double xzDistance)
+    {
+        if (!descentInProgress && !descentMode)
+            return false;
+
+        if (HasPendingUnderwaterFlagApproachReissue()
+            || underwaterFlagApproachSurfacedFallbackActive)
+        {
+            return false;
+        }
+
+        if (activeTarget != Vector3.Zero
+            && xzDistance > UnderwaterFlagApproachArrivalXZRange)
+        {
+            return false;
+        }
+
+        return activeTarget == Vector3.Zero || underwaterBounceHandoffLogged;
+    }
+
+    private void LogSuppressedThiefMapDig(
+        DateTime now,
+        string reason,
+        Vector3 currentPos,
+        Vector3 activeTarget,
+        double xzDistance)
+    {
+        if (now - lastThiefMapDigSuppressedLogTime < ThiefMapDigSuppressionLogInterval)
+            return;
+
+        lastThiefMapDigSuppressedLogTime = now;
+        var targetText = activeTarget == Vector3.Zero ? "none" : FormatVectorCompact(activeTarget);
+        var xzText = double.IsNaN(xzDistance) || xzDistance == double.MaxValue
+            ? "n/a"
+            : $"{xzDistance:F1}y";
+
+        _plugin.AddDebugLog(
+            $"[Underwater] Suppressed thief-map dig during XYZ pathing: reason={reason}; " +
+            $"current={FormatVectorCompact(currentPos)}; target={targetText}; xz={xzText}; " +
+            $"arrival={UnderwaterFlagApproachArrivalXZRange:F1}y; nav={_plugin.NavigationService.State}; " +
+            $"pending={FormatUnderwaterFlagApproachPending(now)}.");
     }
 
     private bool TryHandleMapLandingAndDig(
@@ -3207,7 +3282,7 @@ public class StateManager : IDisposable
         if (keepDescent)
         {
             var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
-            var digIssued = TryDigWhileDiving("[Underwater] thief-map trigger");
+            var digIssued = TryDigThiefMapWhileDivingAtGate("[Underwater] thief-map trigger", now, currentPos, mainTarget, mainXZ);
             LogUnderwaterTriggerLoop(now, currentPos, Math.Min(entryXZ, mainXZ), descentPulseIssued, digIssued);
             StateDetail =
                 $"Holding Lochs thief-map dive entry... (entry {entryXZ:F1}y, landing {mainXZ:F1}y)";
@@ -3261,7 +3336,7 @@ public class StateManager : IDisposable
 
             SuppressUnderwaterBounceVnav();
             var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
-            var digIssued = TryDigWhileDiving("[Underwater] thief-map trigger");
+            var digIssued = TryDigThiefMapWhileDivingAtGate("[Underwater] thief-map trigger", now, currentPos, destination, destinationXZ);
             LogUnderwaterTriggerLoop(now, currentPos, destinationXZ, descentPulseIssued, digIssued);
             StateDetail = "Descending for underwater thief-map trigger...";
             return true;
@@ -3572,7 +3647,7 @@ public class StateManager : IDisposable
                 return false;
 
             var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
-            var digIssued = TryDigWhileDiving("[Underwater] thief-map trigger");
+            var digIssued = TryDigThiefMapWhileDivingAtGate("[Underwater] thief-map trigger", now, currentPos, underwaterTargetPosition, approachXZ);
             LogUnderwaterTriggerLoop(now, currentPos, approachXZ, descentPulseIssued, digIssued);
             StateDetail = "Holding underwater thief-map trigger...";
             return true;
