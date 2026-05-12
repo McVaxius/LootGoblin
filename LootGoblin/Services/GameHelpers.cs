@@ -55,7 +55,7 @@ public static class GameHelpers
     private static DateTime _confirmDialogReadyAt = DateTime.MinValue;
     private static DateTime _lastConfirmDialogLogTime = DateTime.MinValue;
     private static string? _pendingSequenceAddonName;
-    private static bool _pendingSequenceUpdateState;
+    private static bool _pendingSequenceSecondUpdateState;
     private static object[]? _pendingSequenceSecondArgs;
     private static DateTime _pendingSequenceSecondReadyAt = DateTime.MinValue;
     private static bool _pendingSequenceWaitingForSecond = false;
@@ -134,6 +134,15 @@ public static class GameHelpers
         TimeSpan secondDelay,
         object[] firstArgs,
         object[] secondArgs)
+        => QueueTwoStepAddonCallbackSequence(addonName, updateState, updateState, secondDelay, firstArgs, secondArgs);
+
+    public static bool QueueTwoStepAddonCallbackSequence(
+        string addonName,
+        bool firstUpdateState,
+        bool secondUpdateState,
+        TimeSpan secondDelay,
+        object[] firstArgs,
+        object[] secondArgs)
     {
         try
         {
@@ -152,18 +161,19 @@ public static class GameHelpers
             }
 
             Plugin.Log.Information(
-                $"[CALLBACKSEQ] Firing first step for '{addonName}' with args [{FormatCallbackArgs(firstArgs)}]");
-            FireAddonCallback(addonName, updateState, firstArgs);
+                $"[CALLBACKSEQ] Firing first step for '{addonName}' updateState={FormatCallbackArg(firstUpdateState)} " +
+                $"args=[{FormatCallbackArgs(firstArgs)}]");
+            FireAddonCallback(addonName, firstUpdateState, firstArgs);
 
             _pendingSequenceAddonName = addonName;
-            _pendingSequenceUpdateState = updateState;
+            _pendingSequenceSecondUpdateState = secondUpdateState;
             _pendingSequenceSecondArgs = secondArgs;
             _pendingSequenceSecondReadyAt = DateTime.Now.Add(secondDelay);
             _pendingSequenceWaitingForSecond = true;
 
             Plugin.Log.Information(
                 $"[CALLBACKSEQ] Queued second step for '{addonName}' in {secondDelay.TotalMilliseconds:F0}ms " +
-                $"with args [{FormatCallbackArgs(secondArgs)}]");
+                $"updateState={FormatCallbackArg(secondUpdateState)} args=[{FormatCallbackArgs(secondArgs)}]");
             return true;
         }
         catch (Exception ex)
@@ -1095,9 +1105,10 @@ public static class GameHelpers
         try
         {
             Plugin.Log.Information(
-                $"[CALLBACKSEQ] Firing second step for '{_pendingSequenceAddonName}' with args " +
-                $"[{FormatCallbackArgs(_pendingSequenceSecondArgs)}]");
-            FireAddonCallback(_pendingSequenceAddonName, _pendingSequenceUpdateState, _pendingSequenceSecondArgs);
+                $"[CALLBACKSEQ] Firing second step for '{_pendingSequenceAddonName}' " +
+                $"updateState={FormatCallbackArg(_pendingSequenceSecondUpdateState)} " +
+                $"args=[{FormatCallbackArgs(_pendingSequenceSecondArgs)}]");
+            FireAddonCallback(_pendingSequenceAddonName, _pendingSequenceSecondUpdateState, _pendingSequenceSecondArgs);
             Plugin.Log.Information($"[CALLBACKSEQ] Completed sequence for '{_pendingSequenceAddonName}'");
         }
         catch (Exception ex)
@@ -1116,13 +1127,21 @@ public static class GameHelpers
         _pendingSequenceSecondArgs = null;
         _pendingSequenceSecondReadyAt = DateTime.MinValue;
         _pendingSequenceWaitingForSecond = false;
-        _pendingSequenceUpdateState = false;
+        _pendingSequenceSecondUpdateState = false;
     }
 
     private static string FormatCallbackArgs(object[] args)
     {
-        return string.Join(", ", args.Select(arg => arg?.ToString() ?? "<null>"));
+        return string.Join(", ", args.Select(FormatCallbackArg));
     }
+
+    private static string FormatCallbackArg(object? arg)
+        => arg switch
+        {
+            null => "<null>",
+            bool boolValue => boolValue ? "true" : "false",
+            _ => arg.ToString() ?? string.Empty,
+        };
 
     /// <summary>
     /// Fire a callback on a named addon with variable arguments.
@@ -1156,7 +1175,8 @@ public static class GameHelpers
                 addon->FireCallback((uint)atkValues.Length, ptr, updateState);
             }
 
-            Plugin.Log.Information($"[FireAddonCallback] Fired callback on '{addonName}' with {args.Length} args");
+            Plugin.Log.Information(
+                $"[FireAddonCallback] Fired callback on '{addonName}' updateState={FormatCallbackArg(updateState)} args=[{FormatCallbackArgs(args)}]");
             return true;
         }
         catch (Exception ex)

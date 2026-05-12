@@ -139,7 +139,11 @@ public class StateManager : IDisposable
     private DateTime lastInteractionTime = DateTime.MinValue; // Throttle chest/portal interaction attempts
     private bool autoMoveActive; // Track if automove is currently on
     private bool pendingDungeonMapFlagClear; // Clear the overworld flag once dungeon entry has settled
-    private bool treasureHighLowHandledThisOpen; // Track one detection log while puzzle addon stays open
+    private DateTime treasureHighLowVisibleSince = DateTime.MinValue; // Start of the current Higher/Lower addon session
+    private DateTime treasureHighLowNextRetryAt = DateTime.MinValue; // Next time the skip callback pair may be queued
+    private DateTime treasureHighLowLastStatusLogAt = DateTime.MinValue; // Rate-limit visible-after-attempts logs
+    private DateTime treasureHighLowLastMovementStopAt = DateTime.MinValue; // Rate-limit hard movement stop commands while addon is visible
+    private int treasureHighLowAttemptCount; // Number of queued callback pairs in the current addon session
     private bool betweenAreasMovementStopped; // Stop LootGoblin-owned movement once per loading screen
     
     // Map opening validation variables
@@ -175,7 +179,9 @@ public class StateManager : IDisposable
     private const float PortalRunawayDistanceIncrease = 2.0f;
     private const int UnderwaterBounceAutomoveHoldMs = 250;
     private const int UnderwaterBounceDescentHoldMs = 1000;
+    private const int UnderwaterXyzDigRetryMaxAttempts = 3;
     private static readonly TimeSpan UnderwaterBounceDescentInterval = TimeSpan.FromSeconds(1.25);
+    private static readonly TimeSpan UnderwaterXyzDigRetryDelay = TimeSpan.FromSeconds(10.0);
     private static readonly TimeSpan UnderwaterFlagApproachReissueInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan UnderwaterFlagApproachReissueStopDelay = TimeSpan.FromMilliseconds(150);
     private static readonly TimeSpan UnderwaterFlagApproachStallTimeout = TimeSpan.FromSeconds(5.0);
@@ -207,6 +213,9 @@ public class StateManager : IDisposable
     private static readonly TimeSpan AdsRepairStartGrace = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairTimeout = TimeSpan.FromMinutes(3.0);
     private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan TreasureHighLowRetryInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan TreasureHighLowStatusLogInterval = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan TreasureHighLowMovementStopInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagStepTimeout = TimeSpan.FromSeconds(20);
@@ -563,6 +572,9 @@ public class StateManager : IDisposable
         }
         betweenAreasMovementStopped = false;
 
+        if (TrySkipCardGame())
+            return;
+
         RunSelectYesnoWatchdog();
 
         UpdateMountedRotationLifecycle();
@@ -686,6 +698,7 @@ public class StateManager : IDisposable
         ResetPendingUnderwaterFlagApproachReissue();
         underwaterFlagApproachSurfacedFallbackActive = false;
         ResetUnderwaterBounceSpecialNavigationState();
+        ResetUnderwaterXyzDigRetryState();
         betweenAreasMovementStopped = true;
 
         if (hadMovement)
@@ -1855,6 +1868,7 @@ public class StateManager : IDisposable
         underwaterTargetPosition = Vector3.Zero;
         wasDiving = false;
         nonThiefDivingIgnoredLogged = false;
+        ResetUnderwaterXyzDigRetryState();
     }
 
     private void StartSafeDescent(string source, bool includeForward = false)
@@ -3417,6 +3431,111 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private bool TryHandleUnderwaterXyzDigRetryGate(
+        DateTime now,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance)
+    {
+        if (!IsUnderwaterXyzDigRetryGateEligible(target, xzDistance))
+            return false;
+
+        if (underwaterXyzDigRetryTarget == Vector3.Zero ||
+            Vector3.Distance(underwaterXyzDigRetryTarget, target) >= 1.0f)
+        {
+            ResetUnderwaterXyzDigRetryState();
+            underwaterXyzDigRetryTarget = target;
+        }
+
+        if (underwaterXyzDigRetryAttemptCount >= UnderwaterXyzDigRetryMaxAttempts)
+        {
+            if (underwaterXyzDigRetryWaitUntil != DateTime.MinValue &&
+                now < underwaterXyzDigRetryWaitUntil)
+            {
+                StateDetail = BuildUnderwaterXyzDigRetryWaitDetail(now, "Waiting after underwater XYZ dig retry");
+                return true;
+            }
+
+            if (underwaterXyzDigRetryWaitUntil != DateTime.MinValue)
+            {
+                var finalWaitSeconds = underwaterXyzDigRetryLastDigAt == DateTime.MinValue
+                    ? UnderwaterXyzDigRetryDelay.TotalSeconds
+                    : Math.Max(0.0, (now - underwaterXyzDigRetryLastDigAt).TotalSeconds);
+                underwaterXyzDigRetryWaitUntil = DateTime.MinValue;
+                _plugin.AddDebugLog(
+                    $"[Underwater] XYZ dig retry final wait complete after {finalWaitSeconds:F1}s - allowing descent/fallback path.");
+            }
+
+            return false;
+        }
+
+        if (underwaterXyzDigRetryAttemptCount > 0 &&
+            now < underwaterXyzDigRetryWaitUntil)
+        {
+            StateDetail = BuildUnderwaterXyzDigRetryWaitDetail(now, "Waiting before underwater XYZ dig retry");
+            return true;
+        }
+
+        IssueUnderwaterXyzDigRetryAttempt(now, currentPos, target, xzDistance);
+        return true;
+    }
+
+    private bool IsUnderwaterXyzDigRetryGateEligible(Vector3 target, double xzDistance)
+    {
+        return CanUseUnderwaterNavigation()
+            && currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            && Plugin.Condition[ConditionFlag.Diving]
+            && target != Vector3.Zero
+            && xzDistance <= UnderwaterFlagApproachArrivalXZRange;
+    }
+
+    private string BuildUnderwaterXyzDigRetryWaitDetail(DateTime now, string prefix)
+    {
+        var remaining = underwaterXyzDigRetryWaitUntil == DateTime.MinValue
+            ? 0.0
+            : Math.Max(0.0, (underwaterXyzDigRetryWaitUntil - now).TotalSeconds);
+        var nextAttempt = Math.Min(
+            UnderwaterXyzDigRetryMaxAttempts,
+            underwaterXyzDigRetryAttemptCount + 1);
+
+        return $"{prefix} {nextAttempt}/{UnderwaterXyzDigRetryMaxAttempts}... ({remaining:F1}s)";
+    }
+
+    private void IssueUnderwaterXyzDigRetryAttempt(
+        DateTime now,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance)
+    {
+        underwaterXyzDigRetryAttemptCount++;
+        underwaterXyzDigRetryLastDigAt = now;
+        underwaterXyzDigRetryWaitUntil = now.Add(UnderwaterXyzDigRetryDelay);
+
+        _plugin.NavigationService.FlyToPosition(target, force: true);
+        RunLandingCommandsOnce("[Underwater] thief-map XYZ retry");
+        CommandHelper.SendCommand("/gaction dig");
+        lastDigTime = now;
+        digIssuedThisMap = true;
+        digIssuedAt = now;
+
+        _plugin.AddDebugLog(
+            $"[Underwater] XYZ dig retry attempt {underwaterXyzDigRetryAttemptCount}/{UnderwaterXyzDigRetryMaxAttempts}: " +
+            $"force flyto {FormatVectorCompact(target)} -> /gaction dig; " +
+            $"current={FormatVectorCompact(currentPos)}; flagXZ={xzDistance:F1}y; " +
+            $"nextWait={UnderwaterXyzDigRetryDelay.TotalSeconds:F0}s.");
+
+        StateDetail =
+            $"Underwater XYZ dig retry {underwaterXyzDigRetryAttemptCount}/{UnderwaterXyzDigRetryMaxAttempts}...";
+    }
+
+    private void ResetUnderwaterXyzDigRetryState()
+    {
+        underwaterXyzDigRetryTarget = Vector3.Zero;
+        underwaterXyzDigRetryAttemptCount = 0;
+        underwaterXyzDigRetryLastDigAt = DateTime.MinValue;
+        underwaterXyzDigRetryWaitUntil = DateTime.MinValue;
+    }
+
     private void LogUnderwaterTriggerLoop(
         DateTime now,
         Vector3 currentPos,
@@ -3501,6 +3620,7 @@ public class StateManager : IDisposable
         if (portal != null)
         {
             _plugin.AddDebugLog("[Underwater] Portal detected after thief-map flag arrival - switching to portal interaction.");
+            ResetUnderwaterXyzDigRetryState();
             CheckForPortalAfterChest();
             return true;
         }
@@ -3511,11 +3631,13 @@ public class StateManager : IDisposable
 
         if (State == BotState.OpeningChest)
         {
+            ResetUnderwaterXyzDigRetryState();
             yieldToOpeningChest = true;
             return false;
         }
 
         _plugin.AddDebugLog("[Underwater] Coffer detected after thief-map flag arrival - transitioning to chest flow.");
+        ResetUnderwaterXyzDigRetryState();
         TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
         return true;
     }
@@ -3645,6 +3767,9 @@ public class StateManager : IDisposable
 
             if (yieldToOpeningChest)
                 return false;
+
+            if (TryHandleUnderwaterXyzDigRetryGate(now, currentPos, underwaterTargetPosition, approachXZ))
+                return true;
 
             var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
             var digIssued = TryDigThiefMapWhileDivingAtGate("[Underwater] thief-map trigger", now, currentPos, underwaterTargetPosition, approachXZ);
@@ -6509,7 +6634,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Check for card game addon → skip with "Open Chest"
+        // Check for card game addon with observed TreasureHighLow false -2 -> TreasureHighLow true 1 pair.
         if (TrySkipCardGame())
             return;
 
@@ -8106,6 +8231,7 @@ public class StateManager : IDisposable
         }
 
         dungeonConfirmedThisMap = true;
+        ResetUnderwaterXyzDigRetryState();
 
         if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
         {
@@ -9003,49 +9129,106 @@ public class StateManager : IDisposable
     private bool TrySkipCardGame()
     {
         const string addonName = "TreasureHighLow";
+        var now = DateTime.Now;
 
         if (!GameHelpers.IsAddonVisible(addonName))
         {
-            treasureHighLowHandledThisOpen = false;
+            if (treasureHighLowVisibleSince != DateTime.MinValue)
+            {
+                var visibleDuration = now - treasureHighLowVisibleSince;
+                _plugin.AddDebugLog(
+                    $"[CardGame] TreasureHighLow closed after {visibleDuration.TotalSeconds:F1}s and " +
+                    $"{treasureHighLowAttemptCount} callback attempt(s).");
+            }
+
+            ResetTreasureHighLowRetryState();
             return false;
         }
 
-        if (autoMoveActive)
+        StopMovementForTreasureHighLow(now);
+
+        if (treasureHighLowVisibleSince == DateTime.MinValue)
         {
-            GameHelpers.StopAutoMove();
-            autoMoveActive = false;
+            treasureHighLowVisibleSince = now;
+            treasureHighLowAttemptCount = 0;
+            treasureHighLowNextRetryAt = now;
+            treasureHighLowLastStatusLogAt = now;
+            _plugin.AddDebugLog(
+                "[CardGame] TreasureHighLow detected - retrying TreasureHighLow false -2 -> TreasureHighLow true 1 every 500ms until addon closes.");
         }
 
-        if (_plugin.NavigationService.State != NavigationState.Idle)
-        {
-            _plugin.NavigationService.StopNavigation();
-        }
+        LogTreasureHighLowStillVisible(now);
 
         if (GameHelpers.IsAddonCallbackSequencePending(addonName))
         {
-            StateDetail = "Skipping Higher/Lower puzzle...";
+            StateDetail = $"Skipping Higher/Lower puzzle (attempt {treasureHighLowAttemptCount})...";
             return true;
         }
 
-        if (!treasureHighLowHandledThisOpen)
+        if (now < treasureHighLowNextRetryAt)
         {
-            _plugin.AddDebugLog(
-                "[CardGame] TreasureHighLow detected - scheduling Open Chest callbacks (-2 then -1 until addon closes).");
-            treasureHighLowHandledThisOpen = true;
+            StateDetail = $"Waiting for Higher/Lower puzzle to close (attempt {treasureHighLowAttemptCount})...";
+            return true;
         }
+
+        treasureHighLowAttemptCount++;
+        treasureHighLowNextRetryAt = now.Add(TreasureHighLowRetryInterval);
+        _plugin.AddDebugLog(
+            $"[CardGame] Attempt {treasureHighLowAttemptCount}: TreasureHighLow false -2 -> TreasureHighLow true 1");
 
         if (!GameHelpers.QueueTwoStepAddonCallbackSequence(
                 addonName,
+                false,
                 true,
                 TreasureHighLowSecondCallbackDelay,
                 new object[] { -2 },
-                new object[] { -1 }))
+                new object[] { 1 }))
         {
-            _plugin.AddDebugLog("[CardGame] Failed to queue TreasureHighLow skip sequence.");
+            _plugin.AddDebugLog(
+                $"[CardGame] Attempt {treasureHighLowAttemptCount} failed to queue TreasureHighLow callback sequence.");
         }
 
-        StateDetail = "Waiting for Higher/Lower puzzle to close...";
+        StateDetail = $"Waiting for Higher/Lower puzzle to close (attempt {treasureHighLowAttemptCount})...";
         return true;
+    }
+
+    private void StopMovementForTreasureHighLow(DateTime now)
+    {
+        if (now - treasureHighLowLastMovementStopAt < TreasureHighLowMovementStopInterval)
+            return;
+
+        treasureHighLowLastMovementStopAt = now;
+        CommandHelper.SendCommand("/automove off");
+        CommandHelper.SendCommand("/vnav stop");
+        autoMoveActive = false;
+
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+    }
+
+    private void LogTreasureHighLowStillVisible(DateTime now)
+    {
+        if (treasureHighLowAttemptCount <= 0 ||
+            treasureHighLowVisibleSince == DateTime.MinValue ||
+            now - treasureHighLowLastStatusLogAt < TreasureHighLowStatusLogInterval)
+        {
+            return;
+        }
+
+        treasureHighLowLastStatusLogAt = now;
+        var visibleDuration = now - treasureHighLowVisibleSince;
+        _plugin.AddDebugLog(
+            $"[CardGame] TreasureHighLow still visible after {treasureHighLowAttemptCount} callback attempt(s) " +
+            $"over {visibleDuration.TotalSeconds:F1}s; continuing TreasureHighLow false -2 -> TreasureHighLow true 1 retry.");
+    }
+
+    private void ResetTreasureHighLowRetryState()
+    {
+        treasureHighLowVisibleSince = DateTime.MinValue;
+        treasureHighLowNextRetryAt = DateTime.MinValue;
+        treasureHighLowLastStatusLogAt = DateTime.MinValue;
+        treasureHighLowLastMovementStopAt = DateTime.MinValue;
+        treasureHighLowAttemptCount = 0;
     }
 
     // ─── Error Handling ───────────────────────────────────────────────────────
@@ -9150,10 +9333,13 @@ public class StateManager : IDisposable
         descentInProgress = false;
         lastLandingPartyWaitSignature = string.Empty;
         openingChestCombatInterrupted = false;
-        treasureHighLowHandledThisOpen = false;
+        ResetTreasureHighLowRetryState();
         openingChestRecoveryDigIssued = false;
         openingChestReturningToFlag = false;
         openingChestReturningToLastKnownCoffer = false;
+
+        if (newState is BotState.Idle or BotState.Error or BotState.Completed or BotState.InDungeon)
+            ResetUnderwaterXyzDigRetryState();
 
         if (prev == BotState.OpeningChest && newState != BotState.OpeningChest)
         {
@@ -9804,6 +9990,10 @@ public class StateManager : IDisposable
     private DateTime lastDivingCheck = DateTime.MinValue;
     private Vector3 underwaterTargetPosition = Vector3.Zero;
     private bool nonThiefDivingIgnoredLogged = false;
+    private Vector3 underwaterXyzDigRetryTarget = Vector3.Zero;
+    private int underwaterXyzDigRetryAttemptCount;
+    private DateTime underwaterXyzDigRetryLastDigAt = DateTime.MinValue;
+    private DateTime underwaterXyzDigRetryWaitUntil = DateTime.MinValue;
     private static DateTime lastDigTime = DateTime.MinValue;
 
     /// <summary>
