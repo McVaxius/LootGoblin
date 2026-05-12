@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "destinationIndex": 534,
+    "zoneName": "The Lochs",
+    "preX": 54.0,
+    "preY": -10.0,
+    "preZ": -45.0,
+    "mainX": 42.1,
+    "mainY": -12.9,
+    "mainZ": -23.7,
+    "notes": "Lochs Thief ice dive entry for flag 34.6,-249.1,-12.9.",
+    "isActive": true
+  },
+  {
+    "destinationIndex": 536,
+    "zoneName": "The Lochs",
+    "preX": -181.0,
+    "preY": -10.0,
+    "preZ": -173.0,
+    "mainX": -217.6,
+    "mainY": -277.3,
+    "mainZ": -114.2,
+    "notes": "Lochs Thief ice dive entry for flag -217.8,-277.3,-114.2.",
+    "isActive": true
+  },
+  {
+    "destinationIndex": 537,
+    "zoneName": "The Lochs",
+    "preX": -0.9,
+    "preY": -10.0,
+    "preZ": -282.8,
+    "mainX": -0.75,
+    "mainY": -281.6,
+    "mainZ": -282.9,
+    "notes": "Lochs Thief ice dive entry for flag -0.9,-281.6,-282.8.",
+    "isActive": true
+  },
+  {
+    "destinationIndex": 538,
+    "zoneName": "The Lochs",
+    "preX": 141.0,
+    "preY": -10.0,
+    "preZ": 243.0,
+    "mainX": 103.6,
+    "mainY": -343.7,
+    "mainZ": 207.9,
+    "notes": "Lochs Thief ice dive entry for flag 103.5,-343.7,207.7.",
+    "isActive": true
+  }
+]

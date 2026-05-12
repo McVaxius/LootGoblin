@@ -184,6 +184,7 @@ public class StateManager : IDisposable
     private static readonly TimeSpan UnderwaterFlagApproachPendingWaitLogInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan UnderwaterTriggerLoopLogInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan ThiefWaterRecoveryLogInterval = TimeSpan.FromSeconds(5.0);
+    private static readonly HashSet<int> LochsThiefDiveSpecialDestinationIndices = new() { 534, 536, 537, 538 };
     private static readonly TimeSpan PortalMountCommandInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan OpeningChestCofferMountCommandInterval = TimeSpan.FromSeconds(3.0);
@@ -332,6 +333,8 @@ public class StateManager : IDisposable
     private bool underwaterFlagApproachIssued;
     private bool underwaterFlagApproachLogged;
     private bool underwaterBounceHandoffLogged;
+    private int activeUnderwaterBounceSpecialDestinationIndex = -1;
+    private bool activeUnderwaterBounceSpecialEntryReached;
     private bool thiefWaterRemountRecoveryActive;
     private bool thiefWaterRemountRecoveryZoneWaitActive;
     private DateTime lastUnderwaterFlagApproachTime = DateTime.MinValue;
@@ -680,6 +683,7 @@ public class StateManager : IDisposable
         ResetUnderwaterFlagApproachProgressState();
         ResetPendingUnderwaterFlagApproachReissue();
         underwaterFlagApproachSurfacedFallbackActive = false;
+        ResetUnderwaterBounceSpecialNavigationState();
         betweenAreasMovementStopped = true;
 
         if (hadMovement)
@@ -1836,6 +1840,7 @@ public class StateManager : IDisposable
         underwaterFlagApproachIssued = false;
         underwaterFlagApproachLogged = false;
         underwaterBounceHandoffLogged = false;
+        ResetUnderwaterBounceSpecialNavigationState();
         thiefWaterRemountRecoveryActive = false;
         thiefWaterRemountRecoveryZoneWaitActive = false;
         lastUnderwaterFlagApproachTime = DateTime.MinValue;
@@ -2367,6 +2372,9 @@ public class StateManager : IDisposable
             return false;
         }
 
+        if (IsUnderwaterBounceSpecialEntryHandoffActive())
+            return false;
+
         var xzDist = CalculateXZDistance(currentPos, landingTarget);
         if (xzDist <= UnderwaterBounceTriggerXZRange || xzDist <= MapDigXZRange)
             return false;
@@ -2462,20 +2470,23 @@ public class StateManager : IDisposable
             return Vector3.Zero;
         }
 
-        if (currentEntry != null && currentEntry.HasRealXYZ)
-        {
-            basis = "stored RealXYZ";
-            return new Vector3(currentEntry.RealX, currentEntry.RealY, currentEntry.RealZ);
-        }
-
-        if (currentEntry != null && destinationIndex > 0)
+        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            && currentEntry != null
+            && destinationIndex > 0)
         {
             var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
             if (specialNav != null)
             {
+                TrackUnderwaterBounceSpecialNavigation(destinationIndex);
                 basis = "special navigation";
                 return new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
             }
+        }
+
+        if (currentEntry != null && currentEntry.HasRealXYZ)
+        {
+            basis = "stored RealXYZ";
+            return new Vector3(currentEntry.RealX, currentEntry.RealY, currentEntry.RealZ);
         }
 
         if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
@@ -2518,6 +2529,13 @@ public class StateManager : IDisposable
         if (targets.LandingTarget == Vector3.Zero || currentPos == Vector3.Zero)
             return Vector3.Zero;
 
+        if (targets.Basis.StartsWith("special navigation", StringComparison.Ordinal)
+            && activeUnderwaterBounceSpecialDestinationIndex > 0
+            && ShouldUseUnderwaterBounceSpecialMainTarget(activeUnderwaterBounceSpecialDestinationIndex))
+        {
+            return targets.LandingTarget;
+        }
+
         var approachY = currentPos.Y;
         if (ShouldUseLochsDivingFlagApproachOffset())
         {
@@ -2533,6 +2551,71 @@ public class StateManager : IDisposable
         return Plugin.Condition[ConditionFlag.Diving]
             && Plugin.ClientState.TerritoryType == LochsTerritoryId
             && CurrentLocation?.TerritoryId == LochsTerritoryId;
+    }
+
+    private void ResetUnderwaterBounceSpecialNavigationState()
+    {
+        activeUnderwaterBounceSpecialDestinationIndex = -1;
+        activeUnderwaterBounceSpecialEntryReached = false;
+    }
+
+    private void TrackUnderwaterBounceSpecialNavigation(int destinationIndex)
+    {
+        if (activeUnderwaterBounceSpecialDestinationIndex == destinationIndex)
+            return;
+
+        activeUnderwaterBounceSpecialDestinationIndex = destinationIndex;
+        activeUnderwaterBounceSpecialEntryReached = false;
+    }
+
+    private bool ShouldUseUnderwaterBounceSpecialMainTarget(int destinationIndex)
+    {
+        return Plugin.Condition[ConditionFlag.Diving]
+            || wasDiving
+            || underwaterBounceHandoffLogged
+            || underwaterTargetPosition != Vector3.Zero
+            || descentInProgress
+            || descentMode
+            || dismountAttemptStart != DateTime.MinValue
+            || (activeUnderwaterBounceSpecialEntryReached
+                && activeUnderwaterBounceSpecialDestinationIndex == destinationIndex);
+    }
+
+    private bool IsUnderwaterBounceSpecialEntryHandoffActive()
+    {
+        return activeUnderwaterBounceSpecialDestinationIndex > 0
+            && activeUnderwaterBounceSpecialEntryReached
+            && (descentInProgress
+                || descentMode
+                || dismountAttemptStart != DateTime.MinValue
+                || wasDiving
+                || underwaterTargetPosition != Vector3.Zero);
+    }
+
+    private static bool IsSpecialNavigationEntryBasis(string basis)
+    {
+        return string.Equals(basis, "special navigation entry", StringComparison.Ordinal);
+    }
+
+    private void MarkUnderwaterBounceSpecialEntryReachedIfNeeded(
+        Vector3 currentPos,
+        Vector3 entryTarget,
+        string basis,
+        string destinationText,
+        string zoneName)
+    {
+        if (!IsSpecialNavigationEntryBasis(basis)
+            || activeUnderwaterBounceSpecialDestinationIndex <= 0
+            || activeUnderwaterBounceSpecialEntryReached)
+        {
+            return;
+        }
+
+        activeUnderwaterBounceSpecialEntryReached = true;
+        _plugin.AddDebugLog(
+            $"[Underwater] Reached special navigation entry for {destinationText} - {zoneName}; " +
+            $"switching thief-map dive target to main XYZ. " +
+            $"entry={FormatVectorCompact(entryTarget)}; current={FormatVectorCompact(currentPos)}");
     }
 
     private void ResetUnderwaterFlagApproachProgressState()
@@ -3066,8 +3149,91 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private bool TryGetCurrentLochsThiefDiveSpecialNavigation(out SpecialNavigationEntry? specialNav, out int destinationIndex)
+    {
+        specialNav = null;
+        destinationIndex = -1;
+
+        if (CurrentLocation == null
+            || currentLandingMode != OverworldLandingMode.UnderwaterBounce
+            || !CanUseUnderwaterNavigation()
+            || CurrentLocation.TerritoryId != LochsTerritoryId)
+        {
+            return false;
+        }
+
+        var currentEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
+        destinationIndex = currentEntry?.Index > 0
+            ? currentEntry.Index
+            : activeUnderwaterBounceSpecialDestinationIndex;
+
+        if (!LochsThiefDiveSpecialDestinationIndices.Contains(destinationIndex))
+            return false;
+
+        specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
+        return specialNav != null;
+    }
+
+    private bool TrySuppressLochsSpecialSurfacedFallbackRetry(DateTime now, Vector3 currentPos)
+    {
+        if (!TryGetCurrentLochsThiefDiveSpecialNavigation(out var specialNav, out var destinationIndex)
+            || specialNav == null)
+        {
+            return false;
+        }
+
+        var entryTarget = new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ);
+        var mainTarget = new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
+        var entryXZ = CalculateXZDistance(currentPos, entryTarget);
+        var mainXZ = CalculateXZDistance(currentPos, mainTarget);
+
+        if (mainXZ <= UnderwaterFlagApproachArrivalXZRange)
+            return false;
+
+        underwaterFlagApproachSurfacedFallbackActive = false;
+        underwaterTargetPosition = Vector3.Zero;
+        ResetPendingUnderwaterFlagApproachReissue();
+
+        SuppressUnderwaterBounceVnav();
+
+        var withinEntryHandoff = entryXZ <= UnderwaterBounceTriggerXZRange;
+        var withinLandingHandoff = mainXZ <= UnderwaterBounceTriggerXZRange;
+        var keepDescent = withinEntryHandoff
+            || withinLandingHandoff
+            || descentInProgress
+            || descentMode
+            || dismountAttemptStart != DateTime.MinValue;
+
+        if (keepDescent)
+        {
+            var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
+            var digIssued = TryDigWhileDiving("[Underwater] thief-map trigger");
+            LogUnderwaterTriggerLoop(now, currentPos, Math.Min(entryXZ, mainXZ), descentPulseIssued, digIssued);
+            StateDetail =
+                $"Holding Lochs thief-map dive entry... (entry {entryXZ:F1}y, landing {mainXZ:F1}y)";
+        }
+        else
+        {
+            StateDetail =
+                $"Waiting for Lochs thief-map dive recovery... (entry {entryXZ:F1}y, landing {mainXZ:F1}y)";
+        }
+
+        LogThiefWaterInfoRateLimited(
+            ref lastThiefWaterRecoveryLogTime,
+            ThiefWaterRecoveryLogInterval,
+            $"[Underwater] Suppressed surfaced fallback flyto for Lochs special navigation #{destinationIndex}; " +
+            $"waiting for Diving or entry/landing handoff range. " +
+            $"current={FormatVectorCompact(currentPos)}; entry={FormatVectorCompact(entryTarget)} ({entryXZ:F1}y); " +
+            $"main={FormatVectorCompact(mainTarget)} ({mainXZ:F1}y).");
+
+        return true;
+    }
+
     private bool TryHandleSurfacedUnderwaterFlagApproachFallback(DateTime now, Vector3 currentPos)
     {
+        if (TrySuppressLochsSpecialSurfacedFallbackRetry(now, currentPos))
+            return true;
+
         var targets = ResolveOverworldNavigationTargets();
         var destination = targets.LandingTarget;
         if (destination == Vector3.Zero)
@@ -5247,6 +5413,7 @@ public class StateManager : IDisposable
         var mountedFarThiefTravel =
             currentLandingMode == OverworldLandingMode.UnderwaterBounce
             && CanUseUnderwaterNavigation()
+            && !IsUnderwaterBounceSpecialEntryHandoffActive()
             && IsMountedOrActualInFlight()
             && currentPos != Vector3.Zero
             && activeNavTargets.LandingTarget != Vector3.Zero
@@ -5317,7 +5484,15 @@ public class StateManager : IDisposable
                         "dive landing mode active, skipping immediate dismount/dig");
                     stateActionIssued = true;
                     if (TryHandleUnderwaterBounceTriggerFlow(isDiving))
+                    {
+                        MarkUnderwaterBounceSpecialEntryReachedIfNeeded(
+                            playerPos,
+                            initialNavTargets.LandingTarget,
+                            initialNavTargets.Basis,
+                            initialNavTargets.DestinationText,
+                            initialNavTargets.ZoneName);
                         return;
+                    }
                 }
                 else
                 {
@@ -5365,6 +5540,12 @@ public class StateManager : IDisposable
             && xzDist <= UnderwaterBounceTriggerXZRange
             && TryHandleUnderwaterBounceTriggerFlow(isDiving))
         {
+            MarkUnderwaterBounceSpecialEntryReachedIfNeeded(
+                currentPos,
+                activeNavTargets.LandingTarget,
+                activeNavTargets.Basis,
+                activeNavTargets.DestinationText,
+                activeNavTargets.ZoneName);
             return;
         }
         
@@ -9900,26 +10081,30 @@ public class StateManager : IDisposable
 
         if (canUseUnderwaterNavigation && currentLandingMode == OverworldLandingMode.UnderwaterBounce)
         {
-            if (dbEntry != null && dbEntry.HasRealXYZ)
-            {
-                var realTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
-                return (realTarget, realTarget, "stored RealXYZ", destinationText, zoneName, false);
-            }
-
             if (dbEntry != null && destinationIndex > 0)
             {
                 var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
                 if (specialNav != null)
                 {
+                    TrackUnderwaterBounceSpecialNavigation(destinationIndex);
+                    var specialEntryTarget = new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ);
                     var specialMainTarget = new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
+                    var useMainTarget = ShouldUseUnderwaterBounceSpecialMainTarget(destinationIndex);
+                    var target = useMainTarget ? specialMainTarget : specialEntryTarget;
                     return (
-                        new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ),
-                        specialMainTarget,
-                        "special navigation",
+                        target,
+                        target,
+                        useMainTarget ? "special navigation" : "special navigation entry",
                         destinationText,
                         zoneName,
                         false);
                 }
+            }
+
+            if (dbEntry != null && dbEntry.HasRealXYZ)
+            {
+                var realTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
+                return (realTarget, realTarget, "stored RealXYZ", destinationText, zoneName, false);
             }
 
             return (
