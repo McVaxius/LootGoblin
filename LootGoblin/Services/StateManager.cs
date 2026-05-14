@@ -122,6 +122,8 @@ public class StateManager : IDisposable
     private int openingChestRecoveryDigRetryCount; // Bounded retry count for missing coffer after dig
     private int openingChestInteractionAttemptCount; // Cycles coffer interaction methods
     private uint openingChestInteractionEntityId; // Coffer currently being interacted with
+    private uint openingChestCameraResetEntityId; // Coffer waiting for camera reset before direct interact
+    private DateTime openingChestCameraResetReadyAt = DateTime.MinValue;
     private bool openingChestBotInteractionAttemptedThisMap; // Used to flag manual/inconclusive evidence
     private DateTime portalApproachStartedAt = DateTime.MinValue; // Tracks progress for portal FlyToPosition
     private float portalApproachStartDistance = float.MaxValue; // Distance when current portal approach started
@@ -129,7 +131,9 @@ public class StateManager : IDisposable
     private bool portalRegularVnavPathLogged; // One-shot log for portal vnav-only approach path
     private DateTime lastPortalTimeoutHoldLogTime = DateTime.MinValue; // Throttle timeout hold logs while portal/duty still active
     private DateTime lastPortalObjectScanLogTime = DateTime.MinValue; // Throttle active portal ObjectTable logs
-    private int portalInteractionAttemptCount; // Alternates TargetSystem and /interact while portal dialog is pending
+    private int portalInteractionAttemptCount; // Alternates camera-based and no-camera TargetSystem while portal dialog is pending
+    private uint portalCameraResetEntityId; // Portal waiting for camera reset before direct interact
+    private DateTime portalCameraResetReadyAt = DateTime.MinValue;
     private bool portalUnderwaterReadyLogged; // One-shot log when a diving/dismounted portal can be interacted directly
     private DateTime dismountAttemptStart = DateTime.MinValue; // When dismount first attempted at flag X,Z
     private bool descentInProgress = false; // Whether Ctrl+Space descent is currently running
@@ -153,6 +157,7 @@ public class StateManager : IDisposable
     private bool mapOpeningRetried = false;
     private const double TickIntervalSeconds = 0.5;
     private static readonly TimeSpan SelectYesnoWatchdogInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan CameraResetBeforeInteractDelay = TimeSpan.FromMilliseconds(150);
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float MapDigXZRange = 5.0f;
     private const double SameZoneAetheryteTeleportSkipXZRange = 50.0;
@@ -600,6 +605,7 @@ public class StateManager : IDisposable
         if (lastGlobalTerritoryId != 0 && lastGlobalTerritoryId != currentTerritory)
         {
             ResetPortalApproachTrackingForAreaChange();
+            ResetAllCameraResetBeforeInteractTracking();
             _plugin.AddDebugLog($"[Territory] Territory changed: {lastGlobalTerritoryId} -> {currentTerritory} - refreshing maps");
             _plugin.InventoryService.ScanForMaps();
         }
@@ -675,6 +681,7 @@ public class StateManager : IDisposable
     private void HandleBetweenAreasTick()
     {
         ResetPortalApproachTrackingForAreaChange();
+        ResetAllCameraResetBeforeInteractTracking();
         stateStartTime = DateTime.Now; // Don't timeout while loading
 
         if (betweenAreasMovementStopped)
@@ -3844,6 +3851,7 @@ public class StateManager : IDisposable
         lastPortalTimeoutHoldLogTime = DateTime.MinValue;
         lastPortalObjectScanLogTime = DateTime.MinValue;
         portalInteractionAttemptCount = 0;
+        ResetPortalCameraResetBeforeInteractTracking();
         portalUnderwaterReadyLogged = false;
     }
 
@@ -3852,6 +3860,7 @@ public class StateManager : IDisposable
         portalApproachStartedAt = DateTime.MinValue;
         portalApproachStartDistance = float.MaxValue;
         lastPortalRepathTime = DateTime.MinValue;
+        ResetPortalCameraResetBeforeInteractTracking();
     }
 
     private Vector3 CapturePortalApproachPosition(IGameObject portal)
@@ -3976,6 +3985,74 @@ public class StateManager : IDisposable
     {
         openingChestInteractionAttemptCount = 0;
         openingChestInteractionEntityId = 0;
+        ResetOpeningChestCameraResetBeforeInteractTracking();
+    }
+
+    private static void ResetCameraResetBeforeInteractTracking(ref uint entityId, ref DateTime readyAt)
+    {
+        entityId = 0;
+        readyAt = DateTime.MinValue;
+    }
+
+    private void ResetOpeningChestCameraResetBeforeInteractTracking()
+    {
+        ResetCameraResetBeforeInteractTracking(
+            ref openingChestCameraResetEntityId,
+            ref openingChestCameraResetReadyAt);
+    }
+
+    private void ResetPortalCameraResetBeforeInteractTracking()
+    {
+        ResetCameraResetBeforeInteractTracking(
+            ref portalCameraResetEntityId,
+            ref portalCameraResetReadyAt);
+    }
+
+    private void ResetAllCameraResetBeforeInteractTracking()
+    {
+        ResetOpeningChestCameraResetBeforeInteractTracking();
+        ResetPortalCameraResetBeforeInteractTracking();
+    }
+
+    private bool TryHoldForCameraResetBeforeInteract(
+        string source,
+        IGameObject target,
+        DateTime now,
+        ref uint resetEntityId,
+        ref DateTime resetReadyAt)
+    {
+        if (resetEntityId != target.EntityId)
+        {
+            resetEntityId = target.EntityId;
+            resetReadyAt = DateTime.MinValue;
+        }
+
+        var targetName = target.Name.TextValue;
+        if (resetReadyAt == DateTime.MinValue)
+        {
+            if (!GameHelpers.RequestCameraResetBeforeInteract())
+            {
+                ResetCameraResetBeforeInteractTracking(ref resetEntityId, ref resetReadyAt);
+                _plugin.AddDebugLog(
+                    $"{source} Camera reset unavailable before interacting with '{targetName}' - continuing with camera-based TargetSystem.");
+                return false;
+            }
+
+            resetReadyAt = now + CameraResetBeforeInteractDelay;
+            StateDetail = $"Resetting camera before interacting with '{targetName}'...";
+            _plugin.AddDebugLog(
+                $"{source} Requested camera reset before interacting with '{targetName}' - waiting {CameraResetBeforeInteractDelay.TotalMilliseconds:F0}ms.");
+            return true;
+        }
+
+        if (now < resetReadyAt)
+        {
+            StateDetail = $"Waiting briefly for camera reset before interacting with '{targetName}'...";
+            return true;
+        }
+
+        ResetCameraResetBeforeInteractTracking(ref resetEntityId, ref resetReadyAt);
+        return false;
     }
 
     private void CaptureOpeningChestCofferPosition(IGameObject chest)
@@ -4389,8 +4466,10 @@ public class StateManager : IDisposable
 
             if ((now - lastInteractionTime).TotalSeconds >= 1.0)
             {
-                lastInteractionTime = now;
-                AttemptOpeningChestCofferInteraction(chest, chestName, "after coffer recovery");
+                if (AttemptOpeningChestCofferInteraction(chest, chestName, "after coffer recovery", now))
+                    lastInteractionTime = now;
+                else
+                    return true;
             }
 
             StateDetail = $"Interacting with '{chestName}' after recovery ({distance:F1}y)...";
@@ -4430,47 +4509,41 @@ public class StateManager : IDisposable
         return true;
     }
 
-    private void AttemptOpeningChestCofferInteraction(IGameObject chest, string chestName, string reason)
+    private bool AttemptOpeningChestCofferInteraction(IGameObject chest, string chestName, string reason, DateTime now)
     {
         if (openingChestInteractionEntityId != chest.EntityId)
         {
             openingChestInteractionEntityId = chest.EntityId;
             openingChestInteractionAttemptCount = 0;
+            ResetOpeningChestCameraResetBeforeInteractTracking();
         }
 
-        openingChestInteractionAttemptCount++;
+        var nextAttempt = openingChestInteractionAttemptCount + 1;
+        var useCameraRaycast = (nextAttempt - 1) % 2 == 0;
+        if (useCameraRaycast &&
+            TryHoldForCameraResetBeforeInteract(
+                "[OpeningChest]",
+                chest,
+                now,
+                ref openingChestCameraResetEntityId,
+                ref openingChestCameraResetReadyAt))
+        {
+            return false;
+        }
+
+        openingChestInteractionAttemptCount = nextAttempt;
         openingChestBotInteractionAttemptedThisMap = true;
         Plugin.TargetManager.Target = chest;
 
-        var attemptMethod = (openingChestInteractionAttemptCount - 1) % 3;
-        switch (attemptMethod)
-        {
-            case 0:
-            {
-                _plugin.AddDebugLog(
-                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} via TargetSystem(camera) with '{chestName}' {reason}.");
-                var interacted = GameHelpers.InteractWithObject(chest, useCameraRaycast: true);
-                _plugin.AddDebugLog(
-                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} TargetSystem(camera) returned: {interacted}");
-                break;
-            }
-
-            case 1:
-            {
-                _plugin.AddDebugLog(
-                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} via TargetSystem(no-camera) with '{chestName}' {reason}.");
-                var interacted = GameHelpers.InteractWithObject(chest, useCameraRaycast: false);
-                _plugin.AddDebugLog(
-                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} TargetSystem(no-camera) returned: {interacted}");
-                break;
-            }
-
-            default:
-                _plugin.AddDebugLog(
-                    $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} via target+/interact with '{chestName}' {reason}.");
-                CommandHelper.SendCommand("/interact");
-                break;
-        }
+        var methodName = useCameraRaycast
+            ? "TargetSystem(camera+reset)"
+            : "TargetSystem(no-camera)";
+        _plugin.AddDebugLog(
+            $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} via {methodName} with '{chestName}' {reason}.");
+        var interacted = GameHelpers.InteractWithObject(chest, useCameraRaycast);
+        _plugin.AddDebugLog(
+            $"[OpeningChest] Interaction attempt #{openingChestInteractionAttemptCount} {methodName} returned: {interacted}");
+        return true;
     }
 
     private bool HasOpeningChestCofferCompletionEvidence()
@@ -4860,22 +4933,31 @@ public class StateManager : IDisposable
         }
     }
 
-    private void AttemptPortalInteraction(IGameObject portal, Vector3 approachPosition)
+    private bool AttemptPortalInteraction(IGameObject portal, Vector3 approachPosition, DateTime now)
     {
-        portalInteractionAttemptCount++;
-        var useTargetSystem = portalInteractionAttemptCount % 2 == 1;
-        if (useTargetSystem)
+        var nextAttempt = portalInteractionAttemptCount + 1;
+        var useCameraRaycast = (nextAttempt - 1) % 2 == 0;
+        if (useCameraRaycast &&
+            TryHoldForCameraResetBeforeInteract(
+                "[Portal]",
+                portal,
+                now,
+                ref portalCameraResetEntityId,
+                ref portalCameraResetReadyAt))
         {
-            _plugin.AddDebugLog(
-                $"[Portal] Interaction attempt #{portalInteractionAttemptCount} via TargetSystem for '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}.");
-            var interacted = GameHelpers.InteractWithObject(portal);
-            _plugin.AddDebugLog($"[Portal] Interaction attempt #{portalInteractionAttemptCount} TargetSystem returned: {interacted}");
-            return;
+            return false;
         }
 
+        portalInteractionAttemptCount = nextAttempt;
+        var methodName = useCameraRaycast
+            ? "TargetSystem(camera+reset)"
+            : "TargetSystem(no-camera)";
         _plugin.AddDebugLog(
-            $"[Portal] Interaction attempt #{portalInteractionAttemptCount} via /interact for '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}.");
-        CommandHelper.SendCommand("/interact");
+            $"[Portal] Interaction attempt #{portalInteractionAttemptCount} via {methodName} for '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}.");
+        var interacted = GameHelpers.InteractWithObject(portal, useCameraRaycast);
+        _plugin.AddDebugLog(
+            $"[Portal] Interaction attempt #{portalInteractionAttemptCount} {methodName} returned: {interacted}");
+        return true;
     }
 
     private void TryPortalApproachInteraction(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
@@ -4887,10 +4969,10 @@ public class StateManager : IDisposable
         if ((now - lastInteractionTime).TotalSeconds < 1.0)
             return;
 
-        lastInteractionTime = now;
         _plugin.AddDebugLog(
             $"[Portal] Within approach interaction band ({portalDist:F1}y <= {PortalApproachInteractionRange:F1}y) - trying portal interaction while vnav continues.");
-        AttemptPortalInteraction(portal, approachPosition);
+        if (AttemptPortalInteraction(portal, approachPosition, now))
+            lastInteractionTime = now;
     }
 
     private void HandlePortalInInteractionRange(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
@@ -4942,8 +5024,10 @@ public class StateManager : IDisposable
         {
             EnsurePortalMapFlagCleared();
             Plugin.TargetManager.Target = portal;
-            lastInteractionTime = now;
-            AttemptPortalInteraction(portal, approachPosition);
+            if (AttemptPortalInteraction(portal, approachPosition, now))
+                lastInteractionTime = now;
+            else
+                return;
         }
 
         StateDetail = $"Interacting with portal ({portalDist:F1}y)...";
@@ -6315,9 +6399,11 @@ public class StateManager : IDisposable
         // Continually try to interact every ~1 second (only when NOT in combat)
         if ((now - lastInteractionTime).TotalSeconds >= 1.0)
         {
-            lastInteractionTime = now;
-            AttemptOpeningChestCofferInteraction(chest, chestName, "at interaction range");
-            StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
+            if (AttemptOpeningChestCofferInteraction(chest, chestName, "at interaction range", now))
+            {
+                lastInteractionTime = now;
+                StateDetail = $"Interacting with '{chestName}' - waiting for portal...";
+            }
         }
     }
 
@@ -9293,6 +9379,7 @@ public class StateManager : IDisposable
     {
         RetryCount++;
         _plugin.AddDebugLog($"[Error #{RetryCount}] {message}");
+        ResetAllCameraResetBeforeInteractTracking();
 
         // BoundByDuty is also used by overworld treasure-map combat. Only known treasure
         // dungeon territories may recover into the dungeon solver.
@@ -9396,6 +9483,9 @@ public class StateManager : IDisposable
 
         if (newState is BotState.Idle or BotState.Error or BotState.Completed or BotState.InDungeon)
             ResetUnderwaterXyzDigRetryState();
+
+        if (newState is BotState.Idle or BotState.Error or BotState.InDungeon)
+            ResetAllCameraResetBeforeInteractTracking();
 
         if (prev == BotState.OpeningChest && newState != BotState.OpeningChest)
         {

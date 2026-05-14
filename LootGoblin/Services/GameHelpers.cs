@@ -586,6 +586,27 @@ public static class GameHelpers
         }
     }
 
+    public static unsafe bool RequestCameraResetBeforeInteract()
+    {
+        try
+        {
+            var cameraManager = CameraManager.Instance();
+            if (cameraManager == null || cameraManager->Camera == null)
+            {
+                Plugin.Log.Warning("[INTERACT] CameraManager unavailable for pre-interact reset");
+                return false;
+            }
+
+            cameraManager->Camera->ShouldResetAngles = true;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning($"[INTERACT] Failed to request camera reset before interact: {ex.Message}");
+            return false;
+        }
+    }
+
     /// <summary>
     /// Check if the player is available (logged in, not casting, not occupied, not in combat).
     /// </summary>
