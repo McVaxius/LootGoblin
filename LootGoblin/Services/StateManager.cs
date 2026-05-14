@@ -135,6 +135,7 @@ public class StateManager : IDisposable
     private DateTime portalInteractionFirstAttemptAt = DateTime.MinValue; // First TargetSystem attempt since last dialog/progress
     private DateTime portalInteractionLastAttemptAt = DateTime.MinValue; // Last portal TargetSystem attempt
     private DateTime portalInteractionLastProgressAt = DateTime.MinValue; // Last close-distance/dialog/loading progress
+    private uint portalInteractionEntityId; // Portal entity owning the no-dialog recovery window
     private Vector3 portalInteractionLastPlayerPosition; // Player XYZ at last portal interaction
     private Vector3 portalInteractionLastPortalPosition; // Portal XYZ at last portal interaction
     private float portalInteractionLastDistance = float.MaxValue; // 3D distance at last portal interaction
@@ -2065,11 +2066,10 @@ public class StateManager : IDisposable
 
         if (portal == null)
         {
-            portalInteractionFirstAttemptAt = now.Subtract(PortalNoDialogRecoveryTimeout);
-            portalInteractionAttemptsSinceProgress = PortalNoDialogRecoveryAttemptThreshold;
             ResetPortalCloseNudgeTracking(stopMovement: true);
-            _plugin.AddDebugLog("[Portal] Too-far chat during portal retry but no targetable portal resolved - arming close recovery for next portal scan.");
-            StateDetail = "Portal was too far - reacquiring target...";
+            ResetPortalNoDialogAttemptWindow(DateTime.MinValue);
+            _plugin.AddDebugLog("[Portal] Too-far chat during portal retry but no targetable portal resolved - waiting for targetable portal.");
+            StateDetail = "Portal was too far - waiting for targetable portal...";
             return true;
         }
 
@@ -2088,7 +2088,14 @@ public class StateManager : IDisposable
 
         _plugin.AddDebugLog(
             $"[Portal] Too-far chat while retrying portal entry: player={FormatVectorCompact(player?.Position ?? default)} " +
-            $"portal={FormatVectorCompact(approachPosition)} dist={distance:F1}y xz={xzDistance:F1}y y={yDistance:F1}y - starting close nudge.");
+            $"portal={FormatVectorCompact(approachPosition)} dist={distance:F1}y xz={xzDistance:F1}y y={yDistance:F1}y.");
+        if (!HasPortalInteractionAttemptFor(portal))
+        {
+            _plugin.AddDebugLog($"[Portal] Too-far chat ignored for close nudge; no direct interaction attempt recorded for portal entity={portal.EntityId}.");
+            StateDetail = "Portal was too far - approaching targetable portal...";
+            return true;
+        }
+
         BeginPortalCloseNudge(portal, now, "too-far chat");
         StateDetail = "Portal was too far - moving closer...";
         return true;
@@ -2661,16 +2668,18 @@ public class StateManager : IDisposable
             var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
             if (specialNav != null)
             {
-                TrackUnderwaterBounceSpecialNavigation(destinationIndex);
-                basis = "special navigation";
-                return new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
+                return ResolveUnderwaterBounceSpecialNavigationTarget(
+                    specialNav,
+                    currentEntry,
+                    destinationIndex,
+                    out basis);
             }
         }
 
         if (currentEntry != null && currentEntry.HasRealXYZ)
         {
             basis = "stored RealXYZ";
-            return new Vector3(currentEntry.RealX, currentEntry.RealY, currentEntry.RealZ);
+            return GetStoredRealTarget(currentEntry);
         }
 
         if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
@@ -2713,9 +2722,8 @@ public class StateManager : IDisposable
         if (targets.LandingTarget == Vector3.Zero || currentPos == Vector3.Zero)
             return Vector3.Zero;
 
-        if (targets.Basis.StartsWith("special navigation", StringComparison.Ordinal)
-            && activeUnderwaterBounceSpecialDestinationIndex > 0
-            && ShouldUseUnderwaterBounceSpecialMainTarget(activeUnderwaterBounceSpecialDestinationIndex))
+        if (activeUnderwaterBounceSpecialDestinationIndex > 0
+            && ShouldUseUnderwaterBounceSpecialFinalTarget(activeUnderwaterBounceSpecialDestinationIndex))
         {
             return targets.LandingTarget;
         }
@@ -2752,7 +2760,54 @@ public class StateManager : IDisposable
         activeUnderwaterBounceSpecialEntryReached = false;
     }
 
-    private bool ShouldUseUnderwaterBounceSpecialMainTarget(int destinationIndex)
+    private static Vector3 GetStoredRealTarget(MapLocationEntry entry)
+    {
+        return new Vector3(entry.RealX, entry.RealY, entry.RealZ);
+    }
+
+    private static Vector3 GetSpecialNavigationEntryTarget(SpecialNavigationEntry specialNav)
+    {
+        return new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ);
+    }
+
+    private static Vector3 GetSpecialNavigationMainFallbackTarget(SpecialNavigationEntry specialNav)
+    {
+        return new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
+    }
+
+    private static Vector3 ResolveSpecialNavigationFinalTarget(
+        SpecialNavigationEntry specialNav,
+        MapLocationEntry? currentEntry,
+        out string basis)
+    {
+        if (currentEntry != null && currentEntry.HasRealXYZ)
+        {
+            basis = "stored RealXYZ";
+            return GetStoredRealTarget(currentEntry);
+        }
+
+        basis = "special navigation";
+        return GetSpecialNavigationMainFallbackTarget(specialNav);
+    }
+
+    private Vector3 ResolveUnderwaterBounceSpecialNavigationTarget(
+        SpecialNavigationEntry specialNav,
+        MapLocationEntry? currentEntry,
+        int destinationIndex,
+        out string basis)
+    {
+        TrackUnderwaterBounceSpecialNavigation(destinationIndex);
+
+        if (!ShouldUseUnderwaterBounceSpecialFinalTarget(destinationIndex))
+        {
+            basis = "special navigation entry";
+            return GetSpecialNavigationEntryTarget(specialNav);
+        }
+
+        return ResolveSpecialNavigationFinalTarget(specialNav, currentEntry, out basis);
+    }
+
+    private bool ShouldUseUnderwaterBounceSpecialFinalTarget(int destinationIndex)
     {
         return Plugin.Condition[ConditionFlag.Diving]
             || wasDiving
@@ -2798,7 +2853,7 @@ public class StateManager : IDisposable
         activeUnderwaterBounceSpecialEntryReached = true;
         _plugin.AddDebugLog(
             $"[Underwater] Reached special navigation entry for {destinationText} - {zoneName}; " +
-            $"switching thief-map dive target to main XYZ. " +
+            $"switching thief-map dive target to final XYZ. " +
             $"entry={FormatVectorCompact(entryTarget)}; current={FormatVectorCompact(currentPos)}");
     }
 
@@ -3333,9 +3388,13 @@ public class StateManager : IDisposable
         return true;
     }
 
-    private bool TryGetCurrentLochsThiefDiveSpecialNavigation(out SpecialNavigationEntry? specialNav, out int destinationIndex)
+    private bool TryGetCurrentLochsThiefDiveSpecialNavigation(
+        out SpecialNavigationEntry? specialNav,
+        out MapLocationEntry? currentEntry,
+        out int destinationIndex)
     {
         specialNav = null;
+        currentEntry = null;
         destinationIndex = -1;
 
         if (CurrentLocation == null
@@ -3346,7 +3405,7 @@ public class StateManager : IDisposable
             return false;
         }
 
-        var currentEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
+        currentEntry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
         destinationIndex = currentEntry?.Index > 0
             ? currentEntry.Index
             : activeUnderwaterBounceSpecialDestinationIndex;
@@ -3360,18 +3419,18 @@ public class StateManager : IDisposable
 
     private bool TrySuppressLochsSpecialSurfacedFallbackRetry(DateTime now, Vector3 currentPos)
     {
-        if (!TryGetCurrentLochsThiefDiveSpecialNavigation(out var specialNav, out var destinationIndex)
+        if (!TryGetCurrentLochsThiefDiveSpecialNavigation(out var specialNav, out var currentEntry, out var destinationIndex)
             || specialNav == null)
         {
             return false;
         }
 
-        var entryTarget = new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ);
-        var mainTarget = new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
+        var entryTarget = GetSpecialNavigationEntryTarget(specialNav);
+        var finalTarget = ResolveSpecialNavigationFinalTarget(specialNav, currentEntry, out var finalTargetBasis);
         var entryXZ = CalculateXZDistance(currentPos, entryTarget);
-        var mainXZ = CalculateXZDistance(currentPos, mainTarget);
+        var finalXZ = CalculateXZDistance(currentPos, finalTarget);
 
-        if (mainXZ <= UnderwaterFlagApproachArrivalXZRange)
+        if (finalXZ <= UnderwaterFlagApproachArrivalXZRange)
             return false;
 
         underwaterFlagApproachSurfacedFallbackActive = false;
@@ -3381,7 +3440,7 @@ public class StateManager : IDisposable
         SuppressUnderwaterBounceVnav();
 
         var withinEntryHandoff = entryXZ <= UnderwaterBounceTriggerXZRange;
-        var withinLandingHandoff = mainXZ <= UnderwaterBounceTriggerXZRange;
+        var withinLandingHandoff = finalXZ <= UnderwaterBounceTriggerXZRange;
         var keepDescent = withinEntryHandoff
             || withinLandingHandoff
             || descentInProgress
@@ -3391,24 +3450,24 @@ public class StateManager : IDisposable
         if (keepDescent)
         {
             var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
-            var digIssued = TryDigThiefMapWhileDivingAtGate("[Underwater] thief-map trigger", now, currentPos, mainTarget, mainXZ);
-            LogUnderwaterTriggerLoop(now, currentPos, Math.Min(entryXZ, mainXZ), descentPulseIssued, digIssued);
+            var digIssued = TryDigThiefMapWhileDivingAtGate("[Underwater] thief-map trigger", now, currentPos, finalTarget, finalXZ);
+            LogUnderwaterTriggerLoop(now, currentPos, Math.Min(entryXZ, finalXZ), descentPulseIssued, digIssued);
             StateDetail =
-                $"Holding Lochs thief-map dive entry... (entry {entryXZ:F1}y, landing {mainXZ:F1}y)";
+                $"Holding Lochs thief-map dive entry... (entry {entryXZ:F1}y, target {finalXZ:F1}y)";
         }
         else
         {
             StateDetail =
-                $"Waiting for Lochs thief-map dive recovery... (entry {entryXZ:F1}y, landing {mainXZ:F1}y)";
+                $"Waiting for Lochs thief-map dive recovery... (entry {entryXZ:F1}y, target {finalXZ:F1}y)";
         }
 
         LogThiefWaterInfoRateLimited(
             ref lastThiefWaterRecoveryLogTime,
             ThiefWaterRecoveryLogInterval,
             $"[Underwater] Suppressed surfaced fallback flyto for Lochs special navigation #{destinationIndex}; " +
-            $"waiting for Diving or entry/landing handoff range. " +
+            $"waiting for Diving or entry/target handoff range. " +
             $"current={FormatVectorCompact(currentPos)}; entry={FormatVectorCompact(entryTarget)} ({entryXZ:F1}y); " +
-            $"main={FormatVectorCompact(mainTarget)} ({mainXZ:F1}y).");
+            $"target={FormatVectorCompact(finalTarget)} ({finalXZ:F1}y, {finalTargetBasis}).");
 
         return true;
     }
@@ -3962,6 +4021,7 @@ public class StateManager : IDisposable
     {
         portalInteractionFirstAttemptAt = DateTime.MinValue;
         portalInteractionAttemptsSinceProgress = 0;
+        portalInteractionEntityId = 0;
         if (progressAt != DateTime.MinValue)
             portalInteractionLastProgressAt = progressAt;
     }
@@ -5085,6 +5145,12 @@ public class StateManager : IDisposable
 
     private void RecordPortalInteractionAttempt(IGameObject portal, Vector3 portalPosition, DateTime now)
     {
+        if (portalInteractionEntityId != 0 && portalInteractionEntityId != portal.EntityId)
+        {
+            ResetPortalNoDialogAttemptWindow(DateTime.MinValue);
+            portalInteractionBestDistance = float.MaxValue;
+        }
+
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player != null)
         {
@@ -5112,6 +5178,7 @@ public class StateManager : IDisposable
         if (portalInteractionFirstAttemptAt == DateTime.MinValue)
             portalInteractionFirstAttemptAt = now;
 
+        portalInteractionEntityId = portal.EntityId;
         portalInteractionLastAttemptAt = now;
         portalInteractionAttemptsSinceProgress++;
         LogPortalNoDialogDiagnostics(now, $"attempt #{portalInteractionAttemptCount}");
@@ -5129,10 +5196,19 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[Portal] Interaction progress observed via {source}; reset no-dialog attempt window.");
     }
 
-    private bool ShouldRunPortalNoDialogRecovery(DateTime now, float portalDist, out string reason)
+    private bool HasPortalInteractionAttemptFor(IGameObject portal)
+    {
+        return portalInteractionEntityId == portal.EntityId
+            && (portalInteractionAttemptsSinceProgress > 0 || portalInteractionFirstAttemptAt != DateTime.MinValue);
+    }
+
+    private bool ShouldRunPortalNoDialogRecovery(IGameObject portal, DateTime now, float portalDist, out string reason)
     {
         reason = string.Empty;
         if (portalRetryStart == DateTime.MinValue || portalDist > PortalApproachInteractionRange)
+            return false;
+
+        if (!HasPortalInteractionAttemptFor(portal))
             return false;
 
         if (portalInteractionAttemptsSinceProgress >= PortalNoDialogRecoveryAttemptThreshold)
@@ -5153,8 +5229,14 @@ public class StateManager : IDisposable
 
     private bool TryRunPortalCloseNudgeRecovery(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
     {
+        if (portalCloseNudgeActive && portalCloseNudgeEntityId != portal.EntityId)
+        {
+            ResetPortalCloseNudgeTracking(stopMovement: true);
+            return false;
+        }
+
         var reason = "active close nudge";
-        if (!portalCloseNudgeActive && !ShouldRunPortalNoDialogRecovery(now, portalDist, out reason))
+        if (!portalCloseNudgeActive && !ShouldRunPortalNoDialogRecovery(portal, now, portalDist, out reason))
             return false;
 
         if (!portalCloseNudgeActive)
@@ -10805,15 +10887,15 @@ public class StateManager : IDisposable
                 var specialNav = _plugin.SpecialNavigationDatabase.FindEntry(destinationIndex);
                 if (specialNav != null)
                 {
-                    TrackUnderwaterBounceSpecialNavigation(destinationIndex);
-                    var specialEntryTarget = new Vector3(specialNav.PreX, specialNav.PreY, specialNav.PreZ);
-                    var specialMainTarget = new Vector3(specialNav.MainX, specialNav.MainY, specialNav.MainZ);
-                    var useMainTarget = ShouldUseUnderwaterBounceSpecialMainTarget(destinationIndex);
-                    var target = useMainTarget ? specialMainTarget : specialEntryTarget;
+                    var target = ResolveUnderwaterBounceSpecialNavigationTarget(
+                        specialNav,
+                        dbEntry,
+                        destinationIndex,
+                        out var basis);
                     return (
                         target,
                         target,
-                        useMainTarget ? "special navigation" : "special navigation entry",
+                        basis,
                         destinationText,
                         zoneName,
                         false);
@@ -10822,7 +10904,7 @@ public class StateManager : IDisposable
 
             if (dbEntry != null && dbEntry.HasRealXYZ)
             {
-                var realTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
+                var realTarget = GetStoredRealTarget(dbEntry);
                 return (realTarget, realTarget, "stored RealXYZ", destinationText, zoneName, false);
             }
 
@@ -10839,13 +10921,13 @@ public class StateManager : IDisposable
         {
             if (dbEntry.HasRealXYZ && !canUseUnderwaterNavigation)
             {
-                var realTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
+                var realTarget = GetStoredRealTarget(dbEntry);
                 return (realTarget, realTarget, "stored RealXYZ", destinationText, zoneName, true);
             }
 
             if (dbEntry.HasRealXYZ)
             {
-                var realTarget = new Vector3(dbEntry.RealX, dbEntry.RealY, dbEntry.RealZ);
+                var realTarget = GetStoredRealTarget(dbEntry);
                 return (realTarget, realTarget, "stored RealXYZ", destinationText, zoneName, true);
             }
 

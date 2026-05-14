@@ -20,6 +20,63 @@ public class SpecialNavigationDatabase : IDisposable
     private readonly string _filePath;
     private readonly string _bundledFilePath;
     private readonly List<SpecialNavigationEntry> _entries = new();
+    private readonly List<SpecialNavigationEntry> _bundledEntries = new();
+
+    private static readonly Dictionary<int, SpecialNavigationEntry> RequiredLochsFallbackEntries = new()
+    {
+        [534] = new SpecialNavigationEntry
+        {
+            DestinationIndex = 534,
+            ZoneName = "The Lochs",
+            PreX = 54f,
+            PreY = -10f,
+            PreZ = -45f,
+            MainX = 42.1f,
+            MainY = -12.9f,
+            MainZ = -23.7f,
+            Notes = "Required Lochs thief-map dive fallback for flag 34.6,-249.1,-12.9.",
+            IsActive = true,
+        },
+        [536] = new SpecialNavigationEntry
+        {
+            DestinationIndex = 536,
+            ZoneName = "The Lochs",
+            PreX = -181f,
+            PreY = -10f,
+            PreZ = -173f,
+            MainX = -217.6f,
+            MainY = -277.3f,
+            MainZ = -114.2f,
+            Notes = "Required Lochs thief-map dive fallback for flag -217.8,-277.3,-114.2.",
+            IsActive = true,
+        },
+        [537] = new SpecialNavigationEntry
+        {
+            DestinationIndex = 537,
+            ZoneName = "The Lochs",
+            PreX = -0.9f,
+            PreY = -10f,
+            PreZ = -282.8f,
+            MainX = -0.75f,
+            MainY = -281.6f,
+            MainZ = -282.9f,
+            Notes = "Required Lochs thief-map dive fallback for flag -0.9,-281.6,-282.8.",
+            IsActive = true,
+        },
+        [538] = new SpecialNavigationEntry
+        {
+            DestinationIndex = 538,
+            ZoneName = "The Lochs",
+            PreX = 141f,
+            PreY = -10f,
+            PreZ = 243f,
+            MainX = 103.6f,
+            MainY = -343.7f,
+            MainZ = 207.9f,
+            Notes = "Required Lochs thief-map dive fallback for flag 103.5,-343.7,207.7.",
+            IsActive = true,
+        },
+    };
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -47,7 +104,8 @@ public class SpecialNavigationDatabase : IDisposable
     /// </summary>
     public SpecialNavigationEntry? FindEntry(int destinationIndex)
     {
-        return _entries.FirstOrDefault(e => e.DestinationIndex == destinationIndex && e.IsActive);
+        return FindActiveConfiguredOrBundledEntry(destinationIndex)
+            ?? RequiredLochsFallbackEntries.GetValueOrDefault(destinationIndex);
     }
 
     /// <summary>
@@ -59,6 +117,8 @@ public class SpecialNavigationDatabase : IDisposable
         try
         {
             var bundledEntries = LoadBundledDefaultEntries();
+            _bundledEntries.Clear();
+            _bundledEntries.AddRange(bundledEntries);
             var mergedBuiltInCount = 0;
 
             if (!File.Exists(_filePath))
@@ -85,8 +145,11 @@ public class SpecialNavigationDatabase : IDisposable
         catch (Exception ex)
         {
             _log.Error($"[SpecialNavDB] Failed to load special navigation entries: {ex.Message}");
+            var bundledEntries = LoadBundledDefaultEntries();
+            _bundledEntries.Clear();
+            _bundledEntries.AddRange(bundledEntries);
             _entries.Clear();
-            _entries.AddRange(LoadBundledDefaultEntries().Select(CloneEntry));
+            _entries.AddRange(bundledEntries.Select(CloneEntry));
             LogLoadedEntries(0);
         }
     }
@@ -166,6 +229,21 @@ public class SpecialNavigationDatabase : IDisposable
         };
     }
 
+    private SpecialNavigationEntry? FindActiveLoadedEntry(int destinationIndex)
+    {
+        return _entries.FirstOrDefault(e => e.DestinationIndex == destinationIndex && e.IsActive);
+    }
+
+    private SpecialNavigationEntry? FindActiveBundledEntry(int destinationIndex)
+    {
+        return _bundledEntries.FirstOrDefault(e => e.DestinationIndex == destinationIndex && e.IsActive);
+    }
+
+    private SpecialNavigationEntry? FindActiveConfiguredOrBundledEntry(int destinationIndex)
+    {
+        return FindActiveLoadedEntry(destinationIndex) ?? FindActiveBundledEntry(destinationIndex);
+    }
+
     private void LogLoadedEntries(int mergedBuiltInCount)
     {
         var activeDestinationIndices = _entries
@@ -176,11 +254,24 @@ public class SpecialNavigationDatabase : IDisposable
         var activeText = activeDestinationIndices.Count > 0
             ? string.Join(", ", activeDestinationIndices)
             : "none";
+        var requiredLochsFallbackText = FormatDestinationIndices(RequiredLochsFallbackEntries.Keys);
+        var suppliedByFallbackText = FormatDestinationIndices(
+            RequiredLochsFallbackEntries.Keys.Where(i => FindActiveConfiguredOrBundledEntry(i) == null));
 
         _log.Information(
             $"[SpecialNavDB] Loaded {_entries.Count} special navigation entries " +
             $"({activeDestinationIndices.Count} active: {activeText}); " +
-            $"merged {mergedBuiltInCount} built-in active entries");
+            $"merged {mergedBuiltInCount} built-in active entries; " +
+            $"required Lochs fallbacks active: {requiredLochsFallbackText}; " +
+            $"in-memory fallback supplying missing/inactive loaded entries: {suppliedByFallbackText}");
+    }
+
+    private static string FormatDestinationIndices(IEnumerable<int> destinationIndices)
+    {
+        var ordered = destinationIndices.OrderBy(i => i).ToList();
+        return ordered.Count > 0
+            ? string.Join(", ", ordered)
+            : "none";
     }
 
     private static bool IsSamePath(string left, string right)
