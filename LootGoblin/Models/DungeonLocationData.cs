@@ -140,7 +140,7 @@ public static class DungeonLocationData
                     new(138.8713684082f, -10.038649559021f, -48.890167236328f, "Room 3 Right Door"),
                     // Room 4
                     new(-138.51029968262f, 19.961349487305f, -168.72546386719f, "Room 4 Left Door"),
-                    new(138.79026794434f, -10.038649559021f, -48.792549133301f, "Room 4 Right Door"),
+                    new(-81.48990031738f, 19.961349487305f, -168.72546386719f, "Room 4 Right Door"),
                     // Room 5
                     new(-138.91505432129f, 19.961368560791f, -319.07586669922f, "Room 5 Left Door"),
                     new(-81.359451293945f, 19.961378097534f, -318.83532714844f, "Room 5 Right Door"),
