@@ -139,11 +139,12 @@ public class StateManager : IDisposable
     private DateTime lastInteractionTime = DateTime.MinValue; // Throttle chest/portal interaction attempts
     private bool autoMoveActive; // Track if automove is currently on
     private bool pendingDungeonMapFlagClear; // Clear the overworld flag once dungeon entry has settled
-    private DateTime treasureHighLowVisibleSince = DateTime.MinValue; // Start of the current Higher/Lower addon session
-    private DateTime treasureHighLowNextRetryAt = DateTime.MinValue; // Next time the skip callback pair may be queued
+    private DateTime treasureHighLowVisibleSince = DateTime.MinValue; // Start of the current Higher/Lower recovery session
+    private DateTime treasureHighLowNextRetryAt = DateTime.MinValue; // Next time a close/reopen callback may be sent
     private DateTime treasureHighLowLastStatusLogAt = DateTime.MinValue; // Rate-limit visible-after-attempts logs
     private DateTime treasureHighLowLastMovementStopAt = DateTime.MinValue; // Rate-limit hard movement stop commands while addon is visible
-    private int treasureHighLowAttemptCount; // Number of queued callback pairs in the current addon session
+    private int treasureHighLowAttemptCount; // Number of close callbacks tried in the current addon session
+    private bool treasureHighLowExhaustedLogged; // Prevent exhausted-strategy log spam
     private bool betweenAreasMovementStopped; // Stop LootGoblin-owned movement once per loading screen
     
     // Map opening validation variables
@@ -156,6 +157,7 @@ public class StateManager : IDisposable
     private const float MapDigXZRange = 5.0f;
     private const double SameZoneAetheryteTeleportSkipXZRange = 50.0;
     private const float PortalInteractionRange = 3.0f;
+    private const float PortalApproachInteractionRange = 5.0f;
     private const float PortalNormalSearchRange = 30.0f;
     private const float OverworldRecoveryObjectSearchRange = 200.0f;
     private const float OpeningChestNormalCofferSearchRange = 100.0f;
@@ -212,10 +214,20 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalObjectScanLogInterval = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairStartGrace = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairTimeout = TimeSpan.FromMinutes(3.0);
-    private static readonly TimeSpan TreasureHighLowSecondCallbackDelay = TimeSpan.FromMilliseconds(100);
-    private static readonly TimeSpan TreasureHighLowRetryInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan TreasureHighLowSettleDelay = TimeSpan.FromMilliseconds(350);
+    private static readonly TimeSpan TreasureHighLowReopenRetryInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan TreasureHighLowStatusLogInterval = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan TreasureHighLowMovementStopInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly (string Description, bool UpdateState, int Arg)[] TreasureHighLowCloseAttempts =
+    {
+        ("TreasureHighLow true 1", true, 1),
+        ("TreasureHighLow false -2", false, -2),
+        ("TreasureHighLow true 1", true, 1),
+        ("TreasureHighLow true -2", true, -2),
+        ("TreasureHighLow true 1", true, 1),
+        ("TreasureHighLow true -1", true, -1),
+        ("TreasureHighLow false -1", false, -1),
+    };
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagStepTimeout = TimeSpan.FromSeconds(20);
@@ -4866,6 +4878,21 @@ public class StateManager : IDisposable
         CommandHelper.SendCommand("/interact");
     }
 
+    private void TryPortalApproachInteraction(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
+    {
+        if (portalDist > PortalApproachInteractionRange)
+            return;
+
+        Plugin.TargetManager.Target = portal;
+        if ((now - lastInteractionTime).TotalSeconds < 1.0)
+            return;
+
+        lastInteractionTime = now;
+        _plugin.AddDebugLog(
+            $"[Portal] Within approach interaction band ({portalDist:F1}y <= {PortalApproachInteractionRange:F1}y) - trying portal interaction while vnav continues.");
+        AttemptPortalInteraction(portal, approachPosition);
+    }
+
     private void HandlePortalInInteractionRange(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
     {
         CommandHelper.SendCommand("/automove off");
@@ -7843,6 +7870,8 @@ public class StateManager : IDisposable
                         {
                             StateDetail = $"Approaching portal XYZ {FormatVectorCompact(approachPosition)} ({portalDist:F1}y)...";
                         }
+
+                        TryPortalApproachInteraction(portal, approachPosition, portalDist, now);
                         return;
                     }
 
@@ -9129,16 +9158,20 @@ public class StateManager : IDisposable
     private bool TrySkipCardGame()
     {
         const string addonName = "TreasureHighLow";
+        const string notificationChallengeAddonName = "_NotificationChallenge";
+        const string notificationAddonName = "_Notification";
         var now = DateTime.Now;
+        var treasureHighLowVisible = GameHelpers.IsAddonVisible(addonName);
+        var notificationChallengeVisible = GameHelpers.IsAddonVisible(notificationChallengeAddonName);
 
-        if (!GameHelpers.IsAddonVisible(addonName))
+        if (!treasureHighLowVisible && !notificationChallengeVisible)
         {
             if (treasureHighLowVisibleSince != DateTime.MinValue)
             {
-                var visibleDuration = now - treasureHighLowVisibleSince;
+                var sessionDuration = now - treasureHighLowVisibleSince;
                 _plugin.AddDebugLog(
-                    $"[CardGame] TreasureHighLow closed after {visibleDuration.TotalSeconds:F1}s and " +
-                    $"{treasureHighLowAttemptCount} callback attempt(s).");
+                    $"[CardGame] Higher/Lower flow cleared after {sessionDuration.TotalSeconds:F1}s and " +
+                    $"{treasureHighLowAttemptCount} close callback attempt(s).");
             }
 
             ResetTreasureHighLowRetryState();
@@ -9154,41 +9187,59 @@ public class StateManager : IDisposable
             treasureHighLowNextRetryAt = now;
             treasureHighLowLastStatusLogAt = now;
             _plugin.AddDebugLog(
-                "[CardGame] TreasureHighLow detected - retrying TreasureHighLow false -2 -> TreasureHighLow true 1 every 500ms until addon closes.");
+                "[CardGame] Higher/Lower flow detected - checking TreasureHighLow before each close attempt and reopening via _Notification true 0 1 when _NotificationChallenge is visible.");
         }
 
-        LogTreasureHighLowStillVisible(now);
+        LogTreasureHighLowStillVisible(now, treasureHighLowVisible, notificationChallengeVisible);
 
-        if (GameHelpers.IsAddonCallbackSequencePending(addonName))
+        if (treasureHighLowAttemptCount >= TreasureHighLowCloseAttempts.Length)
         {
-            StateDetail = $"Skipping Higher/Lower puzzle (attempt {treasureHighLowAttemptCount})...";
+            if (!treasureHighLowExhaustedLogged)
+            {
+                treasureHighLowExhaustedLogged = true;
+                _plugin.AddDebugLog(
+                    $"[CardGame] Exhausted {TreasureHighLowCloseAttempts.Length} Higher/Lower close attempts; holding movement and waiting for manual/game resolution.");
+            }
+
+            StateDetail = "Waiting for Higher/Lower puzzle after exhausting close attempts...";
             return true;
         }
 
         if (now < treasureHighLowNextRetryAt)
         {
-            StateDetail = $"Waiting for Higher/Lower puzzle to close (attempt {treasureHighLowAttemptCount})...";
+            StateDetail = $"Waiting for Higher/Lower puzzle UI to settle (attempt {treasureHighLowAttemptCount})...";
             return true;
         }
 
-        treasureHighLowAttemptCount++;
-        treasureHighLowNextRetryAt = now.Add(TreasureHighLowRetryInterval);
-        _plugin.AddDebugLog(
-            $"[CardGame] Attempt {treasureHighLowAttemptCount}: TreasureHighLow false -2 -> TreasureHighLow true 1");
-
-        if (!GameHelpers.QueueTwoStepAddonCallbackSequence(
-                addonName,
-                false,
-                true,
-                TreasureHighLowSecondCallbackDelay,
-                new object[] { -2 },
-                new object[] { 1 }))
+        if (!treasureHighLowVisible)
         {
+            treasureHighLowNextRetryAt = now.Add(TreasureHighLowReopenRetryInterval);
             _plugin.AddDebugLog(
-                $"[CardGame] Attempt {treasureHighLowAttemptCount} failed to queue TreasureHighLow callback sequence.");
+                $"[CardGame] TreasureHighLow missing while _NotificationChallenge is visible before attempt {treasureHighLowAttemptCount + 1}; firing _Notification true 0 1.");
+
+            if (!GameHelpers.TryFireAddonCallbackIfExists(notificationAddonName, true, 0, 1))
+            {
+                _plugin.AddDebugLog(
+                    "[CardGame] Failed to fire _Notification true 0 1; will retry while _NotificationChallenge remains visible.");
+            }
+
+            StateDetail = $"Reopening Higher/Lower puzzle (attempt {treasureHighLowAttemptCount + 1})...";
+            return true;
         }
 
-        StateDetail = $"Waiting for Higher/Lower puzzle to close (attempt {treasureHighLowAttemptCount})...";
+        var attempt = TreasureHighLowCloseAttempts[treasureHighLowAttemptCount];
+        treasureHighLowAttemptCount++;
+        treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
+        _plugin.AddDebugLog(
+            $"[CardGame] Attempt {treasureHighLowAttemptCount}/{TreasureHighLowCloseAttempts.Length}: {attempt.Description}");
+
+        if (!GameHelpers.TryFireAddonCallback(addonName, attempt.UpdateState, attempt.Arg))
+        {
+            _plugin.AddDebugLog(
+                $"[CardGame] Attempt {treasureHighLowAttemptCount} failed to fire {attempt.Description}; next tick will re-check addon state.");
+        }
+
+        StateDetail = $"Trying Higher/Lower close attempt {treasureHighLowAttemptCount}...";
         return true;
     }
 
@@ -9206,7 +9257,10 @@ public class StateManager : IDisposable
             _plugin.NavigationService.StopNavigation();
     }
 
-    private void LogTreasureHighLowStillVisible(DateTime now)
+    private void LogTreasureHighLowStillVisible(
+        DateTime now,
+        bool treasureHighLowVisible,
+        bool notificationChallengeVisible)
     {
         if (treasureHighLowAttemptCount <= 0 ||
             treasureHighLowVisibleSince == DateTime.MinValue ||
@@ -9216,10 +9270,11 @@ public class StateManager : IDisposable
         }
 
         treasureHighLowLastStatusLogAt = now;
-        var visibleDuration = now - treasureHighLowVisibleSince;
+        var sessionDuration = now - treasureHighLowVisibleSince;
         _plugin.AddDebugLog(
-            $"[CardGame] TreasureHighLow still visible after {treasureHighLowAttemptCount} callback attempt(s) " +
-            $"over {visibleDuration.TotalSeconds:F1}s; continuing TreasureHighLow false -2 -> TreasureHighLow true 1 retry.");
+            $"[CardGame] Higher/Lower flow still active after {treasureHighLowAttemptCount} close attempt(s) " +
+            $"over {sessionDuration.TotalSeconds:F1}s; TreasureHighLowVisible={treasureHighLowVisible}, " +
+            $"NotificationChallengeVisible={notificationChallengeVisible}.");
     }
 
     private void ResetTreasureHighLowRetryState()
@@ -9229,6 +9284,7 @@ public class StateManager : IDisposable
         treasureHighLowLastStatusLogAt = DateTime.MinValue;
         treasureHighLowLastMovementStopAt = DateTime.MinValue;
         treasureHighLowAttemptCount = 0;
+        treasureHighLowExhaustedLogged = false;
     }
 
     // ─── Error Handling ───────────────────────────────────────────────────────

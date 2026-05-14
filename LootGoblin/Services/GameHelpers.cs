@@ -1155,14 +1155,28 @@ public static class GameHelpers
     /// <summary>
     /// Fire a callback on a named addon and report whether it was sent.
     /// </summary>
-    public static unsafe bool TryFireAddonCallback(string addonName, bool updateState, params object[] args)
+    public static bool TryFireAddonCallback(string addonName, bool updateState, params object[] args)
+        => TryFireAddonCallbackInternal(addonName, updateState, true, args);
+
+    /// <summary>
+    /// Fire a callback on a named addon that may be present but hidden behind a child addon.
+    /// </summary>
+    public static bool TryFireAddonCallbackIfExists(string addonName, bool updateState, params object[] args)
+        => TryFireAddonCallbackInternal(addonName, updateState, false, args);
+
+    private static unsafe bool TryFireAddonCallbackInternal(
+        string addonName,
+        bool updateState,
+        bool requireVisible,
+        params object[] args)
     {
         try
         {
             var addon = RaptureAtkUnitManager.Instance()->GetAddonByName(addonName);
-            if (addon == null || !addon->IsVisible)
+            if (addon == null || (requireVisible && !addon->IsVisible))
             {
-                Plugin.Log.Warning($"[FireAddonCallback] Addon '{addonName}' not found or not visible");
+                var reason = addon == null ? "not found" : "not visible";
+                Plugin.Log.Warning($"[FireAddonCallback] Addon '{addonName}' {reason}");
                 return false;
             }
 
