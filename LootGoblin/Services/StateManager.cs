@@ -132,6 +132,22 @@ public class StateManager : IDisposable
     private DateTime lastPortalTimeoutHoldLogTime = DateTime.MinValue; // Throttle timeout hold logs while portal/duty still active
     private DateTime lastPortalObjectScanLogTime = DateTime.MinValue; // Throttle active portal ObjectTable logs
     private int portalInteractionAttemptCount; // Alternates camera-based and no-camera TargetSystem while portal dialog is pending
+    private DateTime portalInteractionFirstAttemptAt = DateTime.MinValue; // First TargetSystem attempt since last dialog/progress
+    private DateTime portalInteractionLastAttemptAt = DateTime.MinValue; // Last portal TargetSystem attempt
+    private DateTime portalInteractionLastProgressAt = DateTime.MinValue; // Last close-distance/dialog/loading progress
+    private Vector3 portalInteractionLastPlayerPosition; // Player XYZ at last portal interaction
+    private Vector3 portalInteractionLastPortalPosition; // Portal XYZ at last portal interaction
+    private float portalInteractionLastDistance = float.MaxValue; // 3D distance at last portal interaction
+    private float portalInteractionLastXzDistance = float.MaxValue; // XZ distance at last portal interaction
+    private float portalInteractionLastYDistance = float.MaxValue; // Y delta at last portal interaction
+    private float portalInteractionBestDistance = float.MaxValue; // Best 3D distance since last attempt window reset
+    private int portalInteractionAttemptsSinceProgress; // Failed interaction attempts without dialog/loading/progress
+    private bool portalCloseNudgeActive; // Lockon+automove close approach after no-dialog attempts
+    private uint portalCloseNudgeEntityId; // Portal entity being nudged toward
+    private DateTime portalCloseNudgeStartedAt = DateTime.MinValue; // Bounds close nudge duration
+    private DateTime portalCloseNudgeLastCommandAt = DateTime.MinValue; // Reissue lockon+automove sparingly
+    private int portalCloseNudgeCount; // Number of no-dialog close nudges this portal window
+    private DateTime lastPortalStuckDiagnosticLogTime = DateTime.MinValue; // Throttle portal stuck diagnostics
     private uint portalCameraResetEntityId; // Portal waiting for camera reset before direct interact
     private DateTime portalCameraResetReadyAt = DateTime.MinValue;
     private bool portalUnderwaterReadyLogged; // One-shot log when a diving/dismounted portal can be interacted directly
@@ -162,6 +178,7 @@ public class StateManager : IDisposable
     private const float MapDigXZRange = 5.0f;
     private const double SameZoneAetheryteTeleportSkipXZRange = 50.0;
     private const float PortalInteractionRange = 3.0f;
+    private const float PortalStrictInteractionRange = 1.6f;
     private const float PortalApproachInteractionRange = 5.0f;
     private const float PortalNormalSearchRange = 30.0f;
     private const float OverworldRecoveryObjectSearchRange = 200.0f;
@@ -217,6 +234,12 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalSearchTimeout = TimeSpan.FromSeconds(15.0);
     private static readonly TimeSpan PortalActiveApproachTimeout = TimeSpan.FromSeconds(60.0);
     private static readonly TimeSpan PortalObjectScanLogInterval = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan PortalNoDialogRecoveryTimeout = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan PortalNoDialogDiagnosticInterval = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan PortalCloseNudgeTimeout = TimeSpan.FromSeconds(2.0);
+    private static readonly TimeSpan PortalCloseNudgeCommandInterval = TimeSpan.FromMilliseconds(600);
+    private const int PortalNoDialogRecoveryAttemptThreshold = 3;
+    private const float PortalInteractionProgressMargin = 0.35f;
     private static readonly TimeSpan AdsRepairStartGrace = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairTimeout = TimeSpan.FromMinutes(3.0);
     private static readonly TimeSpan TreasureHighLowSettleDelay = TimeSpan.FromMilliseconds(350);
@@ -1935,6 +1958,9 @@ public class StateManager : IDisposable
         if (string.IsNullOrWhiteSpace(text))
             return;
 
+        if (HandlePortalTooFarChatMessage(text))
+            return;
+
         if (HandleOpeningChestTooFarChatMessage(text))
             return;
 
@@ -2022,11 +2048,61 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private bool HandlePortalTooFarChatMessage(string text)
+    {
+        if (State != BotState.Completed ||
+            portalRetryStart == DateTime.MinValue ||
+            !IsOpeningChestTooFarChatMessage(text))
+        {
+            return false;
+        }
+
+        var now = DateTime.Now;
+        var target = Plugin.TargetManager.Target;
+        var portal = IsPortalObject(target)
+            ? target
+            : FindNearestPortal(keepActivePortalWindow: true);
+
+        if (portal == null)
+        {
+            portalInteractionFirstAttemptAt = now.Subtract(PortalNoDialogRecoveryTimeout);
+            portalInteractionAttemptsSinceProgress = PortalNoDialogRecoveryAttemptThreshold;
+            ResetPortalCloseNudgeTracking(stopMovement: true);
+            _plugin.AddDebugLog("[Portal] Too-far chat during portal retry but no targetable portal resolved - arming close recovery for next portal scan.");
+            StateDetail = "Portal was too far - reacquiring target...";
+            return true;
+        }
+
+        Plugin.TargetManager.Target = portal;
+        var approachPosition = CapturePortalApproachPosition(portal);
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var distance = player == null
+            ? float.MaxValue
+            : Vector3.Distance(player.Position, approachPosition);
+        var xzDistance = player == null
+            ? float.MaxValue
+            : (float)CalculateXZDistance(player.Position, approachPosition);
+        var yDistance = player == null
+            ? float.MaxValue
+            : Math.Abs(player.Position.Y - approachPosition.Y);
+
+        _plugin.AddDebugLog(
+            $"[Portal] Too-far chat while retrying portal entry: player={FormatVectorCompact(player?.Position ?? default)} " +
+            $"portal={FormatVectorCompact(approachPosition)} dist={distance:F1}y xz={xzDistance:F1}y y={yDistance:F1}y - starting close nudge.");
+        BeginPortalCloseNudge(portal, now, "too-far chat");
+        StateDetail = "Portal was too far - moving closer...";
+        return true;
+    }
+
     private static bool IsOpeningChestTooFarChatMessage(string text)
     {
         return text.Contains("too far", StringComparison.OrdinalIgnoreCase) ||
                text.Contains("far away", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool IsPortalObject(IGameObject? obj)
+        => obj != null &&
+           string.Equals(obj.Name.TextValue, "Teleportation Portal", StringComparison.Ordinal);
 
     private static bool IsTreasurePortalChatMessage(string text)
     {
@@ -3851,6 +3927,7 @@ public class StateManager : IDisposable
         lastPortalTimeoutHoldLogTime = DateTime.MinValue;
         lastPortalObjectScanLogTime = DateTime.MinValue;
         portalInteractionAttemptCount = 0;
+        ResetPortalInteractionOutcomeTracking();
         ResetPortalCameraResetBeforeInteractTracking();
         portalUnderwaterReadyLogged = false;
     }
@@ -3860,7 +3937,47 @@ public class StateManager : IDisposable
         portalApproachStartedAt = DateTime.MinValue;
         portalApproachStartDistance = float.MaxValue;
         lastPortalRepathTime = DateTime.MinValue;
+        ResetPortalCloseNudgeTracking(stopMovement: true);
+        ResetPortalNoDialogAttemptWindow(DateTime.MinValue);
         ResetPortalCameraResetBeforeInteractTracking();
+    }
+
+    private void ResetPortalInteractionOutcomeTracking()
+    {
+        ResetPortalNoDialogAttemptWindow(DateTime.MinValue);
+        portalInteractionLastAttemptAt = DateTime.MinValue;
+        portalInteractionLastProgressAt = DateTime.MinValue;
+        portalInteractionLastPlayerPosition = default;
+        portalInteractionLastPortalPosition = default;
+        portalInteractionLastDistance = float.MaxValue;
+        portalInteractionLastXzDistance = float.MaxValue;
+        portalInteractionLastYDistance = float.MaxValue;
+        portalInteractionBestDistance = float.MaxValue;
+        lastPortalStuckDiagnosticLogTime = DateTime.MinValue;
+        portalCloseNudgeCount = 0;
+        ResetPortalCloseNudgeTracking(stopMovement: false);
+    }
+
+    private void ResetPortalNoDialogAttemptWindow(DateTime progressAt)
+    {
+        portalInteractionFirstAttemptAt = DateTime.MinValue;
+        portalInteractionAttemptsSinceProgress = 0;
+        if (progressAt != DateTime.MinValue)
+            portalInteractionLastProgressAt = progressAt;
+    }
+
+    private void ResetPortalCloseNudgeTracking(bool stopMovement)
+    {
+        if (stopMovement && portalCloseNudgeActive)
+        {
+            GameHelpers.StopAutoMove();
+            autoMoveActive = false;
+        }
+
+        portalCloseNudgeActive = false;
+        portalCloseNudgeEntityId = 0;
+        portalCloseNudgeStartedAt = DateTime.MinValue;
+        portalCloseNudgeLastCommandAt = DateTime.MinValue;
     }
 
     private Vector3 CapturePortalApproachPosition(IGameObject portal)
@@ -4933,10 +5050,15 @@ public class StateManager : IDisposable
         }
     }
 
-    private bool AttemptPortalInteraction(IGameObject portal, Vector3 approachPosition, DateTime now)
+    private bool AttemptPortalInteraction(
+        IGameObject portal,
+        Vector3 approachPosition,
+        DateTime now,
+        bool? forceCameraRaycast = null,
+        string reason = "")
     {
         var nextAttempt = portalInteractionAttemptCount + 1;
-        var useCameraRaycast = (nextAttempt - 1) % 2 == 0;
+        var useCameraRaycast = forceCameraRaycast ?? (nextAttempt - 1) % 2 == 0;
         if (useCameraRaycast &&
             TryHoldForCameraResetBeforeInteract(
                 "[Portal]",
@@ -4953,12 +5075,184 @@ public class StateManager : IDisposable
             ? "TargetSystem(camera+reset)"
             : "TargetSystem(no-camera)";
         _plugin.AddDebugLog(
-            $"[Portal] Interaction attempt #{portalInteractionAttemptCount} via {methodName} for '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}.");
+            $"[Portal] Interaction attempt #{portalInteractionAttemptCount} via {methodName} for '{portal.Name.TextValue}' at XYZ {FormatVectorCompact(approachPosition)}{reason}.");
         var interacted = GameHelpers.InteractWithObject(portal, useCameraRaycast);
+        RecordPortalInteractionAttempt(portal, approachPosition, now);
         _plugin.AddDebugLog(
             $"[Portal] Interaction attempt #{portalInteractionAttemptCount} {methodName} returned: {interacted}");
         return true;
     }
+
+    private void RecordPortalInteractionAttempt(IGameObject portal, Vector3 portalPosition, DateTime now)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player != null)
+        {
+            portalInteractionLastPlayerPosition = player.Position;
+            portalInteractionLastPortalPosition = portalPosition;
+            portalInteractionLastDistance = Vector3.Distance(player.Position, portalPosition);
+            portalInteractionLastXzDistance = (float)CalculateXZDistance(player.Position, portalPosition);
+            portalInteractionLastYDistance = Math.Abs(player.Position.Y - portalPosition.Y);
+
+            if (portalInteractionLastDistance < portalInteractionBestDistance - PortalInteractionProgressMargin)
+            {
+                portalInteractionBestDistance = portalInteractionLastDistance;
+                ResetPortalNoDialogAttemptWindow(now);
+            }
+        }
+        else
+        {
+            portalInteractionLastPlayerPosition = default;
+            portalInteractionLastPortalPosition = portalPosition;
+            portalInteractionLastDistance = float.MaxValue;
+            portalInteractionLastXzDistance = float.MaxValue;
+            portalInteractionLastYDistance = float.MaxValue;
+        }
+
+        if (portalInteractionFirstAttemptAt == DateTime.MinValue)
+            portalInteractionFirstAttemptAt = now;
+
+        portalInteractionLastAttemptAt = now;
+        portalInteractionAttemptsSinceProgress++;
+        LogPortalNoDialogDiagnostics(now, $"attempt #{portalInteractionAttemptCount}");
+    }
+
+    private void MarkPortalInteractionProgress(DateTime now, string source)
+    {
+        var hadPendingInteraction = portalInteractionAttemptsSinceProgress > 0 ||
+                                    portalInteractionFirstAttemptAt != DateTime.MinValue ||
+                                    portalCloseNudgeActive;
+        ResetPortalNoDialogAttemptWindow(now);
+        ResetPortalCloseNudgeTracking(stopMovement: false);
+        lastPortalStuckDiagnosticLogTime = DateTime.MinValue;
+        if (hadPendingInteraction)
+            _plugin.AddDebugLog($"[Portal] Interaction progress observed via {source}; reset no-dialog attempt window.");
+    }
+
+    private bool ShouldRunPortalNoDialogRecovery(DateTime now, float portalDist, out string reason)
+    {
+        reason = string.Empty;
+        if (portalRetryStart == DateTime.MinValue || portalDist > PortalApproachInteractionRange)
+            return false;
+
+        if (portalInteractionAttemptsSinceProgress >= PortalNoDialogRecoveryAttemptThreshold)
+        {
+            reason = $"{portalInteractionAttemptsSinceProgress} interaction attempts without dialog/loading";
+            return true;
+        }
+
+        if (portalInteractionFirstAttemptAt != DateTime.MinValue &&
+            now - portalInteractionFirstAttemptAt >= PortalNoDialogRecoveryTimeout)
+        {
+            reason = $"{(now - portalInteractionFirstAttemptAt).TotalSeconds:F1}s without dialog/loading";
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryRunPortalCloseNudgeRecovery(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
+    {
+        var reason = "active close nudge";
+        if (!portalCloseNudgeActive && !ShouldRunPortalNoDialogRecovery(now, portalDist, out reason))
+            return false;
+
+        if (!portalCloseNudgeActive)
+        {
+            LogPortalNoDialogDiagnostics(now, reason);
+            BeginPortalCloseNudge(portal, now, reason);
+        }
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+        {
+            StateDetail = "Portal close nudge waiting for local player...";
+            return true;
+        }
+
+        var currentDist = Vector3.Distance(player.Position, approachPosition);
+        var currentXz = (float)CalculateXZDistance(player.Position, approachPosition);
+        var currentY = Math.Abs(player.Position.Y - approachPosition.Y);
+        var elapsed = now - portalCloseNudgeStartedAt;
+        var reachedStrictRange = currentDist <= PortalStrictInteractionRange || currentXz <= PortalStrictInteractionRange;
+        var timedOut = elapsed >= PortalCloseNudgeTimeout;
+
+        if (!reachedStrictRange && !timedOut)
+        {
+            if (now - portalCloseNudgeLastCommandAt >= PortalCloseNudgeCommandInterval)
+            {
+                Plugin.TargetManager.Target = portal;
+                GameHelpers.LockOnAndAutoMove();
+                autoMoveActive = true;
+                portalCloseNudgeLastCommandAt = now;
+            }
+
+            StateDetail = $"Nudging closer to portal ({currentDist:F1}y, XZ {currentXz:F1}y)...";
+            return true;
+        }
+
+        GameHelpers.StopAutoMove();
+        autoMoveActive = false;
+        ResetPortalCloseNudgeTracking(stopMovement: false);
+        ResetPortalNoDialogAttemptWindow(now);
+        portalInteractionBestDistance = currentDist;
+
+        _plugin.AddDebugLog(
+            $"[Portal] Close nudge {(reachedStrictRange ? "reached strict range" : "timed out")} after {elapsed.TotalSeconds:F1}s: " +
+            $"player={FormatVectorCompact(player.Position)} portal={FormatVectorCompact(approachPosition)} " +
+            $"dist={currentDist:F1}y xz={currentXz:F1}y y={currentY:F1}y. Retrying direct TargetSystem.");
+
+        if (IsCharacterReady())
+        {
+            Plugin.TargetManager.Target = portal;
+            if (AttemptPortalInteraction(portal, approachPosition, now, forceCameraRaycast: false, reason: " after close nudge"))
+                lastInteractionTime = now;
+        }
+        else
+        {
+            StateDetail = $"Waiting to retry portal after close nudge ({DescribeCharacterReadyBlockers()})...";
+        }
+
+        return true;
+    }
+
+    private void BeginPortalCloseNudge(IGameObject portal, DateTime now, string reason)
+    {
+        StopPortalConflictingMovement();
+        ResetPortalCameraResetBeforeInteractTracking();
+        portalCloseNudgeActive = true;
+        portalCloseNudgeEntityId = portal.EntityId;
+        portalCloseNudgeStartedAt = now;
+        portalCloseNudgeLastCommandAt = now;
+        portalCloseNudgeCount++;
+        Plugin.TargetManager.Target = portal;
+        GameHelpers.LockOnAndAutoMove();
+        autoMoveActive = true;
+        _plugin.AddDebugLog($"[Portal] Close nudge #{portalCloseNudgeCount} started after {reason}; target entity={portal.EntityId}.");
+    }
+
+    private void LogPortalNoDialogDiagnostics(DateTime now, string reason)
+    {
+        if (now - lastPortalStuckDiagnosticLogTime < PortalNoDialogDiagnosticInterval)
+            return;
+
+        lastPortalStuckDiagnosticLogTime = now;
+        var dialogWait = portalInteractionFirstAttemptAt == DateTime.MinValue
+            ? 0.0
+            : (now - portalInteractionFirstAttemptAt).TotalSeconds;
+        var vnavRunning = _plugin.VNavIPC.TryIsRunning();
+        var vnavState = vnavRunning.HasValue ? vnavRunning.Value.ToString() : "unknown";
+        _plugin.AddDebugLog(
+            $"[Portal] No-dialog diagnostic ({reason}): attemptsSinceProgress={portalInteractionAttemptsSinceProgress}, " +
+            $"firstAttempt={FormatElapsedSince(portalInteractionFirstAttemptAt, now)}, " +
+            $"lastAttempt={FormatElapsedSince(portalInteractionLastAttemptAt, now)}, dialogWait={dialogWait:F1}s, " +
+            $"player={FormatVectorCompact(portalInteractionLastPlayerPosition)} portal={FormatVectorCompact(portalInteractionLastPortalPosition)} " +
+            $"dist={portalInteractionLastDistance:F1}y xz={portalInteractionLastXzDistance:F1}y y={portalInteractionLastYDistance:F1}y, " +
+            $"nav={_plugin.NavigationService.State}, vnavRunning={vnavState}, autoMove={autoMoveActive}, closeNudges={portalCloseNudgeCount}.");
+    }
+
+    private static string FormatElapsedSince(DateTime timestamp, DateTime now)
+        => timestamp == DateTime.MinValue ? "never" : $"{(now - timestamp).TotalSeconds:F1}s ago";
 
     private void TryPortalApproachInteraction(IGameObject portal, Vector3 approachPosition, float portalDist, DateTime now)
     {
@@ -4971,6 +5265,9 @@ public class StateManager : IDisposable
 
         _plugin.AddDebugLog(
             $"[Portal] Within approach interaction band ({portalDist:F1}y <= {PortalApproachInteractionRange:F1}y) - trying portal interaction while vnav continues.");
+        if (TryRunPortalCloseNudgeRecovery(portal, approachPosition, portalDist, now))
+            return;
+
         if (AttemptPortalInteraction(portal, approachPosition, now))
             lastInteractionTime = now;
     }
@@ -5024,6 +5321,9 @@ public class StateManager : IDisposable
         {
             EnsurePortalMapFlagCleared();
             Plugin.TargetManager.Target = portal;
+            if (TryRunPortalCloseNudgeRecovery(portal, approachPosition, portalDist, now))
+                return;
+
             if (AttemptPortalInteraction(portal, approachPosition, now))
                 lastInteractionTime = now;
             else
@@ -7891,6 +8191,7 @@ public class StateManager : IDisposable
 
             if (loading)
             {
+                MarkPortalInteractionProgress(now, "loading screen");
                 adsDutyEntryConfirmedAt = DateTime.MinValue;
                 adsDutyReadySince = DateTime.MinValue;
                 StateDetail = "Portal accepted - waiting for loading to finish...";
@@ -7909,6 +8210,7 @@ public class StateManager : IDisposable
                 // Click Yes on any visible dialog (portal confirmation from previous tick)
                 if (GameHelpers.ClickYesIfVisible())
                 {
+                    MarkPortalInteractionProgress(now, "SelectYesno");
                     _plugin.AddDebugLog("[Portal] Clicked Yes on portal dialog - waiting for loading screen...");
                     CommandHelper.SendCommand("/automove off");
                     if (_plugin.NavigationService.State != NavigationState.Idle)
@@ -7943,6 +8245,12 @@ public class StateManager : IDisposable
                     var portalDist = player == null
                         ? float.MaxValue
                         : Vector3.Distance(player.Position, approachPosition);
+
+                    if (portalCloseNudgeActive &&
+                        TryRunPortalCloseNudgeRecovery(portal, approachPosition, portalDist, now))
+                    {
+                        return;
+                    }
 
                     if (portalDist > PortalInteractionRange)
                     {
