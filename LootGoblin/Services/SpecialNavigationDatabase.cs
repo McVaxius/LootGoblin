@@ -29,6 +29,63 @@ public class SpecialNavigationDatabase : IDisposable
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    // Code-owned defaults keep required special nav available even if bundled JSON is stale.
+    private static readonly SpecialNavigationEntry[] RequiredBuiltInDefaultEntries =
+    {
+        new()
+        {
+            DestinationIndex = 534,
+            ZoneName = "The Lochs",
+            PreX = 54.0f,
+            PreY = -10.0f,
+            PreZ = -45.0f,
+            MainX = 42.1f,
+            MainY = -12.9f,
+            MainZ = -23.7f,
+            Notes = "Lochs Thief ice dive entry for flag 34.6,-249.1,-12.9.",
+            IsActive = true,
+        },
+        new()
+        {
+            DestinationIndex = 536,
+            ZoneName = "The Lochs",
+            PreX = -181.0f,
+            PreY = -10.0f,
+            PreZ = -173.0f,
+            MainX = -217.6f,
+            MainY = -277.3f,
+            MainZ = -114.2f,
+            Notes = "Lochs Thief ice dive entry for flag -217.8,-277.3,-114.2.",
+            IsActive = true,
+        },
+        new()
+        {
+            DestinationIndex = 537,
+            ZoneName = "The Lochs",
+            PreX = -0.9f,
+            PreY = -10.0f,
+            PreZ = -282.8f,
+            MainX = -0.75f,
+            MainY = -281.6f,
+            MainZ = -282.9f,
+            Notes = "Lochs Thief ice dive entry for flag -0.9,-281.6,-282.8.",
+            IsActive = true,
+        },
+        new()
+        {
+            DestinationIndex = 538,
+            ZoneName = "The Lochs",
+            PreX = 141.0f,
+            PreY = -10.0f,
+            PreZ = 243.0f,
+            MainX = 103.6f,
+            MainY = -343.7f,
+            MainZ = 207.9f,
+            Notes = "Lochs Thief ice dive entry for flag 103.5,-343.7,207.7.",
+            IsActive = true,
+        },
+    };
+
     public IReadOnlyList<SpecialNavigationEntry> Entries => _entries.AsReadOnly();
 
     public SpecialNavigationDatabase(Plugin plugin, IPluginLog log)
@@ -58,7 +115,7 @@ public class SpecialNavigationDatabase : IDisposable
     {
         try
         {
-            var bundledEntries = LoadBundledDefaultEntries();
+            var bundledEntries = LoadBuiltInDefaultEntries();
             var mergedBuiltInCount = 0;
 
             if (!File.Exists(_filePath))
@@ -86,9 +143,19 @@ public class SpecialNavigationDatabase : IDisposable
         {
             _log.Error($"[SpecialNavDB] Failed to load special navigation entries: {ex.Message}");
             _entries.Clear();
-            _entries.AddRange(LoadBundledDefaultEntries().Select(CloneEntry));
+            _entries.AddRange(LoadBuiltInDefaultEntries().Select(CloneEntry));
             LogLoadedEntries(0);
         }
+    }
+
+    /// <summary>
+    /// Load all built-in entries from the bundle and code-owned required defaults.
+    /// </summary>
+    private List<SpecialNavigationEntry> LoadBuiltInDefaultEntries()
+    {
+        var entries = LoadBundledDefaultEntries();
+        MergeMissingBuiltInActiveEntries(entries, RequiredBuiltInDefaultEntries);
+        return entries;
     }
 
     /// <summary>
@@ -129,7 +196,7 @@ public class SpecialNavigationDatabase : IDisposable
         File.WriteAllText(_filePath, json);
     }
 
-    private static int MergeMissingBuiltInActiveEntries(List<SpecialNavigationEntry> entries, List<SpecialNavigationEntry> builtInEntries)
+    private static int MergeMissingBuiltInActiveEntries(List<SpecialNavigationEntry> entries, IEnumerable<SpecialNavigationEntry> builtInEntries)
     {
         var existingDestinationIndices = entries
             .Where(e => e.DestinationIndex > 0)
