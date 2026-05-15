@@ -15,6 +15,7 @@ using LootGoblin.Models;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.System.String;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace LootGoblin.Services;
 
@@ -168,8 +169,11 @@ public class StateManager : IDisposable
     private DateTime treasureHighLowNextRetryAt = DateTime.MinValue; // Next time a close/reopen callback may be sent
     private DateTime treasureHighLowLastStatusLogAt = DateTime.MinValue; // Rate-limit visible-after-attempts logs
     private DateTime treasureHighLowLastMovementStopAt = DateTime.MinValue; // Rate-limit hard movement stop commands while addon is visible
-    private int treasureHighLowAttemptCount; // Number of close callbacks tried in the current addon session
+    private int treasureHighLowAttemptCount; // Number of callbacks tried in the current addon session
     private bool treasureHighLowExhaustedLogged; // Prevent exhausted-strategy log spam
+    private int treasureHighLowObservedStage = 1; // Local gamble stage estimate for solver/observe modes
+    private string treasureHighLowLastSnapshotSignature = string.Empty; // One log per UI transition
+    private string treasureHighLowLastDecisionSignature = string.Empty; // Prevent repeated clicks on unchanged UI
     private bool betweenAreasMovementStopped; // Stop LootGoblin-owned movement once per loading screen
     
     // Map opening validation variables
@@ -263,6 +267,9 @@ public class StateManager : IDisposable
         ("TreasureHighLow true -1", true, -1),
         ("TreasureHighLow false -1", false, -1),
     };
+    private const int TreasureHighLowCashOutCallbackArg = 1;
+    private const int TreasureHighLowHigherCallbackArg = -1;
+    private const int TreasureHighLowLowerCallbackArg = -2;
     private static readonly TimeSpan DoorTransitionReadyStabilization = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagAddonStableDelay = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan SaddlebagStepTimeout = TimeSpan.FromSeconds(20);
@@ -9765,7 +9772,7 @@ public class StateManager : IDisposable
                 var sessionDuration = now - treasureHighLowVisibleSince;
                 _plugin.AddDebugLog(
                     $"[CardGame] Higher/Lower flow cleared after {sessionDuration.TotalSeconds:F1}s and " +
-                    $"{treasureHighLowAttemptCount} close callback attempt(s).");
+                    $"{treasureHighLowAttemptCount} callback attempt(s).");
             }
 
             ResetTreasureHighLowRetryState();
@@ -9781,10 +9788,17 @@ public class StateManager : IDisposable
             treasureHighLowNextRetryAt = now;
             treasureHighLowLastStatusLogAt = now;
             _plugin.AddDebugLog(
-                "[CardGame] Higher/Lower flow detected - checking TreasureHighLow before each close attempt and reopening via _Notification true 0 1 when _NotificationChallenge is visible.");
+                "[CardGame] Higher/Lower flow detected - checking TreasureHighLow before each callback attempt and reopening via _Notification true 0 1 when _NotificationChallenge is visible.");
         }
 
         LogTreasureHighLowStillVisible(now, treasureHighLowVisible, notificationChallengeVisible);
+
+        if (treasureHighLowVisible &&
+            _plugin.Configuration.TreasureHighLowMode != TreasureHighLowMode.Skip &&
+            TryHandleTreasureHighLowSolverMode(now))
+        {
+            return true;
+        }
 
         if (treasureHighLowAttemptCount >= TreasureHighLowCloseAttempts.Length)
         {
@@ -9792,10 +9806,10 @@ public class StateManager : IDisposable
             {
                 treasureHighLowExhaustedLogged = true;
                 _plugin.AddDebugLog(
-                    $"[CardGame] Exhausted {TreasureHighLowCloseAttempts.Length} Higher/Lower close attempts; holding movement and waiting for manual/game resolution.");
+                    $"[CardGame] Exhausted {TreasureHighLowCloseAttempts.Length} Higher/Lower callback attempts; holding movement and waiting for manual/game resolution.");
             }
 
-            StateDetail = "Waiting for Higher/Lower puzzle after exhausting close attempts...";
+            StateDetail = "Waiting for Higher/Lower puzzle after exhausting callback attempts...";
             return true;
         }
 
@@ -9833,7 +9847,7 @@ public class StateManager : IDisposable
                 $"[CardGame] Attempt {treasureHighLowAttemptCount} failed to fire {attempt.Description}; next tick will re-check addon state.");
         }
 
-        StateDetail = $"Trying Higher/Lower close attempt {treasureHighLowAttemptCount}...";
+        StateDetail = $"Trying Higher/Lower callback attempt {treasureHighLowAttemptCount}...";
         return true;
     }
 
@@ -9851,6 +9865,174 @@ public class StateManager : IDisposable
             _plugin.NavigationService.StopNavigation();
     }
 
+    private bool TryHandleTreasureHighLowSolverMode(DateTime now)
+    {
+        if (now < treasureHighLowNextRetryAt)
+        {
+            StateDetail = "Waiting for Higher/Lower solver UI to settle...";
+            return true;
+        }
+
+        var snapshot = ReadTreasureHighLowSnapshot();
+        LogTreasureHighLowSnapshot(snapshot);
+
+        if (_plugin.Configuration.TreasureHighLowMode == TreasureHighLowMode.ObserveOnly)
+        {
+            StateDetail = "Observing Higher/Lower puzzle...";
+            treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
+            return true;
+        }
+
+        if (!snapshot.IsReliable)
+        {
+            _plugin.AddDebugLog(
+                $"[CardGame] Solver snapshot incomplete ({snapshot.ReliabilityReason}); falling back to skip/close sequence.");
+            return false;
+        }
+
+        if (snapshot.Signature == treasureHighLowLastDecisionSignature)
+        {
+            StateDetail = "Waiting for Higher/Lower UI to change after solver callback...";
+            return true;
+        }
+
+        var stage = Math.Clamp(snapshot.Stage ?? treasureHighLowObservedStage, 1, 5);
+        var decision = TreasureHighLowSolver.Decide(stage, snapshot.Card!.Value);
+        var callbackArg = decision.Action switch
+        {
+            TreasureHighLowAction.PlayHigher => TreasureHighLowHigherCallbackArg,
+            TreasureHighLowAction.PlayLower => TreasureHighLowLowerCallbackArg,
+            _ => TreasureHighLowCashOutCallbackArg,
+        };
+
+        _plugin.AddDebugLog(
+            $"[CardGame] Solver decision: {decision.Action} ({decision.Reason}); firing TreasureHighLow true {callbackArg}.");
+
+        if (!GameHelpers.TryFireAddonCallback("TreasureHighLow", true, callbackArg))
+        {
+            _plugin.AddDebugLog(
+                $"[CardGame] Solver callback failed for {decision.Action}; falling back to skip/close sequence next tick.");
+            treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
+            return false;
+        }
+
+        treasureHighLowAttemptCount++;
+        treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
+        treasureHighLowLastDecisionSignature = snapshot.Signature;
+
+        if (decision.Action is TreasureHighLowAction.PlayHigher or TreasureHighLowAction.PlayLower)
+            treasureHighLowObservedStage = Math.Clamp(stage + 1, 1, 5);
+
+        StateDetail = decision.Action == TreasureHighLowAction.CashOut
+            ? "Cashing out Higher/Lower puzzle..."
+            : $"Playing Higher/Lower stage {stage}: {decision.Action}...";
+        return true;
+    }
+
+    private void LogTreasureHighLowSnapshot(TreasureHighLowSnapshot snapshot)
+    {
+        if (snapshot.Signature == treasureHighLowLastSnapshotSignature)
+            return;
+
+        treasureHighLowLastSnapshotSignature = snapshot.Signature;
+        _plugin.AddDebugLog(
+            $"[CardGame] Snapshot: card={(snapshot.Card?.ToString() ?? "?")}, " +
+            $"stage={(snapshot.Stage?.ToString() ?? treasureHighLowObservedStage.ToString())}, " +
+            $"reliable={snapshot.IsReliable}, reason={snapshot.ReliabilityReason}, " +
+            $"texts=[{string.Join(" | ", snapshot.VisibleTexts.Take(12))}]");
+    }
+
+    private unsafe TreasureHighLowSnapshot ReadTreasureHighLowSnapshot()
+    {
+        var visibleTexts = new List<string>();
+
+        try
+        {
+            var addon = RaptureAtkUnitManager.Instance()->GetAddonByName("TreasureHighLow");
+            if (addon == null || !addon->IsVisible)
+                return TreasureHighLowSnapshot.Unavailable("TreasureHighLow not visible");
+
+            CollectTextFromKnownNodeRanges(addon, visibleTexts);
+        }
+        catch (Exception ex)
+        {
+            return TreasureHighLowSnapshot.Unavailable($"{ex.GetType().Name}: {ex.Message}");
+        }
+
+        var cardCandidates = visibleTexts
+            .SelectMany(ExtractStandaloneCardDigits)
+            .Distinct()
+            .ToList();
+
+        var stage = ExtractStage(visibleTexts) ?? treasureHighLowObservedStage;
+        var card = cardCandidates.Count == 1 ? cardCandidates[0] : (int?)null;
+        var reliable = card.HasValue && stage is >= 1 and <= 5;
+        var reason = reliable
+            ? "single visible card digit and bounded stage"
+            : $"card candidates={string.Join(",", cardCandidates)} stage={stage}";
+
+        return new TreasureHighLowSnapshot(card, stage, reliable, reason, visibleTexts);
+    }
+
+    private static unsafe void CollectTextFromKnownNodeRanges(AtkUnitBase* unit, List<string> visibleTexts)
+    {
+        for (var id = 1; id <= 220; id++)
+            TryCollectTextNode(unit, (uint)id, visibleTexts);
+
+        for (var id = 50000; id <= 51100; id++)
+            TryCollectTextNode(unit, (uint)id, visibleTexts);
+    }
+
+    private static unsafe void TryCollectTextNode(AtkUnitBase* unit, uint nodeId, List<string> visibleTexts)
+    {
+        var node = unit->GetNodeById(nodeId);
+        if (node == null ||
+            node->Type != NodeType.Text ||
+            !node->IsVisible())
+        {
+            return;
+        }
+
+        var textNode = (AtkTextNode*)node;
+        var text = textNode->NodeText.ToString().Trim();
+        if (!string.IsNullOrWhiteSpace(text) && !visibleTexts.Contains(text))
+            visibleTexts.Add(text);
+    }
+
+    private static IEnumerable<int> ExtractStandaloneCardDigits(string text)
+    {
+        var parts = text.Split(new[] { ' ', '\t', '\r', '\n', ':', '/', '-', '(', ')', '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in parts)
+        {
+            if (part.Length == 1 && part[0] >= '1' && part[0] <= '9')
+                yield return part[0] - '0';
+        }
+    }
+
+    private static int? ExtractStage(IReadOnlyList<string> visibleTexts)
+    {
+        foreach (var text in visibleTexts)
+        {
+            var lower = text.ToLowerInvariant();
+            if (!lower.Contains("round") &&
+                !lower.Contains("stage") &&
+                !lower.Contains("attempt") &&
+                !lower.Contains("try") &&
+                !lower.Contains("gamble"))
+            {
+                continue;
+            }
+
+            foreach (var value in ExtractStandaloneCardDigits(text))
+            {
+                if (value is >= 1 and <= 5)
+                    return value;
+            }
+        }
+
+        return null;
+    }
+
     private void LogTreasureHighLowStillVisible(
         DateTime now,
         bool treasureHighLowVisible,
@@ -9866,7 +10048,7 @@ public class StateManager : IDisposable
         treasureHighLowLastStatusLogAt = now;
         var sessionDuration = now - treasureHighLowVisibleSince;
         _plugin.AddDebugLog(
-            $"[CardGame] Higher/Lower flow still active after {treasureHighLowAttemptCount} close attempt(s) " +
+            $"[CardGame] Higher/Lower flow still active after {treasureHighLowAttemptCount} callback attempt(s) " +
             $"over {sessionDuration.TotalSeconds:F1}s; TreasureHighLowVisible={treasureHighLowVisible}, " +
             $"NotificationChallengeVisible={notificationChallengeVisible}.");
     }
@@ -9879,6 +10061,23 @@ public class StateManager : IDisposable
         treasureHighLowLastMovementStopAt = DateTime.MinValue;
         treasureHighLowAttemptCount = 0;
         treasureHighLowExhaustedLogged = false;
+        treasureHighLowObservedStage = 1;
+        treasureHighLowLastSnapshotSignature = string.Empty;
+        treasureHighLowLastDecisionSignature = string.Empty;
+    }
+
+    private sealed record TreasureHighLowSnapshot(
+        int? Card,
+        int? Stage,
+        bool IsReliable,
+        string ReliabilityReason,
+        IReadOnlyList<string> VisibleTexts)
+    {
+        public string Signature =>
+            $"{Card?.ToString() ?? "?"}:{Stage?.ToString() ?? "?"}:{IsReliable}:{string.Join("|", VisibleTexts.Take(12))}";
+
+        public static TreasureHighLowSnapshot Unavailable(string reason)
+            => new(null, null, false, reason, Array.Empty<string>());
     }
 
     // ─── Error Handling ───────────────────────────────────────────────────────

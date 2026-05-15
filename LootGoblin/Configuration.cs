@@ -18,6 +18,13 @@ public enum ReturnWhenDoneDestination
     Inn,
 }
 
+public enum TreasureHighLowMode
+{
+    Skip,
+    SolveExpectedValue,
+    ObserveOnly,
+}
+
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
@@ -58,6 +65,7 @@ public class Configuration : IPluginConfiguration
     public float ChestInteractionRange { get; set; } = 5f;
     public bool AutoLootChest { get; set; } = true;
     public int ChestOpenTimeout { get; set; } = 10;
+    public TreasureHighLowMode TreasureHighLowMode { get; set; } = TreasureHighLowMode.Skip;
 
     // Automation
     public bool EnableAutoDiscard { get; set; } = false;

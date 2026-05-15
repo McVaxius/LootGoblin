@@ -391,6 +391,27 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
+        var treasureHighLowModes = new[] { "Skip", "Solve EV", "Observe only" };
+        var treasureHighLowModeIndex = configuration.TreasureHighLowMode switch
+        {
+            TreasureHighLowMode.SolveExpectedValue => 1,
+            TreasureHighLowMode.ObserveOnly => 2,
+            _ => 0,
+        };
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.Combo("Higher/Lower", ref treasureHighLowModeIndex, treasureHighLowModes, treasureHighLowModes.Length))
+        {
+            configuration.TreasureHighLowMode = treasureHighLowModeIndex switch
+            {
+                1 => TreasureHighLowMode.SolveExpectedValue,
+                2 => TreasureHighLowMode.ObserveOnly,
+                _ => TreasureHighLowMode.Skip,
+            };
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Skip keeps current behavior. Observe logs readable state only. Solve EV clicks only after it reads a reliable card/stage; otherwise it falls back to skip.");
+
 
         ImGui.Spacing();
         ImGui.Separator();
