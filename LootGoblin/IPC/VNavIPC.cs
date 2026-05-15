@@ -13,6 +13,8 @@ public class VNavIPC : IDisposable
     private readonly IPluginLog _log;
     private readonly Plugin _plugin;
     private bool isRunningIpcFailureLogged;
+    private bool isPathRunningIpcFailureLogged;
+    private bool isPathfindInProgressIpcFailureLogged;
 
     public bool IsAvailable { get; private set; }
     public bool IsNavigating { get; private set; }
@@ -57,6 +59,71 @@ public class VNavIPC : IDisposable
         }
 
         return null;
+    }
+
+    public bool? TryIsPathRunning()
+    {
+        if (!IsAvailable)
+            return null;
+
+        try
+        {
+            return _pluginInterface.GetIpcSubscriber<bool>("vnavmesh.Path.IsRunning").InvokeFunc();
+        }
+        catch (Exception ex)
+        {
+            LogIpcReadFailureOnce(
+                ref isPathRunningIpcFailureLogged,
+                "path running",
+                ex);
+            return null;
+        }
+    }
+
+    public bool? TryIsPathfindInProgress()
+    {
+        if (!IsAvailable)
+            return null;
+
+        Exception? lastException = null;
+        var anyFailed = false;
+        var inProgress = false;
+        foreach (var ipcName in new[] { "vnavmesh.Nav.PathfindInProgress", "vnavmesh.SimpleMove.PathfindInProgress" })
+        {
+            try
+            {
+                inProgress |= _pluginInterface.GetIpcSubscriber<bool>(ipcName).InvokeFunc();
+            }
+            catch (Exception ex)
+            {
+                anyFailed = true;
+                lastException = ex;
+            }
+        }
+
+        if (anyFailed)
+        {
+            LogIpcReadFailureOnce(
+                ref isPathfindInProgressIpcFailureLogged,
+                "pathfind in-progress",
+                lastException);
+            return null;
+        }
+
+        return inProgress;
+    }
+
+    private void LogIpcReadFailureOnce(ref bool failureLogged, string stateName, Exception? exception)
+    {
+        if (failureLogged)
+            return;
+
+        failureLogged = true;
+        var detail = exception == null
+            ? "unknown error"
+            : $"{exception.GetType().Name}: {exception.Message}";
+        _plugin.AddDebugLog($"[VNavIPC] Could not read vnavmesh {stateName} state via IPC: {detail}");
+        _log.Debug($"[VNavIPC] Could not read vnavmesh {stateName} state via IPC: {detail}");
     }
 
     public void CheckAvailability(bool logStatus = true)

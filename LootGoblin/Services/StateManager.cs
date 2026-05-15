@@ -93,6 +93,10 @@ public class StateManager : IDisposable
     private bool stateActionIssued;
     private Vector3 lastStuckCheckPos; // Position at last stuck check
     private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
+    private Vector3 sameZoneStuckCheckPos;
+    private DateTime sameZoneStuckCheckTime = DateTime.MinValue;
+    private string sameZoneStuckTargetKey = string.Empty;
+    private string sameZoneStuckTeleportedTargetKey = string.Empty;
     private DateTime portalRetryStart = DateTime.MinValue; // Portal interaction retry timer
     private bool portalMapFlagCleared; // Clear old map/vnav flag once before portal interaction
     private Vector3? portalApproachPosition; // Exact portal XYZ captured for this portal window
@@ -178,6 +182,8 @@ public class StateManager : IDisposable
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float MapDigXZRange = 5.0f;
     private const double SameZoneAetheryteTeleportSkipXZRange = 50.0;
+    private const float SameZoneStuckMovementThreshold = 0.5f;
+    private static readonly TimeSpan SameZoneStuckTeleportTimeout = TimeSpan.FromSeconds(10.0);
     private const float PortalInteractionRange = 3.0f;
     private const float PortalStrictInteractionRange = 1.6f;
     private const float PortalApproachInteractionRange = 5.0f;
@@ -1198,6 +1204,7 @@ public class StateManager : IDisposable
             dungeonConfirmedThisMap = false;
             ResetOpeningChestLifecycleState();
             CurrentLocation = null;
+            ResetSameZoneStuckTeleportState(clearTeleportedTarget: true);
             activeKeyItemMapItemId = keyItem.ItemId;
             activeKeyItemMapSlot = keyItem.Slot;
             activeKeyItemRecoverySourceLogged = false;
@@ -2142,6 +2149,15 @@ public class StateManager : IDisposable
         flyFlagFallbackUsedThisFlight = false;
     }
 
+    private void ResetSameZoneStuckTeleportState(bool clearTeleportedTarget = false)
+    {
+        sameZoneStuckCheckPos = Vector3.Zero;
+        sameZoneStuckCheckTime = DateTime.MinValue;
+        sameZoneStuckTargetKey = string.Empty;
+        if (clearTeleportedTarget)
+            sameZoneStuckTeleportedTargetKey = string.Empty;
+    }
+
     private void ResetKeyItemMapRecoveryState(bool clearActiveKey = false)
     {
         keyItemMapRecoveryStartedAt = DateTime.MinValue;
@@ -2156,6 +2172,7 @@ public class StateManager : IDisposable
         activeKeyItemRecoverySourceLogged = false;
         activeKeyItemRecoveryUnderwaterLogged = false;
         activeMapTargetCache.Clear();
+        ResetSameZoneStuckTeleportState(clearTeleportedTarget: true);
     }
 
     private bool TryFallbackToFlyFlagAfterVnavFailure(DateTime now)
@@ -2180,6 +2197,92 @@ public class StateManager : IDisposable
         StateDetail = "Flying to map flag after vnav flyto failure...";
         lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         lastStuckCheckTime = now;
+        return true;
+    }
+
+    private string BuildSameZoneStuckTargetKey(MapLocation location)
+    {
+        if (TryGetActiveMapTargetKey(null, out var key))
+            return $"{key.EventItemId}:{key.MapItemId}";
+
+        return FormattableString.Invariant(
+            $"{SelectedMapItemId}:{location.TerritoryId}:{location.X:0.0}:{location.Y:0.0}:{location.Z:0.0}");
+    }
+
+    private bool TryHandleSameZoneStuckTeleport(
+        DateTime now,
+        Vector3 currentPos,
+        float distanceFromTarget,
+        string navigationBasis,
+        Vector3 navigationTarget,
+        Vector3 landingTarget,
+        bool? pathfindInProgress,
+        bool? pathRunning)
+    {
+        if (CurrentLocation == null
+            || CurrentLocation.TerritoryId != Plugin.ClientState.TerritoryType
+            || currentPos == Vector3.Zero
+            || distanceFromTarget <= 5.0f)
+        {
+            ResetSameZoneStuckTeleportState();
+            return false;
+        }
+
+        if (pathfindInProgress != false || pathRunning != true)
+        {
+            ResetSameZoneStuckTeleportState();
+            return false;
+        }
+
+        var targetKey = BuildSameZoneStuckTargetKey(CurrentLocation);
+        if (!string.Equals(sameZoneStuckTargetKey, targetKey, StringComparison.Ordinal)
+            || sameZoneStuckCheckTime == DateTime.MinValue)
+        {
+            sameZoneStuckTargetKey = targetKey;
+            sameZoneStuckCheckPos = currentPos;
+            sameZoneStuckCheckTime = now;
+            return false;
+        }
+
+        if (now - sameZoneStuckCheckTime < SameZoneStuckTeleportTimeout)
+            return false;
+
+        var movedDistance = Vector3.Distance(currentPos, sameZoneStuckCheckPos);
+        if (movedDistance >= SameZoneStuckMovementThreshold)
+        {
+            sameZoneStuckCheckPos = currentPos;
+            sameZoneStuckCheckTime = now;
+            return false;
+        }
+
+        if (string.Equals(sameZoneStuckTeleportedTargetKey, targetKey, StringComparison.Ordinal))
+        {
+            sameZoneStuckCheckPos = currentPos;
+            sameZoneStuckCheckTime = now;
+            return false;
+        }
+
+        PopulateNearestAetheryte(CurrentLocation, out var aetheryteId, out _, out _);
+        if (aetheryteId == 0)
+        {
+            _plugin.AddDebugLog(
+                $"[Flying] Same-zone vnav execution stuck (moved {movedDistance:F1}y in {SameZoneStuckTeleportTimeout.TotalSeconds:F0}s), " +
+                "but no same-zone aetheryte is available; keeping re-path fallback.");
+            sameZoneStuckCheckPos = currentPos;
+            sameZoneStuckCheckTime = now;
+            return false;
+        }
+
+        sameZoneStuckTeleportedTargetKey = targetKey;
+        _plugin.NavigationService.StopNavigation();
+        _plugin.AddDebugLog(
+            $"[Flying] Same-zone vnav execution stuck after pathfinding completed " +
+            $"(moved {movedDistance:F1}y in {SameZoneStuckTeleportTimeout.TotalSeconds:F0}s) - " +
+            $"teleporting once to nearest aetheryte {aetheryteId}; basis={navigationBasis}; " +
+            $"current={FormatVectorCompact(currentPos)}; navTarget={FormatVectorCompact(navigationTarget)}; " +
+            $"landingTarget={FormatVectorCompact(landingTarget)}.");
+        ResetSameZoneStuckTeleportState();
+        TransitionTo(BotState.Teleporting, "Same-zone navigation stuck - teleporting to nearest aetheryte...");
         return true;
     }
 
@@ -6228,6 +6331,8 @@ public class StateManager : IDisposable
         activeNavTargets = ResolveOverworldNavigationTargets();
         var distanceFromTarget = Vector3.Distance(currentPos, activeNavTargets.NavigationTarget);
         var xzDist = CalculateXZDistance(currentPos, activeNavTargets.LandingTarget);
+        var pathfindInProgress = _plugin.VNavIPC.TryIsPathfindInProgress();
+        var pathRunning = _plugin.VNavIPC.TryIsPathRunning();
 
         if (currentLandingMode == OverworldLandingMode.UnderwaterBounce
             && xzDist <= UnderwaterBounceTriggerXZRange
@@ -6239,6 +6344,19 @@ public class StateManager : IDisposable
                 activeNavTargets.Basis,
                 activeNavTargets.DestinationText,
                 activeNavTargets.ZoneName);
+            return;
+        }
+
+        if (TryHandleSameZoneStuckTeleport(
+                now,
+                currentPos,
+                distanceFromTarget,
+                activeNavTargets.Basis,
+                activeNavTargets.NavigationTarget,
+                activeNavTargets.LandingTarget,
+                pathfindInProgress,
+                pathRunning))
+        {
             return;
         }
         
