@@ -391,6 +391,17 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
+        var experimentalTreasureHighLowSolver = configuration.TreasureHighLowMode == TreasureHighLowMode.SolveExpectedValue;
+        if (ImGui.Checkbox("Experimental Gambler's Lure Solver", ref experimentalTreasureHighLowSolver))
+        {
+            configuration.TreasureHighLowMode = experimentalTreasureHighLowSolver
+                ? TreasureHighLowMode.SolveExpectedValue
+                : TreasureHighLowMode.Skip;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Unchecked keeps current skip/close behavior. Checked solves only after a reliable card snapshot; incomplete snapshots fall back to skip.");
+
         var treasureHighLowModes = new[] { "Skip", "Solve EV", "Observe only" };
         var treasureHighLowModeIndex = configuration.TreasureHighLowMode switch
         {
@@ -399,7 +410,7 @@ public class ConfigWindow : Window, IDisposable
             _ => 0,
         };
         ImGui.SetNextItemWidth(160);
-        if (ImGui.Combo("Higher/Lower", ref treasureHighLowModeIndex, treasureHighLowModes, treasureHighLowModes.Length))
+        if (ImGui.Combo("Higher/Lower Mode", ref treasureHighLowModeIndex, treasureHighLowModes, treasureHighLowModes.Length))
         {
             configuration.TreasureHighLowMode = treasureHighLowModeIndex switch
             {

@@ -9825,7 +9825,10 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog(
                 $"[CardGame] TreasureHighLow missing while _NotificationChallenge is visible before attempt {treasureHighLowAttemptCount + 1}; firing _Notification true 0 1.");
 
-            if (!GameHelpers.TryFireAddonCallbackIfExists(notificationAddonName, true, 0, 1))
+            var reopenFired = GameHelpers.TryFireAddonCallbackIfExists(notificationAddonName, true, 0, 1);
+            _plugin.AddDebugLog(
+                $"[CardGame] Callback result: _Notification true [0,1] fired={reopenFired}; {BuildTreasureHighLowLogContext()}");
+            if (!reopenFired)
             {
                 _plugin.AddDebugLog(
                     "[CardGame] Failed to fire _Notification true 0 1; will retry while _NotificationChallenge remains visible.");
@@ -9841,7 +9844,10 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog(
             $"[CardGame] Attempt {treasureHighLowAttemptCount}/{TreasureHighLowCloseAttempts.Length}: {attempt.Description}");
 
-        if (!GameHelpers.TryFireAddonCallback(addonName, attempt.UpdateState, attempt.Arg))
+        var attemptFired = GameHelpers.TryFireAddonCallback(addonName, attempt.UpdateState, attempt.Arg);
+        _plugin.AddDebugLog(
+            $"[CardGame] Callback result: {attempt.Description} fired={attemptFired}; {BuildTreasureHighLowLogContext()}");
+        if (!attemptFired)
         {
             _plugin.AddDebugLog(
                 $"[CardGame] Attempt {treasureHighLowAttemptCount} failed to fire {attempt.Description}; next tick will re-check addon state.");
@@ -9908,7 +9914,10 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog(
             $"[CardGame] Solver decision: {decision.Action} ({decision.Reason}); firing TreasureHighLow true {callbackArg}.");
 
-        if (!GameHelpers.TryFireAddonCallback("TreasureHighLow", true, callbackArg))
+        var solverFired = GameHelpers.TryFireAddonCallback("TreasureHighLow", true, callbackArg);
+        _plugin.AddDebugLog(
+            $"[CardGame] Solver callback result: action={decision.Action}, TreasureHighLow true [{callbackArg}] fired={solverFired}; {BuildTreasureHighLowLogContext()}");
+        if (!solverFired)
         {
             _plugin.AddDebugLog(
                 $"[CardGame] Solver callback failed for {decision.Action}; falling back to skip/close sequence next tick.");
@@ -9937,14 +9946,15 @@ public class StateManager : IDisposable
         treasureHighLowLastSnapshotSignature = snapshot.Signature;
         _plugin.AddDebugLog(
             $"[CardGame] Snapshot: card={(snapshot.Card?.ToString() ?? "?")}, " +
-            $"stage={(snapshot.Stage?.ToString() ?? treasureHighLowObservedStage.ToString())}, " +
-            $"reliable={snapshot.IsReliable}, reason={snapshot.ReliabilityReason}, " +
-            $"texts=[{string.Join(" | ", snapshot.VisibleTexts.Take(12))}]");
+            $"cardCandidates=[{string.Join(",", snapshot.CardCandidates)}], " +
+            $"stage={(snapshot.Stage?.ToString() ?? treasureHighLowObservedStage.ToString())} ({snapshot.StageSource}), " +
+            $"reliable={snapshot.IsReliable}, reason={snapshot.ReliabilityReason}, {BuildTreasureHighLowLogContext()}, " +
+            $"texts=[{FormatTreasureHighLowTexts(snapshot.VisibleTexts)}]");
     }
 
     private unsafe TreasureHighLowSnapshot ReadTreasureHighLowSnapshot()
     {
-        var visibleTexts = new List<string>();
+        var visibleTexts = new List<TreasureHighLowTextEntry>();
 
         try
         {
@@ -9960,21 +9970,24 @@ public class StateManager : IDisposable
         }
 
         var cardCandidates = visibleTexts
+            .Select(entry => entry.Text)
             .SelectMany(ExtractStandaloneCardDigits)
             .Distinct()
             .ToList();
 
-        var stage = ExtractStage(visibleTexts) ?? treasureHighLowObservedStage;
+        var parsedStage = ExtractStage(visibleTexts.Select(entry => entry.Text).ToList());
+        var stage = parsedStage ?? treasureHighLowObservedStage;
+        var stageSource = parsedStage.HasValue ? "parsed text" : "observed local estimate";
         var card = cardCandidates.Count == 1 ? cardCandidates[0] : (int?)null;
         var reliable = card.HasValue && stage is >= 1 and <= 5;
         var reason = reliable
             ? "single visible card digit and bounded stage"
-            : $"card candidates={string.Join(",", cardCandidates)} stage={stage}";
+            : $"card candidates={string.Join(",", cardCandidates)} stage={stage} source={stageSource}";
 
-        return new TreasureHighLowSnapshot(card, stage, reliable, reason, visibleTexts);
+        return new TreasureHighLowSnapshot(card, cardCandidates, stage, stageSource, reliable, reason, visibleTexts);
     }
 
-    private static unsafe void CollectTextFromKnownNodeRanges(AtkUnitBase* unit, List<string> visibleTexts)
+    private static unsafe void CollectTextFromKnownNodeRanges(AtkUnitBase* unit, List<TreasureHighLowTextEntry> visibleTexts)
     {
         for (var id = 1; id <= 220; id++)
             TryCollectTextNode(unit, (uint)id, visibleTexts);
@@ -9983,7 +9996,7 @@ public class StateManager : IDisposable
             TryCollectTextNode(unit, (uint)id, visibleTexts);
     }
 
-    private static unsafe void TryCollectTextNode(AtkUnitBase* unit, uint nodeId, List<string> visibleTexts)
+    private static unsafe void TryCollectTextNode(AtkUnitBase* unit, uint nodeId, List<TreasureHighLowTextEntry> visibleTexts)
     {
         var node = unit->GetNodeById(nodeId);
         if (node == null ||
@@ -9995,8 +10008,11 @@ public class StateManager : IDisposable
 
         var textNode = (AtkTextNode*)node;
         var text = textNode->NodeText.ToString().Trim();
-        if (!string.IsNullOrWhiteSpace(text) && !visibleTexts.Contains(text))
-            visibleTexts.Add(text);
+        if (!string.IsNullOrWhiteSpace(text) &&
+            !visibleTexts.Any(entry => entry.NodeId == nodeId && entry.Text == text))
+        {
+            visibleTexts.Add(new TreasureHighLowTextEntry(nodeId, text));
+        }
     }
 
     private static IEnumerable<int> ExtractStandaloneCardDigits(string text)
@@ -10033,6 +10049,12 @@ public class StateManager : IDisposable
         return null;
     }
 
+    private string BuildTreasureHighLowLogContext()
+        => $"territory={Plugin.ClientState.TerritoryType}, botState={State}, mode={_plugin.Configuration.TreasureHighLowMode}, attempt={treasureHighLowAttemptCount}";
+
+    private static string FormatTreasureHighLowTexts(IReadOnlyList<TreasureHighLowTextEntry> visibleTexts)
+        => string.Join(" | ", visibleTexts.Take(12).Select(entry => $"{entry.NodeId}:{entry.Text}"));
+
     private void LogTreasureHighLowStillVisible(
         DateTime now,
         bool treasureHighLowVisible,
@@ -10068,17 +10090,21 @@ public class StateManager : IDisposable
 
     private sealed record TreasureHighLowSnapshot(
         int? Card,
+        IReadOnlyList<int> CardCandidates,
         int? Stage,
+        string StageSource,
         bool IsReliable,
         string ReliabilityReason,
-        IReadOnlyList<string> VisibleTexts)
+        IReadOnlyList<TreasureHighLowTextEntry> VisibleTexts)
     {
         public string Signature =>
-            $"{Card?.ToString() ?? "?"}:{Stage?.ToString() ?? "?"}:{IsReliable}:{string.Join("|", VisibleTexts.Take(12))}";
+            $"{Card?.ToString() ?? "?"}:{Stage?.ToString() ?? "?"}:{IsReliable}:{string.Join("|", VisibleTexts.Take(12).Select(entry => $"{entry.NodeId}:{entry.Text}"))}";
 
         public static TreasureHighLowSnapshot Unavailable(string reason)
-            => new(null, null, false, reason, Array.Empty<string>());
+            => new(null, Array.Empty<int>(), null, "unavailable", false, reason, Array.Empty<TreasureHighLowTextEntry>());
     }
+
+    private sealed record TreasureHighLowTextEntry(uint NodeId, string Text);
 
     // ─── Error Handling ───────────────────────────────────────────────────────
 
