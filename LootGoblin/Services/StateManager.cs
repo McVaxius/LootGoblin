@@ -307,7 +307,6 @@ public class StateManager : IDisposable
     private HashSet<uint> attemptedCoffers = new HashSet<uint>(); // Track which coffers we've tried to interact with
     private DateTime cofferNavigationStart = DateTime.MinValue; // When we started navigating to current coffer
     private uint currentCofferId = 0; // Track which chest we're currently working on (preserved during combat)
-    private uint lastBMRTerritoryId = 0; // Track territory for BMR activation
     private Dictionary<uint, DateTime> sphereInteractionTimes = new Dictionary<uint, DateTime>(); // Track sphere interactions to prevent spam
     private HashSet<uint> failedSpheres = new HashSet<uint>(); // Track spheres that didn't trigger combat/despawn
 
@@ -356,7 +355,7 @@ public class StateManager : IDisposable
     private bool adsRepairUtilityObserved;
     private DateTime adsRepairHandoffStarted = DateTime.MinValue;
     private string adsRepairRequestedMode = string.Empty;
-    private bool mountedRotationSuppressed;
+    private bool? combatAutomationEnabledState;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
     private bool landingCommandsRanThisMap;
@@ -506,8 +505,17 @@ public class StateManager : IDisposable
             }
         }
 
-        // Companion chocobo summoning (every 15s when bot is enabled)
-        if (_plugin.Configuration.Enabled && _plugin.Configuration.SummonChocobo && Plugin.ClientState.IsLoggedIn)
+        var companionOperationActive = _plugin.Configuration.Enabled
+            && !IsPaused
+            && State is not BotState.Idle and not BotState.Error;
+
+        if (!companionOperationActive)
+        {
+            companionStanceDeferred = DateTime.MinValue;
+        }
+
+        // Companion chocobo summoning (every 15s when bot is actively operating)
+        if (companionOperationActive && _plugin.Configuration.SummonChocobo && Plugin.ClientState.IsLoggedIn)
         {
             var now = DateTime.Now;
 
@@ -631,7 +639,30 @@ public class StateManager : IDisposable
 
         RunSelectYesnoWatchdog();
 
-        UpdateMountedRotationLifecycle();
+        bool currentlyInCombat = Plugin.Condition[ConditionFlag.InCombat];
+        if (!currentlyInCombat)
+            SetCombatAutomationForCombatState(inCombat: false, "active non-combat tick");
+
+        // Universal combat pathfinding stop - only stop when actually in combat
+        if (currentlyInCombat && autoMoveActive)
+        {
+            _plugin.NavigationService.StopNavigation();
+            autoMoveActive = false;
+        }
+
+        // Combat start/end tracking for objective system
+        if (currentlyInCombat && !previouslyInCombat)
+        {
+            // Combat just started
+            OnCombatStart();
+        }
+        else if (!currentlyInCombat && previouslyInCombat)
+        {
+            // Combat just ended
+            OnCombatEnd();
+        }
+        previouslyInCombat = currentlyInCombat;
+
         TryClearPendingDungeonMapFlag();
 
         if (TickAdsRepairHandoff())
@@ -650,36 +681,6 @@ public class StateManager : IDisposable
 
         if (TryYieldToActiveAdsDutyOwnership(currentTerritory))
             return;
-
-        // Enable BMR on territory changes (never turn off)
-        if (!adsDutyHandoffActive && !mountedRotationSuppressed && lastBMRTerritoryId != 0 && lastBMRTerritoryId != currentTerritory)
-        {
-            CommandHelper.SendCommand("/bmrai on");
-            _plugin.AddDebugLog($"[BMR] Enabled on territory change: {lastBMRTerritoryId} -> {currentTerritory}");
-        }
-        lastBMRTerritoryId = currentTerritory;
-
-        // Universal combat pathfinding stop - only stop when actually in combat
-        if (Plugin.Condition[ConditionFlag.InCombat] && autoMoveActive)
-        {
-            _plugin.NavigationService.StopNavigation();
-            autoMoveActive = false;
-        }
-        
-        // Combat start/end tracking for objective system
-        bool currentlyInCombat = Plugin.Condition[ConditionFlag.InCombat];
-        
-        if (currentlyInCombat && !previouslyInCombat)
-        {
-            // Combat just started
-            OnCombatStart();
-        }
-        else if (!currentlyInCombat && previouslyInCombat)
-        {
-            // Combat just ended
-            OnCombatEnd();
-        }
-        previouslyInCombat = currentlyInCombat;
 
         switch (State)
         {
@@ -899,11 +900,7 @@ public class StateManager : IDisposable
     {
         _plugin.NavigationService.StopNavigation(clearFlag: true);
         ResetVnavFlyFlagFallbackState();
-        if (IsDungeonState())
-        {
-            CommandHelper.SendCommand("/bmrai off");
-            _plugin.AddDebugLog("[Stop] Disabled BMR AI (was in dungeon)");
-        }
+        SetCombatAutomationForCombatState(inCombat: false, "bot stop", force: true);
         IsPaused = false;
         RetryCount = 0;
         EndPortalRetryWindow();
@@ -916,7 +913,6 @@ public class StateManager : IDisposable
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
-        RestoreMountedRotationLifecycle("bot stop");
         ClearWarning();
         TransitionTo(BotState.Idle, "Stopped by user.");
     }
@@ -938,7 +934,7 @@ public class StateManager : IDisposable
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
-        RestoreMountedRotationLifecycle("full reset");
+        SetCombatAutomationForCombatState(inCombat: false, "full reset", force: true);
         KrangleService.ClearCache();
         ClearWarning();
         TransitionTo(BotState.Idle, "Full reset by user.");
@@ -2349,6 +2345,12 @@ public class StateManager : IDisposable
             if (string.IsNullOrWhiteSpace(trimmed))
                 continue;
 
+            if (IsCombatAutomationCommand(trimmed))
+            {
+                _plugin.AddDebugLog($"[CommandTrigger] Skipped combat automation command for {reason}: {trimmed}");
+                continue;
+            }
+
             if (CommandHelper.TrySendCommand(trimmed))
                 sent++;
         }
@@ -2356,6 +2358,10 @@ public class StateManager : IDisposable
         if (sent > 0)
             _plugin.AddDebugLog($"[CommandTrigger] Sent {sent} command(s) for {reason}.");
     }
+
+    private static bool IsCombatAutomationCommand(string command) =>
+        command.StartsWith("/bmrai", StringComparison.OrdinalIgnoreCase) ||
+        command.StartsWith("/vbmai", StringComparison.OrdinalIgnoreCase);
 
     private bool TryDigWhileDiving(string reason)
     {
@@ -7117,6 +7123,7 @@ public class StateManager : IDisposable
 
     private void OnCombatStart()
     {
+        SetCombatAutomationForCombatState(inCombat: true, "combat start");
         lastCombatEndTime = DateTime.MinValue; // Reset combat end time
 
         if (State == BotState.OpeningChest)
@@ -7143,6 +7150,7 @@ public class StateManager : IDisposable
     
     private void OnCombatEnd()
     {
+        SetCombatAutomationForCombatState(inCombat: false, "combat end");
         lastCombatEndTime = DateTime.Now;
         
         // ALWAYS reset to chest priority after combat
@@ -9402,60 +9410,15 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog(logMessage);
     }
 
-    private bool IsDungeonState() =>
-        State == BotState.InDungeon || State == BotState.DungeonCombat ||
-        State == BotState.DungeonLooting || State == BotState.DungeonProgressing;
-
-    private void UpdateMountedRotationLifecycle()
+    private void SetCombatAutomationForCombatState(bool inCombat, string reason, bool force = false)
     {
-        if (adsDutyHandoffActive)
+        if (!force && combatAutomationEnabledState == inCombat)
             return;
 
-        var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] || Plugin.Condition[ConditionFlag.BoundByDuty56];
-        var mountedOrMounting = Plugin.Condition[ConditionFlag.Mounted] || Plugin.Condition[ConditionFlag.Mounting71];
-
-        if (inDuty)
-        {
-            RestoreMountedRotationLifecycle("duty entry");
-            return;
-        }
-
-        if (mountedOrMounting)
-        {
-            SuppressMountedRotationLifecycle();
-            return;
-        }
-
-        RestoreMountedRotationLifecycle("dismount");
-    }
-
-    private void SuppressMountedRotationLifecycle()
-    {
-        if (mountedRotationSuppressed)
-            return;
-
-        CommandHelper.SendCommand("/vbmai off");
-        CommandHelper.SendCommand("/bmrai off");
-        CommandHelper.SendCommand("/rotation cancel");
-        CommandHelper.SendCommand("/rotation Settings DummyBoss False");
-        CommandHelper.SendCommand("/rotation Settings DisableTargetDummys True");
-        CommandHelper.SendCommand("/rotation Settings BmrSafetyCheckIntercept True");
-        CommandHelper.SendCommand("/rotation Settings BmrSafetyCheckAuto True");
-	
-        mountedRotationSuppressed = true;
-        _plugin.AddDebugLog("[Rotation] Mounted lifecycle suppression active.");
-    }
-
-    private void RestoreMountedRotationLifecycle(string reason)
-    {
-        if (!mountedRotationSuppressed)
-            return;
-
-        CommandHelper.SendCommand("/vbmai on");
-        CommandHelper.SendCommand("/bmrai on");
-        CommandHelper.SendCommand("/rotation auto");
-        mountedRotationSuppressed = false;
-        _plugin.AddDebugLog($"[Rotation] Mounted lifecycle restore after {reason}.");
+        CommandHelper.SendCommand(inCombat ? "/bmrai on" : "/bmrai off");
+        CommandHelper.SendCommand(inCombat ? "/vbmai on" : "/vbmai off");
+        combatAutomationEnabledState = inCombat;
+        _plugin.AddDebugLog($"[CombatAutomation] BMR/VBM {(inCombat ? "enabled" : "disabled")} for {reason}.");
     }
 
     private static OverworldLandingMode ResolveLandingMode(uint mapItemId)
@@ -10255,6 +10218,8 @@ public class StateManager : IDisposable
         // Unpause YesAlready when bot reaches terminal states
         if (newState == BotState.Idle || newState == BotState.Error)
         {
+            if (newState == BotState.Error || combatAutomationEnabledState != false)
+                SetCombatAutomationForCombatState(inCombat: false, $"terminal state {newState}", force: true);
             ClearCompletedStaleKeyItemSuppression($"terminal state {newState}");
             _plugin.YesAlreadyIPC.Unpause();
             _plugin.AddDebugLog($"[TransitionTo] YesAlready unpaused: {!_plugin.YesAlreadyIPC.IsPaused}");
