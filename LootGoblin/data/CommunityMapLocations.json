@@ -10010,18 +10010,18 @@
     "ZoneName": "Mare Lamentorum"
   },
   {
+    "TerritoryId": 959,
+    "ZoneName": "Mare Lamentorum",
+    "MapName": "Timeworn Kumbhiraskin Map",
     "AetheryteName": "",
     "FlagX": -217.1,
     "FlagY": 122.7,
     "FlagZ": -103.7,
+    "RealX": -217.1,
+    "RealY": 122.7,
+    "RealZ": -103.7,
     "HasRealXYZ": true,
-    "MapName": "Timeworn Kumbhiraskin Map",
-    "RealX": -217.3,
-    "RealY": 122.9,
-    "RealZ": -104,
-    "RecordedAt": "2026-03-12 20:35:25",
-    "TerritoryId": 959,
-    "ZoneName": "Mare Lamentorum"
+    "RecordedAt": "2026-03-12 20:35:25"
   },
   {
     "AetheryteName": "",

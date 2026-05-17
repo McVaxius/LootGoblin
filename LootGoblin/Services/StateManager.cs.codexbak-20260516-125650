@@ -190,7 +190,6 @@ public class StateManager : IDisposable
     private int treasureHighLowObservedStage = 1; // Local gamble stage estimate for solver/observe modes
     private string treasureHighLowLastSnapshotSignature = string.Empty; // One log per UI transition
     private string treasureHighLowLastDecisionSignature = string.Empty; // Prevent repeated clicks on unchanged UI
-    private bool combatMovementForbidSentThisCombat; // One-shot BMR/VBM movement forbid guard per combat
     private bool betweenAreasMovementStopped; // Stop LootGoblin-owned movement once per loading screen
     
     // Map opening validation variables
@@ -7412,7 +7411,6 @@ public class StateManager : IDisposable
     private void OnCombatStart()
     {
         SetCombatAutomationForCombatState(inCombat: true, "combat start");
-        SendCombatMovementForbidOn();
         ResetOpeningChestFlagFallback("combat start", logIfActive: true);
         lastCombatEndTime = DateTime.MinValue; // Reset combat end time
 
@@ -7441,7 +7439,6 @@ public class StateManager : IDisposable
     private void OnCombatEnd()
     {
         SetCombatAutomationForCombatState(inCombat: false, "combat end");
-        combatMovementForbidSentThisCombat = false;
         lastCombatEndTime = DateTime.Now;
         
         // ALWAYS reset to chest priority after combat
@@ -9712,17 +9709,6 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog($"[CombatAutomation] BMR/VBM {(inCombat ? "enabled" : "disabled")} for {reason}.");
     }
 
-    private void SendCombatMovementForbidOn()
-    {
-        if (combatMovementForbidSentThisCombat)
-            return;
-
-        CommandHelper.SendCommand("/bmrai forbidmovement on");
-        CommandHelper.SendCommand("/vbmai forbidmovement on");
-        combatMovementForbidSentThisCombat = true;
-        _plugin.AddDebugLog("[CombatAutomation] BMR/VBM forbidmovement enabled for combat start.");
-    }
-
     private static OverworldLandingMode ResolveLandingMode(uint mapItemId)
     {
         return IsThiefMap(mapItemId)
@@ -10058,12 +10044,11 @@ public class StateManager : IDisposable
 
         LogTreasureHighLowStillVisible(now, treasureHighLowVisible, notificationChallengeVisible);
 
-        if (_plugin.Configuration.TreasureHighLowMode != TreasureHighLowMode.Skip)
+        if (treasureHighLowVisible &&
+            _plugin.Configuration.TreasureHighLowMode != TreasureHighLowMode.Skip &&
+            TryHandleTreasureHighLowSolverMode(now))
         {
-            return TryHandleTreasureHighLowNonSkipMode(
-                now,
-                treasureHighLowVisible,
-                notificationChallengeVisible);
+            return true;
         }
 
         if (treasureHighLowAttemptCount >= TreasureHighLowCloseAttempts.Length)
@@ -10071,8 +10056,8 @@ public class StateManager : IDisposable
             if (!treasureHighLowExhaustedLogged)
             {
                 treasureHighLowExhaustedLogged = true;
-            LogTreasureHighLowInfo(
-                $"[CardGame] Exhausted {TreasureHighLowCloseAttempts.Length} Higher/Lower callback attempts; holding movement and waiting for manual/game resolution.");
+                _plugin.AddDebugLog(
+                    $"[CardGame] Exhausted {TreasureHighLowCloseAttempts.Length} Higher/Lower callback attempts; holding movement and waiting for manual/game resolution.");
             }
 
             StateDetail = "Waiting for Higher/Lower puzzle after exhausting callback attempts...";
@@ -10088,11 +10073,11 @@ public class StateManager : IDisposable
         if (!treasureHighLowVisible)
         {
             treasureHighLowNextRetryAt = now.Add(TreasureHighLowReopenRetryInterval);
-            LogTreasureHighLowInfo(
+            _plugin.AddDebugLog(
                 $"[CardGame] TreasureHighLow missing while _NotificationChallenge is visible before attempt {treasureHighLowAttemptCount + 1}; firing _Notification true 0 1.");
 
             var reopenFired = GameHelpers.TryFireAddonCallbackIfExists(notificationAddonName, true, 0, 1);
-            LogTreasureHighLowInfo(
+            _plugin.AddDebugLog(
                 $"[CardGame] Callback result: _Notification true [0,1] fired={reopenFired}; {BuildTreasureHighLowLogContext()}");
             if (!reopenFired)
             {
@@ -10107,11 +10092,11 @@ public class StateManager : IDisposable
         var attempt = TreasureHighLowCloseAttempts[treasureHighLowAttemptCount];
         treasureHighLowAttemptCount++;
         treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
-        LogTreasureHighLowInfo(
+        _plugin.AddDebugLog(
             $"[CardGame] Attempt {treasureHighLowAttemptCount}/{TreasureHighLowCloseAttempts.Length}: {attempt.Description}");
 
         var attemptFired = GameHelpers.TryFireAddonCallback(addonName, attempt.UpdateState, attempt.Arg);
-        LogTreasureHighLowInfo(
+        _plugin.AddDebugLog(
             $"[CardGame] Callback result: {attempt.Description} fired={attemptFired}; {BuildTreasureHighLowLogContext()}");
         if (!attemptFired)
         {
@@ -10137,27 +10122,6 @@ public class StateManager : IDisposable
             _plugin.NavigationService.StopNavigation();
     }
 
-    private bool TryHandleTreasureHighLowNonSkipMode(
-        DateTime now,
-        bool treasureHighLowVisible,
-        bool notificationChallengeVisible)
-    {
-        if (!treasureHighLowVisible)
-        {
-            if (now >= treasureHighLowNextRetryAt)
-            {
-                treasureHighLowNextRetryAt = now.Add(TreasureHighLowReopenRetryInterval);
-                LogTreasureHighLowInfo(
-                    $"[CardGame] Higher/Lower mode {_plugin.Configuration.TreasureHighLowMode} is holding because TreasureHighLow is not visible (NotificationChallengeVisible={notificationChallengeVisible}); skip/reopen callbacks are disabled outside Skip mode. {BuildTreasureHighLowLogContext()}");
-            }
-
-            StateDetail = $"Waiting for Higher/Lower puzzle UI ({_plugin.Configuration.TreasureHighLowMode})...";
-            return true;
-        }
-
-        return TryHandleTreasureHighLowSolverMode(now);
-    }
-
     private bool TryHandleTreasureHighLowSolverMode(DateTime now)
     {
         if (now < treasureHighLowNextRetryAt)
@@ -10171,12 +10135,6 @@ public class StateManager : IDisposable
 
         if (_plugin.Configuration.TreasureHighLowMode == TreasureHighLowMode.ObserveOnly)
         {
-            if (now >= treasureHighLowNextRetryAt)
-            {
-                LogTreasureHighLowInfo(
-                    $"[CardGame] ObserveOnly holding Higher/Lower puzzle without callbacks. {BuildTreasureHighLowLogContext()}");
-            }
-
             StateDetail = "Observing Higher/Lower puzzle...";
             treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
             return true;
@@ -10184,11 +10142,9 @@ public class StateManager : IDisposable
 
         if (!snapshot.IsReliable)
         {
-            LogTreasureHighLowInfo(
-                $"[CardGame] SolveExpectedValue snapshot incomplete ({snapshot.ReliabilityReason}); holding/retrying without skip/cashout. {BuildTreasureHighLowLogContext()}");
-            StateDetail = "Waiting for reliable Higher/Lower solver snapshot...";
-            treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
-            return true;
+            _plugin.AddDebugLog(
+                $"[CardGame] Solver snapshot incomplete ({snapshot.ReliabilityReason}); falling back to skip/close sequence.");
+            return false;
         }
 
         if (snapshot.Signature == treasureHighLowLastDecisionSignature)
@@ -10199,70 +10155,37 @@ public class StateManager : IDisposable
 
         var stage = Math.Clamp(snapshot.Stage ?? treasureHighLowObservedStage, 1, 5);
         var decision = TreasureHighLowSolver.Decide(stage, snapshot.Card!.Value);
-
-        if (!TryResolveTreasureHighLowWorldObject(decision.Action, out var target, out var targetReason))
+        var callbackArg = decision.Action switch
         {
-            LogTreasureHighLowInfo(
-                $"[CardGame] Solver decision {decision.Action} ({decision.Reason}) held: {targetReason}. {BuildTreasureHighLowLogContext()}");
+            TreasureHighLowAction.PlayHigher => TreasureHighLowHigherCallbackArg,
+            TreasureHighLowAction.PlayLower => TreasureHighLowLowerCallbackArg,
+            _ => TreasureHighLowCashOutCallbackArg,
+        };
+
+        _plugin.AddDebugLog(
+            $"[CardGame] Solver decision: {decision.Action} ({decision.Reason}); firing TreasureHighLow true {callbackArg}.");
+
+        var solverFired = GameHelpers.TryFireAddonCallback("TreasureHighLow", true, callbackArg);
+        _plugin.AddDebugLog(
+            $"[CardGame] Solver callback result: action={decision.Action}, TreasureHighLow true [{callbackArg}] fired={solverFired}; {BuildTreasureHighLowLogContext()}");
+        if (!solverFired)
+        {
+            _plugin.AddDebugLog(
+                $"[CardGame] Solver callback failed for {decision.Action}; falling back to skip/close sequence next tick.");
             treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
-            StateDetail = $"Waiting for targetable Higher/Lower world object for {decision.Action}...";
-            return true;
+            return false;
         }
 
-        LogTreasureHighLowInfo(
-            $"[CardGame] Solver decision: {decision.Action} ({decision.Reason}); interacting world object '{target.Name.TextValue}'.");
-
-        var solverFired = GameHelpers.InteractWithObject(target);
         treasureHighLowAttemptCount++;
         treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
         treasureHighLowLastDecisionSignature = snapshot.Signature;
 
-        if (solverFired && decision.Action is (TreasureHighLowAction.PlayHigher or TreasureHighLowAction.PlayLower))
+        if (decision.Action is TreasureHighLowAction.PlayHigher or TreasureHighLowAction.PlayLower)
             treasureHighLowObservedStage = Math.Clamp(stage + 1, 1, 5);
 
-        StateDetail = solverFired
-            ? $"Playing Higher/Lower stage {stage}: {decision.Action}..."
-            : $"Waiting to retry Higher/Lower world interaction for {decision.Action}...";
-        return true;
-    }
-
-    private bool TryResolveTreasureHighLowWorldObject(
-        TreasureHighLowAction action,
-        out IGameObject target,
-        out string reason)
-    {
-        target = null!;
-        var targetName = action switch
-        {
-            TreasureHighLowAction.PlayHigher => "High",
-            TreasureHighLowAction.PlayLower => "Low",
-            TreasureHighLowAction.CashOut => string.Empty,
-            _ => string.Empty,
-        };
-
-        if (string.IsNullOrWhiteSpace(targetName))
-        {
-            reason = "cash-out has no verified world-object interaction path";
-            return false;
-        }
-
-        var player = Plugin.ObjectTable.LocalPlayer;
-        var candidates = Plugin.ObjectTable
-            .Where(obj => obj != null
-                          && obj.IsTargetable
-                          && obj.Name.TextValue.Equals(targetName, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(obj => player == null ? 0f : Vector3.Distance(player.Position, obj.Position))
-            .ToList();
-
-        if (candidates.Count == 0)
-        {
-            reason = $"targetable '{targetName}' object not found";
-            return false;
-        }
-
-        target = candidates[0];
-        var distance = player == null ? 0f : Vector3.Distance(player.Position, target.Position);
-        reason = $"resolved '{targetName}' at {distance:F1}y";
+        StateDetail = decision.Action == TreasureHighLowAction.CashOut
+            ? "Cashing out Higher/Lower puzzle..."
+            : $"Playing Higher/Lower stage {stage}: {decision.Action}...";
         return true;
     }
 
@@ -10272,18 +10195,12 @@ public class StateManager : IDisposable
             return;
 
         treasureHighLowLastSnapshotSignature = snapshot.Signature;
-        LogTreasureHighLowInfo(
+        _plugin.AddDebugLog(
             $"[CardGame] Snapshot: card={(snapshot.Card?.ToString() ?? "?")}, " +
             $"cardCandidates=[{string.Join(",", snapshot.CardCandidates)}], " +
             $"stage={(snapshot.Stage?.ToString() ?? treasureHighLowObservedStage.ToString())} ({snapshot.StageSource}), " +
             $"reliable={snapshot.IsReliable}, reason={snapshot.ReliabilityReason}, {BuildTreasureHighLowLogContext()}, " +
             $"texts=[{FormatTreasureHighLowTexts(snapshot.VisibleTexts)}]");
-    }
-
-    private void LogTreasureHighLowInfo(string message)
-    {
-        _plugin.AddDebugLog(message);
-        Plugin.Log.Information(message);
     }
 
     private unsafe TreasureHighLowSnapshot ReadTreasureHighLowSnapshot()
