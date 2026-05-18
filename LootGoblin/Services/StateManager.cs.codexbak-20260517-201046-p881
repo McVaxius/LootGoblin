@@ -9982,8 +9982,6 @@ public class StateManager : IDisposable
 
     private void SendAdsInsideCommand(string logMessage, bool includeAssistCommands)
     {
-        RestoreBossModOutdoorSuppressionIfActive("[ADS] duty handoff");
-
         if (includeAssistCommands)
         {
             RunDutyEntryCommandsOnce("[ADS] duty handoff");
@@ -10021,9 +10019,13 @@ public class StateManager : IDisposable
 
         if (bossModOutdoorSuppressionActive)
         {
-            var restoreReason = GetBossModOutdoorSuppressionRestoreReason(dangerDetected, outdoorFlow);
-            if (!string.IsNullOrWhiteSpace(restoreReason))
-                RestoreBossModOutdoorSuppression(restoreReason, markCombatAutomationEnabled: Plugin.Condition[ConditionFlag.InCombat]);
+            var restoreReason = dangerDetected
+                ? "left outdoor flow"
+                : "BossMod danger signal cleared";
+            if (IsPlayerOnFootForBossModRestore())
+                RestoreBossModOutdoorSuppression(restoreReason);
+            else
+                bossModOutdoorSuppressionReason = $"{restoreReason}; waiting for on-foot restore";
 
             return;
         }
@@ -10072,22 +10074,12 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression started: {reason}. Sent /bmrai off and /vbmai off.");
     }
 
-    private void RestoreBossModOutdoorSuppressionIfActive(string reason)
-    {
-        if (!bossModOutdoorSuppressionActive)
-            return;
-
-        RestoreBossModOutdoorSuppression(reason, markCombatAutomationEnabled: Plugin.Condition[ConditionFlag.InCombat]);
-    }
-
-    private void RestoreBossModOutdoorSuppression(string reason, bool markCombatAutomationEnabled = false)
+    private void RestoreBossModOutdoorSuppression(string reason)
     {
         CommandHelper.SendCommand("/bmrai on");
         CommandHelper.SendCommand("/vbmai on");
         bossModOutdoorSuppressionActive = false;
         bossModOutdoorSuppressionReason = $"restored: {reason}";
-        if (markCombatAutomationEnabled)
-            combatAutomationEnabledState = true;
         _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression restored ({reason}). Sent /bmrai on and /vbmai on.");
     }
 
@@ -10102,25 +10094,6 @@ public class StateManager : IDisposable
 
     private string BuildBossModOutdoorSuppressionReason()
         => $"{_plugin.RotationPluginIPC.BossModDangerReason}; state={State}; territory={Plugin.ClientState.TerritoryType}";
-
-    private string GetBossModOutdoorSuppressionRestoreReason(bool dangerDetected, bool outdoorFlow)
-    {
-        var territory = Plugin.ClientState.TerritoryType;
-        if (IsTreasureDungeonTerritory(territory))
-            return $"treasure dungeon territory {territory}";
-
-        if (adsDutyHandoffActive)
-            return "ADS duty handoff active";
-
-        if (IsDungeonState(State))
-            return $"dungeon state {State}";
-
-        return !dangerDetected
-            ? "BossMod danger signal cleared"
-            : !outdoorFlow
-                ? "left outdoor flow"
-                : string.Empty;
-    }
 
     private bool IsOutdoorBossModSuppressionFlowActive()
     {
@@ -10145,23 +10118,22 @@ public class StateManager : IDisposable
             || portalApproachPosition.HasValue;
     }
 
-    private static bool IsDungeonState(BotState state)
-        => state is BotState.InDungeon
-            or BotState.DungeonCombat
-            or BotState.DungeonLooting
-            or BotState.DungeonProgressing;
+    private bool IsPlayerOnFootForBossModRestore()
+    {
+        if (Plugin.ObjectTable.LocalPlayer == null)
+            return false;
+
+        return !_plugin.NavigationService.IsMounted()
+            && !_plugin.NavigationService.IsFlying()
+            && !Plugin.Condition[ConditionFlag.Mounting71]
+            && !Plugin.Condition[ConditionFlag.Diving];
+    }
 
     private void SetCombatAutomationForCombatState(bool inCombat, string reason, bool force = false)
     {
         if (inCombat && bossModOutdoorSuppressionActive)
         {
-            if (IsOutdoorBossModSuppressionFlowActive() && _plugin.RotationPluginIPC.BossModDangerDetected)
-            {
-                _plugin.AddDebugLog($"[BossModDanger] Suppression active; skipped BMR/VBM combat enable for {reason}.");
-                return;
-            }
-
-            RestoreBossModOutdoorSuppression($"combat enable for {reason}", markCombatAutomationEnabled: true);
+            _plugin.AddDebugLog($"[BossModDanger] Suppression active; skipped BMR/VBM combat enable for {reason}.");
             return;
         }
 
@@ -11048,19 +11020,12 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("[OpeningChest] Entered chest recovery while already in combat - will retry after combat");
         }
 
-        if (bossModOutdoorSuppressionActive)
-        {
-            if (newState == BotState.Error)
-                ClearBossModOutdoorSuppressionState($"terminal state {newState}");
-            else if (newState == BotState.Idle || IsDungeonState(newState))
-                RestoreBossModOutdoorSuppression($"state entered {newState}", markCombatAutomationEnabled: Plugin.Condition[ConditionFlag.InCombat]);
-        }
-
         // Unpause YesAlready when bot reaches terminal states
         if (newState == BotState.Idle || newState == BotState.Error)
         {
             if (newState == BotState.Error || combatAutomationEnabledState != false)
                 SetCombatAutomationForCombatState(inCombat: false, $"terminal state {newState}", force: true);
+            ClearBossModOutdoorSuppressionState($"terminal state {newState}");
             ClearCompletedStaleKeyItemSuppression($"terminal state {newState}");
             _plugin.YesAlreadyIPC.Unpause();
             _plugin.AddDebugLog($"[TransitionTo] YesAlready unpaused: {!_plugin.YesAlreadyIPC.IsPaused}");

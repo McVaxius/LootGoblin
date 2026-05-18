@@ -222,6 +222,33 @@ public class MainWindow : Window, IDisposable
             ImGui.SameLine();
             ImGui.TextColored(greensColor, $"  |  Gysahl Greens: {greensCount}");
         }
+
+        DrawBossModDangerStatusLine();
+    }
+
+    private void DrawBossModDangerStatusLine()
+    {
+        var rotation = plugin.RotationPluginIPC;
+        var moduleName = string.IsNullOrWhiteSpace(rotation.BmrActiveModuleName)
+            ? string.Empty
+            : $" ({rotation.BmrActiveModuleName})";
+        var suppressionActive = plugin.StateManager.BossModOutdoorSuppressionActive;
+        var suppressionReason = plugin.StateManager.BossModOutdoorSuppressionReason;
+        var dangerColor = rotation.BossModDangerDetected ? ColorYellow : ColorGrey;
+        var suppressionColor = suppressionActive ? ColorYellow : ColorGrey;
+
+        ImGui.Text("BossMod danger: ");
+        ImGui.SameLine();
+        ImGui.TextColored(dangerColor, $"BMR active module: {(rotation.BmrHasActiveModule ? "yes" : "no")}{moduleName}");
+        ImGui.SameLine();
+        ImGui.TextColored(dangerColor, $"  |  VBM forbidden zones: {rotation.VbmForbiddenZonesCount}");
+        ImGui.SameLine();
+        ImGui.TextColored(suppressionColor, $"  |  Outdoor suppression: {(suppressionActive ? "on" : "off")}");
+        if (!string.IsNullOrWhiteSpace(suppressionReason) && suppressionReason != "off")
+        {
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, $"({suppressionReason})");
+        }
     }
 
     private void DrawOperatorDashboardSection()

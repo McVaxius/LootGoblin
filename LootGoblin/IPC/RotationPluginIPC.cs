@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 
@@ -19,6 +20,7 @@ public class RotationPluginIPC : IDisposable
     private readonly IDalamudPluginInterface _pluginInterface;
     private readonly IPluginLog _log;
     private readonly Plugin _plugin;
+    private DateTime _lastBossModDangerRefreshUtc = DateTime.MinValue;
 
     public List<RotationPluginInfo> RotationPlugins { get; } = new()
     {
@@ -51,6 +53,29 @@ public class RotationPluginIPC : IDisposable
             Notes = "Combat rotation",
         },
     };
+
+    public bool BmrHasActiveModule { get; private set; }
+    public string BmrActiveModuleName { get; private set; } = string.Empty;
+    public int VbmForbiddenZonesCount { get; private set; }
+
+    public bool BossModDangerDetected => BmrHasActiveModule || VbmForbiddenZonesCount > 0;
+
+    public string BossModDangerReason
+    {
+        get
+        {
+            if (BmrHasActiveModule)
+            {
+                return string.IsNullOrWhiteSpace(BmrActiveModuleName)
+                    ? "BMR active module"
+                    : $"BMR active module {BmrActiveModuleName}";
+            }
+
+            return VbmForbiddenZonesCount > 0
+                ? $"VBM forbidden zones {VbmForbiddenZonesCount}"
+                : "No BossMod danger signal";
+        }
+    }
 
     public RotationPluginIPC(Plugin plugin, IDalamudPluginInterface pluginInterface, IPluginLog log)
     {
@@ -99,10 +124,70 @@ public class RotationPluginIPC : IDisposable
                     _plugin.AddDebugLog($"{rp.DisplayName}: Not found (looking for '{rp.InternalName}')");
                 }
             }
+
+            RefreshBossModDangerStatus(force: true);
         }
         catch (Exception ex)
         {
             _log.Error($"Error checking rotation plugins: {ex.Message}");
         }
     }
+
+    public void RefreshBossModDangerStatus(bool force = false)
+    {
+        var now = DateTime.UtcNow;
+        if (!force && (now - _lastBossModDangerRefreshUtc).TotalSeconds < 0.5)
+            return;
+
+        _lastBossModDangerRefreshUtc = now;
+        BmrHasActiveModule = false;
+        BmrActiveModuleName = string.Empty;
+        VbmForbiddenZonesCount = 0;
+
+        if (IsRotationPluginAvailable("BossModReborn"))
+        {
+            try
+            {
+                BmrHasActiveModule = _pluginInterface
+                    .GetIpcSubscriber<bool>("BossMod.HasActiveModule")
+                    .InvokeFunc();
+            }
+            catch (Exception ex)
+            {
+                _log.Debug($"[BossModDanger] BossMod.HasActiveModule IPC unavailable: {ex.Message}");
+            }
+
+            try
+            {
+                BmrActiveModuleName = _pluginInterface
+                    .GetIpcSubscriber<string>("BossMod.ActiveModuleName")
+                    .InvokeFunc() ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _log.Debug($"[BossModDanger] BossMod.ActiveModuleName IPC unavailable: {ex.Message}");
+            }
+        }
+
+        if (IsRotationPluginAvailable("vbm"))
+        {
+            try
+            {
+                VbmForbiddenZonesCount = Math.Max(
+                    0,
+                    _pluginInterface
+                        .GetIpcSubscriber<int>("BossMod.ForbiddenZonesCount")
+                        .InvokeFunc());
+            }
+            catch (Exception ex)
+            {
+                _log.Debug($"[BossModDanger] BossMod.ForbiddenZonesCount IPC unavailable: {ex.Message}");
+            }
+        }
+    }
+
+    private bool IsRotationPluginAvailable(string internalName)
+        => RotationPlugins.Any(plugin =>
+            string.Equals(plugin.InternalName, internalName, StringComparison.OrdinalIgnoreCase)
+            && plugin.IsAvailable);
 }

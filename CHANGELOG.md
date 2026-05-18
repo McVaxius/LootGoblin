@@ -5,6 +5,8 @@ All notable changes to LootGoblin will be documented in this file.
 ## [Unreleased] - 2026-03-25
 
 ### Fixed
+- **BossMod outdoor suppression** - Outdoor BMR/VBM suppression now requires visible BossMod danger signals (BMR active module or VBM forbidden zones), shows the detected state in the main UI, and restores AI once the outdoor flow ends on foot.
+- **Slope chest/portal approach** - Nearby overworld coffers and portals now get a bounded on-foot vnav approach on slopes before mounted recovery, and portal close nudge uses captured XYZ ground vnav instead of lockon+automove.
 - **Close coffer recovery** - OpeningChest now walks to flat, nearby targetable overworld coffers before escalating to mounted flight recovery, avoiding mount attempts for live coffers within 10y and 0.3y vertical delta.
 - **Existing deciphered-map flow** - When no maps remain in inventory but a treasure-map flag is already set, LootGoblin now proceeds from the existing flag instead of failing immediately
 - **Saddlebag retrieval logout risk** - Replaced direct backend saddlebag `MoveItemSlot` use during map selection with a paced `/saddlebag` UI flow. X: log evidence showed logout immediately after direct move (`13:56:00.911 [Saddlebag] ... MoveItemSlot` then `13:56:01.090 Logout Type 2 Code 90002`).
