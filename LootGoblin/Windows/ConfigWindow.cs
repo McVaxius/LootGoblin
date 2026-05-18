@@ -291,7 +291,16 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("When no enabled map is in inventory or loaded saddlebags, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell.");
+            ImGui.SetTooltip("When no enabled map is in inventory, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell.");
+
+        var saddlebagMapRetrieval = configuration.EnableSaddlebagMapRetrieval;
+        if (ImGui.Checkbox("Fetch maps from saddlebags", ref saddlebagMapRetrieval))
+        {
+            configuration.EnableSaddlebagMapRetrieval = saddlebagMapRetrieval;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("When no enabled map is in inventory, LootGoblin can open /saddlebag and move one enabled map into inventory. Disable to ignore saddlebags entirely.");
 
         var autoDiscard = configuration.EnableAutoDiscard;
         if (ImGui.Checkbox("Auto Discard (/ays discard)", ref autoDiscard))

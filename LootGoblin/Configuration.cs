@@ -54,14 +54,16 @@ public class Configuration : IPluginConfiguration
     public bool EnableStateLogging { get; set; } = true;
     public bool UseAdsInsteadOfLegacyDungeonSolver { get; set; } = true;
     public bool EnableRetainerMapRetrieval { get; set; } = true;
+    public bool EnableSaddlebagMapRetrieval { get; set; } = true;
     public int RepairThresholdPercent { get; set; } = 25;
     public RepairMode RepairMode { get; set; } = RepairMode.NpcNoInn;
     public bool ReturnWhenDoneEnabled { get; set; } = false;
     public ReturnWhenDoneDestination ReturnWhenDoneDestination { get; set; } = ReturnWhenDoneDestination.FC;
 
     // Phase 6: Map Selection + Chest Interaction
-    public bool UseMapTypeFilter { get; set; } = false;
+    public bool UseMapTypeFilter { get; set; } = true;
     public List<uint> EnabledMapTypes { get; set; } = new();
+    public bool ShowAllKnownMapTypes { get; set; } = false;
     public float ChestInteractionRange { get; set; } = 5f;
     public bool AutoLootChest { get; set; } = true;
     public int ChestOpenTimeout { get; set; } = 10;
@@ -118,12 +120,12 @@ public class Configuration : IPluginConfiguration
         if (itemId == 0)
             return false;
 
-        return !UseMapTypeFilter || EnabledMapTypes.Any(enabledId => enabledId == itemId);
+        return EnabledMapTypes?.Any(enabledId => enabledId == itemId) == true;
     }
 
     public IReadOnlyList<uint> GetEnabledMapIdsOrAll(IEnumerable<uint> allKnownMapIds)
     {
-        return NormalizeMapIds(UseMapTypeFilter ? EnabledMapTypes : allKnownMapIds);
+        return NormalizeMapIds(EnabledMapTypes);
     }
 
     public void SetMapTypeEnabled(uint itemId, bool enabled, IEnumerable<uint> allKnownMapIds)
@@ -133,11 +135,7 @@ public class Configuration : IPluginConfiguration
 
         EnabledMapTypes ??= new List<uint>();
 
-        if (!UseMapTypeFilter)
-        {
-            UseMapTypeFilter = true;
-            EnabledMapTypes = NormalizeMapIds(allKnownMapIds);
-        }
+        UseMapTypeFilter = true;
 
         if (enabled)
         {

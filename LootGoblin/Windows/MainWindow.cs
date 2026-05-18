@@ -303,7 +303,9 @@ public class MainWindow : Window, IDisposable
         if (ImGui.BeginTable("##LootGoblinAutomationToggles", 2, ImGuiTableFlags.SizingStretchSame))
         {
             DrawDashboardCheckboxCell("Fetch retainer maps", plugin.Configuration.EnableRetainerMapRetrieval, value => plugin.Configuration.EnableRetainerMapRetrieval = value,
-                "When no enabled map is in inventory or loaded saddlebags, try to withdraw one from retainers through XA Database / XA Slave.");
+                "When no enabled map is in inventory, try to withdraw one from retainers through XA Database / XA Slave.");
+            DrawDashboardCheckboxCell("Fetch saddlebag maps", plugin.Configuration.EnableSaddlebagMapRetrieval, value => plugin.Configuration.EnableSaddlebagMapRetrieval = value,
+                "Open /saddlebag and move enabled maps into inventory when no enabled inventory map is available.");
             DrawDashboardCheckboxCell("Auto Discard", plugin.Configuration.EnableAutoDiscard, value => plugin.Configuration.EnableAutoDiscard = value,
                 "Runs /ays discard during safe idle windows.");
             DrawDashboardCheckboxCell("Auto Loot Chest", plugin.Configuration.AutoLootChest, value => plugin.Configuration.AutoLootChest = value);
@@ -380,27 +382,39 @@ public class MainWindow : Window, IDisposable
                     RefreshMapSourceCache(includeRetainers: false, refreshXaDatabase: false);
                 }
 
-                if (cachedMapSources.Count == 0)
+                var showAllKnownMaps = plugin.Configuration.ShowAllKnownMapTypes;
+                if (ImGui.Checkbox("Show all maps regardless if we have any", ref showAllKnownMaps))
                 {
-                    ImGui.TextColored(ColorGrey, "  No treasure maps found in inventory or loaded saddlebags.");
+                    plugin.Configuration.ShowAllKnownMapTypes = showAllKnownMaps;
+                    plugin.Configuration.Save();
+                }
+
+                var displayedMapSources = GetDisplayedMapSources();
+
+                if (displayedMapSources.Count == 0)
+                {
+                    var sourceText = plugin.Configuration.EnableSaddlebagMapRetrieval
+                        ? "inventory or loaded saddlebags"
+                        : "inventory";
+                    ImGui.TextColored(ColorGrey, $"  No treasure maps found in {sourceText}.");
                 }
                 else
                 {
                     var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
 
                     // Show warning if multiple map types detected
-                    if (cachedMapSources.Count > 1)
+                    if (displayedMapSources.Count > 1)
                     {
                         ImGui.TextColored(ColorGrey, "  Multiple map types detected - use checkboxes to select which to run");
                         ImGui.Spacing();
                     }
 
                     // Sort entries lowest MinLevel first (matches StateManager selection order)
-                    var sortedMaps = cachedMapSources
+                    var sortedMaps = displayedMapSources
                         .OrderBy(kvp => LootGoblin.Models.TreasureMapData.KnownMaps.TryGetValue(kvp.Key, out var i) ? i.MinLevel : 999)
                         .ToList();
 
-                    ImGui.TextColored(ColorGrey, "  All maps are enabled by default. Uncheck maps to run an explicit filter (lowest tier runs first).");
+                    ImGui.TextColored(ColorGrey, "  Only checked maps run. New map types stay unchecked until selected.");
                     ImGui.Spacing();
 
                     foreach (var kvp in sortedMaps)
@@ -410,6 +424,11 @@ public class MainWindow : Window, IDisposable
                         
                         var item = itemSheet?.GetRow(itemId);
                         var itemName = item?.Name.ToString();
+                        if (string.IsNullOrEmpty(itemName) &&
+                            LootGoblin.Models.TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo))
+                        {
+                            itemName = mapInfo.Name;
+                        }
                         if (string.IsNullOrEmpty(itemName))
                             itemName = $"Unknown Map (ID: {itemId})";
                         
@@ -485,7 +504,8 @@ public class MainWindow : Window, IDisposable
             .Where(kvp => kvp.Value.Retainer > 0)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Retainer);
 
-        cachedMapSources = plugin.InventoryService.ScanForMapSources();
+        cachedMapSources = plugin.InventoryService.ScanForMapSources(
+            includeSaddlebags: plugin.Configuration.EnableSaddlebagMapRetrieval);
 
         if (!includeRetainers)
         {
@@ -540,6 +560,12 @@ public class MainWindow : Window, IDisposable
         manualMapRefreshStartedAt = DateTime.Now;
         manualMapRefreshStatus = "refreshing...";
 
+        if (!plugin.Configuration.EnableSaddlebagMapRetrieval)
+        {
+            CompleteManualMapRefresh(closeSaddlebagAfterScan: false, "Manual map refresh without saddlebag retrieval.");
+            return;
+        }
+
         if (GameHelpers.IsAddonVisible("InventoryBuddy"))
         {
             CompleteManualMapRefresh(closeSaddlebagAfterScan: false, "Manual map refresh with saddlebag already open.");
@@ -555,6 +581,12 @@ public class MainWindow : Window, IDisposable
     {
         if (!manualMapRefreshPending)
             return;
+
+        if (!plugin.Configuration.EnableSaddlebagMapRetrieval)
+        {
+            CompleteManualMapRefresh(closeSaddlebagAfterScan: false, "Manual map refresh completed after saddlebag retrieval was disabled.");
+            return;
+        }
 
         if (GameHelpers.IsAddonVisible("InventoryBuddy"))
         {
@@ -583,6 +615,21 @@ public class MainWindow : Window, IDisposable
         manualMapRefreshOpenedSaddlebag = false;
         manualMapRefreshStatus = "refreshed";
         plugin.AddDebugLog(logMessage);
+    }
+
+    private Dictionary<uint, MapSourceCount> GetDisplayedMapSources()
+    {
+        var sources = cachedMapSources.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        if (!plugin.Configuration.ShowAllKnownMapTypes)
+            return sources;
+
+        foreach (var mapId in TreasureMapData.KnownMaps.Keys)
+        {
+            if (!sources.ContainsKey(mapId))
+                sources[mapId] = new MapSourceCount();
+        }
+
+        return sources;
     }
 
     private void DrawMapCompletionSection()

@@ -1463,6 +1463,8 @@ public class StateManager : IDisposable
         bool includeInventory,
         bool includeSaddlebags)
     {
+        includeSaddlebags &= _plugin.Configuration.EnableSaddlebagMapRetrieval;
+
         return mapSources
             .Where(kvp =>
             {
@@ -1483,6 +1485,12 @@ public class StateManager : IDisposable
 
     private void TryRetrieveSaddlebagMap(uint mapItemId)
     {
+        if (!_plugin.Configuration.EnableSaddlebagMapRetrieval)
+        {
+            _plugin.AddDebugLog($"[Saddlebag] Retrieval disabled; skipping map ID {mapItemId}.");
+            return;
+        }
+
         if (saddlebagRetrievalStep != SaddlebagRetrievalStep.Idle)
             return;
 
@@ -1504,6 +1512,13 @@ public class StateManager : IDisposable
     {
         if (saddlebagRetrievalStep == SaddlebagRetrievalStep.Idle)
             return;
+
+        if (!_plugin.Configuration.EnableSaddlebagMapRetrieval)
+        {
+            _plugin.AddDebugLog("[Saddlebag] Retrieval disabled while active; cancelling saddlebag retrieval.");
+            ResetSaddlebagRetrieval();
+            return;
+        }
 
         if (DateTime.Now < saddlebagNextActionAt)
             return;
@@ -1774,6 +1789,13 @@ public class StateManager : IDisposable
 
     private void BeginSaddlebagMapRefresh(string scope)
     {
+        if (!_plugin.Configuration.EnableSaddlebagMapRetrieval)
+        {
+            ResetStartMapRefresh();
+            _plugin.AddDebugLog($"[MapRefresh][{scope}] Saddlebag retrieval disabled; skipping saddlebag refresh.");
+            return;
+        }
+
         startMapRefreshPending = true;
         startMapRefreshOpenedSaddlebag = false;
         startMapRefreshScope = scope;
@@ -1793,6 +1815,13 @@ public class StateManager : IDisposable
     {
         if (!startMapRefreshPending)
             return false;
+
+        if (!_plugin.Configuration.EnableSaddlebagMapRetrieval)
+        {
+            _plugin.AddDebugLog($"[MapRefresh][{startMapRefreshScope}] Saddlebag retrieval disabled; cancelling refresh.");
+            ResetStartMapRefresh();
+            return false;
+        }
 
         if (!GameHelpers.IsPlayerAvailable())
         {
@@ -1832,7 +1861,7 @@ public class StateManager : IDisposable
     private void CompleteStartMapRefresh(bool closeSaddlebagAfterScan, string detail)
     {
         var scope = startMapRefreshScope;
-        _plugin.InventoryService.ScanForMapSources(includeSaddlebags: true);
+        _plugin.InventoryService.ScanForMapSources(includeSaddlebags: _plugin.Configuration.EnableSaddlebagMapRetrieval);
         RefreshCompletedRetainerMapCountsIfNeeded(scope);
 
         if (closeSaddlebagAfterScan && GameHelpers.IsAddonVisible("InventoryBuddy"))
@@ -6131,7 +6160,8 @@ public class StateManager : IDisposable
         }
         lastMapScanTime = DateTime.Now;
 
-        var mapSources = _plugin.InventoryService.ScanForMapSources();
+        var mapSources = _plugin.InventoryService.ScanForMapSources(
+            includeSaddlebags: _plugin.Configuration.EnableSaddlebagMapRetrieval);
         var maps = mapSources
             .Where(kvp => kvp.Value.Inventory > 0)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Inventory);
@@ -9223,7 +9253,8 @@ public class StateManager : IDisposable
                 return;
 
             _plugin.AddDebugLog("[Completed] AutoStartNextMap enabled - scanning for maps");
-            var mapSources = _plugin.InventoryService.ScanForMapSources();
+            var mapSources = _plugin.InventoryService.ScanForMapSources(
+                includeSaddlebags: _plugin.Configuration.EnableSaddlebagMapRetrieval);
             var maps = GetEnabledMapCandidates(mapSources, includeInventory: true, includeSaddlebags: true);
             _plugin.AddDebugLog($"[Completed] Found {maps.Count} runnable map type(s) in inventory/saddlebags");
             
@@ -9385,6 +9416,9 @@ public class StateManager : IDisposable
 
     private bool TryRunCompletedMapRefreshBeforeDecisions()
     {
+        if (!_plugin.Configuration.EnableSaddlebagMapRetrieval)
+            return false;
+
         if (!completedSaddlebagRefreshAttempted)
         {
             completedSaddlebagRefreshAttempted = true;
@@ -9396,11 +9430,15 @@ public class StateManager : IDisposable
 
     private bool HasRemainingEnabledMaps(string source)
     {
-        var mapSources = _plugin.InventoryService.ScanForMapSources();
+        var mapSources = _plugin.InventoryService.ScanForMapSources(
+            includeSaddlebags: _plugin.Configuration.EnableSaddlebagMapRetrieval);
         var loadedMaps = GetEnabledMapCandidates(mapSources, includeInventory: true, includeSaddlebags: true);
         if (loadedMaps.Count > 0)
         {
-            _plugin.AddDebugLog($"{source} Return deferred; {loadedMaps.Count} enabled inventory/saddlebag map type(s) remain.");
+            var sourceLabel = _plugin.Configuration.EnableSaddlebagMapRetrieval
+                ? "inventory/saddlebag"
+                : "inventory";
+            _plugin.AddDebugLog($"{source} Return deferred; {loadedMaps.Count} enabled {sourceLabel} map type(s) remain.");
             return true;
         }
 

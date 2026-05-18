@@ -155,6 +155,8 @@ public sealed class Plugin : IDalamudPlugin
 
         // Auto-update community data on login
         ClientState.Login += OnLogin;
+        if (ClientState.IsLoggedIn)
+            QueueCommunityLocationRefresh("plugin load while already logged in");
 
         // Initialize state machine
         StateManager = new StateManager(this, Framework, Log);
@@ -248,6 +250,9 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OnLogin()
+        => QueueCommunityLocationRefresh("login");
+
+    private void QueueCommunityLocationRefresh(string reason)
     {
         if (!Configuration.AutoUpdateLocOnLogin)
             return;
@@ -259,8 +264,21 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        AddDebugLog($"[MapLocDB] Auto-updating community data for plugin v{currentVersion}...");
-        _ = DownloadCommunityLocationsForCurrentVersionAsync();
+        AddDebugLog($"[MapLocDB] Auto-updating community data for plugin v{currentVersion} ({reason})...");
+        _ = ObserveCommunityLocationsRefreshAsync(reason);
+    }
+
+    private async Task ObserveCommunityLocationsRefreshAsync(string reason)
+    {
+        try
+        {
+            await DownloadCommunityLocationsForCurrentVersionAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[MapLocDB] Auto-update failed during {reason}: {ex}");
+            AddDebugLog($"[MapLocDB] Auto-update failed during {reason}: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     public async Task<bool> DownloadCommunityLocationsForCurrentVersionAsync()
@@ -518,6 +536,20 @@ public sealed class Plugin : IDalamudPlugin
                 configuration.UseMapTypeFilter = true;
 
             configuration.Version = 2;
+            changed = true;
+        }
+
+        if (configuration.Version < 3)
+        {
+            configuration.EnabledMapTypes ??= new List<uint>();
+            configuration.EnabledMapTypes = configuration.UseMapTypeFilter
+                ? configuration.EnabledMapTypes
+                    .Where(itemId => itemId != 0)
+                    .Distinct()
+                    .ToList()
+                : new List<uint>();
+            configuration.UseMapTypeFilter = true;
+            configuration.Version = 3;
             changed = true;
         }
 
