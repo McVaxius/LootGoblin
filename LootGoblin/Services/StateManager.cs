@@ -95,6 +95,12 @@ public class StateManager : IDisposable
         Portal
     }
 
+    private enum OverworldRecoveryNavigationKind
+    {
+        FlyTo,
+        MoveTo
+    }
+
     private DateTime stateStartTime = DateTime.Now;
     private DateTime lastTickTime = DateTime.MinValue;
     private DateTime lastSelectYesnoWatchdogTime = DateTime.MinValue;
@@ -103,10 +109,18 @@ public class StateManager : IDisposable
     private bool stateActionIssued;
     private Vector3 lastStuckCheckPos; // Position at last stuck check
     private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
-    private Vector3 sameZoneStuckCheckPos;
-    private DateTime sameZoneStuckCheckTime = DateTime.MinValue;
-    private string sameZoneStuckTargetKey = string.Empty;
-    private string sameZoneStuckTeleportedTargetKey = string.Empty;
+    private string overworldRecoveryTargetKey = string.Empty;
+    private uint overworldRecoveryTerritoryId;
+    private Vector3 overworldRecoveryTarget;
+    private Vector3 overworldRecoveryLastPosition;
+    private float overworldRecoveryBestDistance = float.MaxValue;
+    private DateTime overworldRecoveryLastProgressTime = DateTime.MinValue;
+    private DateTime overworldRecoveryLastRepathTime = DateTime.MinValue;
+    private DateTime overworldRecoveryLastTeleportDecisionLogTime = DateTime.MinValue;
+    private string overworldRecoveryLastTeleportDecision = string.Empty;
+    private int overworldRecoveryRepathCount;
+    private string overworldRecoveryTeleportedTargetKey = string.Empty;
+    private bool overworldRecoveryRequiresPartyMountWait;
     private DateTime portalRetryStart = DateTime.MinValue; // Portal interaction retry timer
     private bool portalMapFlagCleared; // Clear old map/vnav flag once before portal interaction
     private Vector3? portalApproachPosition; // Exact portal XYZ captured for this portal window
@@ -222,8 +236,12 @@ public class StateManager : IDisposable
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float MapDigXZRange = 5.0f;
     private const double SameZoneAetheryteTeleportSkipXZRange = 50.0;
-    private const float SameZoneStuckMovementThreshold = 0.5f;
-    private static readonly TimeSpan SameZoneStuckTeleportTimeout = TimeSpan.FromSeconds(10.0);
+    private const float OverworldRecoveryArrivedDistance = 5.0f;
+    private const float OverworldRecoveryProgressMargin = 0.5f;
+    private const int OverworldRecoveryTeleportRepathThreshold = 2;
+    private static readonly TimeSpan OverworldRecoveryNoProgressRepathTimeout = TimeSpan.FromSeconds(10.0);
+    private static readonly TimeSpan OverworldRecoveryNoProgressTeleportTimeout = TimeSpan.FromSeconds(25.0);
+    private static readonly TimeSpan OverworldRecoveryTeleportDecisionLogInterval = TimeSpan.FromSeconds(5.0);
     private const float PortalInteractionRange = 3.0f;
     private const float PortalStrictInteractionRange = 1.6f;
     private const float PortalApproachInteractionRange = 5.0f;
@@ -268,7 +286,7 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan OpeningChestCofferMountCommandInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan OpeningChestCofferDismountCommandInterval = TimeSpan.FromSeconds(2.0);
-    private static readonly TimeSpan OpeningChestCofferStallTimeout = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan OpeningChestCofferStallTimeout = OverworldRecoveryNoProgressRepathTimeout;
     private static readonly TimeSpan OpeningChestCofferRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan GroundApproachMinimumDuration = TimeSpan.FromSeconds(12.0);
     private static readonly TimeSpan GroundApproachNoProgressTimeout = TimeSpan.FromSeconds(6.0);
@@ -293,6 +311,9 @@ public class StateManager : IDisposable
     private const float PortalInteractionProgressMargin = 0.35f;
     private static readonly TimeSpan AdsRepairStartGrace = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairTimeout = TimeSpan.FromMinutes(3.0);
+    private static readonly TimeSpan AdsRepairRecoveryTeleportSettleDelay = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan AdsRepairRecoveryTimeout = TimeSpan.FromSeconds(90.0);
+    private const float AdsRepairRecoveryTeleportPositionDeltaThreshold = 5.0f;
     private static readonly TimeSpan TreasureHighLowSettleDelay = TimeSpan.FromMilliseconds(350);
     private static readonly TimeSpan TreasureHighLowReopenRetryInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan TreasureHighLowStatusLogInterval = TimeSpan.FromSeconds(5.0);
@@ -396,6 +417,21 @@ public class StateManager : IDisposable
     private DateTime adsRepairHandoffStarted = DateTime.MinValue;
     private string adsRepairRequestedMode = string.Empty;
     private bool continueStartAfterAdsRepair;
+    private bool adsRepairRecoveryActive;
+    private bool adsRepairRecoveryTeleportIssued;
+    private DateTime adsRepairRecoveryStarted = DateTime.MinValue;
+    private DateTime adsRepairRecoveryTeleportIssuedAt = DateTime.MinValue;
+    private Vector3 adsRepairRecoveryStartPosition;
+    private bool adsRepairRecoverySawBetweenAreas;
+    private DateTime adsRepairRecoveryLastLoadingAt = DateTime.MinValue;
+    private bool adsRepairRecoveryStartAttempted;
+    private uint adsRepairRecoveryTerritoryId;
+    private uint adsRepairRecoveryAetheryteId;
+    private string adsRepairRecoveryAetheryteName = string.Empty;
+    private string adsRepairRecoveryMode = string.Empty;
+    private string adsRepairRecoverySource = string.Empty;
+    private int adsRepairRecoveryLowestCondition;
+    private int adsRepairRecoveryThreshold;
     private bool? combatAutomationEnabledState;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
@@ -708,6 +744,9 @@ public class StateManager : IDisposable
 
         TryClearPendingDungeonMapFlag();
 
+        if (TickAdsRepairRecovery())
+            return;
+
         if (TickAdsRepairHandoff())
             return;
 
@@ -761,6 +800,12 @@ public class StateManager : IDisposable
 
     private void HandleBetweenAreasTick()
     {
+        if (adsRepairRecoveryActive)
+        {
+            adsRepairRecoverySawBetweenAreas = true;
+            adsRepairRecoveryLastLoadingAt = DateTime.Now;
+        }
+
         ResetPortalApproachTrackingForAreaChange();
         ResetAllCameraResetBeforeInteractTracking();
         stateStartTime = DateTime.Now; // Don't timeout while loading
@@ -918,9 +963,9 @@ public class StateManager : IDisposable
         _plugin.YesAlreadyIPC.Pause();
         _plugin.AddDebugLog($"[Start] YesAlready paused: {_plugin.YesAlreadyIPC.IsPaused}");
 
-        if (TryStartAdsRepairIfNeeded("[Start]"))
+        if (TryStartAdsRepairIfNeeded("[Start]", resumeStartAfterRepair: true))
         {
-            if (adsRepairHandoffActive)
+            if (adsRepairHandoffActive || adsRepairRecoveryActive)
             {
                 continueStartAfterAdsRepair = true;
                 TransitionTo(BotState.Repairing, "Repairing gear before starting map run...");
@@ -1330,7 +1375,7 @@ public class StateManager : IDisposable
             dungeonConfirmedThisMap = false;
             ResetOpeningChestLifecycleState();
             CurrentLocation = null;
-            ResetSameZoneStuckTeleportState(clearTeleportedTarget: true);
+            ResetOverworldRecoveryState(clearTeleportedTarget: true);
             activeKeyItemMapItemId = keyItem.ItemId;
             activeKeyItemMapSlot = keyItem.Slot;
             activeKeyItemRecoverySourceLogged = false;
@@ -1441,7 +1486,8 @@ public class StateManager : IDisposable
             source,
             $"Recovered active map target from {recoverySource}; already at map location - landing and digging...",
             $"Recovered active map target from {recoverySource}; already mounted - resuming map run...",
-            $"Recovered active map target from {recoverySource}; mounting up...");
+            $"Recovered active map target from {recoverySource}; mounting up...",
+            allowSameZoneTeleport: true);
     }
 
     private void LogActiveKeyItemRecoverySourceOnce(
@@ -2112,9 +2158,13 @@ public class StateManager : IDisposable
         if (State != BotState.Flying)
             return;
 
-        lastVnavPathFailureTime = DateTime.Now;
+        var now = DateTime.Now;
+        var shouldLog = !string.Equals(lastVnavPathFailureText, text, StringComparison.Ordinal) ||
+                        now - lastVnavPathFailureTime >= OverworldRecoveryTeleportDecisionLogInterval;
+        lastVnavPathFailureTime = now;
         lastVnavPathFailureText = text;
-        _plugin.AddDebugLog($"[Flying] Observed vnav path failure: {text}");
+        if (shouldLog)
+            _plugin.AddDebugLog($"[Flying] Observed vnav path failure: {text}");
     }
 
     public void NotifyChatMessage(string text)
@@ -2308,15 +2358,6 @@ public class StateManager : IDisposable
         flyFlagFallbackUsedThisFlight = false;
     }
 
-    private void ResetSameZoneStuckTeleportState(bool clearTeleportedTarget = false)
-    {
-        sameZoneStuckCheckPos = Vector3.Zero;
-        sameZoneStuckCheckTime = DateTime.MinValue;
-        sameZoneStuckTargetKey = string.Empty;
-        if (clearTeleportedTarget)
-            sameZoneStuckTeleportedTargetKey = string.Empty;
-    }
-
     private void ResetKeyItemMapRecoveryState(bool clearActiveKey = false)
     {
         keyItemMapRecoveryStartedAt = DateTime.MinValue;
@@ -2332,7 +2373,7 @@ public class StateManager : IDisposable
         activeKeyItemRecoveryUnderwaterLogged = false;
         activeKeyItemRecoveryPopupShown = false;
         activeMapTargetCache.Clear();
-        ResetSameZoneStuckTeleportState(clearTeleportedTarget: true);
+        ResetOverworldRecoveryState(clearTeleportedTarget: true);
     }
 
     private bool TryFallbackToFlyFlagAfterVnavFailure(DateTime now)
@@ -2349,18 +2390,38 @@ public class StateManager : IDisposable
             return false;
 
         flyFlagFallbackUsedThisFlight = true;
-        _plugin.AddDebugLog("[Flying] vnav flyto failed - falling back to /vnav flyflag");
         if (!string.IsNullOrWhiteSpace(lastVnavPathFailureText))
             _plugin.AddDebugLog($"[Flying] vnav failure text: {lastVnavPathFailureText}");
 
-        _plugin.NavigationService.FlyToFlag();
-        StateDetail = "Flying to map flag after vnav flyto failure...";
+        var activeTargets = ResolveOverworldNavigationTargets();
+        var flagLocation = _plugin.MapFlagService.TryReadFlag();
+        var hasCurrentTerritoryFlag = flagLocation != null &&
+                                      flagLocation.TerritoryId == Plugin.ClientState.TerritoryType;
+        if (hasCurrentTerritoryFlag)
+        {
+            _plugin.AddDebugLog("[Flying] vnav flyto failed - current AgentMap flag is present in-zone, falling back to /vnav flyflag.");
+            _plugin.NavigationService.FlyToFlag();
+            StateDetail = "Flying to current map flag after vnav flyto failure...";
+        }
+        else if (activeTargets.NavigationTarget != Vector3.Zero)
+        {
+            _plugin.AddDebugLog(
+                $"[Flying] vnav flyto failed but no current in-zone AgentMap flag exists - reissuing explicit XYZ target {FormatVectorCompact(activeTargets.NavigationTarget)}.");
+            _plugin.NavigationService.FlyToPosition(activeTargets.NavigationTarget, force: true);
+            StateDetail = "Reissuing explicit XYZ after vnav flyto failure...";
+        }
+        else
+        {
+            HandleError("vnav flyto failed and no current map flag or explicit XYZ target is available.");
+            return true;
+        }
+
         lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         lastStuckCheckTime = now;
         return true;
     }
 
-    private string BuildSameZoneStuckTargetKey(MapLocation location)
+    private string BuildOverworldMapTargetKey(MapLocation location)
     {
         if (TryGetActiveMapTargetKey(null, out var key))
             return $"{key.EventItemId}:{key.MapItemId}";
@@ -2369,81 +2430,327 @@ public class StateManager : IDisposable
             $"{SelectedMapItemId}:{location.TerritoryId}:{location.X:0.0}:{location.Y:0.0}:{location.Z:0.0}");
     }
 
-    private bool TryHandleSameZoneStuckTeleport(
+    private static string BuildOverworldRecoveryPositionKey(string prefix, uint territoryId, Vector3 target)
+    {
+        return FormattableString.Invariant(
+            $"{prefix}:{territoryId}:{target.X:0.0}:{target.Y:0.0}:{target.Z:0.0}");
+    }
+
+    private void ResetOverworldRecoveryState(bool clearTeleportedTarget = false)
+    {
+        overworldRecoveryTargetKey = string.Empty;
+        overworldRecoveryTerritoryId = 0;
+        overworldRecoveryTarget = Vector3.Zero;
+        overworldRecoveryLastPosition = Vector3.Zero;
+        overworldRecoveryBestDistance = float.MaxValue;
+        overworldRecoveryLastProgressTime = DateTime.MinValue;
+        overworldRecoveryLastRepathTime = DateTime.MinValue;
+        overworldRecoveryLastTeleportDecisionLogTime = DateTime.MinValue;
+        overworldRecoveryLastTeleportDecision = string.Empty;
+        overworldRecoveryRepathCount = 0;
+        if (clearTeleportedTarget)
+            overworldRecoveryTeleportedTargetKey = string.Empty;
+    }
+
+    private bool TryRunOverworldRecoveryWatchdog(
         DateTime now,
+        string source,
+        string targetKind,
+        string targetKey,
+        uint territoryId,
+        Vector3 target,
+        OverworldRecoveryNavigationKind navigationKind)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var currentPos = player?.Position ?? Vector3.Zero;
+        if (player == null ||
+            currentPos == Vector3.Zero ||
+            target == Vector3.Zero ||
+            territoryId == 0 ||
+            Plugin.ClientState.TerritoryType != territoryId)
+        {
+            ResetOverworldRecoveryState();
+            return false;
+        }
+
+        var distanceFromTarget = Vector3.Distance(currentPos, target);
+        if (distanceFromTarget <= OverworldRecoveryArrivedDistance)
+        {
+            ResetOverworldRecoveryState();
+            return false;
+        }
+
+        var targetChanged = !string.Equals(overworldRecoveryTargetKey, targetKey, StringComparison.Ordinal) ||
+                            overworldRecoveryTerritoryId != territoryId ||
+                            Vector3.DistanceSquared(overworldRecoveryTarget, target) > 1.0f;
+        if (targetChanged)
+        {
+            overworldRecoveryTargetKey = targetKey;
+            overworldRecoveryTerritoryId = territoryId;
+            overworldRecoveryTarget = target;
+            overworldRecoveryLastPosition = currentPos;
+            overworldRecoveryBestDistance = distanceFromTarget;
+            overworldRecoveryLastProgressTime = now;
+            overworldRecoveryLastRepathTime = DateTime.MinValue;
+            overworldRecoveryLastTeleportDecisionLogTime = DateTime.MinValue;
+            overworldRecoveryLastTeleportDecision = string.Empty;
+            overworldRecoveryRepathCount = 0;
+            _plugin.AddDebugLog(
+                $"[{source}][Recovery] Tracking {targetKind}; key={targetKey}; territory={territoryId}; " +
+                $"target={FormatVectorCompact(target)}; current={FormatVectorCompact(currentPos)}; distance={distanceFromTarget:F1}y.");
+            return false;
+        }
+
+        if (distanceFromTarget + OverworldRecoveryProgressMargin < overworldRecoveryBestDistance)
+        {
+            overworldRecoveryBestDistance = distanceFromTarget;
+            overworldRecoveryLastProgressTime = now;
+            overworldRecoveryLastPosition = currentPos;
+            overworldRecoveryLastRepathTime = DateTime.MinValue;
+            overworldRecoveryRepathCount = 0;
+            return false;
+        }
+
+        var noProgressFor = now - overworldRecoveryLastProgressTime;
+        if (noProgressFor < OverworldRecoveryNoProgressRepathTimeout)
+            return false;
+
+        var pathfindInProgress = _plugin.VNavIPC.TryIsPathfindInProgress();
+        var pathRunning = _plugin.VNavIPC.TryIsPathRunning();
+        var navState = _plugin.NavigationService.State;
+        var movedDistance = Vector3.Distance(currentPos, overworldRecoveryLastPosition);
+        var shouldTeleport = overworldRecoveryRepathCount >= OverworldRecoveryTeleportRepathThreshold ||
+                             noProgressFor >= OverworldRecoveryNoProgressTeleportTimeout;
+
+        if (shouldTeleport &&
+            TryTeleportForOverworldRecovery(
+                now,
+                source,
+                targetKind,
+                targetKey,
+                territoryId,
+                target,
+                currentPos,
+                distanceFromTarget,
+                movedDistance,
+                noProgressFor,
+                pathfindInProgress,
+                pathRunning,
+                navState))
+        {
+            return true;
+        }
+
+        if (overworldRecoveryLastRepathTime != DateTime.MinValue &&
+            now - overworldRecoveryLastRepathTime < OverworldRecoveryNoProgressRepathTimeout)
+        {
+            return false;
+        }
+
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+
+        IssueOverworldRecoveryNavigation(navigationKind, target);
+        autoMoveActive = true;
+        overworldRecoveryLastRepathTime = now;
+        overworldRecoveryRepathCount++;
+
+        _plugin.AddDebugLog(
+            $"[{source}][Recovery] No progress to {targetKind} for {noProgressFor.TotalSeconds:F1}s - stopped and reissued {DescribeOverworldRecoveryNavigation(navigationKind)}. " +
+            $"moved={movedDistance:F1}y; currentDist={distanceFromTarget:F1}y; bestDist={overworldRecoveryBestDistance:F1}y; " +
+            $"repath={overworldRecoveryRepathCount}; nav={navState}; pathfind={FormatNullableBool(pathfindInProgress)}; " +
+            $"pathRunning={FormatNullableBool(pathRunning)}; target={FormatVectorCompact(target)}.");
+        StateDetail = $"Recovering {targetKind}: re-pathing ({distanceFromTarget:F1}y)...";
+        return true;
+    }
+
+    private void IssueOverworldRecoveryNavigation(OverworldRecoveryNavigationKind navigationKind, Vector3 target)
+    {
+        if (navigationKind == OverworldRecoveryNavigationKind.FlyTo)
+            _plugin.NavigationService.FlyToPosition(target, force: true);
+        else
+            _plugin.NavigationService.MoveToPosition(target);
+    }
+
+    private bool TryTeleportForOverworldRecovery(
+        DateTime now,
+        string source,
+        string targetKind,
+        string targetKey,
+        uint territoryId,
+        Vector3 target,
         Vector3 currentPos,
         float distanceFromTarget,
-        string navigationBasis,
-        Vector3 navigationTarget,
-        Vector3 landingTarget,
+        float movedDistance,
+        TimeSpan noProgressFor,
         bool? pathfindInProgress,
-        bool? pathRunning)
+        bool? pathRunning,
+        NavigationState navState)
     {
-        if (CurrentLocation == null
-            || CurrentLocation.TerritoryId != Plugin.ClientState.TerritoryType
-            || currentPos == Vector3.Zero
-            || distanceFromTarget <= 5.0f)
+        var blockedReason = GetOverworldRecoveryTeleportBlockReason(
+            targetKey,
+            territoryId,
+            target,
+            distanceFromTarget,
+            out var aetheryteId,
+            out var aetheryteName,
+            out var playerDistanceToAetheryte);
+        if (blockedReason != null)
         {
-            ResetSameZoneStuckTeleportState();
+            LogOverworldRecoveryTeleportDecision(
+                now,
+                source,
+                targetKind,
+                targetKey,
+                $"blocked: {blockedReason}",
+                movedDistance,
+                distanceFromTarget,
+                noProgressFor,
+                pathfindInProgress,
+                pathRunning,
+                navState);
             return false;
         }
 
-        if (pathfindInProgress != false || pathRunning != true)
+        overworldRecoveryTeleportedTargetKey = targetKey;
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+        autoMoveActive = false;
+
+        if (CurrentLocation != null)
         {
-            ResetSameZoneStuckTeleportState();
-            return false;
+            CurrentLocation.NearestAetheryteId = aetheryteId;
+            CurrentLocation.NearestAetheryteName = aetheryteName;
         }
 
-        var targetKey = BuildSameZoneStuckTargetKey(CurrentLocation);
-        if (!string.Equals(sameZoneStuckTargetKey, targetKey, StringComparison.Ordinal)
-            || sameZoneStuckCheckTime == DateTime.MinValue)
-        {
-            sameZoneStuckTargetKey = targetKey;
-            sameZoneStuckCheckPos = currentPos;
-            sameZoneStuckCheckTime = now;
-            return false;
-        }
-
-        if (now - sameZoneStuckCheckTime < SameZoneStuckTeleportTimeout)
-            return false;
-
-        var movedDistance = Vector3.Distance(currentPos, sameZoneStuckCheckPos);
-        if (movedDistance >= SameZoneStuckMovementThreshold)
-        {
-            sameZoneStuckCheckPos = currentPos;
-            sameZoneStuckCheckTime = now;
-            return false;
-        }
-
-        if (string.Equals(sameZoneStuckTeleportedTargetKey, targetKey, StringComparison.Ordinal))
-        {
-            sameZoneStuckCheckPos = currentPos;
-            sameZoneStuckCheckTime = now;
-            return false;
-        }
-
-        PopulateNearestAetheryte(CurrentLocation, out var aetheryteId, out _, out _);
-        if (aetheryteId == 0)
-        {
-            _plugin.AddDebugLog(
-                $"[Flying] Same-zone vnav execution stuck (moved {movedDistance:F1}y in {SameZoneStuckTeleportTimeout.TotalSeconds:F0}s), " +
-                "but no same-zone aetheryte is available; keeping re-path fallback.");
-            sameZoneStuckCheckPos = currentPos;
-            sameZoneStuckCheckTime = now;
-            return false;
-        }
-
-        sameZoneStuckTeleportedTargetKey = targetKey;
-        _plugin.NavigationService.StopNavigation();
         _plugin.AddDebugLog(
-            $"[Flying] Same-zone vnav execution stuck after pathfinding completed " +
-            $"(moved {movedDistance:F1}y in {SameZoneStuckTeleportTimeout.TotalSeconds:F0}s) - " +
-            $"teleporting once to nearest aetheryte {aetheryteId}; basis={navigationBasis}; " +
-            $"current={FormatVectorCompact(currentPos)}; navTarget={FormatVectorCompact(navigationTarget)}; " +
-            $"landingTarget={FormatVectorCompact(landingTarget)}.");
-        ResetSameZoneStuckTeleportState();
-        TransitionTo(BotState.Teleporting, "Same-zone navigation stuck - teleporting to nearest aetheryte...");
+            $"[{source}][Recovery] Teleporting to nearest safe aetheryte for stuck {targetKind}: {aetheryteName} (ID {aetheryteId}). " +
+            $"noProgress={noProgressFor.TotalSeconds:F1}s; moved={movedDistance:F1}y; currentDist={distanceFromTarget:F1}y; " +
+            $"bestDist={overworldRecoveryBestDistance:F1}y; repath={overworldRecoveryRepathCount}; " +
+            $"playerToAetheryte={playerDistanceToAetheryte:F1}y; nav={navState}; pathfind={FormatNullableBool(pathfindInProgress)}; " +
+            $"pathRunning={FormatNullableBool(pathRunning)}; current={FormatVectorCompact(currentPos)}; target={FormatVectorCompact(target)}.");
+        overworldRecoveryRequiresPartyMountWait = true;
+        ResetOverworldRecoveryState();
+        TransitionTo(BotState.Teleporting, $"{source}: stuck {targetKind} - teleporting to nearest aetheryte...");
         return true;
+    }
+
+    private string? GetOverworldRecoveryTeleportBlockReason(
+        string targetKey,
+        uint territoryId,
+        Vector3 target,
+        float distanceFromTarget,
+        out uint aetheryteId,
+        out string aetheryteName,
+        out double playerDistanceToAetheryte)
+    {
+        aetheryteId = 0;
+        aetheryteName = string.Empty;
+        playerDistanceToAetheryte = double.MaxValue;
+
+        if (string.Equals(overworldRecoveryTeleportedTargetKey, targetKey, StringComparison.Ordinal))
+            return "already teleported once for target";
+
+        if (CurrentLocation == null)
+            return "no current map location";
+
+        if (CurrentLocation.TerritoryId != territoryId ||
+            Plugin.ClientState.TerritoryType != territoryId)
+        {
+            return $"territory mismatch current={Plugin.ClientState.TerritoryType} target={territoryId}";
+        }
+
+        if (distanceFromTarget <= OverworldRecoveryArrivedDistance)
+            return $"target within {OverworldRecoveryArrivedDistance:F1}y";
+
+        if (Plugin.Condition[ConditionFlag.InCombat])
+            return "in combat";
+
+        if (Plugin.Condition[ConditionFlag.BetweenAreas] ||
+            Plugin.Condition[ConditionFlag.BetweenAreas51])
+        {
+            return "loading";
+        }
+
+        if (_plugin.NavigationService.IsTeleporting())
+            return "already teleporting";
+
+        if (!_plugin.IsLifestreamAvailable)
+            return "Lifestream unavailable";
+
+        aetheryteId = _plugin.NavigationService.FindNearestAetheryte(territoryId, target, out _, out _);
+        if (aetheryteId == 0)
+            return "no same-zone aetheryte";
+
+        aetheryteName = GetAetheryteName(aetheryteId);
+        var maybePlayerDistanceToAetheryte = _plugin.NavigationService.GetPlayerXZDistanceToAetheryte(aetheryteId);
+        if (maybePlayerDistanceToAetheryte == null)
+            return $"cannot verify distance to selected aetheryte {aetheryteId}";
+
+        playerDistanceToAetheryte = maybePlayerDistanceToAetheryte.Value;
+        if (playerDistanceToAetheryte <= SameZoneAetheryteTeleportSkipXZRange)
+        {
+            return $"already {playerDistanceToAetheryte:F1}y from selected aetheryte {aetheryteId}";
+        }
+
+        return null;
+    }
+
+    private string GetAetheryteName(uint aetheryteId)
+    {
+        try
+        {
+            var aetheryteSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Aetheryte>();
+            if (aetheryteSheet != null)
+            {
+                var aetheryte = aetheryteSheet.GetRow(aetheryteId);
+                return aetheryte.PlaceName.ValueNullable?.Name.ToString() ?? $"ID {aetheryteId}";
+            }
+        }
+        catch
+        {
+        }
+
+        return $"ID {aetheryteId}";
+    }
+
+    private void LogOverworldRecoveryTeleportDecision(
+        DateTime now,
+        string source,
+        string targetKind,
+        string targetKey,
+        string decision,
+        float movedDistance,
+        float distanceFromTarget,
+        TimeSpan noProgressFor,
+        bool? pathfindInProgress,
+        bool? pathRunning,
+        NavigationState navState)
+    {
+        var decisionKey = $"{targetKey}:{decision}";
+        if (string.Equals(overworldRecoveryLastTeleportDecision, decisionKey, StringComparison.Ordinal) &&
+            now - overworldRecoveryLastTeleportDecisionLogTime < OverworldRecoveryTeleportDecisionLogInterval)
+        {
+            return;
+        }
+
+        overworldRecoveryLastTeleportDecision = decisionKey;
+        overworldRecoveryLastTeleportDecisionLogTime = now;
+        _plugin.AddDebugLog(
+            $"[{source}][Recovery] Teleport decision for {targetKind}: {decision}. " +
+            $"noProgress={noProgressFor.TotalSeconds:F1}s; moved={movedDistance:F1}y; currentDist={distanceFromTarget:F1}y; " +
+            $"bestDist={overworldRecoveryBestDistance:F1}y; repath={overworldRecoveryRepathCount}; " +
+            $"nav={navState}; pathfind={FormatNullableBool(pathfindInProgress)}; pathRunning={FormatNullableBool(pathRunning)}.");
+    }
+
+    private static string DescribeOverworldRecoveryNavigation(OverworldRecoveryNavigationKind navigationKind)
+    {
+        return navigationKind == OverworldRecoveryNavigationKind.FlyTo ? "fly path" : "move path";
+    }
+
+    private static string FormatNullableBool(bool? value)
+    {
+        return value.HasValue ? (value.Value ? "true" : "false") : "null";
     }
 
     private void RunLandingCommandsOnce(string reason)
@@ -4796,13 +5103,29 @@ public class StateManager : IDisposable
             return true;
         }
 
+        var fallbackTargetKey = BuildOverworldRecoveryPositionKey(
+            $"opening-{kind.ToString().ToLowerInvariant()}-flag-fallback",
+            Plugin.ClientState.TerritoryType,
+            openingChestFlagFallbackTarget);
+        if (TryRunOverworldRecoveryWatchdog(
+                now,
+                "OpeningChest",
+                $"{kind.ToString().ToLowerInvariant()} flag fallback",
+                fallbackTargetKey,
+                Plugin.ClientState.TerritoryType,
+                openingChestFlagFallbackTarget,
+                OverworldRecoveryNavigationKind.FlyTo))
+        {
+            return true;
+        }
+
         var navInactive = _plugin.NavigationService.State == NavigationState.Idle || !_plugin.VNavIPC.IsNavigating;
-        if (navInactive || now - lastOpeningChestFlagFallbackRepathTime >= OpeningChestCofferRepathInterval)
+        if (navInactive)
         {
             if (_plugin.NavigationService.State != NavigationState.Idle)
                 _plugin.NavigationService.StopNavigation();
 
-            _plugin.NavigationService.FlyToPosition(openingChestFlagFallbackTarget);
+            _plugin.NavigationService.FlyToPosition(openingChestFlagFallbackTarget, force: true);
             autoMoveActive = true;
             lastOpeningChestFlagFallbackRepathTime = now;
         }
@@ -4856,13 +5179,28 @@ public class StateManager : IDisposable
 
     private void NavigateToOpeningChestCofferPosition(Vector3 position, float distance, DateTime now)
     {
-        if (!autoMoveActive || _plugin.NavigationService.State == NavigationState.Idle ||
-            now - lastOpeningChestCofferRepathTime >= OpeningChestCofferRepathInterval)
+        var targetKey = BuildOverworldRecoveryPositionKey(
+            "opening-captured-coffer",
+            Plugin.ClientState.TerritoryType,
+            position);
+        if (TryRunOverworldRecoveryWatchdog(
+                now,
+                "OpeningChest",
+                "captured coffer",
+                targetKey,
+                Plugin.ClientState.TerritoryType,
+                position,
+                OverworldRecoveryNavigationKind.FlyTo))
+        {
+            return;
+        }
+
+        if (!autoMoveActive || _plugin.NavigationService.State == NavigationState.Idle)
         {
             if (_plugin.NavigationService.State != NavigationState.Idle)
                 _plugin.NavigationService.StopNavigation();
 
-            _plugin.NavigationService.FlyToPosition(position);
+            _plugin.NavigationService.FlyToPosition(position, force: true);
             autoMoveActive = true;
             lastOpeningChestCofferRepathTime = now;
             _plugin.AddDebugLog(
@@ -4898,6 +5236,19 @@ public class StateManager : IDisposable
         {
             openingChestCofferApproachBestDistance = distance;
             openingChestCofferApproachLastProgressTime = now;
+        }
+
+        var targetKey = $"opening-coffer:{chest.EntityId}:{chest.Position.X:0.0}:{chest.Position.Y:0.0}:{chest.Position.Z:0.0}";
+        if (TryRunOverworldRecoveryWatchdog(
+                now,
+                "OpeningChest",
+                fly ? "displaced coffer" : "coffer",
+                targetKey,
+                Plugin.ClientState.TerritoryType,
+                chest.Position,
+                fly ? OverworldRecoveryNavigationKind.FlyTo : OverworldRecoveryNavigationKind.MoveTo))
+        {
+            return true;
         }
 
         var stalled = now - openingChestCofferApproachLastProgressTime >= OpeningChestCofferStallTimeout;
@@ -5431,13 +5782,52 @@ public class StateManager : IDisposable
 
         if (hasFlagRecoveryTarget && xzDistToFlag > MapDigXZRange)
         {
-            if (_plugin.NavigationService.State == NavigationState.Idle ||
-                now - lastOpeningChestCofferRepathTime >= OpeningChestCofferRepathInterval)
+            var nav = _plugin.NavigationService;
+            if (!nav.IsMounted() && !nav.IsFlying())
             {
-                _plugin.NavigationService.MoveToPosition(flagRecoveryTarget);
+                if (Plugin.Condition[ConditionFlag.Mounting71])
+                {
+                    StateDetail = $"Mounting to return to flag and recover coffer ({xzDistToFlag:F1}y XZ)...";
+                    return true;
+                }
+
+                if (now - lastOpeningChestCofferMountCommandTime >= OpeningChestCofferMountCommandInterval)
+                {
+                    lastOpeningChestCofferMountCommandTime = now;
+                    nav.MountUp();
+                    _plugin.AddDebugLog($"[OpeningChest] Missing coffer recovery: mounting before long return to flag ({xzDistToFlag:F1}y XZ).");
+                }
+
+                StateDetail = $"Mounting to return to flag and recover coffer ({xzDistToFlag:F1}y XZ)...";
+                return true;
+            }
+
+            var targetKey = BuildOverworldRecoveryPositionKey(
+                "opening-missing-coffer-flag",
+                Plugin.ClientState.TerritoryType,
+                flagRecoveryTarget);
+            if (TryRunOverworldRecoveryWatchdog(
+                    now,
+                    "OpeningChest",
+                    "missing coffer flag",
+                    targetKey,
+                    Plugin.ClientState.TerritoryType,
+                    flagRecoveryTarget,
+                    OverworldRecoveryNavigationKind.FlyTo))
+            {
+                return true;
+            }
+
+            var navInactive = _plugin.NavigationService.State == NavigationState.Idle || !_plugin.VNavIPC.IsNavigating;
+            if (navInactive)
+            {
+                if (_plugin.NavigationService.State != NavigationState.Idle)
+                    _plugin.NavigationService.StopNavigation();
+
+                _plugin.NavigationService.FlyToPosition(flagRecoveryTarget, force: true);
                 autoMoveActive = true;
                 lastOpeningChestCofferRepathTime = now;
-                _plugin.AddDebugLog($"[OpeningChest] Missing coffer recovery: returning to flag ({xzDistToFlag:F1}y XZ).");
+                _plugin.AddDebugLog($"[OpeningChest] Missing coffer recovery: flying back to flag ({xzDistToFlag:F1}y XZ).");
             }
 
             StateDetail = $"Returning to flag to recover coffer ({xzDistToFlag:F1}y XZ)...";
@@ -6509,6 +6899,50 @@ public class StateManager : IDisposable
             return;
         }
 
+        var selectedAetheryteName = aetheryteId != 0
+            ? GetAetheryteName(aetheryteId)
+            : "none";
+        var playerXZDistToAetheryte = aetheryteId != 0
+            ? _plugin.NavigationService.GetPlayerXZDistanceToAetheryte(aetheryteId)
+            : null;
+        var bestAethDistText = bestAethDist == double.MaxValue ? "infinity" : $"{bestAethDist:F0}y";
+        var playerDistToSelectedText = playerXZDistToAetheryte is { } selectedDistance
+            ? $"{selectedDistance:F1}y"
+            : "unknown";
+
+        if (allowSameZoneTeleport)
+        {
+            _plugin.AddDebugLog(
+                $"{logPrefix} Same-zone teleport check: playerToTarget={playerDist:F0}y; " +
+                $"bestAetheryteToTarget={bestAethDistText}; selectedAetheryte={selectedAetheryteName} (ID {aetheryteId}); " +
+                $"playerToSelectedAetheryte={playerDistToSelectedText}.");
+
+            var selectedAetheryteIsCloser =
+                aetheryteId != 0 &&
+                bestAethDist != double.MaxValue &&
+                bestAethDist < playerDist;
+
+            if (selectedAetheryteIsCloser)
+            {
+                if (playerXZDistToAetheryte is { } aetherytePlayerDistance
+                    && aetherytePlayerDistance <= SameZoneAetheryteTeleportSkipXZRange)
+                {
+                    _plugin.AddDebugLog(
+                        $"{logPrefix} Selected aetheryte {selectedAetheryteName} (ID {aetheryteId}) is closer to target " +
+                        $"({bestAethDist:F0}y < {playerDist:F0}y), but player is already within {SameZoneAetheryteTeleportSkipXZRange:F0}y XZ " +
+                        $"of that aetheryte ({aetherytePlayerDistance:F1}y) - skipping same-zone teleport.");
+                }
+                else
+                {
+                    _plugin.AddDebugLog(
+                        $"{logPrefix} Selected aetheryte {selectedAetheryteName} (ID {aetheryteId}) is closer to target " +
+                        $"({bestAethDist:F0}y < {playerDist:F0}y); playerToSelectedAetheryte={playerDistToSelectedText} - teleporting.");
+                    TransitionTo(BotState.Teleporting, $"In zone but aetheryte closer ({bestAethDist:F0}y vs {playerDist:F0}y) - teleporting...");
+                    return;
+                }
+            }
+        }
+
         if (IsMountedOrActualInFlight())
         {
             _plugin.AddDebugLog($"{logPrefix} Already mounted or actually in flight - skipping mount setup.");
@@ -6554,31 +6988,14 @@ public class StateManager : IDisposable
             return;
         }
 
-        var playerXZDistToAetheryte = aetheryteId != 0
-            ? _plugin.NavigationService.GetPlayerXZDistanceToAetheryte(aetheryteId)
-            : null;
-
-        if (playerXZDistToAetheryte is { } aetherytePlayerDistance
-            && aetherytePlayerDistance <= SameZoneAetheryteTeleportSkipXZRange)
-        {
-            _plugin.AddDebugLog(
-                $"{logPrefix} Player is already within {SameZoneAetheryteTeleportSkipXZRange:F0}y XZ of selected aetheryte {aetheryteId} " +
-                $"({aetherytePlayerDistance:F1}y) - skipping same-zone teleport.");
-            TransitionTo(BotState.Mounting, "Already near selected aetheryte - mounting up...");
-            return;
-        }
-
-        if (aetheryteId != 0 && bestAethDist < playerDist && bestAethDist != double.MaxValue)
-        {
-            _plugin.AddDebugLog($"{logPrefix} Aetheryte is closer ({bestAethDist:F0}y < {playerDist:F0}y) - teleporting to aetheryte {aetheryteId}");
-            TransitionTo(BotState.Teleporting, $"In zone but aetheryte closer ({bestAethDist:F0}y vs {playerDist:F0}y) - teleporting...");
-            return;
-        }
-
         if (aetheryteId == 0)
             _plugin.AddDebugLog($"{logPrefix} No valid aetheryte found ({aetheryteId}) - mounting up");
         else if (bestAethDist == double.MaxValue)
             _plugin.AddDebugLog($"{logPrefix} Aetheryte has no position data (dist=infinity) - mounting up, no teleport possible");
+        else if (playerXZDistToAetheryte is { } aetherytePlayerDistance
+                 && aetherytePlayerDistance <= SameZoneAetheryteTeleportSkipXZRange
+                 && bestAethDist < playerDist)
+            _plugin.AddDebugLog($"{logPrefix} Already near selected aetheryte {selectedAetheryteName} (ID {aetheryteId}) - mounting up");
         else
             _plugin.AddDebugLog($"{logPrefix} Player is closer ({playerDist:F0}y <= {bestAethDist:F0}y) - mounting up, no teleport needed");
 
@@ -6769,8 +7186,23 @@ public class StateManager : IDisposable
             
             var partySize = Plugin.PartyList.Length;
             var waitForParty = _plugin.Configuration.WaitForParty;
-            _plugin.AddDebugLog($"[Mounting] PartySize={partySize}, WaitForParty={waitForParty}");
-            
+            var recoveryWait = overworldRecoveryRequiresPartyMountWait;
+            _plugin.AddDebugLog($"[Mounting] PartySize={partySize}, WaitForParty={waitForParty}, RecoveryPartyWait={recoveryWait}");
+
+            if (recoveryWait)
+            {
+                if (partySize > 0)
+                {
+                    TransitionTo(BotState.WaitingForParty, "Recovery teleport complete - waiting for party to mount...");
+                }
+                else
+                {
+                    overworldRecoveryRequiresPartyMountWait = false;
+                    TransitionTo(BotState.Flying, "Recovery teleport complete - mounted! Flying to location...");
+                }
+                return;
+            }
+
             if (partySize > 0 && waitForParty)
                 TransitionTo(BotState.WaitingForParty, "Waiting for party to mount...");
             else
@@ -6860,6 +7292,7 @@ public class StateManager : IDisposable
 
         if (_plugin.PartyService.AllMembersMounted)
         {
+            overworldRecoveryRequiresPartyMountWait = false;
             TransitionTo(BotState.Flying, "All party members mounted! Flying...");
             return;
         }
@@ -7024,11 +7457,7 @@ public class StateManager : IDisposable
 
         currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         activeNavTargets = ResolveOverworldNavigationTargets();
-        var distanceFromTarget = Vector3.Distance(currentPos, activeNavTargets.NavigationTarget);
         var xzDist = CalculateXZDistance(currentPos, activeNavTargets.LandingTarget);
-        var pathfindInProgress = _plugin.VNavIPC.TryIsPathfindInProgress();
-        var pathRunning = _plugin.VNavIPC.TryIsPathRunning();
-
         if (currentLandingMode == OverworldLandingMode.UnderwaterBounce
             && xzDist <= UnderwaterBounceTriggerXZRange
             && TryHandleUnderwaterBounceTriggerFlow(isDiving))
@@ -7042,38 +7471,19 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (TryHandleSameZoneStuckTeleport(
+        var recoveryTargetKey = $"{BuildOverworldMapTargetKey(CurrentLocation)}:{activeNavTargets.NavigationTarget.X:0.0}:{activeNavTargets.NavigationTarget.Y:0.0}:{activeNavTargets.NavigationTarget.Z:0.0}";
+        if (TryRunOverworldRecoveryWatchdog(
                 now,
-                currentPos,
-                distanceFromTarget,
-                activeNavTargets.Basis,
+                "Flying",
+                "map target",
+                recoveryTargetKey,
+                CurrentLocation.TerritoryId,
                 activeNavTargets.NavigationTarget,
-                activeNavTargets.LandingTarget,
-                pathfindInProgress,
-                pathRunning))
+                OverworldRecoveryNavigationKind.FlyTo))
         {
             return;
         }
         
-        // Stuck detection: only re-pathfind if stuck (10+ seconds without moving 5+ yalms)
-        var sinceStuckCheck = (now - lastStuckCheckTime).TotalSeconds;
-        if (sinceStuckCheck >= 10.0 && distanceFromTarget > 5.0f)
-        {
-            var movedDistance = Vector3.Distance(currentPos, lastStuckCheckPos);
-            if (movedDistance < 5.0f)
-            {
-                // Stuck! Stop current navigation before re-pathfinding to prevent erratic movement
-                nav.StopNavigation();
-                nav.FlyToPosition(activeNavTargets.NavigationTarget);
-                _plugin.AddDebugLog(
-                    $"[Flying] Stuck detected (moved {movedDistance:F1}y in 10s) - stopped + re-pathfinding using {activeNavTargets.Basis}; " +
-                    $"navDistance={distanceFromTarget:F1}y; current={FormatVectorCompact(currentPos)}; " +
-                    $"navTarget={FormatVectorCompact(activeNavTargets.NavigationTarget)}; landingTarget={FormatVectorCompact(activeNavTargets.LandingTarget)}");
-            }
-            lastStuckCheckPos = currentPos;
-            lastStuckCheckTime = now;
-        }
-
         // Check if we're close enough to X,Z coordinates (within 5 yalms) — uses ground target, not elevated
         // If we're not mounted, we've already dismounted - proceed with dig regardless of nav state
         if (!_plugin.NavigationService.IsMounted() && dismountAttemptStart != DateTime.MinValue)
@@ -7395,12 +7805,55 @@ public class StateManager : IDisposable
                 {
                     if (!openingChestReturningToFlag)
                     {
-                        _plugin.AddDebugLog($"[OpeningChest] Combat recovery: no chest visible and {distToFlag:F1}y from flag - moving back to flag");
+                        _plugin.AddDebugLog($"[OpeningChest] Combat recovery: no chest visible and {distToFlag:F1}y from flag - returning mounted/flying to flag");
                         openingChestReturningToFlag = true;
                     }
 
-                    _plugin.NavigationService.MoveToPosition(flagRecoveryTarget);
-                    autoMoveActive = true;
+                    var nav = _plugin.NavigationService;
+                    if (!nav.IsMounted() && !nav.IsFlying())
+                    {
+                        if (Plugin.Condition[ConditionFlag.Mounting71])
+                        {
+                            StateDetail = $"Mounting to return to flag after combat ({distToFlag:F1}y)...";
+                            return;
+                        }
+
+                        if (now - lastOpeningChestCofferMountCommandTime >= OpeningChestCofferMountCommandInterval)
+                        {
+                            lastOpeningChestCofferMountCommandTime = now;
+                            nav.MountUp();
+                        }
+
+                        StateDetail = $"Mounting to return to flag after combat ({distToFlag:F1}y)...";
+                        return;
+                    }
+
+                    var targetKey = BuildOverworldRecoveryPositionKey(
+                        "opening-combat-flag",
+                        Plugin.ClientState.TerritoryType,
+                        flagRecoveryTarget);
+                    if (TryRunOverworldRecoveryWatchdog(
+                            now,
+                            "OpeningChest",
+                            "combat recovery flag",
+                            targetKey,
+                            Plugin.ClientState.TerritoryType,
+                            flagRecoveryTarget,
+                            OverworldRecoveryNavigationKind.FlyTo))
+                    {
+                        return;
+                    }
+
+                    var navInactive = _plugin.NavigationService.State == NavigationState.Idle || !_plugin.VNavIPC.IsNavigating;
+                    if (navInactive)
+                    {
+                        if (_plugin.NavigationService.State != NavigationState.Idle)
+                            _plugin.NavigationService.StopNavigation();
+
+                        _plugin.NavigationService.FlyToPosition(flagRecoveryTarget, force: true);
+                        autoMoveActive = true;
+                    }
+
                     chestDisappearedTime = DateTime.MinValue;
                     StateDetail = $"Returning to flag after combat ({distToFlag:F1}y)...";
                     return;
@@ -9322,7 +9775,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (TryStartAdsRepairIfNeeded("[Completed]"))
+        if (TryStartAdsRepairIfNeeded("[Completed]", resumeStartAfterRepair: false))
             return;
         
         KrangleService.ClearCache();
@@ -9847,7 +10300,7 @@ public class StateManager : IDisposable
 
     // ─── Dungeon Helpers ─────────────────────────────────────────────────────
 
-    private bool TryStartAdsRepairIfNeeded(string source)
+    private bool TryStartAdsRepairIfNeeded(string source, bool resumeStartAfterRepair)
     {
         var threshold = Math.Clamp(_plugin.Configuration.RepairThresholdPercent, 0, 100);
         if (threshold <= 0)
@@ -9871,20 +10324,87 @@ public class StateManager : IDisposable
         var repairMode = ResolveAdsRepairMode();
         if (repairMode == "npc-no-inn" && !GameHelpers.IsInSanctuary())
         {
-            TransitionTo(
-                BotState.Error,
-                $"Equipped gear durability is {lowestCondition}% below repair threshold {threshold}%, but ADS NPC no-inn repair can only start from a sanctuary.");
+            return BeginAdsRepairTeleportRecovery(source, repairMode, lowestCondition, threshold, resumeStartAfterRepair);
+        }
+
+        continueStartAfterAdsRepair = resumeStartAfterRepair;
+        TryRequestAdsRepair(source, repairMode, lowestCondition, threshold);
+        return true;
+    }
+
+    private bool BeginAdsRepairTeleportRecovery(
+        string source,
+        string repairMode,
+        int lowestCondition,
+        int threshold,
+        bool resumeStartAfterRepair)
+    {
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+        {
+            TransitionTo(BotState.Error, $"Equipped gear durability is {lowestCondition}% below repair threshold {threshold}%, but player position is unavailable for ADS repair recovery.");
             return true;
         }
 
+        var territoryId = Plugin.ClientState.TerritoryType;
+        var playerPosition = player.Position;
+        var aetheryteId = _plugin.NavigationService.FindNearestAetheryte(territoryId, playerPosition, out _, out _);
+        if (aetheryteId == 0)
+        {
+            TransitionTo(
+                BotState.Error,
+                $"Equipped gear durability is {lowestCondition}% below repair threshold {threshold}%, but no unlocked aetheryte was found in current territory {territoryId} for ADS NPC no-inn repair.");
+            return true;
+        }
+
+        var aetheryteName = GetAetheryteName(aetheryteId);
+        var playerDistanceToAetheryte = _plugin.NavigationService.GetPlayerXZDistanceToAetheryte(aetheryteId);
+        if (playerDistanceToAetheryte is { } aetheryteDistance &&
+            aetheryteDistance <= SameZoneAetheryteTeleportSkipXZRange)
+        {
+            continueStartAfterAdsRepair = resumeStartAfterRepair;
+            _plugin.AddDebugLog(
+                $"{source}[Repair] Player already {aetheryteDistance:F1}y XZ from selected aetheryte " +
+                $"{aetheryteName} (ID {aetheryteId}); starting ADS repair without teleport.");
+            TryRequestAdsRepair(source, repairMode, lowestCondition, threshold);
+            return true;
+        }
+
+        adsRepairRecoveryActive = true;
+        adsRepairRecoveryTeleportIssued = false;
+        adsRepairRecoveryStarted = DateTime.Now;
+        adsRepairRecoveryTeleportIssuedAt = DateTime.MinValue;
+        adsRepairRecoveryStartPosition = playerPosition;
+        adsRepairRecoverySawBetweenAreas = false;
+        adsRepairRecoveryLastLoadingAt = DateTime.MinValue;
+        adsRepairRecoveryStartAttempted = false;
+        adsRepairRecoveryTerritoryId = territoryId;
+        adsRepairRecoveryAetheryteId = aetheryteId;
+        adsRepairRecoveryAetheryteName = aetheryteName;
+        adsRepairRecoveryMode = repairMode;
+        adsRepairRecoverySource = source;
+        adsRepairRecoveryLowestCondition = lowestCondition;
+        adsRepairRecoveryThreshold = threshold;
+        continueStartAfterAdsRepair = resumeStartAfterRepair;
+
+        StateDetail = $"Gear durability {lowestCondition}% below {threshold}% - teleporting to {adsRepairRecoveryAetheryteName} for ADS repair...";
+        _plugin.AddDebugLog(
+            $"{source}[Repair] NPC no-inn repair needs sanctuary; selected nearest current-territory aetheryte " +
+            $"{adsRepairRecoveryAetheryteName} (ID {aetheryteId}) from player position {FormatVectorCompact(playerPosition)}.");
+        return true;
+    }
+
+    private bool TryRequestAdsRepair(string source, string repairMode, int lowestCondition, int threshold)
+    {
         if (!_plugin.AdsStatusService.StartRepair(repairMode))
         {
             var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
-            var statusText = string.IsNullOrWhiteSpace(adsStatus.UtilityStatus)
-                ? "ADS did not accept the repair request."
-                : adsStatus.UtilityStatus;
+            var statusText = GetAdsRepairStatusText(adsStatus);
+            if (string.IsNullOrWhiteSpace(statusText))
+                statusText = "ADS did not accept the repair request.";
+            ResetAdsRepairHandoffTracking();
             TransitionTo(BotState.Error, $"Could not start ADS repair ({repairMode}) at {lowestCondition}% durability: {statusText}");
-            return true;
+            return false;
         }
 
         adsRepairHandoffActive = true;
@@ -9894,6 +10414,146 @@ public class StateManager : IDisposable
         StateDetail = $"ADS repair requested ({repairMode}); durability {lowestCondition}% below threshold {threshold}%...";
         _plugin.AddDebugLog($"{source}[Repair] Requested ADS repair mode {repairMode}; lowest durability {lowestCondition}%, threshold {threshold}%.");
         return true;
+    }
+
+    private bool TickAdsRepairRecovery()
+    {
+        if (!adsRepairRecoveryActive)
+            return false;
+
+        var now = DateTime.Now;
+        var elapsed = now - adsRepairRecoveryStarted;
+        if (elapsed > AdsRepairRecoveryTimeout)
+        {
+            FailAdsRepairRecovery(
+                $"ADS repair recovery timed out after {AdsRepairRecoveryTimeout.TotalSeconds:F0}s while teleporting to {adsRepairRecoveryAetheryteName} (ID {adsRepairRecoveryAetheryteId}).");
+            return true;
+        }
+
+        if (!_plugin.IsAdsAvailable)
+        {
+            FailAdsRepairRecovery("ADS unloaded during repair recovery; cannot start ADS repair.");
+            return true;
+        }
+
+        if (Plugin.ClientState.TerritoryType != adsRepairRecoveryTerritoryId)
+        {
+            FailAdsRepairRecovery(
+                $"Wrong territory during ADS repair recovery: {Plugin.ClientState.TerritoryType} (expected {adsRepairRecoveryTerritoryId}).");
+            return true;
+        }
+
+        var sanctuaryHeuristic = GameHelpers.IsInSanctuary();
+        if (sanctuaryHeuristic && !adsRepairRecoveryTeleportIssued)
+        {
+            return StartAdsRepairAfterRecovery("Sanctuary heuristic became true before repair teleport; starting ADS repair directly.");
+        }
+
+        if (!adsRepairRecoveryTeleportIssued)
+        {
+            if (!_plugin.IsLifestreamAvailable)
+            {
+                _plugin.ShowLifestreamMissingToast();
+                FailAdsRepairRecovery("Lifestream is not loaded; cannot teleport to aetheryte for ADS NPC no-inn repair.");
+                return true;
+            }
+
+            if (Plugin.Condition[ConditionFlag.InCombat])
+            {
+                FailAdsRepairRecovery("Cannot teleport to aetheryte for ADS NPC no-inn repair while in combat.");
+                return true;
+            }
+
+            if (_plugin.NavigationService.State != NavigationState.Idle)
+                _plugin.NavigationService.StopNavigation();
+
+            adsRepairRecoveryStartPosition = Plugin.ObjectTable.LocalPlayer?.Position ?? adsRepairRecoveryStartPosition;
+            adsRepairRecoverySawBetweenAreas = false;
+            adsRepairRecoveryLastLoadingAt = DateTime.MinValue;
+            adsRepairRecoveryStartAttempted = false;
+
+            _plugin.NavigationService.TeleportToAetheryte(adsRepairRecoveryAetheryteId);
+            adsRepairRecoveryTeleportIssued = true;
+            adsRepairRecoveryTeleportIssuedAt = now;
+            StateDetail = $"Teleporting to {adsRepairRecoveryAetheryteName} for ADS repair...";
+
+            if (_plugin.NavigationService.State == NavigationState.Error)
+            {
+                FailAdsRepairRecovery($"Could not teleport to {adsRepairRecoveryAetheryteName} for ADS repair: {_plugin.NavigationService.StateDetail}");
+                return true;
+            }
+
+            return true;
+        }
+
+        if (_plugin.NavigationService.State == NavigationState.Error)
+        {
+            FailAdsRepairRecovery($"Teleport to {adsRepairRecoveryAetheryteName} for ADS repair failed: {_plugin.NavigationService.StateDetail}");
+            return true;
+        }
+
+        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                      Plugin.Condition[ConditionFlag.BetweenAreas51] ||
+                      _plugin.NavigationService.IsTeleporting();
+        var teleportElapsed = now - adsRepairRecoveryTeleportIssuedAt;
+        if (teleportElapsed < AdsRepairRecoveryTeleportSettleDelay || loading)
+        {
+            StateDetail = $"Teleporting to {adsRepairRecoveryAetheryteName} for ADS repair... ({teleportElapsed.TotalSeconds:F0}s)";
+            return true;
+        }
+
+        var playerPosition = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        var positionDelta = playerPosition != Vector3.Zero && adsRepairRecoveryStartPosition != Vector3.Zero
+            ? Vector3.Distance(playerPosition, adsRepairRecoveryStartPosition)
+            : 0.0f;
+        var positionChanged = positionDelta >= AdsRepairRecoveryTeleportPositionDeltaThreshold;
+        if (!adsRepairRecoverySawBetweenAreas && !positionChanged)
+        {
+            StateDetail =
+                $"Waiting for repair teleport settle proof at {adsRepairRecoveryAetheryteName} " +
+                $"({teleportElapsed.TotalSeconds:F0}s, moved {positionDelta:F1}y)...";
+            return true;
+        }
+
+        var lastLoadingText = adsRepairRecoveryLastLoadingAt == DateTime.MinValue
+            ? "never"
+            : $"{(now - adsRepairRecoveryLastLoadingAt).TotalSeconds:F1}s ago";
+        sanctuaryHeuristic = GameHelpers.IsInSanctuary();
+        _plugin.AddDebugLog(
+            $"{adsRepairRecoverySource}[Repair] Repair teleport settled at {adsRepairRecoveryAetheryteName} " +
+            $"(ID {adsRepairRecoveryAetheryteId}); territory={Plugin.ClientState.TerritoryType}; " +
+            $"positionDelta={positionDelta:F1}y; sawBetweenAreas={adsRepairRecoverySawBetweenAreas}; " +
+            $"lastLoading={lastLoadingText}; sanctuaryHeuristic={sanctuaryHeuristic}.");
+
+        return StartAdsRepairAfterRecovery("Starting ADS after repair teleport settle.");
+    }
+
+    private bool StartAdsRepairAfterRecovery(string startLogMessage)
+    {
+        if (adsRepairRecoveryStartAttempted)
+            return true;
+
+        var source = string.IsNullOrWhiteSpace(adsRepairRecoverySource)
+            ? "[RepairRecovery]"
+            : adsRepairRecoverySource;
+        var repairMode = string.IsNullOrWhiteSpace(adsRepairRecoveryMode)
+            ? ResolveAdsRepairMode()
+            : adsRepairRecoveryMode;
+        var lowestCondition = adsRepairRecoveryLowestCondition;
+        var threshold = adsRepairRecoveryThreshold;
+
+        adsRepairRecoveryStartAttempted = true;
+        _plugin.AddDebugLog($"{source}[Repair] {startLogMessage}");
+        ResetAdsRepairRecoveryTracking();
+
+        TryRequestAdsRepair(source, repairMode, lowestCondition, threshold);
+        return true;
+    }
+
+    private void FailAdsRepairRecovery(string message)
+    {
+        ResetAdsRepairHandoffTracking();
+        TransitionTo(BotState.Error, message);
     }
 
     private bool TickAdsRepairHandoff()
@@ -9978,6 +10638,26 @@ public class StateManager : IDisposable
         adsRepairHandoffStarted = DateTime.MinValue;
         adsRepairRequestedMode = string.Empty;
         continueStartAfterAdsRepair = false;
+        ResetAdsRepairRecoveryTracking();
+    }
+
+    private void ResetAdsRepairRecoveryTracking()
+    {
+        adsRepairRecoveryActive = false;
+        adsRepairRecoveryTeleportIssued = false;
+        adsRepairRecoveryStarted = DateTime.MinValue;
+        adsRepairRecoveryTeleportIssuedAt = DateTime.MinValue;
+        adsRepairRecoveryStartPosition = Vector3.Zero;
+        adsRepairRecoverySawBetweenAreas = false;
+        adsRepairRecoveryLastLoadingAt = DateTime.MinValue;
+        adsRepairRecoveryStartAttempted = false;
+        adsRepairRecoveryTerritoryId = 0;
+        adsRepairRecoveryAetheryteId = 0;
+        adsRepairRecoveryAetheryteName = string.Empty;
+        adsRepairRecoveryMode = string.Empty;
+        adsRepairRecoverySource = string.Empty;
+        adsRepairRecoveryLowestCondition = 0;
+        adsRepairRecoveryThreshold = 0;
     }
 
     private bool TryYieldToActiveAdsDutyOwnership(uint currentTerritory)
@@ -11130,6 +11810,16 @@ public class StateManager : IDisposable
         var prev = State;
         if (prev == BotState.Flying || newState == BotState.Flying)
             ResetVnavFlyFlagFallbackState();
+
+        if ((prev == BotState.Flying || prev == BotState.OpeningChest) &&
+            newState != BotState.Flying &&
+            newState != BotState.OpeningChest)
+        {
+            ResetOverworldRecoveryState();
+        }
+
+        if (newState is BotState.Idle or BotState.Error or BotState.Completed or BotState.InDungeon)
+            overworldRecoveryRequiresPartyMountWait = false;
 
         State = newState;
         StateDetail = detail;

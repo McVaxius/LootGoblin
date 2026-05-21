@@ -86,31 +86,29 @@ public class VNavIPC : IDisposable
             return null;
 
         Exception? lastException = null;
-        var anyFailed = false;
+        var anySucceeded = false;
         var inProgress = false;
         foreach (var ipcName in new[] { "vnavmesh.Nav.PathfindInProgress", "vnavmesh.SimpleMove.PathfindInProgress" })
         {
             try
             {
+                anySucceeded = true;
                 inProgress |= _pluginInterface.GetIpcSubscriber<bool>(ipcName).InvokeFunc();
             }
             catch (Exception ex)
             {
-                anyFailed = true;
                 lastException = ex;
             }
         }
 
-        if (anyFailed)
-        {
-            LogIpcReadFailureOnce(
-                ref isPathfindInProgressIpcFailureLogged,
-                "pathfind in-progress",
-                lastException);
-            return null;
-        }
+        if (anySucceeded)
+            return inProgress;
 
-        return inProgress;
+        LogIpcReadFailureOnce(
+            ref isPathfindInProgressIpcFailureLogged,
+            "pathfind in-progress",
+            lastException);
+        return null;
     }
 
     private void LogIpcReadFailureOnce(ref bool failureLogged, string stateName, Exception? exception)
