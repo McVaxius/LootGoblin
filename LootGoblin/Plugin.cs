@@ -363,8 +363,8 @@ public sealed class Plugin : IDalamudPlugin
                 Configuration.ShowDebugMapCompletion = !Configuration.ShowDebugMapCompletion;
                 Configuration.Save();
                 var debugState = Configuration.ShowDebugMapCompletion ? "ON" : "OFF";
-                PrintChat($"Map Completion debug controls: {debugState}");
-                AddDebugLog($"Debug map completion controls toggled: {debugState}");
+                PrintChat($"Diagnostics: {debugState}");
+                AddDebugLog($"Diagnostics toggled via command: {debugState}");
                 break;
 
             case "fetchretainer":
@@ -549,6 +549,13 @@ public sealed class Plugin : IDalamudPlugin
             changed = true;
         }
 
+        if (configuration.Version < 6)
+        {
+            configuration.TreasureHighLowMode = TreasureHighLowMode.SolveExpectedValue;
+            configuration.Version = 6;
+            changed = true;
+        }
+
         configuration.NormalizeConfiguredMapRuns();
 
         if (configuration.LandingOrDutyCommandTriggers == null)
@@ -579,6 +586,12 @@ public sealed class Plugin : IDalamudPlugin
         if (!Enum.IsDefined(typeof(ReturnWhenDoneDestination), configuration.ReturnWhenDoneDestination))
         {
             configuration.ReturnWhenDoneDestination = ReturnWhenDoneDestination.FC;
+            changed = true;
+        }
+
+        if (!Enum.IsDefined(typeof(TreasureHighLowMode), configuration.TreasureHighLowMode))
+        {
+            configuration.TreasureHighLowMode = TreasureHighLowMode.SolveExpectedValue;
             changed = true;
         }
 

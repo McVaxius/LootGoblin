@@ -35,7 +35,7 @@ public class ConfigWindow : Window, IDisposable
     {
         Flags = ImGuiWindowFlags.None;
 
-        Size = new Vector2(350, 520);
+        Size = new Vector2(560, 560);
         SizeCondition = ImGuiCond.FirstUseEver;
 
         configuration = plugin.Configuration;
@@ -102,161 +102,63 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
-        var enabled = configuration.Enabled;
-        if (ImGui.Checkbox("Bot Enabled", ref enabled))
+        if (ImGui.BeginTabBar("##LootGoblinSettingsTabs"))
         {
-            configuration.Enabled = enabled;
-            configuration.Save();
+            if (ImGui.BeginTabItem("Run"))
+            {
+                DrawRunTab();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Maps"))
+            {
+                DrawMapsTab();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Travel"))
+            {
+                DrawTravelTab();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Party"))
+            {
+                DrawPartyTab();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Dungeon/Loot"))
+            {
+                DrawDungeonLootTab();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Integrations"))
+            {
+                DrawIntegrationsTab();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Interface"))
+            {
+                DrawInterfaceTab();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Advanced"))
+            {
+                DrawAdvancedTab();
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
         }
+    }
 
-        var showMain = configuration.ShowMainWindow;
-        if (ImGui.Checkbox("Show Main Window on Login", ref showMain))
-        {
-            configuration.ShowMainWindow = showMain;
-            configuration.Save();
-        }
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        ImGui.Text("UI Settings");
-        ImGui.Spacing();
-
-        var movable = configuration.IsConfigWindowMovable;
-        if (ImGui.Checkbox("Movable Config Window", ref movable))
-        {
-            configuration.IsConfigWindowMovable = movable;
-            configuration.Save();
-        }
-
-        var debug = configuration.DebugMode;
-        if (ImGui.Checkbox("Debug Mode", ref debug))
-        {
-            configuration.DebugMode = debug;
-            configuration.Save();
-        }
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        ImGui.Text("Navigation");
-        ImGui.Spacing();
-
-        var autoTeleport = configuration.AutoTeleport;
-        if (ImGui.Checkbox("Auto Teleport", ref autoTeleport))
-        {
-            configuration.AutoTeleport = autoTeleport;
-            configuration.Save();
-        }
-
-        var requireVNav = configuration.RequireVNav;
-        if (ImGui.Checkbox("Require vnavmesh", ref requireVNav))
-        {
-            configuration.RequireVNav = requireVNav;
-            configuration.Save();
-        }
-
-        var navTimeout = configuration.NavigationTimeout;
-        if (ImGui.SliderFloat("Nav Timeout (s)", ref navTimeout, 30f, 600f, "%.0f"))
-        {
-            configuration.NavigationTimeout = navTimeout;
-            configuration.Save();
-        }
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        ImGui.Text("Party Coordination");
-        ImGui.Spacing();
-
-        var waitForParty = configuration.WaitForParty;
-        if (ImGui.Checkbox("Wait for Party", ref waitForParty))
-        {
-            Plugin.Log.Info($"[Config] Wait for Party changed from {configuration.WaitForParty} to {waitForParty}");
-            configuration.WaitForParty = waitForParty;
-            configuration.Save();
-            Plugin.Log.Info($"[Config] Wait for Party saved as: {configuration.WaitForParty}");
-        }
-        ImGui.SameLine();
-        ImGui.TextColored(ColorGrey, "(?)");
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.BeginTooltip();
-            ImGui.Text("When enabled, the bot will wait for party members\n" +
-                       "to mount up before taking off.\n" +
-                       "\n" +
-                       "Note: Use the 'Wait for party before dismounting'\n" +
-                       "option in the main window to wait for party members\n" +
-                       "to reach the destination before dismounting.");
-            ImGui.EndTooltip();
-        }
-
-        var requireAllMounted = configuration.RequireAllMounted;
-        if (ImGui.Checkbox("Require All Mounted", ref requireAllMounted))
-        {
-            configuration.RequireAllMounted = requireAllMounted;
-            configuration.Save();
-        }
-
-
-        var partyTimeout = configuration.PartyWaitTimeout;
-        if (ImGui.SliderInt("Party Wait Timeout (s)", ref partyTimeout, 30, 300))
-        {
-            configuration.PartyWaitTimeout = partyTimeout;
-            configuration.Save();
-        }
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        ImGui.Text("Bot Automation");
-        ImGui.Spacing();
-
-        var autoNext = configuration.AutoStartNextMap;
-        if (ImGui.Checkbox("Auto-Start Next Map", ref autoNext))
-        {
-            configuration.AutoStartNextMap = autoNext;
-            configuration.Save();
-        }
-
-        var stateLogging = configuration.EnableStateLogging;
-        if (ImGui.Checkbox("Enable State Logging", ref stateLogging))
-        {
-            configuration.EnableStateLogging = stateLogging;
-            configuration.Save();
-        }
-
-        var useAdsDungeonSolver = configuration.UseAdsInsteadOfLegacyDungeonSolver;
-        if (ImGui.Checkbox("Use ADS for dungeon phase", ref useAdsDungeonSolver))
-        {
-            configuration.UseAdsInsteadOfLegacyDungeonSolver = useAdsDungeonSolver;
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("After a portal is accepted and duty entry is confirmed, LootGoblin will send /ads inside and wait for ADS to finish the dungeon instead of running its legacy dungeon solver.");
-
-        if (configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
-        {
-            ImGui.TextColored(ColorRed, "ADS is not loaded. Install ADS or disable this setting.");
-        }
-
-        var repairThreshold = Math.Clamp(configuration.RepairThresholdPercent, 0, 100);
-        if (ImGui.SliderInt("Repair threshold %", ref repairThreshold, 0, 100))
-        {
-            configuration.RepairThresholdPercent = repairThreshold;
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing.");
-
-        var repairModes = new[] { "Self", "NPC no inn" };
-        var repairModeIndex = configuration.RepairMode == RepairMode.Self ? 0 : 1;
-        ImGui.SetNextItemWidth(160);
-        if (ImGui.Combo("Repair mode", ref repairModeIndex, repairModes, repairModes.Length))
-        {
-            configuration.RepairMode = repairModeIndex == 0 ? RepairMode.Self : RepairMode.NpcNoInn;
-            configuration.Save();
-        }
+    private void DrawRunTab()
+    {
+        DrawConfigCheckbox("Auto-Start Next Map", configuration.AutoStartNextMap, value => configuration.AutoStartNextMap = value);
 
         var returnWhenDone = configuration.ReturnWhenDoneEnabled;
         if (ImGui.Checkbox("Return when done", ref returnWhenDone))
@@ -274,7 +176,7 @@ public class ConfigWindow : Window, IDisposable
             ReturnWhenDoneDestination.Inn => 2,
             _ => 0,
         };
-        ImGui.SetNextItemWidth(160);
+        ImGui.SetNextItemWidth(180);
         if (ImGui.Combo("Return destination", ref returnDestinationIndex, returnDestinations, returnDestinations.Length))
         {
             configuration.ReturnWhenDoneDestination = returnDestinationIndex switch
@@ -286,109 +188,150 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
-        var retainerMapRetrieval = configuration.EnableRetainerMapRetrieval;
-        if (ImGui.Checkbox("Fetch maps from retainers", ref retainerMapRetrieval))
+        var repairThreshold = Math.Clamp(configuration.RepairThresholdPercent, 0, 100);
+        if (ImGui.SliderInt("Repair threshold %", ref repairThreshold, 0, 100))
         {
-            configuration.EnableRetainerMapRetrieval = retainerMapRetrieval;
+            configuration.RepairThresholdPercent = repairThreshold;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("When no enabled map is in inventory, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell.");
+            ImGui.SetTooltip("0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing.");
 
-        var saddlebagMapRetrieval = configuration.EnableSaddlebagMapRetrieval;
-        if (ImGui.Checkbox("Fetch maps from saddlebags", ref saddlebagMapRetrieval))
+        var repairModes = new[] { "Self", "NPC no inn" };
+        var repairModeIndex = configuration.RepairMode == RepairMode.Self ? 0 : 1;
+        ImGui.SetNextItemWidth(180);
+        if (ImGui.Combo("Repair mode", ref repairModeIndex, repairModes, repairModes.Length))
         {
-            configuration.EnableSaddlebagMapRetrieval = saddlebagMapRetrieval;
+            configuration.RepairMode = repairModeIndex == 0 ? RepairMode.Self : RepairMode.NpcNoInn;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("When no enabled map is in inventory, LootGoblin can open /saddlebag and move one enabled map into inventory. Disable to ignore saddlebags entirely.");
+    }
 
-        var autoDiscard = configuration.EnableAutoDiscard;
-        if (ImGui.Checkbox("Auto Discard (/ays discard)", ref autoDiscard))
-        {
-            configuration.EnableAutoDiscard = autoDiscard;
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Runs /ays discard every 30s during a mounted safe idle window.\nDefers while in combat, loading, or cutscene-like states.\nRequires AutoRetainer plugin.");
+    private void DrawMapsTab()
+    {
+        DrawConfigCheckbox("Fetch maps from retainers", configuration.EnableRetainerMapRetrieval, value => configuration.EnableRetainerMapRetrieval = value,
+            "When no enabled map is in inventory, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell.");
+        DrawConfigCheckbox("Fetch maps from saddlebags", configuration.EnableSaddlebagMapRetrieval, value => configuration.EnableSaddlebagMapRetrieval = value,
+            "When no enabled map is in inventory, LootGoblin can open /saddlebag and move one enabled map into inventory. Disable to ignore saddlebags entirely.");
+        DrawConfigCheckbox("Show all known map types", configuration.ShowAllKnownMapTypes, value => configuration.ShowAllKnownMapTypes = value,
+            "Shows runnable map rows even when none are currently in inventory or loaded saddlebags.");
 
-        var autoSyncFate = configuration.AutoSyncFate;
-        if (ImGui.Checkbox("Auto Sync FATE", ref autoSyncFate))
-        {
-            configuration.AutoSyncFate = autoSyncFate;
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Runs /levelsync on after joining a FATE.\nDefers while mounted or riding pillion.");
-        ImGui.SameLine();
-        if (ImGui.SmallButton("DISABLE PANDORA's BOX"))
-        {
-            CommandHelper.TrySendCommand("/xldisableplugin Pandora's Box");
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Disable Pandora's Box through Dalamud.");
-
-        DrawHacksSection();
-
-        DrawFoodSection();
+        ImGui.Spacing();
+        ImGui.Separator();
         ImGui.Spacing();
 
-        var summonChocobo = configuration.SummonChocobo;
-        if (ImGui.Checkbox("Summon Chocobo", ref summonChocobo))
+        DrawConfigCheckbox("Auto-update locations on login", configuration.AutoUpdateLocOnLogin, value => configuration.AutoUpdateLocOnLogin = value);
+
+        var db = plugin.MapLocationDatabase;
+        if (db.IsDownloading)
         {
-            configuration.SummonChocobo = summonChocobo;
+            ImGui.TextColored(ColorYellow, "Downloading...");
+        }
+        else
+        {
+            if (ImGui.Button("Download Updated Locs"))
+                _ = plugin.DownloadCommunityLocationsForCurrentVersionAsync();
+            if (!string.IsNullOrEmpty(db.LastDownloadResult))
+            {
+                ImGui.SameLine();
+                var dlColor = db.LastDownloadResult.StartsWith("OK") ? ColorGreen :
+                              db.LastDownloadResult.StartsWith("Error") ? ColorRed : ColorGrey;
+                ImGui.TextColored(dlColor, db.LastDownloadResult);
+            }
+        }
+    }
+
+    private void DrawTravelTab()
+    {
+        DrawConfigCheckbox("Auto Teleport", configuration.AutoTeleport, value => configuration.AutoTeleport = value);
+        DrawConfigCheckbox("Require vnavmesh", configuration.RequireVNav, value => configuration.RequireVNav = value);
+
+        var navTimeout = configuration.NavigationTimeout;
+        if (ImGui.SliderFloat("Nav Timeout (s)", ref navTimeout, 30f, 600f, "%.0f"))
+        {
+            configuration.NavigationTimeout = navTimeout;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Auto-summon chocobo companion using Gysahl Greens when timer is low.\nWill not summon in sanctuaries or duties.");
 
-        if (configuration.SummonChocobo)
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawMountSelection();
+    }
+
+    private void DrawPartyTab()
+    {
+        var waitForParty = configuration.WaitForParty;
+        if (ImGui.Checkbox("Wait for Party", ref waitForParty))
         {
-            var stances = new[] { "Free Stance", "Defender Stance", "Attacker Stance", "Healer Stance", "Follow" };
-            var stanceIdx = Array.IndexOf(stances, configuration.CompanionStance);
-            if (stanceIdx < 0) stanceIdx = 0;
-            ImGui.SetNextItemWidth(200);
-            if (ImGui.Combo("Companion Stance", ref stanceIdx, stances, stances.Length))
+            Plugin.Log.Info($"[Config] Wait for Party changed from {configuration.WaitForParty} to {waitForParty}");
+            configuration.WaitForParty = waitForParty;
+            configuration.Save();
+            Plugin.Log.Info($"[Config] Wait for Party saved as: {configuration.WaitForParty}");
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("When enabled, the bot waits for party members to mount before taking off.");
+
+        DrawConfigCheckbox("Require All Mounted", configuration.RequireAllMounted, value => configuration.RequireAllMounted = value);
+
+        var partyTimeout = configuration.PartyWaitTimeout;
+        if (ImGui.SliderInt("Party Wait Timeout (s)", ref partyTimeout, 30, 300))
+        {
+            configuration.PartyWaitTimeout = partyTimeout;
+            configuration.Save();
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        DrawConfigCheckbox("Wait for party before dismounting", configuration.PartyWaitBeforeDismount, value => configuration.PartyWaitBeforeDismount = value,
+            "Wait at the destination until party members are within 10 yalms before dismounting.");
+        if (configuration.PartyWaitBeforeDismount)
+        {
+            DrawConfigCheckbox("Specify number of party to wait for", configuration.PartyWaitBeforeDismountUseCountThreshold, value => configuration.PartyWaitBeforeDismountUseCountThreshold = value,
+                "Use a count of other party members instead of waiting for the entire party roster.");
+            if (configuration.PartyWaitBeforeDismountUseCountThreshold)
             {
-                configuration.CompanionStance = stances[stanceIdx];
-                configuration.Save();
+                var requiredOthers = Math.Clamp(configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);
+                ImGui.SetNextItemWidth(80f);
+                if (ImGui.InputInt("Players to wait for##PartyWaitBeforeDismountRequiredOthers", ref requiredOthers))
+                {
+                    configuration.PartyWaitBeforeDismountRequiredOthers = Math.Clamp(requiredOthers, 1, 7);
+                    configuration.Save();
+                }
             }
         }
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
-        ImGui.Text("Command Triggers");
-        ImGui.Spacing();
 
-        DrawCommandTriggerList(
-            "Landing / Duty Entry",
-            landingCommandTriggerDrafts,
-            LandingOrDutyCommandDefaults);
+        DrawConfigCheckbox("Summon Chocobo", configuration.SummonChocobo, value => configuration.SummonChocobo = value,
+            "Auto-summon chocobo companion using Gysahl Greens when timer is low. Will not summon in sanctuaries or duties.");
+        if (configuration.SummonChocobo)
+            DrawCompanionStanceCombo();
+    }
 
-        ImGui.Spacing();
+    private void DrawDungeonLootTab()
+    {
+        var useAdsDungeonSolver = configuration.UseAdsInsteadOfLegacyDungeonSolver;
+        if (ImGui.Checkbox("Use ADS for dungeon phase", ref useAdsDungeonSolver))
+        {
+            configuration.UseAdsInsteadOfLegacyDungeonSolver = useAdsDungeonSolver;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("After a portal is accepted and duty entry is confirmed, LootGoblin sends /ads inside and waits for ADS to finish the dungeon instead of running its legacy dungeon solver.");
 
-        DrawCommandTriggerList(
-            "Finish",
-            finishCommandTriggerDrafts,
-            FinishCommandDefaults);
-
-        if (!string.IsNullOrWhiteSpace(commandTriggerStatus))
-            ImGui.TextDisabled(commandTriggerStatus);
+        if (configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
+            ImGui.TextColored(ColorRed, "ADS is not loaded. Install ADS or disable this setting.");
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
-        ImGui.Text("Chest Interaction");
-        ImGui.Spacing();
 
-        var autoLoot = configuration.AutoLootChest;
-        if (ImGui.Checkbox("Auto Loot Chest", ref autoLoot))
-        {
-            configuration.AutoLootChest = autoLoot;
-            configuration.Save();
-        }
+        DrawConfigCheckbox("Auto Loot Chest", configuration.AutoLootChest, value => configuration.AutoLootChest = value);
 
         var chestRange = configuration.ChestInteractionRange;
         if (ImGui.SliderFloat("Interaction Range (y)", ref chestRange, 1f, 15f))
@@ -404,61 +347,128 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
-        var experimentalTreasureHighLowSolver = configuration.TreasureHighLowMode == TreasureHighLowMode.SolveExpectedValue;
-        if (ImGui.Checkbox("Experimental Gambler's Lure Solver", ref experimentalTreasureHighLowSolver))
-        {
-            configuration.TreasureHighLowMode = experimentalTreasureHighLowSolver
-                ? TreasureHighLowMode.SolveExpectedValue
-                : TreasureHighLowMode.Skip;
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Unchecked keeps current skip/close behavior. Checked solves only after a reliable card snapshot; incomplete snapshots hold and retry.");
+        DrawGamblerLureModeCombo();
+    }
 
-        var treasureHighLowModes = new[] { "Skip", "Solve EV", "Observe only" };
-        var treasureHighLowModeIndex = configuration.TreasureHighLowMode switch
-        {
-            TreasureHighLowMode.SolveExpectedValue => 1,
-            TreasureHighLowMode.ObserveOnly => 2,
-            _ => 0,
-        };
-        ImGui.SetNextItemWidth(160);
-        if (ImGui.Combo("Higher/Lower Mode", ref treasureHighLowModeIndex, treasureHighLowModes, treasureHighLowModes.Length))
-        {
-            configuration.TreasureHighLowMode = treasureHighLowModeIndex switch
-            {
-                1 => TreasureHighLowMode.SolveExpectedValue,
-                2 => TreasureHighLowMode.ObserveOnly,
-                _ => TreasureHighLowMode.Skip,
-            };
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Skip keeps current behavior. Observe logs readable state only and never clicks. Solve EV clicks only after it reads a reliable card/stage; otherwise it holds and retries.");
-
+    private void DrawIntegrationsTab()
+    {
+        DrawFoodSection();
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
-        ImGui.Text("Mount Settings");
+
+        DrawConfigCheckbox("Auto Discard (/ays discard)", configuration.EnableAutoDiscard, value => configuration.EnableAutoDiscard = value,
+            "Runs /ays discard every 30s during a mounted safe idle window. Defers while in combat, loading, or cutscene-like states. Requires AutoRetainer plugin.");
+        DrawConfigCheckbox("Auto Sync FATE", configuration.AutoSyncFate, value => configuration.AutoSyncFate = value,
+            "Runs /levelsync on after joining a FATE. Defers while mounted or riding pillion.");
+
+        DrawAdsBmrAdjustmentsSection();
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.Text("Command Triggers");
         ImGui.Spacing();
 
-        // Mount Name (searchable dropdown from game data)
+        DrawCommandTriggerList("Landing / Duty Entry", landingCommandTriggerDrafts, LandingOrDutyCommandDefaults);
+        ImGui.Spacing();
+        DrawCommandTriggerList("Finish", finishCommandTriggerDrafts, FinishCommandDefaults);
+
+        if (!string.IsNullOrWhiteSpace(commandTriggerStatus))
+            ImGui.TextDisabled(commandTriggerStatus);
+    }
+
+    private void DrawInterfaceTab()
+    {
+        DrawConfigCheckbox("Show Main Window on Login", configuration.ShowMainWindow, value => configuration.ShowMainWindow = value);
+        DrawConfigCheckbox("Movable Settings Window", configuration.IsConfigWindowMovable, value => configuration.IsConfigWindowMovable = value);
+        DrawConfigCheckbox("Krangle Names", configuration.KrangleNames, value => configuration.KrangleNames = value);
+    }
+
+    private void DrawAdvancedTab()
+    {
+        DrawConfigCheckbox("Debug Mode", configuration.DebugMode, value => configuration.DebugMode = value);
+        DrawConfigCheckbox("Enable State Logging", configuration.EnableStateLogging, value => configuration.EnableStateLogging = value);
+        DrawConfigCheckbox("Map Diagnostics", configuration.ShowDebugMapCompletion, value => configuration.ShowDebugMapCompletion = value,
+            "Shows Location Data diagnostics in the main window and enables map/aetheryte collection tools.");
+        DrawConfigCheckbox("Ground-only map diagnostics", configuration.CycleGroundOnly, value => configuration.CycleGroundOnly = value);
+
+        ImGui.Spacing();
+        if (ImGui.Button("Disable Pandora's Box"))
+            CommandHelper.TrySendCommand("/xldisableplugin Pandora's Box");
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Disable Pandora's Box through Dalamud.");
+
+        ImGui.Spacing();
+        DrawAdsRepairTestButton();
+    }
+
+    private void DrawConfigCheckbox(string label, bool currentValue, Action<bool> setter, string? tooltip = null)
+    {
+        var value = currentValue;
+        if (ImGui.Checkbox(label, ref value))
+        {
+            setter(value);
+            configuration.Save();
+        }
+
+        if (!string.IsNullOrWhiteSpace(tooltip) && ImGui.IsItemHovered())
+            ImGui.SetTooltip(tooltip);
+    }
+
+    private void DrawCompanionStanceCombo()
+    {
+        var stances = new[] { "Free Stance", "Defender Stance", "Attacker Stance", "Healer Stance", "Follow" };
+        var stanceIdx = Array.IndexOf(stances, configuration.CompanionStance);
+        if (stanceIdx < 0) stanceIdx = 0;
+        ImGui.SetNextItemWidth(220);
+        if (ImGui.Combo("Companion Stance", ref stanceIdx, stances, stances.Length))
+        {
+            configuration.CompanionStance = stances[stanceIdx];
+            configuration.Save();
+        }
+    }
+
+    private void DrawGamblerLureModeCombo()
+    {
+        var treasureHighLowModes = new[] { "Solve EV", "Skip", "Observe only" };
+        var treasureHighLowModeIndex = configuration.TreasureHighLowMode switch
+        {
+            TreasureHighLowMode.Skip => 1,
+            TreasureHighLowMode.ObserveOnly => 2,
+            _ => 0,
+        };
+        ImGui.SetNextItemWidth(180);
+        if (ImGui.Combo("Gambler's Lure Solver", ref treasureHighLowModeIndex, treasureHighLowModes, treasureHighLowModes.Length))
+        {
+            configuration.TreasureHighLowMode = treasureHighLowModeIndex switch
+            {
+                1 => TreasureHighLowMode.Skip,
+                2 => TreasureHighLowMode.ObserveOnly,
+                _ => TreasureHighLowMode.SolveExpectedValue,
+            };
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Solve EV clicks only after it reads a reliable card/stage; otherwise it holds and retries. Skip keeps current skip/close behavior. Observe logs readable state only and never clicks.");
+    }
+
+    private void DrawMountSelection()
+    {
         ImGui.Text("Mount Selection");
         ImGui.SameLine();
         ImGui.TextDisabled("(Used for manual mounting)");
-        
+
         var mountNames = plugin.MountNames;
         var currentMount = configuration.SelectedMount;
-        ImGui.SetNextItemWidth(300);
+        ImGui.SetNextItemWidth(320);
         if (ImGui.BeginCombo("##MountSelect", string.IsNullOrEmpty(currentMount) ? "(none)" : currentMount))
         {
-            // Search field - fixed at top
             ImGui.SetNextItemWidth(-1);
             ImGui.InputText("##MountSearch", ref mountSearch, 64);
             ImGui.Separator();
-            
-            // Scrollable list area
+
             ImGui.BeginChild("##MountList", new Vector2(0, 200), false);
             for (var i = 0; i < mountNames.Length; i++)
             {
@@ -480,12 +490,49 @@ public class ConfigWindow : Window, IDisposable
         }
     }
 
-    private void DrawHacksSection()
+    private void DrawAdsRepairTestButton()
+    {
+        if (ImGui.Button("Test ADS NPC No-Inn Repair"))
+        {
+            if (!plugin.IsAdsAvailable)
+            {
+                const string message = "ADS is not loaded; NPC no-inn repair test not started.";
+                plugin.PrintChat(message);
+                plugin.AddDebugLog($"[Repair] {message}");
+            }
+            else if (!GameHelpers.IsInSanctuary())
+            {
+                const string message = "ADS NPC no-inn repair can only start from a sanctuary.";
+                plugin.PrintChat(message);
+                plugin.AddDebugLog($"[Repair] {message}");
+            }
+            else if (plugin.AdsStatusService.StartRepair("npc-no-inn"))
+            {
+                const string message = "ADS NPC no-inn repair test requested.";
+                plugin.PrintChat(message);
+                plugin.AddDebugLog($"[Repair] {message}");
+            }
+            else
+            {
+                var adsStatus = plugin.AdsStatusService.Refresh(force: true);
+                var statusText = string.IsNullOrWhiteSpace(adsStatus.UtilityStatus)
+                    ? "ADS did not accept the repair request."
+                    : adsStatus.UtilityStatus;
+                var message = $"ADS NPC no-inn repair test failed: {statusText}";
+                plugin.PrintChat(message);
+                plugin.AddDebugLog($"[Repair] {message}");
+            }
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Debug-only IPC test: ADS.StartRepair(\"npc-no-inn\").");
+    }
+
+    private void DrawAdsBmrAdjustmentsSection()
     {
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
-        ImGui.Text("Hacks");
+        ImGui.Text("ADS / BMR Adjustments");
         ImGui.Spacing();
 
         var reduceRange = configuration.BmrReduceActivationRangeForOutdoorAreas;

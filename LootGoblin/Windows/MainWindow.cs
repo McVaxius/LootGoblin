@@ -58,31 +58,11 @@ public class MainWindow : Window, IDisposable
 
     public void Dispose() { }
 
+    private bool DiagnosticsVisible => plugin.Configuration.DebugMode || plugin.Configuration.ShowDebugMapCompletion;
+
     public override void Draw()
     {
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
-        ImGui.Text($"Loot Goblin v{version}");
-        
-        // Ko-fi donation button in upper right
-        ImGui.SameLine(ImGui.GetWindowWidth() - 120);
-        if (ImGui.SmallButton("\u2661 Ko-fi \u2661"))
-        {
-            System.Diagnostics.Process.Start(new ProcessStartInfo
-            {
-                FileName = "https://ko-fi.com/mcvaxius",
-                UseShellExecute = true
-            });
-        }
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip("Support development on Ko-fi");
-        }
-        
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        DrawStatusSection();
-        ImGui.Spacing();
+        DrawHeaderSection();
         ImGui.Separator();
         ImGui.Spacing();
 
@@ -91,7 +71,7 @@ public class MainWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
-        DrawOperatorDashboardSection();
+        DrawStatusSection();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -101,12 +81,7 @@ public class MainWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
-        DrawMapCompletionSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        DrawNavigationSection();
+        DrawCurrentRunSection();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -123,7 +98,15 @@ public class MainWindow : Window, IDisposable
 
         DrawCommandsSection();
 
-        if (plugin.Configuration.DebugMode)
+        if (DiagnosticsVisible)
+        {
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
+            DrawMapCompletionSection();
+        }
+
+        if (DiagnosticsVisible)
         {
             ImGui.Spacing();
             ImGui.Separator();
@@ -132,8 +115,55 @@ public class MainWindow : Window, IDisposable
         }
     }
 
+    private void DrawHeaderSection()
+    {
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
+        ImGui.Text($"Loot Goblin v{version}");
+
+        ImGui.SameLine(ImGui.GetWindowWidth() - 120);
+        if (ImGui.SmallButton("\u2661 Ko-fi \u2661"))
+        {
+            System.Diagnostics.Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://ko-fi.com/mcvaxius",
+                UseShellExecute = true
+            });
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Support development on Ko-fi");
+
+        ImGui.Spacing();
+        DrawCompactWarnings();
+    }
+
+    private void DrawCompactWarnings()
+    {
+        var warnings = new List<string>();
+        if (!Plugin.ClientState.IsLoggedIn)
+            warnings.Add("not logged in");
+        if (!plugin.VNavIPC.IsAvailable)
+            warnings.Add("vnavmesh missing");
+        if (!plugin.IsLifestreamAvailable)
+            warnings.Add("Lifestream missing");
+        if (plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
+            warnings.Add("ADS missing");
+        if (!string.IsNullOrWhiteSpace(plugin.StateManager.WarningMessage))
+            warnings.Add(plugin.StateManager.WarningMessage);
+
+        if (warnings.Count == 0)
+        {
+            ImGui.TextColored(ColorGreen, "Ready");
+            return;
+        }
+
+        ImGui.TextColored(ColorYellow, $"Attention: {string.Join(" | ", warnings)}");
+    }
+
     private void DrawStatusSection()
     {
+        if (!ImGui.CollapsingHeader("Status", ImGuiTreeNodeFlags.DefaultOpen))
+            return;
+
         var enabled = plugin.Configuration.Enabled;
         var statusText = enabled ? "ENABLED" : "DISABLED";
         var statusColor = enabled ? ColorGreen : ColorRed;
@@ -244,126 +274,9 @@ public class MainWindow : Window, IDisposable
         }
     }
 
-    private void DrawOperatorDashboardSection()
-    {
-        if (!ImGui.CollapsingHeader("Operator Controls", ImGuiTreeNodeFlags.DefaultOpen))
-            return;
-
-        if (ImGui.Button("Full Settings", new Vector2(120, 0)))
-        {
-            plugin.ToggleConfigUi();
-        }
-
-        ImGui.SameLine();
-        var krangleEnabled = plugin.Configuration.KrangleNames;
-        var krangleText = krangleEnabled ? "Un-Krangle" : "Krangle Names";
-        if (ImGui.Button(krangleText, new Vector2(120, 0)))
-        {
-            plugin.Configuration.KrangleNames = !krangleEnabled;
-            plugin.Configuration.Save();
-        }
-
-        ImGui.SameLine();
-        if (ImGui.Button("Reset", new Vector2(120, 0)))
-        {
-            plugin.StateManager.ResetAll();
-        }
-
-        ImGui.Spacing();
-
-        ImGui.TextColored(ColorCyan, "Run");
-        if (ImGui.BeginTable("##LootGoblinRunToggles", 2, ImGuiTableFlags.SizingStretchSame))
-        {
-            DrawDashboardCheckboxCell("Bot Enabled", plugin.Configuration.Enabled, value => plugin.Configuration.Enabled = value);
-            DrawDashboardCheckboxCell("Auto-Start Next Map", plugin.Configuration.AutoStartNextMap, value => plugin.Configuration.AutoStartNextMap = value);
-            DrawDashboardCheckboxCell("Show Main Window on Login", plugin.Configuration.ShowMainWindow, value => plugin.Configuration.ShowMainWindow = value);
-            ImGui.EndTable();
-        }
-
-        ImGui.TextColored(ColorCyan, "Travel");
-        if (ImGui.BeginTable("##LootGoblinTravelToggles", 2, ImGuiTableFlags.SizingStretchSame))
-        {
-            DrawDashboardCheckboxCell("Auto Teleport", plugin.Configuration.AutoTeleport, value => plugin.Configuration.AutoTeleport = value);
-            DrawDashboardCheckboxCell("Require vnavmesh", plugin.Configuration.RequireVNav, value => plugin.Configuration.RequireVNav = value);
-            DrawDashboardCheckboxCell("Use ADS for dungeons", plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver, value => plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver = value,
-                "After duty entry, LootGoblin sends /ads and waits for ADS instead of using the legacy dungeon solver.");
-            ImGui.EndTable();
-        }
-        if (plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
-            ImGui.TextColored(ColorRed, "ADS handoff enabled, but ADS is not loaded.");
-
-        ImGui.TextColored(ColorCyan, "Automation");
-        if (ImGui.BeginTable("##LootGoblinAutomationToggles", 2, ImGuiTableFlags.SizingStretchSame))
-        {
-            DrawDashboardCheckboxCell("Fetch retainer maps", plugin.Configuration.EnableRetainerMapRetrieval, value => plugin.Configuration.EnableRetainerMapRetrieval = value,
-                "When no enabled map is in inventory, try to withdraw one from retainers through XA Database / XA Slave.");
-            DrawDashboardCheckboxCell("Fetch saddlebag maps", plugin.Configuration.EnableSaddlebagMapRetrieval, value => plugin.Configuration.EnableSaddlebagMapRetrieval = value,
-                "Open /saddlebag and move enabled maps into inventory when no enabled inventory map is available.");
-            DrawDashboardCheckboxCell("Auto Discard", plugin.Configuration.EnableAutoDiscard, value => plugin.Configuration.EnableAutoDiscard = value,
-                "Runs /ays discard during safe idle windows.");
-            DrawDashboardCheckboxCell("Auto Loot Chest", plugin.Configuration.AutoLootChest, value => plugin.Configuration.AutoLootChest = value);
-            DrawDashboardCheckboxCell("Summon Chocobo", plugin.Configuration.SummonChocobo, value => plugin.Configuration.SummonChocobo = value);
-            ImGui.EndTable();
-        }
-
-        if (plugin.Configuration.SummonChocobo)
-        {
-            var stances = new[] { "Free Stance", "Defender Stance", "Attacker Stance", "Healer Stance", "Follow" };
-            var stanceIdx = Array.IndexOf(stances, plugin.Configuration.CompanionStance);
-            if (stanceIdx < 0)
-                stanceIdx = 0;
-
-            ImGui.SetNextItemWidth(180f);
-            if (ImGui.Combo("Companion Stance##Dashboard", ref stanceIdx, stances, stances.Length))
-            {
-                plugin.Configuration.CompanionStance = stances[stanceIdx];
-                plugin.Configuration.Save();
-            }
-        }
-
-        ImGui.TextColored(ColorCyan, "Party");
-        if (ImGui.BeginTable("##LootGoblinPartyToggles", 2, ImGuiTableFlags.SizingStretchSame))
-        {
-            DrawDashboardCheckboxCell("Wait for Party", plugin.Configuration.WaitForParty, value => plugin.Configuration.WaitForParty = value,
-                "Wait for party members to mount before travel.");
-            DrawDashboardCheckboxCell("Require All Mounted", plugin.Configuration.RequireAllMounted, value => plugin.Configuration.RequireAllMounted = value);
-            DrawDashboardCheckboxCell("Wait Before Dismount", plugin.Configuration.PartyWaitBeforeDismount, value => plugin.Configuration.PartyWaitBeforeDismount = value,
-                "Wait for party members near the destination before dismounting.");
-            ImGui.EndTable();
-        }
-
-        ImGui.TextColored(ColorCyan, "Debug");
-        if (ImGui.BeginTable("##LootGoblinDebugToggles", 2, ImGuiTableFlags.SizingStretchSame))
-        {
-            DrawDashboardCheckboxCell("State Logging", plugin.Configuration.EnableStateLogging, value => plugin.Configuration.EnableStateLogging = value);
-            DrawDashboardCheckboxCell("Debug Mode", plugin.Configuration.DebugMode, value => plugin.Configuration.DebugMode = value);
-            DrawDashboardCheckboxCell("Map Debug Tools", plugin.Configuration.ShowDebugMapCompletion, value => plugin.Configuration.ShowDebugMapCompletion = value);
-            ImGui.EndTable();
-        }
-    }
-
-    private void DrawDashboardCheckboxCell(string label, bool currentValue, Action<bool> setter, string? tooltip = null)
-    {
-        ImGui.TableNextColumn();
-        DrawSavedCheckbox(label, currentValue, setter, tooltip);
-    }
-
-    private void DrawSavedCheckbox(string label, bool currentValue, Action<bool> setter, string? tooltip = null)
-    {
-        var value = currentValue;
-        if (ImGui.Checkbox(label, ref value))
-        {
-            setter(value);
-            plugin.Configuration.Save();
-        }
-
-        if (!string.IsNullOrWhiteSpace(tooltip) && ImGui.IsItemHovered())
-            ImGui.SetTooltip(tooltip);
-    }
-
     private void DrawMapInventorySection()
     {
-        if (ImGui.CollapsingHeader("Treasure Maps in Inventory", ImGuiTreeNodeFlags.DefaultOpen))
+        if (ImGui.CollapsingHeader("Map Queue", ImGuiTreeNodeFlags.DefaultOpen))
         {
             if (Plugin.ClientState.IsLoggedIn)
             {
@@ -373,13 +286,6 @@ public class MainWindow : Window, IDisposable
                 if (!manualMapRefreshPending && (now - lastScanTime).TotalSeconds >= ScanCooldownSeconds)
                 {
                     RefreshMapSourceCache(includeRetainers: false, refreshXaDatabase: false);
-                }
-
-                var showAllKnownMaps = plugin.Configuration.ShowAllKnownMapTypes;
-                if (ImGui.Checkbox("Show all maps regardless if we have any", ref showAllKnownMaps))
-                {
-                    plugin.Configuration.ShowAllKnownMapTypes = showAllKnownMaps;
-                    plugin.Configuration.Save();
                 }
 
                 var displayedMapSources = GetDisplayedMapSources();
@@ -667,7 +573,7 @@ public class MainWindow : Window, IDisposable
 
     private void DrawMapCompletionSection()
     {
-        if (ImGui.CollapsingHeader("Map Completion"))
+        if (ImGui.CollapsingHeader("Location Data"))
         {
             var maps = TreasureMapData.KnownMaps.Values
                 .OrderBy(m => m.MinLevel)
@@ -792,14 +698,6 @@ public class MainWindow : Window, IDisposable
                     // Debug controls - only shown when /lg debug is enabled
                     if (plugin.Configuration.ShowDebugMapCompletion)
                     {
-                        // Ground-only mode checkbox
-                        var groundOnly = plugin.Configuration.CycleGroundOnly;
-                        if (ImGui.Checkbox("Ground-only (no flying)", ref groundOnly))
-                        {
-                            plugin.Configuration.CycleGroundOnly = groundOnly;
-                            plugin.Configuration.Save();
-                        }
-
                         if (isBusy)
                             ImGui.BeginDisabled();
 
@@ -813,40 +711,6 @@ public class MainWindow : Window, IDisposable
                             sm.StartCyclingMapLocations();
                         }
 
-                        if (ImGui.Button("Test ADS NPC No-Inn Repair"))
-                        {
-                            if (!plugin.IsAdsAvailable)
-                            {
-                                const string message = "ADS is not loaded; NPC no-inn repair test not started.";
-                                plugin.PrintChat(message);
-                                plugin.AddDebugLog($"[Repair] {message}");
-                            }
-                            else if (!GameHelpers.IsInSanctuary())
-                            {
-                                const string message = "ADS NPC no-inn repair can only start from a sanctuary.";
-                                plugin.PrintChat(message);
-                                plugin.AddDebugLog($"[Repair] {message}");
-                            }
-                            else if (plugin.AdsStatusService.StartRepair("npc-no-inn"))
-                            {
-                                const string message = "ADS NPC no-inn repair test requested.";
-                                plugin.PrintChat(message);
-                                plugin.AddDebugLog($"[Repair] {message}");
-                            }
-                            else
-                            {
-                                var adsStatus = plugin.AdsStatusService.Refresh(force: true);
-                                var statusText = string.IsNullOrWhiteSpace(adsStatus.UtilityStatus)
-                                    ? "ADS did not accept the repair request."
-                                    : adsStatus.UtilityStatus;
-                                var message = $"ADS NPC no-inn repair test failed: {statusText}";
-                                plugin.PrintChat(message);
-                                plugin.AddDebugLog($"[Repair] {message}");
-                            }
-                        }
-                        if (ImGui.IsItemHovered())
-                            ImGui.SetTooltip("Debug-only IPC test: ADS.StartRepair(\"npc-no-inn\").");
-                        
                         // Aetheryte management buttons
                         ImGui.Spacing();
                         if (ImGui.Button("Reset All Aetherytes"))
@@ -899,13 +763,6 @@ public class MainWindow : Window, IDisposable
                                   db.LastDownloadResult.StartsWith("Error") ? ColorRed : ColorGrey;
                     ImGui.TextColored(dlColor, db.LastDownloadResult);
                 }
-            }
-
-            var autoUpdate = plugin.Configuration.AutoUpdateLocOnLogin;
-            if (ImGui.Checkbox("Auto-update locations on login", ref autoUpdate))
-            {
-                plugin.Configuration.AutoUpdateLocOnLogin = autoUpdate;
-                plugin.Configuration.Save();
             }
 
             ImGui.Spacing();
@@ -1005,17 +862,97 @@ public class MainWindow : Window, IDisposable
 
     private void DrawBotControlSection()
     {
-        if (ImGui.CollapsingHeader("Bot Control", ImGuiTreeNodeFlags.DefaultOpen))
+        if (ImGui.CollapsingHeader("Quick Actions", ImGuiTreeNodeFlags.DefaultOpen))
+        {
+            var sm = plugin.StateManager;
+            var loggedIn = Plugin.ClientState.IsLoggedIn;
+            const float buttonWidth = 110f;
+
+            var canStart = loggedIn && (sm.State == BotState.Idle || sm.State == BotState.Error);
+            if (!canStart)
+                ImGui.BeginDisabled();
+            if (ImGui.Button("Start", new Vector2(buttonWidth, 0)))
+            {
+                plugin.Configuration.Enabled = true;
+                plugin.Configuration.Save();
+                sm.Start();
+            }
+            if (!canStart)
+                ImGui.EndDisabled();
+
+            ImGui.SameLine();
+
+            if (sm.IsPaused)
+            {
+                var canResume = loggedIn;
+                if (!canResume)
+                    ImGui.BeginDisabled();
+                if (ImGui.Button("Resume", new Vector2(buttonWidth, 0)))
+                    sm.Resume();
+                if (!canResume)
+                    ImGui.EndDisabled();
+            }
+            else
+            {
+                var canPause = loggedIn && sm.State != BotState.Idle && sm.State != BotState.Error;
+                if (!canPause)
+                    ImGui.BeginDisabled();
+                if (ImGui.Button("Pause", new Vector2(buttonWidth, 0)))
+                    sm.Pause();
+                if (!canPause)
+                    ImGui.EndDisabled();
+            }
+
+            ImGui.SameLine();
+
+            var canStop = loggedIn && sm.State != BotState.Idle && sm.State != BotState.Error;
+            if (!canStop)
+                ImGui.BeginDisabled();
+            if (ImGui.Button("Stop", new Vector2(buttonWidth, 0)))
+            {
+                if (!sm.IsPaused)
+                {
+                    plugin.Configuration.Enabled = false;
+                    plugin.Configuration.Save();
+                }
+
+                sm.Stop();
+            }
+            if (!canStop)
+                ImGui.EndDisabled();
+
+            ImGui.Spacing();
+            if (ImGui.Button("Alexandrite", new Vector2(buttonWidth, 0)))
+            {
+                plugin.AlexandriteMapWindow.IsOpen = !plugin.AlexandriteMapWindow.IsOpen;
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Settings", new Vector2(buttonWidth, 0)))
+            {
+                plugin.ToggleConfigUi();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Report Issue", new Vector2(buttonWidth, 0)))
+            {
+                ReportIssue();
+            }
+        }
+    }
+
+    private void DrawCurrentRunSection()
+    {
+        if (ImGui.CollapsingHeader("Current Run", ImGuiTreeNodeFlags.DefaultOpen))
         {
             if (!Plugin.ClientState.IsLoggedIn)
             {
-                ImGui.TextColored(ColorGrey, "  Log in to control the bot.");
+                ImGui.TextColored(ColorGrey, "  Log in to view current run.");
                 return;
             }
 
             var sm = plugin.StateManager;
 
-            // State display
             ImGui.Text("  State: ");
             ImGui.SameLine();
             var stateColor = sm.State == BotState.Error ? ColorRed :
@@ -1043,53 +980,6 @@ public class MainWindow : Window, IDisposable
                 ImGui.TextColored(ColorYellow, $"Errors: {sm.RetryCount}");
             }
 
-            ImGui.Spacing();
-
-            // Control buttons
-            if (sm.State == BotState.Idle || sm.State == BotState.Error)
-            {
-                if (ImGui.Button("Start Bot", new Vector2(120, 0)))
-                {
-                    plugin.Configuration.Enabled = true;
-                    plugin.Configuration.Save();
-                    sm.Start();
-                }
-            }
-            else if (sm.IsPaused)
-            {
-                if (ImGui.Button("Resume", new Vector2(120, 0)))
-                    sm.Resume();
-                ImGui.SameLine();
-                if (ImGui.Button("Stop", new Vector2(120, 0)))
-                    sm.Stop();
-            }
-            else
-            {
-                if (ImGui.Button("Pause", new Vector2(120, 0)))
-                    sm.Pause();
-                ImGui.SameLine();
-                if (ImGui.Button("Stop", new Vector2(120, 0)))
-                {
-                    // Stop button should act like /lg off - fully disable the bot
-                    plugin.Configuration.Enabled = false;
-                    plugin.Configuration.Save();
-                    sm.Stop();
-                }
-            }
-
-            ImGui.SameLine();
-            if (ImGui.Button("Alexandrite", new Vector2(100, 0)))
-            {
-                plugin.AlexandriteMapWindow.IsOpen = !plugin.AlexandriteMapWindow.IsOpen;
-            }
-
-            ImGui.SameLine();
-            if (ImGui.Button("Report Issue", new Vector2(100, 0)))
-            {
-                ReportIssue();
-            }
-
-            // Current map info
             if (sm.SelectedMapItemId > 0)
             {
                 ImGui.Spacing();
@@ -1116,6 +1006,26 @@ public class MainWindow : Window, IDisposable
                 ImGui.SameLine();
                 ImGui.TextColored(ColorCyan, sm.CurrentLocation.ZoneName);
             }
+
+            var nav = plugin.NavigationService;
+            ImGui.Text("  Nav: ");
+            ImGui.SameLine();
+            var navColor = nav.State == NavigationState.Error ? ColorRed :
+                           nav.State == NavigationState.Idle ? ColorGrey : ColorCyan;
+            ImGui.TextColored(navColor, nav.State.ToString());
+            if (!string.IsNullOrEmpty(nav.StateDetail))
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(ColorGrey, $"  {nav.StateDetail}");
+            }
+
+            ImGui.Text("  ");
+            ImGui.SameLine();
+            ImGui.TextColored(nav.IsMounted() ? ColorGreen : ColorGrey, nav.IsMounted() ? "[Mounted]" : "[On Foot]");
+            ImGui.SameLine();
+            ImGui.TextColored(nav.IsFlying() ? ColorCyan : ColorGrey, nav.IsFlying() ? "[Flying]" : "[Grounded]");
+            ImGui.SameLine();
+            ImGui.TextColored(nav.IsInCombat() ? ColorRed : ColorGrey, nav.IsInCombat() ? "[In Combat]" : "[No Combat]");
         }
     }
 
@@ -1163,7 +1073,7 @@ public class MainWindow : Window, IDisposable
 
     private void DrawPartySection()
     {
-        if (ImGui.CollapsingHeader("Party Coordination"))
+        if (ImGui.CollapsingHeader("Party Status"))
         {
             if (!Plugin.ClientState.IsLoggedIn)
             {
@@ -1223,57 +1133,24 @@ public class MainWindow : Window, IDisposable
             }
 
             ImGui.Spacing();
-            var partyWait = plugin.Configuration.PartyWaitBeforeDismount;
-            if (ImGui.Checkbox("Wait for party before dismounting", ref partyWait))
-            {
-                plugin.Configuration.PartyWaitBeforeDismount = partyWait;
-                plugin.Configuration.Save();
-            }
+            ImGui.Text("  Mount wait: ");
             ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, "(?)");
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.Text("When enabled, the bot will wait at the destination\n" +
-                           "until the required party members are within 10 yalms (XZ distance)\n" +
-                           "before dismounting. This prevents the bot from dismounting\n" +
-                           "alone in dangerous zones while party members are still\n" +
-                           "traveling. Works in both flying and ground-only modes.");
-                ImGui.EndTooltip();
-            }
+            ImGui.TextColored(plugin.Configuration.WaitForParty ? ColorGreen : ColorGrey,
+                plugin.Configuration.WaitForParty ? "enabled" : "off");
+            ImGui.SameLine();
+            ImGui.TextColored(plugin.Configuration.RequireAllMounted ? ColorGreen : ColorGrey,
+                plugin.Configuration.RequireAllMounted ? " | all mounted" : " | any mounted");
 
-            if (partyWait)
+            ImGui.Text("  Dismount wait: ");
+            ImGui.SameLine();
+            ImGui.TextColored(plugin.Configuration.PartyWaitBeforeDismount ? ColorGreen : ColorGrey,
+                plugin.Configuration.PartyWaitBeforeDismount ? "enabled" : "off");
+            if (plugin.Configuration.PartyWaitBeforeDismount &&
+                plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold)
             {
-                var useThreshold = plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold;
-                if (ImGui.Checkbox("Specify number of party to wait for", ref useThreshold))
-                {
-                    plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold = useThreshold;
-                    plugin.Configuration.Save();
-                }
                 ImGui.SameLine();
-                ImGui.TextColored(ColorGrey, "(?)");
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.BeginTooltip();
-                    ImGui.Text("When enabled, use the number below as the count of\n" +
-                               "other party members to wait for before dismounting\n" +
-                               "and opening. When disabled, LootGoblin waits for the\n" +
-                               "entire party roster.");
-                    ImGui.EndTooltip();
-                }
-
-                if (useThreshold)
-                {
-                    var requiredOthers = Math.Clamp(plugin.Configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);
-                    ImGui.SetNextItemWidth(70f);
-                    if (ImGui.InputInt("##PartyWaitBeforeDismountRequiredOthers", ref requiredOthers))
-                    {
-                        plugin.Configuration.PartyWaitBeforeDismountRequiredOthers = Math.Clamp(requiredOthers, 1, 7);
-                        plugin.Configuration.Save();
-                    }
-                    ImGui.SameLine();
-                    ImGui.Text("players (not yourself)");
-                }
+                var requiredOthers = Math.Clamp(plugin.Configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);
+                ImGui.TextColored(ColorGrey, $" | wait for {requiredOthers} other player(s)");
             }
         }
     }
