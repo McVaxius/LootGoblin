@@ -14,6 +14,8 @@ public class ConfigWindow : Window, IDisposable
     private const int CommandTriggerSlotCount = 5;
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
+    private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
+    private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
     private static readonly string[] LandingOrDutyCommandDefaults = { "/rotation Auto", "/bmrai on", "/vbmai on", "/echo wheee", string.Empty };
     private static readonly string[] FinishCommandDefaults = { "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty, string.Empty };
     
@@ -327,6 +329,8 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Disable Pandora's Box through Dalamud.");
 
+        DrawHacksSection();
+
         DrawFoodSection();
         ImGui.Spacing();
 
@@ -473,6 +477,49 @@ public class ConfigWindow : Window, IDisposable
             }
             ImGui.EndChild();
             ImGui.EndCombo();
+        }
+    }
+
+    private void DrawHacksSection()
+    {
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.Text("Hacks");
+        ImGui.Spacing();
+
+        var reduceRange = configuration.BmrReduceActivationRangeForOutdoorAreas;
+        if (ImGui.Checkbox("BMR reduce activation range for outdoor areas", ref reduceRange))
+        {
+            configuration.BmrReduceActivationRangeForOutdoorAreas = reduceRange;
+            configuration.Save();
+            plugin.AdsReflectionIpcService.QueueImmediateUpdate();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip($"When enabled, LootGoblin asks ADS to set BMR MaxLoadDistance to {AdsReflectionIpcService.ReducedOutdoorMaxLoadDistance:0}.");
+
+        var disableHunts = configuration.BmrDisableHuntModules;
+        if (ImGui.Checkbox("BMR Disable Hunt Modules", ref disableHunts))
+        {
+            configuration.BmrDisableHuntModules = disableHunts;
+            configuration.Save();
+            plugin.AdsReflectionIpcService.QueueImmediateUpdate();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("When enabled, LootGoblin asks ADS to disable BMR hunt modules.");
+
+        var reflection = plugin.AdsReflectionIpcService;
+        var statusColor = !reflection.IsAdsAvailable && reflection.HasPendingActions
+            ? ColorYellow
+            : reflection.StatusText.Contains("unavailable", StringComparison.OrdinalIgnoreCase)
+                ? ColorYellow
+                : ColorGreen;
+        ImGui.TextColored(statusColor, $"ADS reflection: {reflection.StatusText}");
+
+        if (reflection.NextAttemptAtUtc is { } nextAttempt && nextAttempt > DateTime.UtcNow)
+        {
+            var seconds = Math.Max(0, (int)Math.Ceiling((nextAttempt - DateTime.UtcNow).TotalSeconds));
+            ImGui.TextColored(ColorGrey, $"  Next retry/reassert in {seconds}s.");
         }
     }
 

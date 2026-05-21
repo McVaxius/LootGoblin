@@ -155,13 +155,6 @@ public class MainWindow : Window, IDisposable
         ImGui.SameLine();
         ImGui.TextColored(loggedIn ? ColorGreen : ColorRed, loggedIn ? "Yes" : "No");
 
-        // AutoDuty detection warning
-        var autoDutyDetection = plugin.AutoDutyDetectionService;
-        if (autoDutyDetection.IsAutoDutyDetected())
-        {
-            ImGui.TextColored(new Vector4(1f, 0.2f, 0.2f, 1), "⚠️ AutoDuty Detected - May interfere with LootGoblin");
-        }
-
         if (!string.IsNullOrWhiteSpace(plugin.StateManager.WarningMessage))
         {
             ImGui.TextColored(ColorRed, plugin.StateManager.WarningMessage);
@@ -414,7 +407,7 @@ public class MainWindow : Window, IDisposable
                         .OrderBy(kvp => LootGoblin.Models.TreasureMapData.KnownMaps.TryGetValue(kvp.Key, out var i) ? i.MinLevel : 999)
                         .ToList();
 
-                    ImGui.TextColored(ColorGrey, "  Only checked maps run. New map types stay unchecked until selected.");
+                    ImGui.TextColored(ColorGrey, "  Checked maps run. Use max for unlimited runs or a number for finite runs.");
                     ImGui.Spacing();
 
                     foreach (var kvp in sortedMaps)
@@ -435,13 +428,14 @@ public class MainWindow : Window, IDisposable
                         var desc = item?.Description.ToString() ?? "";
                         var (mapTier, mapLevel) = ParseMapTierAndLevel(desc);
 
-                        // Checkbox per map type
                         var isEnabled = plugin.Configuration.IsMapTypeEnabled(itemId);
                         if (ImGui.Checkbox($"##map_{itemId}", ref isEnabled))
                         {
                             plugin.Configuration.SetMapTypeEnabled(itemId, isEnabled, TreasureMapData.AllMapItemIds);
                             plugin.Configuration.Save();
                         }
+                        ImGui.SameLine();
+                        DrawMapRunCountEditor(itemId, isEnabled);
                         ImGui.SameLine();
                         ImGui.Text($"{itemName} x{quantity}");
                         ImGui.SameLine();
@@ -498,6 +492,45 @@ public class MainWindow : Window, IDisposable
         }
     }
 
+    private void DrawMapRunCountEditor(uint itemId, bool isEnabled)
+    {
+        var runCount = plugin.Configuration.GetMapRunCount(itemId);
+
+        ImGui.SetNextItemWidth(60f);
+        if (isEnabled && runCount == Configuration.MapRunCountMax)
+        {
+            var maxText = "max";
+            ImGui.BeginDisabled();
+            ImGui.InputText($"##map_count_{itemId}", ref maxText, 8);
+            ImGui.EndDisabled();
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                ImGui.SetTooltip("Runs this map type until no available maps remain.");
+            return;
+        }
+
+        var editableCount = Math.Max(0, runCount);
+        if (ImGui.InputInt($"##map_count_{itemId}", ref editableCount))
+        {
+            plugin.Configuration.SetMapRunCount(itemId, editableCount);
+            plugin.Configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("0 disables this map type. Positive numbers run that many resolved maps.");
+
+        runCount = plugin.Configuration.GetMapRunCount(itemId);
+        if (runCount > 0 && runCount != Configuration.MapRunCountMax)
+        {
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"Max##map_max_{itemId}"))
+            {
+                plugin.Configuration.SetMapRunCountToMax(itemId);
+                plugin.Configuration.Save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Switch this map type back to unlimited runs.");
+        }
+    }
+
     private void RefreshMapSourceCache(bool includeRetainers, bool refreshXaDatabase)
     {
         var previousRetainerCounts = cachedMapSources
@@ -529,7 +562,7 @@ public class MainWindow : Window, IDisposable
             }
             else
             {
-                var mapIds = TreasureMapData.AllMapItemIds.ToList();
+                var mapIds = plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
                 var retainerCounts = plugin.RetainerMapRetrievalService.GetRetainerMapCounts(mapIds, refreshXaDatabase);
                 foreach (var kvp in retainerCounts)
                 {
@@ -1409,7 +1442,7 @@ private void DrawDependencySection()
                 }
 
                 // Get enabled maps from main window for comparison
-                var enabledTypes = plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
+                var enabledTypes = plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
                 var cachedMaps = plugin.InventoryService.ScanForMaps();
                 var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
                 var enabledInventoryMapCount = cachedMaps.Keys.Count(plugin.Configuration.IsMapTypeEnabled);
@@ -1584,10 +1617,10 @@ private void DrawDependencySection()
             }
             
             // Configuration info
-            var enabledMapTypes = plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
+            var enabledMapTypes = plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
             reportInfo.AppendLine("Configuration:");
             reportInfo.AppendLine($"Map Type Filter: {(plugin.Configuration.UseMapTypeFilter ? "Explicit" : "All known maps")}");
-            reportInfo.AppendLine($"Enabled Map Types: {(enabledMapTypes.Count == 0 ? "none" : string.Join(", ", enabledMapTypes))}");
+            reportInfo.AppendLine($"Runnable Map Types: {(enabledMapTypes.Count == 0 ? "none" : string.Join(", ", enabledMapTypes))}");
             reportInfo.AppendLine($"Chest Interaction Range: {plugin.Configuration.ChestInteractionRange}y");
             reportInfo.AppendLine($"Auto Loot Chest: {plugin.Configuration.AutoLootChest}");
             reportInfo.AppendLine($"Chest Open Timeout: {plugin.Configuration.ChestOpenTimeout}s");

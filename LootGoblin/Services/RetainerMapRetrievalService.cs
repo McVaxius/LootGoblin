@@ -777,7 +777,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
     private IReadOnlyCollection<uint> GetConfiguredMapIds()
     {
-        return _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
+        return _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
     }
 
     private bool IsXaDatabaseReady()

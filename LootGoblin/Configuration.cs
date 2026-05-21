@@ -28,6 +28,8 @@ public enum TreasureHighLowMode
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
+    public const int MapRunCountMax = int.MaxValue;
+
     public int Version { get; set; } = 0;
 
     public bool IsConfigWindowMovable { get; set; } = true;
@@ -63,6 +65,7 @@ public class Configuration : IPluginConfiguration
     // Phase 6: Map Selection + Chest Interaction
     public bool UseMapTypeFilter { get; set; } = true;
     public List<uint> EnabledMapTypes { get; set; } = new();
+    public Dictionary<uint, int> MapRunCounts { get; set; } = new();
     public bool ShowAllKnownMapTypes { get; set; } = false;
     public float ChestInteractionRange { get; set; } = 5f;
     public bool AutoLootChest { get; set; } = true;
@@ -72,6 +75,8 @@ public class Configuration : IPluginConfiguration
     // Automation
     public bool EnableAutoDiscard { get; set; } = false;
     public bool AutoSyncFate { get; set; } = true;
+    public bool BmrReduceActivationRangeForOutdoorAreas { get; set; } = true;
+    public bool BmrDisableHuntModules { get; set; } = true;
     public int FeedMeItemId { get; set; } = 4650;
     public string FeedMeItem { get; set; } = "Boiled Egg";
     public bool FeedMeUseHighQuality { get; set; } = false;
@@ -116,39 +121,109 @@ public class Configuration : IPluginConfiguration
     }
 
     public bool IsMapTypeEnabled(uint itemId)
+        => GetMapRunCount(itemId) > 0;
+
+    public bool IsMapRunCountMax(uint itemId)
+        => GetMapRunCount(itemId) == MapRunCountMax;
+
+    public int GetMapRunCount(uint itemId)
     {
         if (itemId == 0)
-            return false;
+            return 0;
 
-        return EnabledMapTypes?.Any(enabledId => enabledId == itemId) == true;
+        MapRunCounts ??= new Dictionary<uint, int>();
+        if (MapRunCounts.TryGetValue(itemId, out var count))
+            return NormalizeMapRunCount(count);
+
+        return EnabledMapTypes?.Any(enabledId => enabledId == itemId) == true
+            ? MapRunCountMax
+            : 0;
     }
 
     public IReadOnlyList<uint> GetEnabledMapIdsOrAll(IEnumerable<uint> allKnownMapIds)
+        => GetRunnableMapIds(allKnownMapIds);
+
+    public IReadOnlyList<uint> GetRunnableMapIds(IEnumerable<uint> allKnownMapIds)
     {
-        return NormalizeMapIds(EnabledMapTypes);
+        return NormalizeMapIds(EnabledMapTypes)
+            .Where(itemId => GetMapRunCount(itemId) > 0)
+            .ToList();
     }
 
     public void SetMapTypeEnabled(uint itemId, bool enabled, IEnumerable<uint> allKnownMapIds)
+        => SetMapRunCount(itemId, enabled ? MapRunCountMax : 0);
+
+    public void SetMapRunCountToMax(uint itemId)
+        => SetMapRunCount(itemId, MapRunCountMax);
+
+    public void SetMapRunCount(uint itemId, int count)
     {
         if (itemId == 0)
             return;
 
         EnabledMapTypes ??= new List<uint>();
+        MapRunCounts ??= new Dictionary<uint, int>();
 
         UseMapTypeFilter = true;
+        count = NormalizeMapRunCount(count);
 
-        if (enabled)
+        if (count > 0)
         {
+            MapRunCounts[itemId] = count;
             if (!EnabledMapTypes.Any(enabledId => enabledId == itemId))
                 EnabledMapTypes.Add(itemId);
         }
         else
         {
+            MapRunCounts.Remove(itemId);
             EnabledMapTypes.RemoveAll(enabledId => enabledId == itemId);
         }
 
         EnabledMapTypes = NormalizeMapIds(EnabledMapTypes);
     }
+
+    public bool TryDecrementMapRunCount(uint itemId, out int remaining)
+    {
+        remaining = GetMapRunCount(itemId);
+        if (remaining <= 0 || remaining == MapRunCountMax)
+            return false;
+
+        remaining = Math.Max(0, remaining - 1);
+        SetMapRunCount(itemId, remaining);
+        Save();
+        return true;
+    }
+
+    public void NormalizeConfiguredMapRuns()
+    {
+        EnabledMapTypes = NormalizeMapIds(EnabledMapTypes);
+        MapRunCounts ??= new Dictionary<uint, int>();
+
+        var normalizedCounts = new Dictionary<uint, int>();
+        foreach (var kvp in MapRunCounts)
+        {
+            var itemId = kvp.Key;
+            if (itemId == 0)
+                continue;
+
+            var count = NormalizeMapRunCount(kvp.Value);
+            if (count > 0)
+                normalizedCounts[itemId] = count;
+        }
+
+        foreach (var itemId in EnabledMapTypes)
+        {
+            if (!normalizedCounts.ContainsKey(itemId))
+                normalizedCounts[itemId] = MapRunCountMax;
+        }
+
+        MapRunCounts = normalizedCounts;
+        EnabledMapTypes = NormalizeMapIds(MapRunCounts.Keys);
+        UseMapTypeFilter = true;
+    }
+
+    private static int NormalizeMapRunCount(int count)
+        => count <= 0 ? 0 : count;
 
     private static List<uint> NormalizeMapIds(IEnumerable<uint> mapIds)
     {

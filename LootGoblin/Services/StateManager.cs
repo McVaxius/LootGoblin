@@ -214,6 +214,8 @@ public class StateManager : IDisposable
     private int initialMapCount;
     private bool mapCountChecked = false;
     private bool mapOpeningRetried = false;
+    private bool selectedMapRunCountPendingDecrement;
+    private bool selectedMapRunCountDecremented;
     private const double TickIntervalSeconds = 0.5;
     private static readonly TimeSpan SelectYesnoWatchdogInterval = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan CameraResetBeforeInteractDelay = TimeSpan.FromMilliseconds(150);
@@ -419,6 +421,7 @@ public class StateManager : IDisposable
     private int activeKeyItemMapSlot = -1;
     private bool activeKeyItemRecoverySourceLogged;
     private bool activeKeyItemRecoveryUnderwaterLogged;
+    private bool activeKeyItemRecoveryPopupShown;
     private DateTime lastKeyItemCompletionGuardLogAt = DateTime.MinValue;
     private bool completedStaleKeyItemSuppressionActive;
     private uint completedStaleKeyItemId;
@@ -818,6 +821,7 @@ public class StateManager : IDisposable
 
         ClearWarning();
         ResetRunCommandTriggers();
+        ClearSelectedMapRunCountDecrement("[Start]");
         ResetSaddlebagRetrieval();
         ResetStartMapRefresh();
         ResetOpeningChestCofferApproachTracking();
@@ -825,23 +829,11 @@ public class StateManager : IDisposable
         ResetPortalGroundApproachTracking(resetFailure: true);
         _plugin.TreasureMapLocationService.ClearCapturedLocation();
 
-        // Check for AutoDuty when starting LootGoblin
+        CommandHelper.TrySendCommand("/xldisableplugin AutoDuty");
+        CommandHelper.TrySendCommand("/xldisableplugin ReAction");
+        _plugin.AddDebugLog("[Start] Sent AutoDuty/ReAction disable commands.");
+
         _plugin.RefreshDependencyStatus(logStatus: true);
-        _plugin.AddDebugLog("[Start] Checking for AutoDuty before starting...");
-        _plugin.AutoDutyDetectionService.ForceCheck();
-        
-        var isAutoDutyDetected = _plugin.AutoDutyDetectionService.IsAutoDutyDetected();
-        _plugin.AddDebugLog($"[Start] AutoDuty detected: {isAutoDutyDetected}");
-        
-        if (isAutoDutyDetected)
-        {
-            _plugin.AddDebugLog("[Start] AutoDuty detected - showing warning window");
-            _plugin.AutoDutyDetectionService.ForceShowWarning();
-        }
-        else
-        {
-            _plugin.AddDebugLog("[Start] AutoDuty not detected - proceeding with start");
-        }
 
         // Check if already in duty; only known treasure dungeon territories enter dungeon handling.
         bool inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
@@ -951,6 +943,7 @@ public class StateManager : IDisposable
         ResetAdsHandoffTracking(resetStatus: true);
         ResetAdsRepairHandoffTracking();
         _plugin.RetainerMapRetrievalService.Reset();
+        ClearSelectedMapRunCountDecrement("[Stop]");
         ResetSaddlebagRetrieval();
         ResetStartMapRefresh();
         currentLandingMode = OverworldLandingMode.MountToggle;
@@ -972,6 +965,7 @@ public class StateManager : IDisposable
         ResetAdsHandoffTracking(resetStatus: true);
         ResetAdsRepairHandoffTracking();
         _plugin.RetainerMapRetrievalService.Reset();
+        ClearSelectedMapRunCountDecrement("[ResetAll]");
         ResetSaddlebagRetrieval();
         ResetStartMapRefresh();
         currentLandingMode = OverworldLandingMode.MountToggle;
@@ -1001,6 +995,53 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog("Bot resumed.");
     }
 
+    private void MarkSelectedMapRunCountPending(string source)
+    {
+        selectedMapRunCountPendingDecrement = true;
+        selectedMapRunCountDecremented = false;
+        _plugin.AddDebugLog($"{source} Run count decrement armed for selected map ID {SelectedMapItemId}.");
+    }
+
+    private void ClearSelectedMapRunCountDecrement(string source)
+    {
+        if (!selectedMapRunCountPendingDecrement && !selectedMapRunCountDecremented)
+            return;
+
+        selectedMapRunCountPendingDecrement = false;
+        selectedMapRunCountDecremented = false;
+        _plugin.AddDebugLog($"{source} Cleared pending selected-map run count decrement.");
+    }
+
+    private void ConsumeSelectedMapRunCountIfPending(string source)
+    {
+        if (!selectedMapRunCountPendingDecrement || selectedMapRunCountDecremented)
+            return;
+
+        selectedMapRunCountPendingDecrement = false;
+        selectedMapRunCountDecremented = true;
+
+        if (SelectedMapItemId == 0)
+        {
+            _plugin.AddDebugLog($"{source} Run count decrement skipped: no selected map ID.");
+            return;
+        }
+
+        var currentRunCount = _plugin.Configuration.GetMapRunCount(SelectedMapItemId);
+        if (currentRunCount == Configuration.MapRunCountMax)
+        {
+            _plugin.AddDebugLog($"{source} Run count is max for map ID {SelectedMapItemId}; not decrementing.");
+            return;
+        }
+
+        if (_plugin.Configuration.TryDecrementMapRunCount(SelectedMapItemId, out var remaining))
+        {
+            _plugin.AddDebugLog($"{source} Decremented run count for map ID {SelectedMapItemId}; remaining={remaining}.");
+            return;
+        }
+
+        _plugin.AddDebugLog($"{source} Run count decrement skipped for map ID {SelectedMapItemId}; current={currentRunCount}.");
+    }
+
     private bool TryRecoverActiveKeyItemMap(string source, bool transitionToDetectingOnActive)
     {
         if (!_plugin.InventoryService.TryFindTreasureMapKeyItem(out var keyItem))
@@ -1013,6 +1054,8 @@ public class StateManager : IDisposable
         }
 
         UpdateActiveKeyItemMap(keyItem, source);
+        if (!selectedMapRunCountPendingDecrement)
+            ShowActiveKeyItemRecoveryPopupOnce(keyItem);
         if (TryHandleCompletedStaleKeyItemSuppression(keyItem, source, out var suppressRecovery))
             return true;
         if (suppressRecovery)
@@ -1025,9 +1068,10 @@ public class StateManager : IDisposable
         if (TryResolveActiveKeyItemMapTarget(keyItem, out var recoveryLocation, out var recoverySource))
         {
             ResetKeyItemMapRecoveryState();
-            SetWarning(keyItem.KnownMapItemId == 0
-                ? $"Active treasure map key item '{keyItem.DisplayName}' found. Map type is unknown, but LootGoblin recovered its target and will not open another map."
-                : $"Active deciphered map key item '{keyItem.DisplayName}' found. LootGoblin recovered its target and will finish it before opening another map.");
+            if (selectedMapRunCountPendingDecrement)
+                ConsumeSelectedMapRunCountIfPending(source);
+            else if (WarningMessage.Contains("key item", StringComparison.OrdinalIgnoreCase))
+                ClearWarning();
 
             RetryCount = 0;
             ResumeActiveKeyItemMapFromTarget(keyItem, recoveryLocation, recoverySource, source);
@@ -1062,6 +1106,25 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private void ShowActiveKeyItemRecoveryPopupOnce(TreasureMapKeyItem keyItem)
+    {
+        if (activeKeyItemRecoveryPopupShown)
+            return;
+
+        activeKeyItemRecoveryPopupShown = true;
+        var message = $"Active map found: {keyItem.DisplayName}. Recovering it; run count not decremented.";
+        try
+        {
+            Plugin.ToastGui.ShowNormal(message);
+        }
+        catch (Exception ex)
+        {
+            _plugin.AddDebugLog($"[KeyItemMap] Toast failed: {ex.Message}");
+        }
+
+        _plugin.AddDebugLog($"[KeyItemMap] {message}");
+    }
+
     private void TryOpenActiveKeyItemMap(TreasureMapKeyItem keyItem)
     {
         var now = DateTime.Now;
@@ -1082,7 +1145,7 @@ public class StateManager : IDisposable
 
         if (keyItemMapOpenAttemptCount == 1)
         {
-            SetWarning($"Active treasure map key item '{keyItem.DisplayName}' found. LootGoblin is opening it to recover the map flag before opening another map.");
+            _plugin.AddDebugLog($"[KeyItemMap] Recovering active treasure-map key item {keyItem.DisplayName}; run count not decremented unless this came from the newly opened selected map.");
             stateStartTime = DateTime.Now;
         }
     }
@@ -1256,6 +1319,7 @@ public class StateManager : IDisposable
             activeKeyItemMapSlot = keyItem.Slot;
             activeKeyItemRecoverySourceLogged = false;
             activeKeyItemRecoveryUnderwaterLogged = false;
+            activeKeyItemRecoveryPopupShown = false;
             _plugin.AddDebugLog($"{source} Active treasure map key item: {keyItem.DisplayName} (item {keyItem.ItemId}, slot {keyItem.Slot}).");
         }
 
@@ -1887,7 +1951,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        var enabledMapIds = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
+        var enabledMapIds = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
         var counts = _plugin.RetainerMapRetrievalService.GetRetainerMapCounts(enabledMapIds, refreshFirst: true);
         _plugin.AddDebugLog(
             $"[MapRefresh][Completed] Refreshed XADB retainer maps for {FormatMapIds(enabledMapIds)}; " +
@@ -2250,6 +2314,7 @@ public class StateManager : IDisposable
         lastKeyItemCompletionGuardLogAt = DateTime.MinValue;
         activeKeyItemRecoverySourceLogged = false;
         activeKeyItemRecoveryUnderwaterLogged = false;
+        activeKeyItemRecoveryPopupShown = false;
         activeMapTargetCache.Clear();
         ResetSameZoneStuckTeleportState(clearTeleportedTarget: true);
     }
@@ -6183,7 +6248,7 @@ public class StateManager : IDisposable
                 return;
             }
 
-            var enabledForRetainers = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
+            var enabledForRetainers = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
             _plugin.AddDebugLog($"[SelectingMap] No inventory/saddlebag maps. Checking retainer maps via XADB for {FormatMapIds(enabledForRetainers)}.");
             if (TryRetrieveRetainerMap(enabledForRetainers, "No maps found in inventory, saddlebags, or retainers."))
                 return;
@@ -6193,7 +6258,7 @@ public class StateManager : IDisposable
 
         ClearWarning();
 
-        var enabled = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
+        var enabled = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
 
         // Filter to only enabled map types.
         var candidates = maps
@@ -6241,6 +6306,7 @@ public class StateManager : IDisposable
         initialMapCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
         mapCountChecked = false;
         mapOpeningRetried = false;
+        MarkSelectedMapRunCountPending("[SelectingMap]");
         ClearCompletedStaleKeyItemSuppression("[SelectingMap] starting fresh map");
         ResetPerMapCommandTriggers();
         _plugin.AddDebugLog($"[SelectingMap] Initial map count: {initialMapCount}");
@@ -6554,6 +6620,7 @@ public class StateManager : IDisposable
             PopulateNearestAetheryte(location, out var aetheryteId, out var bestAethDist, out var usedXyz);
 
             SetLocation(location);
+            ConsumeSelectedMapRunCountIfPending("[DetectingLocation]");
 
             if (Plugin.ClientState.TerritoryType == location.TerritoryId)
             {
@@ -9270,7 +9337,7 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("[Completed] No runnable maps in inventory or loaded saddlebags. Checking retainers via XADB.");
             if (_plugin.Configuration.EnableRetainerMapRetrieval)
             {
-                var enabledForRetainers = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
+                var enabledForRetainers = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
                 var retainerResult = _plugin.RetainerMapRetrievalService.StartOrTick(enabledForRetainers);
                 switch (retainerResult)
                 {
@@ -9442,7 +9509,7 @@ public class StateManager : IDisposable
             return true;
         }
 
-        var enabledForRetainers = _plugin.Configuration.GetEnabledMapIdsOrAll(TreasureMapData.AllMapItemIds);
+        var enabledForRetainers = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
         var hasRetainerMap = _plugin.RetainerMapRetrievalService.HasRetainerMapCandidate(enabledForRetainers);
         if (hasRetainerMap)
             _plugin.AddDebugLog($"{source} Return deferred; enabled retainer map remains via XADB.");
@@ -10987,7 +11054,8 @@ public class StateManager : IDisposable
         if (hasActiveMapKeyItem && activeMapKeyItem != null)
         {
             UpdateActiveKeyItemMap(activeMapKeyItem, $"[Error #{RetryCount}]");
-            SetWarning($"Treasure map key item '{activeMapKeyItem.DisplayName}' is still active. Recovering its target instead of opening another map.");
+            if (!selectedMapRunCountPendingDecrement)
+                ShowActiveKeyItemRecoveryPopupOnce(activeMapKeyItem);
             mapCountChecked = true;
             mapOpeningRetried = false;
             digIssuedThisMap = false;
@@ -10995,6 +11063,7 @@ public class StateManager : IDisposable
 
             if (TryResolveActiveKeyItemMapTarget(activeMapKeyItem, out var recoveryLocation, out var recoverySource))
             {
+                ConsumeSelectedMapRunCountIfPending($"[Error #{RetryCount}]");
                 _plugin.AddDebugLog($"[Error #{RetryCount}] Active key item still has target from {recoverySource}; resuming map run.");
                 ResumeActiveKeyItemMapFromTarget(activeMapKeyItem, recoveryLocation, recoverySource, $"[Error #{RetryCount}]");
                 return;
@@ -11008,6 +11077,7 @@ public class StateManager : IDisposable
         }
         
         // Not in duty - safe to retry from SelectingMap
+        ClearSelectedMapRunCountDecrement($"[Error #{RetryCount}]");
         TransitionTo(BotState.SelectingMap, $"Error #{RetryCount}: {message}");
     }
 
