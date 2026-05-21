@@ -1191,6 +1191,14 @@ private void DrawDependencySection()
             ImGui.TextColored(ColorGrey, "needed for assisted retainer/saddlebag retrieval");
 
             ImGui.Spacing();
+            ImGui.Text("Optional (Treasure Map Statistics):");
+            ImGui.Spacing();
+
+            DrawPluginStatus("  MapPartyAssist", plugin.IsMapPartyAssistAvailable, false);
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, "by SaMo; used for treasure map statistics");
+
+            ImGui.Spacing();
             ImGui.Text("Optional (Combat/Rotation):");
             ImGui.Spacing();
 

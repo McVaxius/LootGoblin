@@ -311,9 +311,12 @@ public class StateManager : IDisposable
     private const float PortalInteractionProgressMargin = 0.35f;
     private static readonly TimeSpan AdsRepairStartGrace = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairTimeout = TimeSpan.FromMinutes(3.0);
+    private static readonly TimeSpan AdsRepairRecoveryInitialTeleportDelay = TimeSpan.FromSeconds(1.5);
     private static readonly TimeSpan AdsRepairRecoveryTeleportSettleDelay = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan AdsRepairRecoveryTeleportRetryCooldown = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan AdsRepairRecoveryTimeout = TimeSpan.FromSeconds(90.0);
     private const float AdsRepairRecoveryTeleportPositionDeltaThreshold = 5.0f;
+    private const int AdsRepairRecoveryTeleportMaxRetries = 2;
     private static readonly TimeSpan TreasureHighLowSettleDelay = TimeSpan.FromMilliseconds(350);
     private static readonly TimeSpan TreasureHighLowReopenRetryInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan TreasureHighLowStatusLogInterval = TimeSpan.FromSeconds(5.0);
@@ -432,6 +435,9 @@ public class StateManager : IDisposable
     private string adsRepairRecoverySource = string.Empty;
     private int adsRepairRecoveryLowestCondition;
     private int adsRepairRecoveryThreshold;
+    private DateTime adsRepairRecoveryNextTeleportAttemptAt = DateTime.MinValue;
+    private int adsRepairRecoveryTeleportRetryCount;
+    private string adsRepairRecoveryLastTeleportFailure = string.Empty;
     private bool? combatAutomationEnabledState;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
@@ -2172,6 +2178,16 @@ public class StateManager : IDisposable
         if (string.IsNullOrWhiteSpace(text))
             return;
 
+        if (IsLifestreamDestinationNotFoundMessage(text))
+        {
+            var navigationFailureHandled = _plugin.NavigationService.NotifyTeleportCommandFailure(text);
+            if (HandleAdsRepairRecoveryTeleportFailure(text, navigationFailureHandled))
+                return;
+
+            if (navigationFailureHandled)
+                return;
+        }
+
         if (HandlePortalTooFarChatMessage(text))
             return;
 
@@ -2215,6 +2231,9 @@ public class StateManager : IDisposable
             }
         }
     }
+
+    private static bool IsLifestreamDestinationNotFoundMessage(string text)
+        => text.Contains("Destination could not be found", StringComparison.OrdinalIgnoreCase);
 
     private bool HandleOpeningChestTooFarChatMessage(string text)
     {
@@ -7096,6 +7115,15 @@ public class StateManager : IDisposable
             return;
         }
 
+        if (nav.State == NavigationState.Error)
+        {
+            var destination = string.IsNullOrWhiteSpace(nav.LastTeleportDestinationName)
+                ? CurrentLocation?.NearestAetheryteName
+                : nav.LastTeleportDestinationName;
+            HandleError($"Teleport to {destination} failed: {nav.StateDetail}");
+            return;
+        }
+
         // Minimum wait after teleport command to allow animation to start and complete
         // Without this, same-zone teleports transition instantly because BetweenAreas hasn't been set yet
         var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
@@ -10385,12 +10413,16 @@ public class StateManager : IDisposable
         adsRepairRecoverySource = source;
         adsRepairRecoveryLowestCondition = lowestCondition;
         adsRepairRecoveryThreshold = threshold;
+        adsRepairRecoveryNextTeleportAttemptAt = DateTime.Now + AdsRepairRecoveryInitialTeleportDelay;
+        adsRepairRecoveryTeleportRetryCount = 0;
+        adsRepairRecoveryLastTeleportFailure = string.Empty;
         continueStartAfterAdsRepair = resumeStartAfterRepair;
 
         StateDetail = $"Gear durability {lowestCondition}% below {threshold}% - teleporting to {adsRepairRecoveryAetheryteName} for ADS repair...";
         _plugin.AddDebugLog(
             $"{source}[Repair] NPC no-inn repair needs sanctuary; selected nearest current-territory aetheryte " +
-            $"{adsRepairRecoveryAetheryteName} (ID {aetheryteId}) from player position {FormatVectorCompact(playerPosition)}.");
+            $"{adsRepairRecoveryAetheryteName} (ID {aetheryteId}) from player position {FormatVectorCompact(playerPosition)}; " +
+            $"waiting {AdsRepairRecoveryInitialTeleportDelay.TotalSeconds:F1}s before Lifestream command.");
         return true;
     }
 
@@ -10464,6 +10496,22 @@ public class StateManager : IDisposable
                 return true;
             }
 
+            if (now < adsRepairRecoveryNextTeleportAttemptAt)
+            {
+                var waitRemaining = adsRepairRecoveryNextTeleportAttemptAt - now;
+                var retryText = adsRepairRecoveryTeleportRetryCount > 0
+                    ? $"retry {adsRepairRecoveryTeleportRetryCount}/{AdsRepairRecoveryTeleportMaxRetries}"
+                    : "initial command";
+                StateDetail = $"Waiting {waitRemaining.TotalSeconds:F1}s before repair teleport {retryText} to {adsRepairRecoveryAetheryteName}...";
+                return true;
+            }
+
+            if (!TryRefreshAdsRepairRecoveryAetheryte(out var refreshFailure))
+            {
+                FailAdsRepairRecovery(refreshFailure);
+                return true;
+            }
+
             if (_plugin.NavigationService.State != NavigationState.Idle)
                 _plugin.NavigationService.StopNavigation();
 
@@ -10471,6 +10519,7 @@ public class StateManager : IDisposable
             adsRepairRecoverySawBetweenAreas = false;
             adsRepairRecoveryLastLoadingAt = DateTime.MinValue;
             adsRepairRecoveryStartAttempted = false;
+            adsRepairRecoveryLastTeleportFailure = string.Empty;
 
             _plugin.NavigationService.TeleportToAetheryte(adsRepairRecoveryAetheryteId);
             adsRepairRecoveryTeleportIssued = true;
@@ -10526,6 +10575,89 @@ public class StateManager : IDisposable
             $"lastLoading={lastLoadingText}; sanctuaryHeuristic={sanctuaryHeuristic}.");
 
         return StartAdsRepairAfterRecovery("Starting ADS after repair teleport settle.");
+    }
+
+    private bool HandleAdsRepairRecoveryTeleportFailure(string message, bool navigationFailureHandled)
+    {
+        if (!adsRepairRecoveryActive || !adsRepairRecoveryTeleportIssued)
+            return false;
+
+        var destination = !string.IsNullOrWhiteSpace(_plugin.NavigationService.LastTeleportDestinationName)
+            ? _plugin.NavigationService.LastTeleportDestinationName
+            : adsRepairRecoveryAetheryteName;
+        var aetheryteId = _plugin.NavigationService.LastTeleportAetheryteId != 0
+            ? _plugin.NavigationService.LastTeleportAetheryteId
+            : adsRepairRecoveryAetheryteId;
+        var cleanMessage = string.IsNullOrWhiteSpace(message)
+            ? "Destination could not be found."
+            : message.Trim();
+        var source = string.IsNullOrWhiteSpace(adsRepairRecoverySource)
+            ? "[RepairRecovery]"
+            : adsRepairRecoverySource;
+        var commandAttempts = adsRepairRecoveryTeleportRetryCount + 1;
+
+        adsRepairRecoveryLastTeleportFailure = cleanMessage;
+        if (adsRepairRecoveryTeleportRetryCount >= AdsRepairRecoveryTeleportMaxRetries)
+        {
+            FailAdsRepairRecovery(
+                $"Lifestream rejected ADS repair teleport to {destination} (ID {aetheryteId}) " +
+                $"after {commandAttempts} command attempt(s): {cleanMessage}");
+            return true;
+        }
+
+        adsRepairRecoveryTeleportRetryCount++;
+        adsRepairRecoveryTeleportIssued = false;
+        adsRepairRecoveryTeleportIssuedAt = DateTime.MinValue;
+        adsRepairRecoverySawBetweenAreas = false;
+        adsRepairRecoveryLastLoadingAt = DateTime.MinValue;
+        adsRepairRecoveryNextTeleportAttemptAt = DateTime.Now + AdsRepairRecoveryTeleportRetryCooldown;
+
+        var retryDetail = $"{adsRepairRecoveryTeleportRetryCount}/{AdsRepairRecoveryTeleportMaxRetries}";
+        StateDetail =
+            $"Lifestream rejected repair teleport to {destination}: {cleanMessage}. Retrying ({retryDetail})...";
+        _plugin.AddDebugLog(
+            $"{source}[Repair] Lifestream rejected repair teleport to {destination} (ID {aetheryteId}): {cleanMessage}. " +
+            $"Retrying after {AdsRepairRecoveryTeleportRetryCooldown.TotalSeconds:F1}s ({retryDetail}); " +
+            $"navigationStateHandled={navigationFailureHandled}.");
+        return true;
+    }
+
+    private bool TryRefreshAdsRepairRecoveryAetheryte(out string failureMessage)
+    {
+        failureMessage = string.Empty;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+        {
+            failureMessage = "Player position is unavailable while resolving ADS repair recovery aetheryte.";
+            return false;
+        }
+
+        var territoryId = Plugin.ClientState.TerritoryType;
+        var aetheryteId = _plugin.NavigationService.FindNearestAetheryte(territoryId, player.Position, out _, out _);
+        if (aetheryteId == 0)
+        {
+            var lastFailure = string.IsNullOrWhiteSpace(adsRepairRecoveryLastTeleportFailure)
+                ? string.Empty
+                : $" Last Lifestream error: {adsRepairRecoveryLastTeleportFailure}";
+            failureMessage =
+                $"No unlocked aetheryte was found in current territory {territoryId} for ADS NPC no-inn repair retry." +
+                lastFailure;
+            return false;
+        }
+
+        var aetheryteName = GetAetheryteName(aetheryteId);
+        if (aetheryteId != adsRepairRecoveryAetheryteId)
+        {
+            _plugin.AddDebugLog(
+                $"{adsRepairRecoverySource}[Repair] Re-resolved repair teleport aetheryte: " +
+                $"{adsRepairRecoveryAetheryteName} (ID {adsRepairRecoveryAetheryteId}) -> {aetheryteName} (ID {aetheryteId}).");
+        }
+
+        adsRepairRecoveryTerritoryId = territoryId;
+        adsRepairRecoveryAetheryteId = aetheryteId;
+        adsRepairRecoveryAetheryteName = aetheryteName;
+        return true;
     }
 
     private bool StartAdsRepairAfterRecovery(string startLogMessage)
@@ -10658,6 +10790,9 @@ public class StateManager : IDisposable
         adsRepairRecoverySource = string.Empty;
         adsRepairRecoveryLowestCondition = 0;
         adsRepairRecoveryThreshold = 0;
+        adsRepairRecoveryNextTeleportAttemptAt = DateTime.MinValue;
+        adsRepairRecoveryTeleportRetryCount = 0;
+        adsRepairRecoveryLastTeleportFailure = string.Empty;
     }
 
     private bool TryYieldToActiveAdsDutyOwnership(uint currentTerritory)

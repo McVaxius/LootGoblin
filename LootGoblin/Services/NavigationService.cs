@@ -41,6 +41,11 @@ public class NavigationService : IDisposable
     public string StateDetail { get; private set; } = "";
     public Vector3 TargetPosition { get; private set; }
     public uint TargetTerritoryId { get; private set; }
+    public uint LastTeleportAetheryteId { get; private set; }
+    public string LastTeleportDestinationName { get; private set; } = string.Empty;
+    public DateTime LastTeleportCommandAt { get; private set; } = DateTime.MinValue;
+    public string LastTeleportFailureMessage { get; private set; } = string.Empty;
+    public DateTime LastTeleportFailureAt { get; private set; } = DateTime.MinValue;
 
     private DateTime stateStartTime;
     private float timeoutSeconds = 30f;
@@ -91,8 +96,32 @@ public class NavigationService : IDisposable
 
         _plugin.AddDebugLog($"Teleporting to {name} (ID: {aetheryteId})...");
         CommandHelper.SendCommand($"/li {name}");
+        LastTeleportAetheryteId = aetheryteId;
+        LastTeleportDestinationName = name;
+        LastTeleportCommandAt = DateTime.Now;
+        LastTeleportFailureMessage = string.Empty;
+        LastTeleportFailureAt = DateTime.MinValue;
+        TargetTerritoryId = aetheryte?.Territory.RowId ?? 0;
 
         SetState(NavigationState.Teleporting, $"Teleporting to {name}...");
+    }
+
+    public bool NotifyTeleportCommandFailure(string message)
+    {
+        if (State is not NavigationState.Teleporting and not NavigationState.WaitingForTeleport)
+            return false;
+
+        var cleanMessage = string.IsNullOrWhiteSpace(message)
+            ? "Teleport destination was rejected."
+            : message.Trim();
+        var destination = string.IsNullOrWhiteSpace(LastTeleportDestinationName)
+            ? "teleport destination"
+            : LastTeleportDestinationName;
+
+        LastTeleportFailureMessage = cleanMessage;
+        LastTeleportFailureAt = DateTime.Now;
+        SetState(NavigationState.Error, $"Lifestream rejected {destination}: {cleanMessage}");
+        return true;
     }
 
     public void FlyToPosition(Vector3 position, bool force = false)
