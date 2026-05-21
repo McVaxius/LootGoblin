@@ -395,6 +395,7 @@ public class StateManager : IDisposable
     private bool adsRepairUtilityObserved;
     private DateTime adsRepairHandoffStarted = DateTime.MinValue;
     private string adsRepairRequestedMode = string.Empty;
+    private bool continueStartAfterAdsRepair;
     private bool? combatAutomationEnabledState;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
@@ -917,6 +918,22 @@ public class StateManager : IDisposable
         _plugin.YesAlreadyIPC.Pause();
         _plugin.AddDebugLog($"[Start] YesAlready paused: {_plugin.YesAlreadyIPC.IsPaused}");
 
+        if (TryStartAdsRepairIfNeeded("[Start]"))
+        {
+            if (adsRepairHandoffActive)
+            {
+                continueStartAfterAdsRepair = true;
+                TransitionTo(BotState.Repairing, "Repairing gear before starting map run...");
+            }
+
+            return;
+        }
+
+        ContinueStartAfterRepair();
+    }
+
+    private void ContinueStartAfterRepair()
+    {
         if (TryRecoverActiveKeyItemMap("[Start]", transitionToDetectingOnActive: true))
             return;
 
@@ -927,7 +944,6 @@ public class StateManager : IDisposable
 
         BeginStartMapRefresh();
         TransitionTo(BotState.SelectingMap, "Starting map run - refreshing saddlebag maps...");
-        TryStartAdsRepairIfNeeded("[Start]");
     }
 
     public void Stop()
@@ -9853,6 +9869,14 @@ public class StateManager : IDisposable
         }
 
         var repairMode = ResolveAdsRepairMode();
+        if (repairMode == "npc-no-inn" && !GameHelpers.IsInSanctuary())
+        {
+            TransitionTo(
+                BotState.Error,
+                $"Equipped gear durability is {lowestCondition}% below repair threshold {threshold}%, but ADS NPC no-inn repair can only start from a sanctuary.");
+            return true;
+        }
+
         if (!_plugin.AdsStatusService.StartRepair(repairMode))
         {
             var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
@@ -9919,6 +9943,14 @@ public class StateManager : IDisposable
         }
 
         _plugin.AddDebugLog($"[Repair] ADS repair complete; continuing map loop. ADS: {GetAdsRepairStatusText(adsStatus)}");
+
+        if (continueStartAfterAdsRepair)
+        {
+            ResetAdsRepairHandoffTracking();
+            ContinueStartAfterRepair();
+            return true;
+        }
+
         ResetAdsRepairHandoffTracking();
         return false;
     }
@@ -9945,6 +9977,7 @@ public class StateManager : IDisposable
         adsRepairUtilityObserved = false;
         adsRepairHandoffStarted = DateTime.MinValue;
         adsRepairRequestedMode = string.Empty;
+        continueStartAfterAdsRepair = false;
     }
 
     private bool TryYieldToActiveAdsDutyOwnership(uint currentTerritory)

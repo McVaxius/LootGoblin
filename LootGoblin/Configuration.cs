@@ -57,7 +57,7 @@ public class Configuration : IPluginConfiguration
     public bool UseAdsInsteadOfLegacyDungeonSolver { get; set; } = true;
     public bool EnableRetainerMapRetrieval { get; set; } = true;
     public bool EnableSaddlebagMapRetrieval { get; set; } = true;
-    public int RepairThresholdPercent { get; set; } = 25;
+    public int RepairThresholdPercent { get; set; } = 75;
     public RepairMode RepairMode { get; set; } = RepairMode.NpcNoInn;
     public bool ReturnWhenDoneEnabled { get; set; } = false;
     public ReturnWhenDoneDestination ReturnWhenDoneDestination { get; set; } = ReturnWhenDoneDestination.FC;

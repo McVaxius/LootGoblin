@@ -812,6 +812,40 @@ public class MainWindow : Window, IDisposable
                         {
                             sm.StartCyclingMapLocations();
                         }
+
+                        if (ImGui.Button("Test ADS NPC No-Inn Repair"))
+                        {
+                            if (!plugin.IsAdsAvailable)
+                            {
+                                const string message = "ADS is not loaded; NPC no-inn repair test not started.";
+                                plugin.PrintChat(message);
+                                plugin.AddDebugLog($"[Repair] {message}");
+                            }
+                            else if (!GameHelpers.IsInSanctuary())
+                            {
+                                const string message = "ADS NPC no-inn repair can only start from a sanctuary.";
+                                plugin.PrintChat(message);
+                                plugin.AddDebugLog($"[Repair] {message}");
+                            }
+                            else if (plugin.AdsStatusService.StartRepair("npc-no-inn"))
+                            {
+                                const string message = "ADS NPC no-inn repair test requested.";
+                                plugin.PrintChat(message);
+                                plugin.AddDebugLog($"[Repair] {message}");
+                            }
+                            else
+                            {
+                                var adsStatus = plugin.AdsStatusService.Refresh(force: true);
+                                var statusText = string.IsNullOrWhiteSpace(adsStatus.UtilityStatus)
+                                    ? "ADS did not accept the repair request."
+                                    : adsStatus.UtilityStatus;
+                                var message = $"ADS NPC no-inn repair test failed: {statusText}";
+                                plugin.PrintChat(message);
+                                plugin.AddDebugLog($"[Repair] {message}");
+                            }
+                        }
+                        if (ImGui.IsItemHovered())
+                            ImGui.SetTooltip("Debug-only IPC test: ADS.StartRepair(\"npc-no-inn\").");
                         
                         // Aetheryte management buttons
                         ImGui.Spacing();

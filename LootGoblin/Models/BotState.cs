@@ -3,6 +3,7 @@ namespace LootGoblin.Models;
 public enum BotState
 {
     Idle,
+    Repairing,
     SelectingMap,
     OpeningMap,
     DetectingLocation,

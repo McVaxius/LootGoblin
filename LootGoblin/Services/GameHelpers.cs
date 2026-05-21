@@ -17,6 +17,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using ECommons.Automation;
 using LootGoblin.Services;
+using DalamudObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 
 namespace LootGoblin.Services;
 
@@ -26,6 +27,9 @@ namespace LootGoblin.Services;
 /// </summary>
 public static class GameHelpers
 {
+    private const float AetheryteSanctuaryFallbackDistance = 50.0f;
+    private const float AetheryteSanctuaryFallbackDistanceSquared = AetheryteSanctuaryFallbackDistance * AetheryteSanctuaryFallbackDistance;
+
     public const uint WellFedStatusId = 48;
 
     // Known food items in order of priority (least to most preferred), matching FrenRider.
@@ -764,6 +768,7 @@ public static class GameHelpers
     /// <summary>
     /// Check if the player is in a sanctuary (rest area where you can't summon companion).
     /// Ported from FrenRider GameHelpers.
+    /// Also allows ADS NPC no-inn repair near Aetheryte/Aethernet objects.
     /// </summary>
     public static unsafe bool IsInSanctuary()
     {
@@ -772,12 +777,48 @@ public static class GameHelpers
             var am = ActionManager.Instance();
             if (am == null) return true;
             var status = am->GetActionStatus(ActionType.GeneralAction, 9);
-            return status != 0;
+            return status != 0 || IsNearAetheryteOrAethernet();
         }
         catch
         {
             return true;
         }
+    }
+
+    private static bool IsNearAetheryteOrAethernet()
+    {
+        try
+        {
+            var player = Plugin.ObjectTable.LocalPlayer;
+            if (player == null) return false;
+
+            var playerPosition = player.Position;
+            foreach (var obj in Plugin.ObjectTable)
+            {
+                if (obj == null || !IsAetheryteOrAethernet(obj))
+                    continue;
+
+                if (Vector3.DistanceSquared(playerPosition, obj.Position) <= AetheryteSanctuaryFallbackDistanceSquared)
+                    return true;
+            }
+        }
+        catch
+        {
+            // Keep old sanctuary heuristic behavior if object-table proximity cannot be read.
+        }
+
+        return false;
+    }
+
+    private static bool IsAetheryteOrAethernet(IGameObject obj)
+    {
+        if (obj.ObjectKind == DalamudObjectKind.Aetheryte)
+            return true;
+
+        var name = obj.Name.TextValue;
+        return !string.IsNullOrEmpty(name) &&
+               (name.Contains("Aetheryte", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("Aethernet", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
