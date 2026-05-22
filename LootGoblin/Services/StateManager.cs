@@ -441,6 +441,7 @@ public class StateManager : IDisposable
     private bool? combatAutomationEnabledState;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
+    private DateTime lastPartyMountWaitLogTime = DateTime.MinValue;
     private bool landingCommandsRanThisMap;
     private bool dutyEntryCommandsRanThisMap;
     private bool finishCommandsRanThisRun;
@@ -537,7 +538,6 @@ public class StateManager : IDisposable
         { BotState.DetectingLocation, 30  },
         { BotState.Teleporting,       90  },
         { BotState.Mounting,          30  },
-        { BotState.WaitingForParty,   120 },
         { BotState.Flying,            300 },
         { BotState.OpeningChest,      120 },
         { BotState.DungeonCombat,      300 },
@@ -3096,6 +3096,47 @@ public class StateManager : IDisposable
             || Plugin.Condition[ConditionFlag.InFlight];
     }
 
+    private bool ShouldHoldSameTerritoryTakeoffForParty(out int mounted, out int total)
+    {
+        mounted = 0;
+        total = 0;
+
+        if (!_plugin.Configuration.WaitForParty)
+            return false;
+
+        if (State is not (BotState.Idle
+            or BotState.DetectingLocation
+            or BotState.Teleporting
+            or BotState.Mounting
+            or BotState.WaitingForParty))
+        {
+            return false;
+        }
+
+        _plugin.PartyService.UpdatePartyStatus();
+        mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
+        total = _plugin.PartyService.PartyMembers.Count;
+
+        return total > 1 && !_plugin.PartyService.AllMembersMounted;
+    }
+
+    private bool TryHoldSameTerritoryTakeoffForParty(string logPrefix)
+    {
+        if (!ShouldHoldSameTerritoryTakeoffForParty(out var mounted, out var total))
+            return false;
+
+        var detail = $"Waiting for party before takeoff ({mounted}/{total} mounted)...";
+        _plugin.AddDebugLog(
+            $"{logPrefix} Already mounted, but WaitForParty is enabled and party is not fully mounted ({mounted}/{total}) - holding before flight.");
+
+        if (State == BotState.WaitingForParty)
+            StateDetail = detail;
+        else
+            TransitionTo(BotState.WaitingForParty, detail);
+
+        return true;
+    }
+
     private void LogThiefWaterInfo(string message)
     {
         _plugin.AddDebugLog(message);
@@ -3110,19 +3151,6 @@ public class StateManager : IDisposable
 
         lastLogTime = now;
         LogThiefWaterInfo(message);
-    }
-
-    private bool CanResumeThiefWaterTravelAfterRemount(out List<string> outOfZoneNames)
-    {
-        var party = _plugin.PartyService;
-        party.UpdatePartyStatus();
-        outOfZoneNames = party.PartyMembers
-            .Where(member => !member.IsInSameZone)
-            .Select(member => string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name)
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .ToList();
-
-        return outOfZoneNames.Count == 0;
     }
 
     private string BuildThiefWaterRemountZoneWaitDetail(IReadOnlyCollection<string> outOfZoneNames)
@@ -6964,6 +6992,10 @@ public class StateManager : IDisposable
 
         if (IsMountedOrActualInFlight())
         {
+            if (TryHoldSameTerritoryTakeoffForParty(logPrefix))
+                return;
+
+            overworldRecoveryRequiresPartyMountWait = false;
             _plugin.AddDebugLog($"{logPrefix} Already mounted or actually in flight - skipping mount setup.");
             TransitionTo(BotState.Flying, mountedTransitionDetail);
             return;
@@ -7191,6 +7223,7 @@ public class StateManager : IDisposable
         if (nav.IsMounted())
         {
             var thiefWaterRemountRecovered = thiefWaterRemountRecoveryActive;
+            var waitForParty = _plugin.Configuration.WaitForParty;
 
             // Successfully mounted - reset counters and proceed
             mountAttemptStart = DateTime.MinValue;
@@ -7198,24 +7231,52 @@ public class StateManager : IDisposable
             if (thiefWaterRemountRecovered)
             {
                 thiefWaterRemountRecoveryActive = false;
-                if (CanResumeThiefWaterTravelAfterRemount(out var outOfZoneNames))
+                _plugin.PartyService.UpdatePartyStatus();
+                var outOfZoneNames = _plugin.PartyService.PartyMembers
+                    .Where(member => !member.IsInSameZone)
+                    .Select(member => string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name)
+                    .OrderBy(name => name, StringComparer.Ordinal)
+                    .ToList();
+
+                if (!waitForParty)
                 {
-                    LogThiefWaterInfo("[Underwater] Remount recovery succeeded; all party members are in zone, bypassing mount wait for thief-map travel.");
+                    LogThiefWaterInfo("[Underwater] Remount recovery succeeded; WaitForParty disabled, bypassing party wait for thief-map travel.");
+                    ResumeThiefWaterTravelAfterRemount("Thief-map remount recovered - flying to location...");
+                    return;
+                }
+
+                if (_plugin.PartyService.AllMembersMounted)
+                {
+                    LogThiefWaterInfo("[Underwater] Remount recovery succeeded; all party members are mounted, resuming thief-map travel.");
                     ResumeThiefWaterTravelAfterRemount("Thief-map remount recovered - flying to location...");
                     return;
                 }
 
                 thiefWaterRemountRecoveryZoneWaitActive = true;
                 var missingText = string.Join(", ", outOfZoneNames);
-                LogThiefWaterInfo($"[Underwater] Remount recovery succeeded; waiting for party members to load into zone before thief-map travel: {missingText}.");
-                TransitionTo(BotState.WaitingForParty, BuildThiefWaterRemountZoneWaitDetail(outOfZoneNames));
+                var mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
+                var total = _plugin.PartyService.PartyMembers.Count;
+                LogThiefWaterInfo(outOfZoneNames.Count > 0
+                    ? $"[Underwater] Remount recovery succeeded; waiting for party before thief-map travel: {mounted}/{total} mounted; out of zone: {missingText}."
+                    : $"[Underwater] Remount recovery succeeded; waiting for party to mount before thief-map travel: {mounted}/{total} mounted.");
+                TransitionTo(
+                    BotState.WaitingForParty,
+                    outOfZoneNames.Count > 0
+                        ? BuildThiefWaterRemountZoneWaitDetail(outOfZoneNames)
+                        : $"Thief-map remount: waiting for party to mount ({mounted}/{total} mounted)...");
                 return;
             }
             
             var partySize = Plugin.PartyList.Length;
-            var waitForParty = _plugin.Configuration.WaitForParty;
-            var recoveryWait = overworldRecoveryRequiresPartyMountWait;
-            _plugin.AddDebugLog($"[Mounting] PartySize={partySize}, WaitForParty={waitForParty}, RecoveryPartyWait={recoveryWait}");
+            var recoveryWaitRequested = overworldRecoveryRequiresPartyMountWait;
+            var recoveryWait = recoveryWaitRequested && waitForParty;
+            _plugin.AddDebugLog($"[Mounting] PartySize={partySize}, WaitForParty={waitForParty}, RecoveryPartyWait={recoveryWaitRequested}");
+
+            if (recoveryWaitRequested && !waitForParty)
+            {
+                overworldRecoveryRequiresPartyMountWait = false;
+                _plugin.AddDebugLog("[Mounting] Recovery party wait skipped because WaitForParty is disabled.");
+            }
 
             if (recoveryWait)
             {
@@ -7234,7 +7295,10 @@ public class StateManager : IDisposable
             if (partySize > 0 && waitForParty)
                 TransitionTo(BotState.WaitingForParty, "Waiting for party to mount...");
             else
+            {
+                overworldRecoveryRequiresPartyMountWait = false;
                 TransitionTo(BotState.Flying, "Mounted! Flying to location...");
+            }
             return;
         }
 
@@ -7301,39 +7365,58 @@ public class StateManager : IDisposable
     {
         _plugin.PartyService.UpdatePartyStatus();
 
-        if (thiefWaterRemountRecoveryZoneWaitActive)
+        if (!_plugin.Configuration.WaitForParty)
         {
-            if (CanResumeThiefWaterTravelAfterRemount(out var outOfZoneNames))
+            overworldRecoveryRequiresPartyMountWait = false;
+            if (thiefWaterRemountRecoveryZoneWaitActive)
             {
-                LogThiefWaterInfo("[Underwater] Thief-map remount zone wait complete; bypassing party mount wait and resuming travel.");
-                ResumeThiefWaterTravelAfterRemount("Party loaded into zone - flying to thief-map location...");
+                LogThiefWaterInfo("[Underwater] WaitForParty disabled; bypassing thief-map party wait after remount.");
+                ResumeThiefWaterTravelAfterRemount("Wait for party disabled - flying to thief-map location...");
                 return;
             }
 
-            var missingText = string.Join(", ", outOfZoneNames);
-            StateDetail = BuildThiefWaterRemountZoneWaitDetail(outOfZoneNames);
-            LogLandingPartyWaitOnce(
-                $"ThiefWaterRemountZone:block:{string.Join("|", outOfZoneNames)}",
-                $"[PartyWait][ThiefWaterRemountZone] Waiting for out-of-zone party members before thief-map travel: {missingText}");
+            TransitionTo(BotState.Flying, "Wait for party disabled - flying to location...");
             return;
         }
 
         if (_plugin.PartyService.AllMembersMounted)
         {
             overworldRecoveryRequiresPartyMountWait = false;
+            if (thiefWaterRemountRecoveryZoneWaitActive)
+            {
+                LogThiefWaterInfo("[Underwater] Thief-map remount party wait complete; all party members mounted.");
+                ResumeThiefWaterTravelAfterRemount("All party members mounted - flying to thief-map location...");
+                return;
+            }
+
             TransitionTo(BotState.Flying, "All party members mounted! Flying...");
             return;
         }
 
         var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-        var timeout = _plugin.Configuration.PartyWaitTimeout;
-        var remaining = timeout - (int)elapsed;
+        var mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
+        var total = _plugin.PartyService.PartyMembers.Count;
+        var outOfZoneNames = _plugin.PartyService.PartyMembers
+            .Where(member => !member.IsInSameZone)
+            .Select(member => string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+        var outOfZoneDetail = outOfZoneNames.Count == 0
+            ? string.Empty
+            : $"; out of zone: {string.Join(", ", outOfZoneNames)}";
 
-        if ((int)elapsed % 10 == 0 && (int)elapsed > 0)
+        StateDetail = thiefWaterRemountRecoveryZoneWaitActive && outOfZoneNames.Count > 0
+            ? $"Thief-map remount: waiting for party ({mounted}/{total} mounted, {elapsed:F0}s elapsed{outOfZoneDetail})..."
+            : $"Waiting for party to mount ({mounted}/{total} mounted, {elapsed:F0}s elapsed{outOfZoneDetail})...";
+
+        var now = DateTime.Now;
+        if (now - lastPartyMountWaitLogTime >= TimeSpan.FromSeconds(10))
         {
-            var mounted = _plugin.PartyService.PartyMembers.FindAll(m => m.IsMounted).Count;
-            var total = _plugin.PartyService.PartyMembers.Count;
-            StateDetail = $"Waiting for party ({mounted}/{total} mounted) - {remaining}s left...";
+            lastPartyMountWaitLogTime = now;
+            var outOfZoneLog = outOfZoneNames.Count == 0
+                ? string.Empty
+                : $"; outOfZone={string.Join(", ", outOfZoneNames)}";
+            _plugin.AddDebugLog($"[PartyWait][Mount] Waiting {elapsed:F0}s; mounted={mounted}/{total}{outOfZoneLog}.");
         }
     }
 
@@ -11970,6 +12053,8 @@ public class StateManager : IDisposable
         }
         descentInProgress = false;
         lastLandingPartyWaitSignature = string.Empty;
+        if (prev == BotState.WaitingForParty || newState == BotState.WaitingForParty)
+            lastPartyMountWaitLogTime = DateTime.MinValue;
         openingChestCombatInterrupted = false;
         ResetTreasureHighLowRetryState();
         openingChestRecoveryDigIssued = false;
