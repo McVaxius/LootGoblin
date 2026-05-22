@@ -44,6 +44,7 @@ public class PartyService : IDisposable
     public List<PartyMember> PartyMembers { get; } = new();
     public bool AllMembersMounted { get; private set; }
     public bool AllMembersReady { get; private set; }
+    public int LastValidMemberCount { get; private set; }
 
     private int lastLoggedMemberCount;
     private int lastLoggedMountedCount;
@@ -60,12 +61,20 @@ public class PartyService : IDisposable
 
     public void Dispose() { }
 
-    public void UpdatePartyStatus()
+    public bool UpdatePartyStatus()
     {
         if (!_clientState.IsLoggedIn)
         {
+            ResetPartySnapshot(clearLastValid: true);
             SetState(PartyCoordinationState.Idle, "Not logged in.");
-            return;
+            return false;
+        }
+
+        if (_condition[ConditionFlag.BetweenAreas] || _condition[ConditionFlag.BetweenAreas51])
+        {
+            ResetPartySnapshot();
+            SetState(PartyCoordinationState.Idle, "Loading...");
+            return false;
         }
 
         PartyMembers.Clear();
@@ -73,8 +82,9 @@ public class PartyService : IDisposable
         if (localPlayer == null)
         {
             // During area transitions, local player can be temporarily null - don't error
+            ResetPartySnapshot();
             SetState(PartyCoordinationState.Idle, "Loading...");
-            return;
+            return false;
         }
 
         // Add local player
@@ -113,8 +123,9 @@ public class PartyService : IDisposable
         }
 
         // Check if all members are ready
-        AllMembersMounted = PartyMembers.All(m => m.IsMounted);
-        AllMembersReady = PartyMembers.All(m => m.IsReady);
+        AllMembersMounted = PartyMembers.Count > 0 && PartyMembers.All(m => m.IsMounted);
+        AllMembersReady = PartyMembers.Count > 0 && PartyMembers.All(m => m.IsReady);
+        LastValidMemberCount = PartyMembers.Count;
 
         var currentMounted = PartyMembers.Count(m => m.IsMounted);
         if (PartyMembers.Count != lastLoggedMemberCount || currentMounted != lastLoggedMountedCount)
@@ -123,10 +134,18 @@ public class PartyService : IDisposable
             lastLoggedMountedCount = currentMounted;
             _plugin.AddDebugLog($"Party: {PartyMembers.Count} members, {currentMounted} mounted");
         }
+
+        return true;
     }
 
     public bool WaitForAllMounted(int timeoutSeconds = 60)
     {
+        if (!UpdatePartyStatus())
+        {
+            SetState(PartyCoordinationState.Error, "Party snapshot unavailable.");
+            return false;
+        }
+
         if (PartyMembers.Count <= 1)
         {
             _plugin.AddDebugLog("Solo: No party coordination needed.");
@@ -138,8 +157,7 @@ public class PartyService : IDisposable
         var startTime = DateTime.Now;
         while ((DateTime.Now - startTime).TotalSeconds < timeoutSeconds)
         {
-            UpdatePartyStatus();
-            if (AllMembersMounted)
+            if (UpdatePartyStatus() && AllMembersMounted)
             {
                 SetState(PartyCoordinationState.AllReady, "All party members mounted!");
                 return true;
@@ -210,5 +228,14 @@ public class PartyService : IDisposable
         State = state;
         StateDetail = detail;
         _plugin.AddDebugLog($"Party state: {state} - {detail}");
+    }
+
+    private void ResetPartySnapshot(bool clearLastValid = false)
+    {
+        PartyMembers.Clear();
+        AllMembersMounted = false;
+        AllMembersReady = false;
+        if (clearLastValid)
+            LastValidMemberCount = 0;
     }
 }

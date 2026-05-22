@@ -47,6 +47,7 @@ public class StateManager : IDisposable
     private readonly struct OverworldLandingPartyWaitResult
     {
         public bool CanProceed { get; init; }
+        public bool SnapshotValid { get; init; }
         public int NearbyOthers { get; init; }
         public int RequiredOthers { get; init; }
         public int TotalOthers { get; init; }
@@ -442,6 +443,7 @@ public class StateManager : IDisposable
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
     private DateTime lastPartyMountWaitLogTime = DateTime.MinValue;
+    private int waitingForPartyExpectedMemberCount;
     private bool landingCommandsRanThisMap;
     private bool dutyEntryCommandsRanThisMap;
     private bool finishCommandsRanThisRun;
@@ -2949,21 +2951,14 @@ public class StateManager : IDisposable
             return false;
 
         var now = DateTime.Now;
+        if (TryHoldForOverworldMapContentPartyWait(10.0))
+            return true;
+
         if (_plugin.NavigationService.IsMounted())
         {
             var waitForPartyDismount = _plugin.Configuration.PartyWaitBeforeDismount;
             _plugin.AddDebugLog(
                 $"[Dismount] PartyWaitBeforeDismount={waitForPartyDismount}, LandingMode={currentLandingMode}, BypassForDive=False");
-
-            if (waitForPartyDismount)
-            {
-                var partyWait = EvaluateOverworldLandingPartyWait(10.0);
-                if (!partyWait.CanProceed)
-                {
-                    StateDetail = BuildOverworldLandingPartyWaitDetail(partyWait, 10.0);
-                    return true;
-                }
-            }
 
             if (dismountAttemptStart == DateTime.MinValue)
             {
@@ -3016,6 +3011,19 @@ public class StateManager : IDisposable
             }
         }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
 
+        return true;
+    }
+
+    private bool TryHoldForOverworldMapContentPartyWait(double maxDistance)
+    {
+        if (!_plugin.Configuration.PartyWaitBeforeDismount)
+            return false;
+
+        var partyWait = EvaluateOverworldLandingPartyWait(maxDistance);
+        if (partyWait.CanProceed)
+            return false;
+
+        StateDetail = BuildOverworldLandingPartyWaitDetail(partyWait, maxDistance);
         return true;
     }
 
@@ -3096,6 +3104,41 @@ public class StateManager : IDisposable
             || Plugin.Condition[ConditionFlag.InFlight];
     }
 
+    private int EstimateExpectedPartyMemberCount()
+    {
+        var partyListCount = Plugin.PartyList.Length;
+        if (partyListCount <= 0)
+            return Math.Max(1, _plugin.PartyService.LastValidMemberCount);
+
+        var localPlayerName = Plugin.ObjectTable.LocalPlayer?.Name.TextValue;
+        if (string.IsNullOrWhiteSpace(localPlayerName))
+            return Math.Max(partyListCount, _plugin.PartyService.LastValidMemberCount);
+
+        for (var i = 0; i < Plugin.PartyList.Length; i++)
+        {
+            var member = Plugin.PartyList[i];
+            if (member != null && member.Name.TextValue == localPlayerName)
+                return Math.Max(partyListCount, _plugin.PartyService.LastValidMemberCount);
+        }
+
+        return Math.Max(partyListCount + 1, _plugin.PartyService.LastValidMemberCount);
+    }
+
+    private void CaptureWaitingForPartyExpectedMemberCount()
+    {
+        var priorLastValidMemberCount = _plugin.PartyService.LastValidMemberCount;
+        var snapshotValid = _plugin.PartyService.UpdatePartyStatus();
+        var snapshotCount = _plugin.PartyService.PartyMembers.Count;
+        waitingForPartyExpectedMemberCount = Math.Max(
+            1,
+            Math.Max(Math.Max(snapshotCount, priorLastValidMemberCount), EstimateExpectedPartyMemberCount()));
+
+        var mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
+        _plugin.AddDebugLog(
+            $"[PartyWait][Mount] Entered wait; expected={waitingForPartyExpectedMemberCount}, " +
+            $"snapshotValid={snapshotValid}, mounted={mounted}/{snapshotCount}.");
+    }
+
     private bool ShouldHoldSameTerritoryTakeoffForParty(out int mounted, out int total)
     {
         mounted = 0;
@@ -3113,11 +3156,22 @@ public class StateManager : IDisposable
             return false;
         }
 
-        _plugin.PartyService.UpdatePartyStatus();
+        var priorLastValidMemberCount = _plugin.PartyService.LastValidMemberCount;
+        var snapshotValid = _plugin.PartyService.UpdatePartyStatus();
         mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
         total = _plugin.PartyService.PartyMembers.Count;
+        var expectedTotal = Math.Max(total, Math.Max(priorLastValidMemberCount, EstimateExpectedPartyMemberCount()));
 
-        return total > 1 && !_plugin.PartyService.AllMembersMounted;
+        if (!snapshotValid)
+        {
+            total = Math.Max(waitingForPartyExpectedMemberCount, expectedTotal);
+            return total > 1;
+        }
+
+        if (expectedTotal > total)
+            total = expectedTotal;
+
+        return total > 1 && (mounted < total || !_plugin.PartyService.AllMembersMounted);
     }
 
     private bool TryHoldSameTerritoryTakeoffForParty(string logPrefix)
@@ -7231,7 +7285,7 @@ public class StateManager : IDisposable
             if (thiefWaterRemountRecovered)
             {
                 thiefWaterRemountRecoveryActive = false;
-                _plugin.PartyService.UpdatePartyStatus();
+                var partySnapshotValid = _plugin.PartyService.UpdatePartyStatus();
                 var outOfZoneNames = _plugin.PartyService.PartyMembers
                     .Where(member => !member.IsInSameZone)
                     .Select(member => string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name)
@@ -7245,7 +7299,7 @@ public class StateManager : IDisposable
                     return;
                 }
 
-                if (_plugin.PartyService.AllMembersMounted)
+                if (partySnapshotValid && _plugin.PartyService.AllMembersMounted)
                 {
                     LogThiefWaterInfo("[Underwater] Remount recovery succeeded; all party members are mounted, resuming thief-map travel.");
                     ResumeThiefWaterTravelAfterRemount("Thief-map remount recovered - flying to location...");
@@ -7363,7 +7417,7 @@ public class StateManager : IDisposable
 
     private void TickWaitingForParty()
     {
-        _plugin.PartyService.UpdatePartyStatus();
+        var snapshotValid = _plugin.PartyService.UpdatePartyStatus();
 
         if (!_plugin.Configuration.WaitForParty)
         {
@@ -7379,23 +7433,17 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (_plugin.PartyService.AllMembersMounted)
-        {
-            overworldRecoveryRequiresPartyMountWait = false;
-            if (thiefWaterRemountRecoveryZoneWaitActive)
-            {
-                LogThiefWaterInfo("[Underwater] Thief-map remount party wait complete; all party members mounted.");
-                ResumeThiefWaterTravelAfterRemount("All party members mounted - flying to thief-map location...");
-                return;
-            }
-
-            TransitionTo(BotState.Flying, "All party members mounted! Flying...");
-            return;
-        }
-
         var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
         var mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
         var total = _plugin.PartyService.PartyMembers.Count;
+        if (waitingForPartyExpectedMemberCount <= 0 && total > 0)
+            waitingForPartyExpectedMemberCount = total;
+        if (total > waitingForPartyExpectedMemberCount)
+            waitingForPartyExpectedMemberCount = total;
+
+        var expectedTotal = waitingForPartyExpectedMemberCount > 0
+            ? waitingForPartyExpectedMemberCount
+            : EstimateExpectedPartyMemberCount();
         var outOfZoneNames = _plugin.PartyService.PartyMembers
             .Where(member => !member.IsInSameZone)
             .Select(member => string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name)
@@ -7405,9 +7453,44 @@ public class StateManager : IDisposable
             ? string.Empty
             : $"; out of zone: {string.Join(", ", outOfZoneNames)}";
 
-        StateDetail = thiefWaterRemountRecoveryZoneWaitActive && outOfZoneNames.Count > 0
-            ? $"Thief-map remount: waiting for party ({mounted}/{total} mounted, {elapsed:F0}s elapsed{outOfZoneDetail})..."
-            : $"Waiting for party to mount ({mounted}/{total} mounted, {elapsed:F0}s elapsed{outOfZoneDetail})...";
+        if (snapshotValid &&
+            total >= expectedTotal &&
+            outOfZoneNames.Count == 0 &&
+            _plugin.PartyService.AllMembersMounted)
+        {
+            overworldRecoveryRequiresPartyMountWait = false;
+            if (thiefWaterRemountRecoveryZoneWaitActive)
+            {
+                LogThiefWaterInfo("[Underwater] Thief-map remount party wait complete; all expected party members mounted.");
+                ResumeThiefWaterTravelAfterRemount("All expected party members mounted - flying to thief-map location...");
+                return;
+            }
+
+            TransitionTo(BotState.Flying, "All expected party members mounted! Flying...");
+            return;
+        }
+
+        if (!snapshotValid)
+        {
+            StateDetail = $"Waiting for party snapshot ({elapsed:F0}s elapsed, expecting {expectedTotal} members)...";
+        }
+        else if (total < expectedTotal)
+        {
+            StateDetail =
+                $"Waiting for full party snapshot ({total}/{expectedTotal} seen, {mounted}/{total} mounted, {elapsed:F0}s elapsed)...";
+        }
+        else if (outOfZoneNames.Count > 0)
+        {
+            StateDetail = thiefWaterRemountRecoveryZoneWaitActive
+                ? $"Thief-map remount: waiting for party zone load ({mounted}/{total} mounted, {elapsed:F0}s elapsed{outOfZoneDetail})..."
+                : $"Waiting for party zone load ({mounted}/{total} mounted, {elapsed:F0}s elapsed{outOfZoneDetail})...";
+        }
+        else
+        {
+            StateDetail = thiefWaterRemountRecoveryZoneWaitActive
+                ? $"Thief-map remount: waiting for party to mount ({mounted}/{total} mounted, {elapsed:F0}s elapsed)..."
+                : $"Waiting for party to mount ({mounted}/{total} mounted, {elapsed:F0}s elapsed)...";
+        }
 
         var now = DateTime.Now;
         if (now - lastPartyMountWaitLogTime >= TimeSpan.FromSeconds(10))
@@ -7416,7 +7499,9 @@ public class StateManager : IDisposable
             var outOfZoneLog = outOfZoneNames.Count == 0
                 ? string.Empty
                 : $"; outOfZone={string.Join(", ", outOfZoneNames)}";
-            _plugin.AddDebugLog($"[PartyWait][Mount] Waiting {elapsed:F0}s; mounted={mounted}/{total}{outOfZoneLog}.");
+            var validityLog = snapshotValid ? string.Empty : "; snapshot=invalid";
+            var expectedLog = expectedTotal > 0 ? $"; expected={expectedTotal}" : string.Empty;
+            _plugin.AddDebugLog($"[PartyWait][Mount] Waiting {elapsed:F0}s; mounted={mounted}/{total}{expectedLog}{outOfZoneLog}{validityLog}.");
         }
     }
 
@@ -10025,7 +10110,14 @@ public class StateManager : IDisposable
     private bool CanStartNextMapAfterPartyWait()
     {
         var party = _plugin.PartyService;
-        party.UpdatePartyStatus();
+        if (!party.UpdatePartyStatus())
+        {
+            StateDetail = "Waiting for party snapshot before next map...";
+            LogLandingPartyWaitOnce(
+                "CompletedNextMap:snapshot-invalid",
+                "[PartyWait][CompletedNextMap] Party snapshot unavailable - blocking next map");
+            return false;
+        }
 
         if (party.PartyMembers.Count <= 1)
         {
@@ -12055,6 +12147,10 @@ public class StateManager : IDisposable
         lastLandingPartyWaitSignature = string.Empty;
         if (prev == BotState.WaitingForParty || newState == BotState.WaitingForParty)
             lastPartyMountWaitLogTime = DateTime.MinValue;
+        if (newState == BotState.WaitingForParty)
+            CaptureWaitingForPartyExpectedMemberCount();
+        else if (prev == BotState.WaitingForParty)
+            waitingForPartyExpectedMemberCount = 0;
         openingChestCombatInterrupted = false;
         ResetTreasureHighLowRetryState();
         openingChestRecoveryDigIssued = false;
@@ -13169,13 +13265,30 @@ public class StateManager : IDisposable
     private OverworldLandingPartyWaitResult EvaluateOverworldLandingPartyWait(double maxDistance)
     {
         var party = _plugin.PartyService;
-        party.UpdatePartyStatus();
+        var snapshotValid = party.UpdatePartyStatus();
+        if (!snapshotValid)
+        {
+            var expectedOthers = Math.Max(0, EstimateExpectedPartyMemberCount() - 1);
+            LogLandingPartyWaitOnce(
+                "OverworldLanding:snapshot-invalid",
+                "[PartyWait][OverworldLanding] Party snapshot unavailable - holding map content");
+            return new OverworldLandingPartyWaitResult
+            {
+                CanProceed = false,
+                SnapshotValid = false,
+                NearbyOthers = 0,
+                RequiredOthers = expectedOthers,
+                TotalOthers = expectedOthers,
+            };
+        }
+
         if (party.PartyMembers.Count <= 1)
         {
-            LogLandingPartyWaitOnce("OverworldLanding:solo", "[PartyWait][OverworldLanding] Solo or no party members - dismounting allowed");
+            LogLandingPartyWaitOnce("OverworldLanding:solo", "[PartyWait][OverworldLanding] Solo or no party members - map content allowed");
             return new OverworldLandingPartyWaitResult
             {
                 CanProceed = true,
+                SnapshotValid = true,
                 NearbyOthers = 0,
                 RequiredOthers = 0,
                 TotalOthers = 0,
@@ -13185,10 +13298,11 @@ public class StateManager : IDisposable
         var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         if (playerPos == Vector3.Zero)
         {
-            LogLandingPartyWaitOnce("OverworldLanding:no-local-player", "[PartyWait][OverworldLanding] Local player unavailable - holding dismount");
+            LogLandingPartyWaitOnce("OverworldLanding:no-local-player", "[PartyWait][OverworldLanding] Local player unavailable - holding map content");
             return new OverworldLandingPartyWaitResult
             {
                 CanProceed = false,
+                SnapshotValid = true,
                 NearbyOthers = 0,
                 RequiredOthers = 0,
                 TotalOthers = party.PartyMembers.Count - 1,
@@ -13238,7 +13352,7 @@ public class StateManager : IDisposable
         if (!canProceed)
         {
             var message =
-                $"[PartyWait][OverworldLanding] Blocking dismount; nearby {nearbyOthers}/{totalOthers} within {maxDistance:F1}y, " +
+                $"[PartyWait][OverworldLanding] Blocking map content; nearby {nearbyOthers}/{totalOthers} within {maxDistance:F1}y, " +
                 $"required {requiredOthers}";
             if (sameZoneFarDescriptions.Count > 0)
                 message += $"; same-zone far: {string.Join(", ", sameZoneFarDescriptions)}";
@@ -13252,7 +13366,7 @@ public class StateManager : IDisposable
         else
         {
             var message =
-                $"[PartyWait][OverworldLanding] Dismount allowed; nearby {nearbyOthers}/{totalOthers} within {maxDistance:F1}y, " +
+                $"[PartyWait][OverworldLanding] Map content allowed; nearby {nearbyOthers}/{totalOthers} within {maxDistance:F1}y, " +
                 $"required {requiredOthers}";
             if (sameZoneFarDescriptions.Count > 0)
                 message += $"; threshold satisfied with same-zone far members still trailing: {string.Join(", ", sameZoneFarDescriptions)}";
@@ -13267,6 +13381,7 @@ public class StateManager : IDisposable
         return new OverworldLandingPartyWaitResult
         {
             CanProceed = canProceed,
+            SnapshotValid = true,
             NearbyOthers = nearbyOthers,
             RequiredOthers = requiredOthers,
             TotalOthers = totalOthers,
@@ -13277,9 +13392,16 @@ public class StateManager : IDisposable
 
     private string BuildOverworldLandingPartyWaitDetail(OverworldLandingPartyWaitResult result, double maxDistance)
     {
+        if (!result.SnapshotValid)
+        {
+            return result.TotalOthers > 0
+                ? $"Waiting for party snapshot before map content (expecting {result.TotalOthers} other players)..."
+                : "Waiting for party snapshot before map content...";
+        }
+
         var summary =
             $"Waiting for party ({result.NearbyOthers}/{result.TotalOthers} nearby within {maxDistance:F0}y, " +
-            $"need {result.RequiredOthers} before dismounting";
+            $"need {result.RequiredOthers} before map content";
 
         if (result.SameZoneFarCount > 0)
             summary += $", {result.SameZoneFarCount} far";
@@ -13293,7 +13415,14 @@ public class StateManager : IDisposable
     private (bool CanProceed, int NearbyCount, int TotalSameZone, int IgnoredOutOfZone) EvaluateLandingPartyWait(double maxDistance, string context)
     {
         var party = _plugin.PartyService;
-        party.UpdatePartyStatus();
+        var snapshotValid = party.UpdatePartyStatus();
+        if (!snapshotValid)
+        {
+            var expectedOthers = Math.Max(0, EstimateExpectedPartyMemberCount() - 1);
+            LogLandingPartyWaitOnce($"{context}:snapshot-invalid", $"[PartyWait][{context}] Party snapshot unavailable - holding dismount");
+            return (false, 0, 0, expectedOthers);
+        }
+
         if (party.PartyMembers.Count <= 1)
         {
             LogLandingPartyWaitOnce($"{context}:solo", $"[PartyWait][{context}] Solo or no party members - dismounting allowed");
