@@ -224,6 +224,11 @@ public class StateManager : IDisposable
     private string lastLoggedBmrActiveModuleName = string.Empty;
     private int lastLoggedVbmForbiddenZonesCount;
     private bool betweenAreasMovementStopped; // Stop LootGoblin-owned movement once per loading screen
+    private DateTime teleportCommandIssuedAt = DateTime.MinValue;
+    private Vector3 teleportOriginPosition = Vector3.Zero;
+    private bool teleportSawBetweenAreas;
+    private DateTime teleportLastLoadingAt = DateTime.MinValue;
+    private DateTime teleportLoadingClearedAt = DateTime.MinValue;
     
     // Map opening validation variables
     private int initialMapCount;
@@ -243,6 +248,7 @@ public class StateManager : IDisposable
     private static readonly TimeSpan OverworldRecoveryNoProgressRepathTimeout = TimeSpan.FromSeconds(10.0);
     private static readonly TimeSpan OverworldRecoveryNoProgressTeleportTimeout = TimeSpan.FromSeconds(25.0);
     private static readonly TimeSpan OverworldRecoveryTeleportDecisionLogInterval = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan TeleportArrivalSettleDelay = TimeSpan.FromSeconds(1.0);
     private const float PortalInteractionRange = 3.0f;
     private const float PortalStrictInteractionRange = 1.6f;
     private const float PortalApproachInteractionRange = 5.0f;
@@ -822,6 +828,13 @@ public class StateManager : IDisposable
         {
             adsRepairRecoverySawBetweenAreas = true;
             adsRepairRecoveryLastLoadingAt = DateTime.Now;
+        }
+
+        if (State == BotState.Teleporting)
+        {
+            teleportSawBetweenAreas = true;
+            teleportLastLoadingAt = DateTime.Now;
+            teleportLoadingClearedAt = DateTime.MinValue;
         }
 
         ResetPortalApproachTrackingForAreaChange();
@@ -3112,6 +3125,15 @@ public class StateManager : IDisposable
     {
         return _plugin.NavigationService.IsMounted()
             || Plugin.Condition[ConditionFlag.InFlight];
+    }
+
+    private void ResetTeleportLifecycleTracking()
+    {
+        teleportCommandIssuedAt = DateTime.MinValue;
+        teleportOriginPosition = Vector3.Zero;
+        teleportSawBetweenAreas = false;
+        teleportLastLoadingAt = DateTime.MinValue;
+        teleportLoadingClearedAt = DateTime.MinValue;
     }
 
     private int EstimateExpectedPartyMemberCount()
@@ -7198,6 +7220,7 @@ public class StateManager : IDisposable
     private void TickTeleporting()
     {
         var nav = _plugin.NavigationService;
+        var now = DateTime.Now;
 
         if (!stateActionIssued)
         {
@@ -7206,6 +7229,11 @@ public class StateManager : IDisposable
                 HandleError("No aetheryte ID for teleport.");
                 return;
             }
+            teleportCommandIssuedAt = now;
+            teleportOriginPosition = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+            teleportSawBetweenAreas = false;
+            teleportLastLoadingAt = DateTime.MinValue;
+            teleportLoadingClearedAt = DateTime.MinValue;
             nav.TeleportToAetheryte(CurrentLocation.NearestAetheryteId);
             stateActionIssued = true;
             return;
@@ -7220,64 +7248,116 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Minimum wait after teleport command to allow animation to start and complete
-        // Without this, same-zone teleports transition instantly because BetweenAreas hasn't been set yet
-        var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-        if (elapsed < 5.0)
+        var elapsed = teleportCommandIssuedAt == DateTime.MinValue
+            ? now - stateStartTime
+            : now - teleportCommandIssuedAt;
+        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                      Plugin.Condition[ConditionFlag.BetweenAreas51] ||
+                      nav.IsTeleporting();
+
+        if (loading)
         {
-            StateDetail = $"Teleporting... ({elapsed:F0}s)";
+            teleportSawBetweenAreas = true;
+            teleportLastLoadingAt = now;
+            teleportLoadingClearedAt = DateTime.MinValue;
+            StateDetail = $"Teleporting... ({elapsed.TotalSeconds:F0}s)";
             return;
         }
 
-        // Check if teleport finished (no longer between areas and in correct territory)
-        if (!nav.IsTeleporting())
+        if (!teleportSawBetweenAreas)
         {
-            var currentTerritory = Plugin.ClientState.TerritoryType;
-            if (CurrentLocation != null && currentTerritory == CurrentLocation.TerritoryId)
-            {
-                _plugin.AddDebugLog($"[Teleporting] Arrived after {elapsed:F1}s");
+            StateDetail = $"Teleporting... waiting for area load ({elapsed.TotalSeconds:F0}s)";
+            return;
+        }
 
-                // Passively record aetheryte position for future nearest-aetheryte lookups
-                // Record when within 20y of estimated aetheryte location (XZ only)
-                if (CurrentLocation?.NearestAetheryteId > 0)
+        if (teleportLoadingClearedAt == DateTime.MinValue)
+            teleportLoadingClearedAt = now;
+
+        var settleElapsed = now - teleportLoadingClearedAt;
+        if (settleElapsed < TeleportArrivalSettleDelay)
+        {
+            StateDetail = $"Teleporting... settling ({elapsed.TotalSeconds:F0}s)";
+            return;
+        }
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+        {
+            StateDetail = $"Teleporting... waiting for player after load ({elapsed.TotalSeconds:F0}s)";
+            return;
+        }
+
+        if (player.IsCasting || Plugin.Condition[ConditionFlag.Casting])
+        {
+            StateDetail = $"Teleporting... waiting for cast lock to clear ({elapsed.TotalSeconds:F0}s)";
+            return;
+        }
+
+        var currentTerritory = Plugin.ClientState.TerritoryType;
+        var expectedTerritory = CurrentLocation?.TerritoryId ?? 0;
+        if (expectedTerritory == 0)
+        {
+            HandleError("No target territory after teleport.");
+            return;
+        }
+
+        if (currentTerritory != expectedTerritory)
+        {
+            if (elapsed.TotalSeconds > 15)
+            {
+                HandleError($"Wrong territory after teleport: {currentTerritory} (expected {expectedTerritory}).");
+                return;
+            }
+
+            StateDetail = $"Teleporting... waiting for target territory ({elapsed.TotalSeconds:F0}s)";
+            return;
+        }
+
+        var playerPos = player.Position;
+        var positionDelta = playerPos != Vector3.Zero && teleportOriginPosition != Vector3.Zero
+            ? Vector3.Distance(playerPos, teleportOriginPosition)
+            : 0.0f;
+        var lastLoadingText = teleportLastLoadingAt == DateTime.MinValue
+            ? "never"
+            : $"{(now - teleportLastLoadingAt).TotalSeconds:F1}s ago";
+        _plugin.AddDebugLog(
+            $"[Teleporting] Arrived after {elapsed.TotalSeconds:F1}s; " +
+            $"settle={settleElapsed.TotalSeconds:F1}s; moved={positionDelta:F1}y; lastLoading={lastLoadingText}.");
+
+        // Passively record aetheryte position for future nearest-aetheryte lookups
+        // Record when within 20y of estimated aetheryte location (XZ only)
+        if (CurrentLocation?.NearestAetheryteId > 0)
+        {
+            if (playerPos != Vector3.Zero)
+            {
+                // Get estimated position from Level sheet or MapMarker
+                var estimatedPos = _plugin.NavigationService.GetEstimatedAetherytePosition(CurrentLocation.NearestAetheryteId);
+                if (estimatedPos != Vector3.Zero)
                 {
-                    var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-                    if (playerPos != Vector3.Zero)
+                    // Check XZ distance only (ignore Y)
+                    var dx = playerPos.X - estimatedPos.X;
+                    var dz = playerPos.Z - estimatedPos.Z;
+                    var xzDist = Math.Sqrt(dx * dx + dz * dz);
+                    
+                    _plugin.AddDebugLog($"[Aetheryte] {CurrentLocation.NearestAetheryteName} - Player pos: ({playerPos.X:F1}, {playerPos.Z:F1}), Est pos: ({estimatedPos.X:F1}, {estimatedPos.Z:F1}), XZ dist: {xzDist:F1}y");
+                    
+                    if (xzDist <= 20.0f)
                     {
-                        // Get estimated position from Level sheet or MapMarker
-                        var estimatedPos = _plugin.NavigationService.GetEstimatedAetherytePosition(CurrentLocation.NearestAetheryteId);
-                        if (estimatedPos != Vector3.Zero)
-                        {
-                            // Check XZ distance only (ignore Y)
-                            var dx = playerPos.X - estimatedPos.X;
-                            var dz = playerPos.Z - estimatedPos.Z;
-                            var xzDist = Math.Sqrt(dx * dx + dz * dz);
-                            
-                            _plugin.AddDebugLog($"[Aetheryte] {CurrentLocation.NearestAetheryteName} - Player pos: ({playerPos.X:F1}, {playerPos.Z:F1}), Est pos: ({estimatedPos.X:F1}, {estimatedPos.Z:F1}), XZ dist: {xzDist:F1}y");
-                            
-                            if (xzDist <= 20.0f)
-                            {
-                                _plugin.AddDebugLog($"[Aetheryte] RECORDING {CurrentLocation.NearestAetheryteId} - within 20y!");
-                                _plugin.AetherytePositionDatabase.RecordPosition(
-                                    CurrentLocation.NearestAetheryteId,
-                                    CurrentLocation.NearestAetheryteName,
-                                    playerPos.X, playerPos.Y, playerPos.Z);
-                            }
-                        }
-                        else
-                        {
-                            _plugin.AddDebugLog($"[Aetheryte] No estimated position for {CurrentLocation.NearestAetheryteName} (ID {CurrentLocation.NearestAetheryteId})");
-                        }
+                        _plugin.AddDebugLog($"[Aetheryte] RECORDING {CurrentLocation.NearestAetheryteId} - within 20y!");
+                        _plugin.AetherytePositionDatabase.RecordPosition(
+                            CurrentLocation.NearestAetheryteId,
+                            CurrentLocation.NearestAetheryteName,
+                            playerPos.X, playerPos.Y, playerPos.Z);
                     }
                 }
-
-                TransitionTo(BotState.Mounting, "Arrived! Mounting up...");
-            }
-            else if (elapsed > 15)
-            {
-                HandleError($"Wrong territory after teleport: {currentTerritory} (expected {CurrentLocation?.TerritoryId}).");
+                else
+                {
+                    _plugin.AddDebugLog($"[Aetheryte] No estimated position for {CurrentLocation.NearestAetheryteName} (ID {CurrentLocation.NearestAetheryteId})");
+                }
             }
         }
+
+        TransitionTo(BotState.Mounting, "Arrived! Mounting up...");
     }
 
     private void TickMounting()
@@ -12283,6 +12363,9 @@ public class StateManager : IDisposable
         var prev = State;
         if (newState == BotState.Error)
             ResetAdsRepairHandoffTracking();
+
+        if (newState == BotState.Teleporting || prev == BotState.Teleporting)
+            ResetTeleportLifecycleTracking();
 
         if (prev == BotState.Flying || newState == BotState.Flying)
             ResetVnavFlyFlagFallbackState();
