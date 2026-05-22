@@ -312,10 +312,12 @@ public class StateManager : IDisposable
     private const float PortalInteractionProgressMargin = 0.35f;
     private static readonly TimeSpan AdsRepairStartGrace = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairTimeout = TimeSpan.FromMinutes(3.0);
+    private static readonly TimeSpan AdsRepairRetryDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan AdsRepairRecoveryInitialTeleportDelay = TimeSpan.FromSeconds(1.5);
     private static readonly TimeSpan AdsRepairRecoveryTeleportSettleDelay = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan AdsRepairRecoveryTeleportRetryCooldown = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan AdsRepairRecoveryTimeout = TimeSpan.FromSeconds(90.0);
+    private const int AdsRepairMaxRetryAttempts = 3;
     private const float AdsRepairRecoveryTeleportPositionDeltaThreshold = 5.0f;
     private const int AdsRepairRecoveryTeleportMaxRetries = 2;
     private static readonly TimeSpan TreasureHighLowSettleDelay = TimeSpan.FromMilliseconds(350);
@@ -420,7 +422,12 @@ public class StateManager : IDisposable
     private bool adsRepairUtilityObserved;
     private DateTime adsRepairHandoffStarted = DateTime.MinValue;
     private string adsRepairRequestedMode = string.Empty;
+    private string adsRepairSource = string.Empty;
     private bool continueStartAfterAdsRepair;
+    private bool adsRepairRetryPending;
+    private DateTime adsRepairRetryAt = DateTime.MinValue;
+    private int adsRepairRetryAttemptCount;
+    private string adsRepairRetryReason = string.Empty;
     private bool adsRepairRecoveryActive;
     private bool adsRepairRecoveryTeleportIssued;
     private DateTime adsRepairRecoveryStarted = DateTime.MinValue;
@@ -755,6 +762,9 @@ public class StateManager : IDisposable
         if (TickAdsRepairRecovery())
             return;
 
+        if (TickAdsRepairRetry())
+            return;
+
         if (TickAdsRepairHandoff())
             return;
 
@@ -973,7 +983,7 @@ public class StateManager : IDisposable
 
         if (TryStartAdsRepairIfNeeded("[Start]", resumeStartAfterRepair: true))
         {
-            if (adsRepairHandoffActive || adsRepairRecoveryActive)
+            if (adsRepairHandoffActive || adsRepairRecoveryActive || adsRepairRetryPending)
             {
                 continueStartAfterAdsRepair = true;
                 TransitionTo(BotState.Repairing, "Repairing gear before starting map run...");
@@ -10542,6 +10552,8 @@ public class StateManager : IDisposable
         int threshold,
         bool resumeStartAfterRepair)
     {
+        adsRepairSource = source;
+
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null)
         {
@@ -10603,14 +10615,16 @@ public class StateManager : IDisposable
 
     private bool TryRequestAdsRepair(string source, string repairMode, int lowestCondition, int threshold)
     {
+        adsRepairSource = source;
+
         if (!_plugin.AdsStatusService.StartRepair(repairMode))
         {
             var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
-            var statusText = GetAdsRepairStatusText(adsStatus);
-            if (string.IsNullOrWhiteSpace(statusText))
-                statusText = "ADS did not accept the repair request.";
-            ResetAdsRepairHandoffTracking();
-            TransitionTo(BotState.Error, $"Could not start ADS repair ({repairMode}) at {lowestCondition}% durability: {statusText}");
+            ScheduleAdsRepairRetry(
+                $"Could not start ADS repair ({repairMode}) at {lowestCondition}% durability.",
+                adsStatus,
+                lowestCondition,
+                threshold);
             return false;
         }
 
@@ -10648,12 +10662,6 @@ public class StateManager : IDisposable
             FailAdsRepairRecovery(
                 $"Wrong territory during ADS repair recovery: {Plugin.ClientState.TerritoryType} (expected {adsRepairRecoveryTerritoryId}).");
             return true;
-        }
-
-        var sanctuaryHeuristic = GameHelpers.IsInSanctuary();
-        if (sanctuaryHeuristic && !adsRepairRecoveryTeleportIssued)
-        {
-            return StartAdsRepairAfterRecovery("Sanctuary heuristic became true before repair teleport; starting ADS repair directly.");
         }
 
         if (!adsRepairRecoveryTeleportIssued)
@@ -10742,7 +10750,7 @@ public class StateManager : IDisposable
         var lastLoadingText = adsRepairRecoveryLastLoadingAt == DateTime.MinValue
             ? "never"
             : $"{(now - adsRepairRecoveryLastLoadingAt).TotalSeconds:F1}s ago";
-        sanctuaryHeuristic = GameHelpers.IsInSanctuary();
+        var sanctuaryHeuristic = GameHelpers.IsInSanctuary();
         _plugin.AddDebugLog(
             $"{adsRepairRecoverySource}[Repair] Repair teleport settled at {adsRepairRecoveryAetheryteName} " +
             $"(ID {adsRepairRecoveryAetheryteId}); territory={Plugin.ClientState.TerritoryType}; " +
@@ -10863,6 +10871,64 @@ public class StateManager : IDisposable
         TransitionTo(BotState.Error, message);
     }
 
+    private bool TickAdsRepairRetry()
+    {
+        if (!adsRepairRetryPending)
+            return false;
+
+        var now = DateTime.Now;
+        var source = GetAdsRepairSource();
+        var waitRemaining = adsRepairRetryAt - now;
+        if (waitRemaining > TimeSpan.Zero)
+        {
+            var retryReason = string.IsNullOrWhiteSpace(adsRepairRetryReason)
+                ? "ADS repair failed."
+                : adsRepairRetryReason;
+            StateDetail =
+                $"{retryReason} Retrying ADS repair in {waitRemaining.TotalSeconds:F1}s " +
+                $"({adsRepairRetryAttemptCount}/{AdsRepairMaxRetryAttempts})...";
+            return true;
+        }
+
+        adsRepairRetryPending = false;
+        adsRepairRetryAt = DateTime.MinValue;
+        adsRepairRetryReason = string.Empty;
+
+        var threshold = Math.Clamp(_plugin.Configuration.RepairThresholdPercent, 0, 100);
+        if (threshold <= 0)
+            return CompleteAdsRepair(_plugin.AdsStatusService.Refresh(force: true));
+
+        if (!_plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition))
+        {
+            ResetAdsRepairHandoffTracking();
+            TransitionTo(BotState.Error, "Could not read equipped gear durability before ADS repair retry.");
+            return true;
+        }
+
+        if (lowestCondition >= threshold)
+            return CompleteAdsRepair(_plugin.AdsStatusService.Refresh(force: true));
+
+        if (!_plugin.IsAdsAvailable)
+        {
+            ResetAdsRepairHandoffTracking();
+            TransitionTo(
+                BotState.Error,
+                $"Equipped gear durability is {lowestCondition}% below repair threshold {threshold}%, but ADS unloaded before repair retry.");
+            return true;
+        }
+
+        var repairMode = ResolveAdsRepairMode();
+        _plugin.AddDebugLog(
+            $"{source}[Repair] Retrying ADS repair {adsRepairRetryAttemptCount}/{AdsRepairMaxRetryAttempts}; " +
+            $"lowest durability {lowestCondition}%, threshold {threshold}%, mode {repairMode}.");
+
+        if (repairMode == "npc-no-inn" && !GameHelpers.IsInSanctuary())
+            return BeginAdsRepairTeleportRecovery(source, repairMode, lowestCondition, threshold, continueStartAfterAdsRepair);
+
+        TryRequestAdsRepair(source, repairMode, lowestCondition, threshold);
+        return true;
+    }
+
     private bool TickAdsRepairHandoff()
     {
         if (!adsRepairHandoffActive)
@@ -10872,10 +10938,9 @@ public class StateManager : IDisposable
         if (elapsed > AdsRepairTimeout)
         {
             var status = _plugin.AdsStatusService.Refresh(force: true);
-            var statusText = GetAdsRepairStatusText(status);
-            ResetAdsRepairHandoffTracking();
-            TransitionTo(BotState.Error, $"ADS repair timed out after {AdsRepairTimeout.TotalSeconds:F0}s. ADS: {statusText}");
-            return true;
+            return FinishOrRetryAdsRepairAttempt(
+                $"ADS repair timed out after {AdsRepairTimeout.TotalSeconds:F0}s.",
+                status);
         }
 
         var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
@@ -10899,17 +10964,97 @@ public class StateManager : IDisposable
         }
 
         var threshold = Math.Clamp(_plugin.Configuration.RepairThresholdPercent, 0, 100);
-        if (threshold > 0
-            && _plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition)
-            && lowestCondition < threshold)
+        if (threshold > 0)
         {
-            var statusText = GetAdsRepairStatusText(adsStatus);
+            if (!_plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition))
+            {
+                ResetAdsRepairHandoffTracking();
+                TransitionTo(BotState.Error, "ADS repair finished, but equipped gear durability could not be read.");
+                return true;
+            }
+
+            if (lowestCondition < threshold)
+            {
+                ScheduleAdsRepairRetry(
+                    "ADS repair stopped before durability reached threshold.",
+                    adsStatus,
+                    lowestCondition,
+                    threshold);
+                return true;
+            }
+        }
+
+        return CompleteAdsRepair(adsStatus);
+    }
+
+    private bool FinishOrRetryAdsRepairAttempt(string failureMessage, AdsStatusSnapshot adsStatus)
+    {
+        var threshold = Math.Clamp(_plugin.Configuration.RepairThresholdPercent, 0, 100);
+        if (threshold <= 0)
+            return CompleteAdsRepair(adsStatus);
+
+        if (!_plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition))
+        {
             ResetAdsRepairHandoffTracking();
-            TransitionTo(BotState.Error, $"ADS repair finished but durability is still {lowestCondition}% below threshold {threshold}%. ADS: {statusText}");
+            TransitionTo(BotState.Error, $"{failureMessage} Could not read equipped gear durability.");
             return true;
         }
 
-        _plugin.AddDebugLog($"[Repair] ADS repair complete; continuing map loop. ADS: {GetAdsRepairStatusText(adsStatus)}");
+        if (lowestCondition >= threshold)
+            return CompleteAdsRepair(adsStatus);
+
+        ScheduleAdsRepairRetry(failureMessage, adsStatus, lowestCondition, threshold);
+        return true;
+    }
+
+    private void ScheduleAdsRepairRetry(
+        string failureMessage,
+        AdsStatusSnapshot adsStatus,
+        int lowestCondition,
+        int threshold)
+    {
+        var source = GetAdsRepairSource();
+        var statusText = GetAdsRepairStatusText(adsStatus);
+
+        if (!_plugin.IsAdsAvailable)
+        {
+            ResetAdsRepairHandoffTracking();
+            TransitionTo(
+                BotState.Error,
+                $"{failureMessage} Durability is still {lowestCondition}% below threshold {threshold}%, but ADS is not loaded.");
+            return;
+        }
+
+        if (adsRepairRetryAttemptCount >= AdsRepairMaxRetryAttempts)
+        {
+            ResetAdsRepairHandoffTracking();
+            TransitionTo(
+                BotState.Error,
+                $"{failureMessage} Durability is still {lowestCondition}% below threshold {threshold}% " +
+                $"after {AdsRepairMaxRetryAttempts} ADS repair retry attempts. ADS: {statusText}");
+            return;
+        }
+
+        adsRepairRetryAttemptCount++;
+        adsRepairRetryPending = true;
+        adsRepairRetryAt = DateTime.Now + AdsRepairRetryDelay;
+        adsRepairRetryReason = failureMessage;
+        ClearAdsRepairAttemptTrackingForRetry();
+
+        StateDetail =
+            $"ADS repair did not raise durability ({lowestCondition}%/{threshold}%). " +
+            $"Retrying in {AdsRepairRetryDelay.TotalSeconds:F1}s " +
+            $"({adsRepairRetryAttemptCount}/{AdsRepairMaxRetryAttempts})...";
+        _plugin.AddDebugLog(
+            $"{source}[Repair] {failureMessage} Durability still {lowestCondition}% below threshold {threshold}%. " +
+            $"Retrying ADS repair after {AdsRepairRetryDelay.TotalSeconds:F1}s " +
+            $"({adsRepairRetryAttemptCount}/{AdsRepairMaxRetryAttempts}). ADS: {statusText}");
+    }
+
+    private bool CompleteAdsRepair(AdsStatusSnapshot adsStatus)
+    {
+        var source = GetAdsRepairSource();
+        _plugin.AddDebugLog($"{source}[Repair] ADS repair complete; continuing map loop. ADS: {GetAdsRepairStatusText(adsStatus)}");
 
         if (continueStartAfterAdsRepair)
         {
@@ -10921,6 +11066,9 @@ public class StateManager : IDisposable
         ResetAdsRepairHandoffTracking();
         return false;
     }
+
+    private string GetAdsRepairSource()
+        => string.IsNullOrWhiteSpace(adsRepairSource) ? "[Repair]" : adsRepairSource;
 
     private string ResolveAdsRepairMode()
         => _plugin.Configuration.RepairMode == RepairMode.Self ? "self" : "npc-no-inn";
@@ -10940,12 +11088,27 @@ public class StateManager : IDisposable
 
     private void ResetAdsRepairHandoffTracking()
     {
+        ClearAdsRepairAttemptTrackingForRetry();
+        adsRepairSource = string.Empty;
+        continueStartAfterAdsRepair = false;
+        ResetAdsRepairRetryTracking();
+    }
+
+    private void ClearAdsRepairAttemptTrackingForRetry()
+    {
         adsRepairHandoffActive = false;
         adsRepairUtilityObserved = false;
         adsRepairHandoffStarted = DateTime.MinValue;
         adsRepairRequestedMode = string.Empty;
-        continueStartAfterAdsRepair = false;
         ResetAdsRepairRecoveryTracking();
+    }
+
+    private void ResetAdsRepairRetryTracking()
+    {
+        adsRepairRetryPending = false;
+        adsRepairRetryAt = DateTime.MinValue;
+        adsRepairRetryAttemptCount = 0;
+        adsRepairRetryReason = string.Empty;
     }
 
     private void ResetAdsRepairRecoveryTracking()
@@ -12118,6 +12281,9 @@ public class StateManager : IDisposable
     private void TransitionTo(BotState newState, string detail)
     {
         var prev = State;
+        if (newState == BotState.Error)
+            ResetAdsRepairHandoffTracking();
+
         if (prev == BotState.Flying || newState == BotState.Flying)
             ResetVnavFlyFlagFallbackState();
 
