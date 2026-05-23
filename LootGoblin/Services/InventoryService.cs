@@ -156,14 +156,12 @@ public class InventoryService : IDisposable
                     var slot = container->GetInventorySlot(i);
                     if (slot == null || slot->ItemId == 0) continue;
 
-                    var item = itemSheet.GetRow(slot->ItemId);
+                    var itemId = slot->ItemId;
+                    var item = itemSheet.GetRow(itemId);
                     var itemName = item.Name.ToString();
-                    if (string.IsNullOrEmpty(itemName)) continue;
 
-                    // Pattern: "Timeworn * Map", "* Special Timeworn Map", or "Mysterious Map"
-                    if ((itemName.Contains("Timeworn") && itemName.Contains("Map")) || itemName == "Mysterious Map")
+                    if (IsTreasureMapSource(itemId, itemName))
                     {
-                        var itemId = slot->ItemId;
                         var quantity = (int)slot->Quantity;
 
                         if (!results.TryGetValue(itemId, out var sourceCount))
@@ -195,8 +193,7 @@ public class InventoryService : IDisposable
                     foreach (var kvp in results)
                     {
                         var item = itemSheet.GetRow(kvp.Key);
-                        var name = item.Name.ToString();
-                        if (string.IsNullOrEmpty(name)) name = "Unknown";
+                        var name = GetMapSourceDisplayName(kvp.Key, item.Name.ToString());
                         var counts = kvp.Value;
                         _plugin.AddDebugLog(
                             $"  Found {counts.Total}x {name} (ID: {kvp.Key}) " +
@@ -726,6 +723,28 @@ public class InventoryService : IDisposable
             new ContainerSpec(InventoryType.RetainerPage6, (count, quantity) => count.Retainer += quantity),
             new ContainerSpec(InventoryType.RetainerPage7, (count, quantity) => count.Retainer += quantity),
         };
+    }
+
+    private static bool IsTreasureMapSource(uint itemId, string itemName)
+    {
+        if (TreasureMapData.KnownMaps.ContainsKey(itemId))
+            return true;
+
+        return !string.IsNullOrWhiteSpace(itemName) &&
+               ((itemName.Contains("Timeworn", StringComparison.OrdinalIgnoreCase) &&
+                 itemName.Contains("Map", StringComparison.OrdinalIgnoreCase)) ||
+                string.Equals(itemName, "Mysterious Map", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string GetMapSourceDisplayName(uint itemId, string itemName)
+    {
+        if (!string.IsNullOrWhiteSpace(itemName))
+            return itemName;
+
+        return TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo) &&
+               !string.IsNullOrWhiteSpace(mapInfo.Name)
+            ? mapInfo.Name
+            : "Unknown";
     }
 
     private static bool TryMatchTreasureMapKeyItem(
