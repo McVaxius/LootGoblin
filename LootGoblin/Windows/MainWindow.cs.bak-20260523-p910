@@ -287,16 +287,6 @@ public class MainWindow : Window, IDisposable
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Automatically starts the next runnable selected map after completing one.");
 
-            ImGui.SameLine();
-            var showAllKnownMapTypes = plugin.Configuration.ShowAllKnownMapTypes;
-            if (ImGui.Checkbox("Show all map types##MapQueueShowAllKnownMapTypes", ref showAllKnownMapTypes))
-            {
-                plugin.Configuration.ShowAllKnownMapTypes = showAllKnownMapTypes;
-                plugin.Configuration.Save();
-            }
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Shows runnable map rows even when none are currently in inventory or loaded saddlebags.");
-
             ImGui.Spacing();
 
             if (Plugin.ClientState.IsLoggedIn)

@@ -306,7 +306,6 @@ public sealed class Plugin : IDalamudPlugin
         FateSyncService.Update();
         FoodService.Update();
         AdsReflectionIpcService.Update();
-        NavigationService.Update();
 
         if (RetainerMapRetrievalService.IsRunning)
         {
@@ -415,16 +414,7 @@ public sealed class Plugin : IDalamudPlugin
 
         StateManager.NotifyChatMessage(text);
 
-        var isPathFailure = text.Contains("Failed to find path", StringComparison.OrdinalIgnoreCase);
-        var isNavmeshMissing = text.Contains("navmesh", StringComparison.OrdinalIgnoreCase) &&
-                               text.Contains("missing", StringComparison.OrdinalIgnoreCase);
-        if (!isPathFailure && !isNavmeshMissing)
-            return;
-
-        if (NavigationService.NotifyVnavCommandRejectedWhileNavmeshBuilding(text))
-            return;
-
-        if (!isPathFailure)
+        if (!text.Contains("Failed to find path", StringComparison.OrdinalIgnoreCase))
             return;
 
         StateManager.NotifyVnavPathFailure(text);

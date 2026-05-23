@@ -117,7 +117,6 @@ public class StateManager : IDisposable
     private float overworldRecoveryBestDistance = float.MaxValue;
     private DateTime overworldRecoveryLastProgressTime = DateTime.MinValue;
     private DateTime overworldRecoveryLastRepathTime = DateTime.MinValue;
-    private DateTime overworldRecoveryLastNavmeshWaitLogTime = DateTime.MinValue;
     private DateTime overworldRecoveryLastTeleportDecisionLogTime = DateTime.MinValue;
     private string overworldRecoveryLastTeleportDecision = string.Empty;
     private int overworldRecoveryRepathCount;
@@ -710,12 +709,6 @@ public class StateManager : IDisposable
         // Don't timeout during combat - reset the timer so it starts fresh after combat ends
         bool inCombat = Plugin.Condition[ConditionFlag.InCombat];
         if (inCombat)
-        {
-            stateStartTime = DateTime.Now;
-            return;
-        }
-
-        if (_plugin.NavigationService.State == NavigationState.WaitingForNavmesh)
         {
             stateStartTime = DateTime.Now;
             return;
@@ -2496,7 +2489,6 @@ public class StateManager : IDisposable
         overworldRecoveryBestDistance = float.MaxValue;
         overworldRecoveryLastProgressTime = DateTime.MinValue;
         overworldRecoveryLastRepathTime = DateTime.MinValue;
-        overworldRecoveryLastNavmeshWaitLogTime = DateTime.MinValue;
         overworldRecoveryLastTeleportDecisionLogTime = DateTime.MinValue;
         overworldRecoveryLastTeleportDecision = string.Empty;
         overworldRecoveryRepathCount = 0;
@@ -2544,7 +2536,6 @@ public class StateManager : IDisposable
             overworldRecoveryBestDistance = distanceFromTarget;
             overworldRecoveryLastProgressTime = now;
             overworldRecoveryLastRepathTime = DateTime.MinValue;
-            overworldRecoveryLastNavmeshWaitLogTime = DateTime.MinValue;
             overworldRecoveryLastTeleportDecisionLogTime = DateTime.MinValue;
             overworldRecoveryLastTeleportDecision = string.Empty;
             overworldRecoveryRepathCount = 0;
@@ -2562,23 +2553,6 @@ public class StateManager : IDisposable
             overworldRecoveryLastRepathTime = DateTime.MinValue;
             overworldRecoveryRepathCount = 0;
             return false;
-        }
-
-        if (_plugin.NavigationService.State == NavigationState.WaitingForNavmesh)
-        {
-            overworldRecoveryLastProgressTime = now;
-            overworldRecoveryLastPosition = currentPos;
-            StateDetail = _plugin.NavigationService.StateDetail;
-
-            if (now - overworldRecoveryLastNavmeshWaitLogTime >= OverworldRecoveryTeleportDecisionLogInterval)
-            {
-                overworldRecoveryLastNavmeshWaitLogTime = now;
-                _plugin.AddDebugLog(
-                    $"[{source}][Recovery] Holding {targetKind} recovery while vnavmesh is building the navmesh; " +
-                    $"currentDist={distanceFromTarget:F1}y; target={FormatVectorCompact(target)}.");
-            }
-
-            return true;
         }
 
         var noProgressFor = now - overworldRecoveryLastProgressTime;

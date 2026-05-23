@@ -13,7 +13,6 @@ public class VNavIPC : IDisposable
     private readonly IPluginLog _log;
     private readonly Plugin _plugin;
     private bool isRunningIpcFailureLogged;
-    private bool isNavReadyIpcFailureLogged;
     private bool isPathRunningIpcFailureLogged;
     private bool isPathfindInProgressIpcFailureLogged;
 
@@ -60,25 +59,6 @@ public class VNavIPC : IDisposable
         }
 
         return null;
-    }
-
-    public bool? TryIsNavReady()
-    {
-        if (!IsAvailable)
-            return null;
-
-        try
-        {
-            return _pluginInterface.GetIpcSubscriber<bool>("vnavmesh.Nav.IsReady").InvokeFunc();
-        }
-        catch (Exception ex)
-        {
-            LogIpcReadFailureOnce(
-                ref isNavReadyIpcFailureLogged,
-                "navmesh ready",
-                ex);
-            return null;
-        }
     }
 
     public bool? TryIsPathRunning()
@@ -146,112 +126,37 @@ public class VNavIPC : IDisposable
 
     public void CheckAvailability(bool logStatus = true)
     {
-        IsAvailable = false;
-
-        var foundInstalledButNotLoaded = false;
-        var loadedMatchDetail = string.Empty;
-        var metadataScanError = string.Empty;
-
         try
         {
+            IsAvailable = false;
+            
             foreach (var p in _pluginInterface.InstalledPlugins)
             {
-                if (!IsVNavPluginIdentity(p.InternalName) &&
-                    !IsVNavPluginIdentity(p.Name))
+                if (string.Equals(p.InternalName, "vnavmesh", StringComparison.OrdinalIgnoreCase))
                 {
-                    continue;
-                }
-
-                if (p.IsLoaded)
-                {
-                    IsAvailable = true;
-                    loadedMatchDetail = $"InternalName='{p.InternalName}', Name='{p.Name}'";
+                    if (p.IsLoaded)
+                    {
+                        IsAvailable = true;
+                    }
+                    else
+                    {
+                        if (logStatus)
+                            _plugin.AddDebugLog($"[VNavIPC] vnavmesh found but not loaded");
+                    }
                     break;
                 }
+            }
 
-                foundInstalledButNotLoaded = true;
+            if (!IsAvailable && logStatus)
+            {
+                _plugin.AddDebugLog($"[VNavIPC] vnavmesh not available");
             }
         }
         catch (Exception ex)
         {
-            metadataScanError = $"{ex.GetType().Name}: {ex.Message}";
-            _log.Debug($"[VNavIPC] Plugin metadata scan failed while checking vnavmesh: {metadataScanError}");
+            _log.Error($"Error checking vnavmesh: {ex.Message}");
+            IsAvailable = false;
         }
-
-        if (IsAvailable)
-        {
-            if (logStatus)
-                LogAvailabilityStatus($"vnavmesh available via plugin metadata ({loadedMatchDetail})");
-            return;
-        }
-
-        if (TryProbeVNavIpc(out var probeName, out var probeFailureDetail))
-        {
-            IsAvailable = true;
-            if (logStatus)
-                LogAvailabilityStatus($"vnavmesh available via IPC probe ({probeName})");
-            return;
-        }
-
-        if (!logStatus)
-            return;
-
-        if (foundInstalledButNotLoaded)
-        {
-            LogAvailabilityStatus("vnavmesh found but not loaded; IPC probe failed");
-            return;
-        }
-
-        var scanDetail = string.IsNullOrWhiteSpace(metadataScanError)
-            ? "not found in plugin list"
-            : $"plugin list unavailable ({metadataScanError})";
-        var probeDetail = string.IsNullOrWhiteSpace(probeFailureDetail)
-            ? "no IPC responder"
-            : probeFailureDetail;
-        LogAvailabilityStatus($"vnavmesh not available: {scanDetail}; {probeDetail}");
-    }
-
-    private static bool IsVNavPluginIdentity(string? value)
-        => string.Equals(NormalizePluginIdentity(value), "vnavmesh", StringComparison.Ordinal);
-
-    private static string NormalizePluginIdentity(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return string.Empty;
-
-        return new string(value
-            .Where(char.IsLetterOrDigit)
-            .Select(char.ToLowerInvariant)
-            .ToArray());
-    }
-
-    private bool TryProbeVNavIpc(out string probeName, out string failureDetail)
-    {
-        probeName = string.Empty;
-        failureDetail = string.Empty;
-
-        foreach (var ipcName in new[] { "vnavmesh.Nav.IsReady", "vnavmesh.Path.IsRunning", "NavmeshManager.IsRunning" })
-        {
-            try
-            {
-                _pluginInterface.GetIpcSubscriber<bool>(ipcName).InvokeFunc();
-                probeName = ipcName;
-                return true;
-            }
-            catch (Exception ex)
-            {
-                failureDetail = $"{ipcName}: {ex.GetType().Name}: {ex.Message}";
-            }
-        }
-
-        return false;
-    }
-
-    private void LogAvailabilityStatus(string message)
-    {
-        var formatted = $"[VNavIPC] {message}";
-        _plugin.AddDebugLog(formatted);
-        _log.Debug(formatted);
     }
 
     public void FlyTo(Vector3 target)

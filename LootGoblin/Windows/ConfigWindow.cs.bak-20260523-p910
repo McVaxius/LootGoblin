@@ -211,6 +211,8 @@ public class ConfigWindow : Window, IDisposable
             "When no enabled map is in inventory, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell.");
         DrawConfigCheckbox("Fetch maps from saddlebags", configuration.EnableSaddlebagMapRetrieval, value => configuration.EnableSaddlebagMapRetrieval = value,
             "When no enabled map is in inventory, LootGoblin can open /saddlebag and move one enabled map into inventory. Disable to ignore saddlebags entirely.");
+        DrawConfigCheckbox("Show all known map types", configuration.ShowAllKnownMapTypes, value => configuration.ShowAllKnownMapTypes = value,
+            "Shows runnable map rows even when none are currently in inventory or loaded saddlebags.");
 
         ImGui.Spacing();
         ImGui.Separator();

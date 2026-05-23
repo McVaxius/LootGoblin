@@ -15,7 +15,6 @@ public enum NavigationState
     Teleporting,
     WaitingForTeleport,
     Mounting,
-    WaitingForNavmesh,
     Flying,
     Arrived,
     Error,
@@ -28,21 +27,6 @@ public class NavigationService : IDisposable
         None,
         FlyTo,
         MoveTo,
-    }
-
-    private enum NavigationCommandKind
-    {
-        None,
-        FlyToPosition,
-        MoveToPosition,
-        FlyToFlag,
-    }
-
-    private enum NavigationCommandStartResult
-    {
-        SendNow,
-        Queued,
-        Failed,
     }
 
     private const float PositionCommandReuseTolerance = 1.0f;
@@ -67,10 +51,6 @@ public class NavigationService : IDisposable
     private float timeoutSeconds = 30f;
     private PositionNavigationKind activePositionNavigationKind = PositionNavigationKind.None;
     private Vector3 activePositionNavigationTarget;
-    private NavigationCommandKind activeNavigationCommandKind = NavigationCommandKind.None;
-    private Vector3 activeNavigationCommandTarget;
-    private NavigationCommandKind pendingNavigationCommandKind = NavigationCommandKind.None;
-    private Vector3 pendingNavigationCommandTarget;
 
     public NavigationService(Plugin plugin, ICondition condition, IClientState clientState, IDataManager dataManager, IPluginLog log)
     {
@@ -82,61 +62,6 @@ public class NavigationService : IDisposable
     }
 
     public void Dispose() { }
-
-    public void Update()
-    {
-        if (State != NavigationState.WaitingForNavmesh ||
-            pendingNavigationCommandKind == NavigationCommandKind.None)
-        {
-            return;
-        }
-
-        _plugin.VNavIPC.CheckAvailability(logStatus: false);
-        if (!_plugin.VNavIPC.IsAvailable)
-        {
-            ClearPendingNavigationCommand();
-            SetState(NavigationState.Error, "vnavmesh not available.");
-            return;
-        }
-
-        var isReady = _plugin.VNavIPC.TryIsNavReady();
-        if (isReady == false)
-            return;
-
-        var commandKind = pendingNavigationCommandKind;
-        var target = pendingNavigationCommandTarget;
-        ClearPendingNavigationCommand();
-
-        _plugin.AddDebugLog("[Navigation] vnavmesh is ready; starting queued navigation.");
-        SendNavigationCommand(commandKind, target);
-    }
-
-    public bool NotifyVnavCommandRejectedWhileNavmeshBuilding(string text)
-    {
-        _plugin.VNavIPC.CheckAvailability(logStatus: false);
-        if (!_plugin.VNavIPC.IsAvailable)
-            return false;
-
-        var isReady = _plugin.VNavIPC.TryIsNavReady();
-        if (isReady != false)
-            return false;
-
-        if (pendingNavigationCommandKind != NavigationCommandKind.None &&
-            State == NavigationState.WaitingForNavmesh)
-        {
-            return true;
-        }
-
-        if (activeNavigationCommandKind == NavigationCommandKind.None)
-            return false;
-
-        QueuePendingNavigationCommand(
-            activeNavigationCommandKind,
-            activeNavigationCommandTarget,
-            "vnavmesh rejected the command while navmesh was building");
-        _plugin.AddDebugLog($"[Navigation] vnavmesh command rejected while navmesh is building; waiting to retry. Message: {text}");
-        return true;
-    }
 
     public void TeleportToAetheryte(uint aetheryteId)
     {
@@ -204,12 +129,19 @@ public class NavigationService : IDisposable
         if (!force && IsActivePositionNavigation(PositionNavigationKind.FlyTo, position))
             return;
 
-        TargetPosition = position;
-        var startResult = PrepareVNavCommand(NavigationCommandKind.FlyToPosition, position);
-        if (startResult != NavigationCommandStartResult.SendNow)
+        // Re-check availability in case vnavmesh loaded after LootGoblin startup
+        _plugin.VNavIPC.CheckAvailability();
+        
+        if (!_plugin.VNavIPC.IsAvailable)
+        {
+            SetState(NavigationState.Error, "vnavmesh not available.");
             return;
+        }
 
-        SendNavigationCommand(NavigationCommandKind.FlyToPosition, position);
+        TargetPosition = position;
+        RememberActivePositionNavigation(PositionNavigationKind.FlyTo, position);
+        _plugin.VNavIPC.FlyTo(position);
+        SetState(NavigationState.Flying, $"Flying to {CommandHelper.FormatVector(position)}...");
     }
 
     public void MoveToPosition(Vector3 position)
@@ -217,18 +149,23 @@ public class NavigationService : IDisposable
         if (IsActivePositionNavigation(PositionNavigationKind.MoveTo, position))
             return;
 
-        TargetPosition = position;
-        var startResult = PrepareVNavCommand(NavigationCommandKind.MoveToPosition, position);
-        if (startResult != NavigationCommandStartResult.SendNow)
+        // Re-check availability in case vnavmesh loaded after LootGoblin startup
+        _plugin.VNavIPC.CheckAvailability();
+        
+        if (!_plugin.VNavIPC.IsAvailable)
+        {
+            SetState(NavigationState.Error, "vnavmesh not available.");
             return;
+        }
 
-        SendNavigationCommand(NavigationCommandKind.MoveToPosition, position);
+        TargetPosition = position;
+        RememberActivePositionNavigation(PositionNavigationKind.MoveTo, position);
+        _plugin.VNavIPC.MoveTo(position);
+        SetState(NavigationState.Flying, $"Moving to {CommandHelper.FormatVector(position)}...");
     }
 
     public void StopNavigation(bool clearFlag = false)
     {
-        ClearPendingNavigationCommand();
-        ClearActiveNavigationCommand();
         ClearActivePositionNavigation();
         _plugin.VNavIPC.Stop();
         if (clearFlag)
@@ -260,17 +197,19 @@ public class NavigationService : IDisposable
 
     public void FlyToFlag()
     {
-        if (State == NavigationState.WaitingForNavmesh &&
-            pendingNavigationCommandKind == NavigationCommandKind.FlyToFlag)
+        // Re-check availability in case vnavmesh loaded after LootGoblin startup
+        _plugin.VNavIPC.CheckAvailability();
+        
+        if (!_plugin.VNavIPC.IsAvailable)
         {
+            SetState(NavigationState.Error, "vnavmesh not available.");
             return;
         }
 
-        var startResult = PrepareVNavCommand(NavigationCommandKind.FlyToFlag, Vector3.Zero);
-        if (startResult != NavigationCommandStartResult.SendNow)
-            return;
-
-        SendNavigationCommand(NavigationCommandKind.FlyToFlag, Vector3.Zero);
+        CommandHelper.SendCommand("/vnav flyflag");
+        ClearActivePositionNavigation();
+        SetState(NavigationState.Flying, "Flying to map flag...");
+        _plugin.AddDebugLog("Flying to flag via vnavmesh.");
     }
 
     /// <summary>
@@ -843,134 +782,10 @@ public class NavigationService : IDisposable
         return Vector3.Zero;
     }
 
-    private NavigationCommandStartResult PrepareVNavCommand(NavigationCommandKind commandKind, Vector3 target)
-    {
-        _plugin.VNavIPC.CheckAvailability();
-
-        if (!_plugin.VNavIPC.IsAvailable)
-        {
-            ClearPendingNavigationCommand();
-            SetState(NavigationState.Error, "vnavmesh not available.");
-            return NavigationCommandStartResult.Failed;
-        }
-
-        var isReady = _plugin.VNavIPC.TryIsNavReady();
-        if (isReady == false)
-        {
-            QueuePendingNavigationCommand(commandKind, target, "navmesh is building");
-            return NavigationCommandStartResult.Queued;
-        }
-
-        return NavigationCommandStartResult.SendNow;
-    }
-
-    private void QueuePendingNavigationCommand(NavigationCommandKind commandKind, Vector3 target, string reason)
-    {
-        var alreadyPending = IsPendingNavigationCommand(commandKind, target);
-
-        pendingNavigationCommandKind = commandKind;
-        pendingNavigationCommandTarget = target;
-
-        if (alreadyPending && State == NavigationState.WaitingForNavmesh)
-            return;
-
-        _plugin.AddDebugLog($"[Navigation] Waiting for vnavmesh to finish building the navmesh before {DescribeNavigationCommand(commandKind, target)} ({reason}).");
-        SetState(NavigationState.WaitingForNavmesh, BuildWaitingForNavmeshDetail(commandKind, target));
-    }
-
-    private bool IsPendingNavigationCommand(NavigationCommandKind commandKind, Vector3 target)
-    {
-        if (pendingNavigationCommandKind != commandKind)
-            return false;
-
-        return commandKind == NavigationCommandKind.FlyToFlag ||
-               Vector3.DistanceSquared(pendingNavigationCommandTarget, target)
-                   <= PositionCommandReuseTolerance * PositionCommandReuseTolerance;
-    }
-
-    private void SendNavigationCommand(NavigationCommandKind commandKind, Vector3 target)
-    {
-        switch (commandKind)
-        {
-            case NavigationCommandKind.FlyToPosition:
-                TargetPosition = target;
-                RememberActivePositionNavigation(PositionNavigationKind.FlyTo, target);
-                RememberActiveNavigationCommand(commandKind, target);
-                _plugin.VNavIPC.FlyTo(target);
-                SetState(NavigationState.Flying, $"Flying to {CommandHelper.FormatVector(target)}...");
-                break;
-
-            case NavigationCommandKind.MoveToPosition:
-                TargetPosition = target;
-                RememberActivePositionNavigation(PositionNavigationKind.MoveTo, target);
-                RememberActiveNavigationCommand(commandKind, target);
-                _plugin.VNavIPC.MoveTo(target);
-                SetState(NavigationState.Flying, $"Moving to {CommandHelper.FormatVector(target)}...");
-                break;
-
-            case NavigationCommandKind.FlyToFlag:
-                ClearActivePositionNavigation();
-                RememberActiveNavigationCommand(commandKind, target);
-                CommandHelper.SendCommand("/vnav flyflag");
-                SetState(NavigationState.Flying, "Flying to map flag...");
-                _plugin.AddDebugLog("Flying to flag via vnavmesh.");
-                break;
-        }
-    }
-
-    private static string BuildWaitingForNavmeshDetail(NavigationCommandKind commandKind, Vector3 target)
-    {
-        return commandKind switch
-        {
-            NavigationCommandKind.FlyToPosition =>
-                $"Waiting for vnavmesh to finish building the navmesh before flying to {CommandHelper.FormatVector(target)}...",
-            NavigationCommandKind.MoveToPosition =>
-                $"Waiting for vnavmesh to finish building the navmesh before moving to {CommandHelper.FormatVector(target)}...",
-            NavigationCommandKind.FlyToFlag =>
-                "Waiting for vnavmesh to finish building the navmesh before flying to map flag...",
-            _ => "Waiting for vnavmesh to finish building the navmesh...",
-        };
-    }
-
-    private static string DescribeNavigationCommand(NavigationCommandKind commandKind, Vector3 target)
-    {
-        return commandKind switch
-        {
-            NavigationCommandKind.FlyToPosition => $"flying to {CommandHelper.FormatVector(target)}",
-            NavigationCommandKind.MoveToPosition => $"moving to {CommandHelper.FormatVector(target)}",
-            NavigationCommandKind.FlyToFlag => "flying to map flag",
-            _ => "navigating",
-        };
-    }
-
-    private void RememberActiveNavigationCommand(NavigationCommandKind commandKind, Vector3 target)
-    {
-        activeNavigationCommandKind = commandKind;
-        activeNavigationCommandTarget = target;
-    }
-
-    private void ClearActiveNavigationCommand()
-    {
-        activeNavigationCommandKind = NavigationCommandKind.None;
-        activeNavigationCommandTarget = default;
-    }
-
-    private void ClearPendingNavigationCommand()
-    {
-        pendingNavigationCommandKind = NavigationCommandKind.None;
-        pendingNavigationCommandTarget = default;
-    }
-
     private void SetState(NavigationState state, string detail)
     {
-        if (state != NavigationState.WaitingForNavmesh)
-            ClearPendingNavigationCommand();
-
         if (state != NavigationState.Flying)
-        {
             ClearActivePositionNavigation();
-            ClearActiveNavigationCommand();
-        }
 
         State = state;
         StateDetail = detail;
@@ -980,20 +795,10 @@ public class NavigationService : IDisposable
 
     private bool IsActivePositionNavigation(PositionNavigationKind kind, Vector3 position)
     {
-        var commandKind = kind == PositionNavigationKind.FlyTo
-            ? NavigationCommandKind.FlyToPosition
-            : NavigationCommandKind.MoveToPosition;
-
-        var activeMatch = State == NavigationState.Flying
+        return State == NavigationState.Flying
             && activePositionNavigationKind == kind
             && Vector3.DistanceSquared(activePositionNavigationTarget, position)
                 <= PositionCommandReuseTolerance * PositionCommandReuseTolerance;
-        var pendingMatch = State == NavigationState.WaitingForNavmesh
-            && pendingNavigationCommandKind == commandKind
-            && Vector3.DistanceSquared(pendingNavigationCommandTarget, position)
-                <= PositionCommandReuseTolerance * PositionCommandReuseTolerance;
-
-        return activeMatch || pendingMatch;
     }
 
     private void RememberActivePositionNavigation(PositionNavigationKind kind, Vector3 position)
