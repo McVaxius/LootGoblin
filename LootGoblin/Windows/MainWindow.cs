@@ -278,6 +278,17 @@ public class MainWindow : Window, IDisposable
     {
         if (ImGui.CollapsingHeader("Map Queue", ImGuiTreeNodeFlags.DefaultOpen))
         {
+            var autoStartNextMap = plugin.Configuration.AutoStartNextMap;
+            if (ImGui.Checkbox("Auto Start next map", ref autoStartNextMap))
+            {
+                plugin.Configuration.AutoStartNextMap = autoStartNextMap;
+                plugin.Configuration.Save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Automatically starts the next runnable selected map after completing one.");
+
+            ImGui.Spacing();
+
             if (Plugin.ClientState.IsLoggedIn)
             {
                 TickManualMapRefresh();

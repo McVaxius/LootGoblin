@@ -52,7 +52,7 @@ public class Configuration : IPluginConfiguration
     public int PartyWaitBeforeDismountRequiredOthers { get; set; } = 7;
 
     // Phase 5: State Machine
-    public bool AutoStartNextMap { get; set; } = false;
+    public bool AutoStartNextMap { get; set; } = true;
     public bool EnableStateLogging { get; set; } = true;
     public bool UseAdsInsteadOfLegacyDungeonSolver { get; set; } = true;
     public bool EnableRetainerMapRetrieval { get; set; } = true;

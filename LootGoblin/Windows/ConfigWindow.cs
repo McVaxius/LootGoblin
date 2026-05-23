@@ -158,8 +158,6 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawRunTab()
     {
-        DrawConfigCheckbox("Auto-Start Next Map", configuration.AutoStartNextMap, value => configuration.AutoStartNextMap = value);
-
         var returnWhenDone = configuration.ReturnWhenDoneEnabled;
         if (ImGui.Checkbox("Return when done", ref returnWhenDone))
         {
