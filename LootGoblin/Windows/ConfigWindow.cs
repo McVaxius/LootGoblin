@@ -269,6 +269,8 @@ public class ConfigWindow : Window, IDisposable
             ImGui.SetTooltip("When enabled, the bot waits for party members to mount before taking off.");
 
         DrawConfigCheckbox("Require All Mounted", configuration.RequireAllMounted, value => configuration.RequireAllMounted = value);
+        DrawConfigCheckbox("Do not use Tamamizu aetheryte", configuration.AvoidTamamizuAetheryte, value => configuration.AvoidTamamizuAetheryte = value,
+            "Skips Tamamizu when choosing the map teleport destination.");
 
         var partyTimeout = configuration.PartyWaitTimeout;
         if (ImGui.SliderInt("Party Wait Timeout (s)", ref partyTimeout, 30, 300))

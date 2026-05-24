@@ -20,6 +20,11 @@ public sealed class FateSyncService
         this.plugin = plugin;
     }
 
+    public bool IsInJoinedFate => TryReadCurrentFateId(out _, logFailure: false);
+
+    public bool TryGetJoinedFateId(out ushort fateId)
+        => TryReadCurrentFateId(out fateId, logFailure: false);
+
     public void Update()
     {
         if (!plugin.Configuration.AutoSyncFate)
@@ -28,7 +33,7 @@ public sealed class FateSyncService
         if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)
             return;
 
-        if (!TryGetCurrentFateId(out var fateId))
+        if (!TryReadCurrentFateId(out var fateId, logFailure: true))
         {
             ResetFateState();
             return;
@@ -52,7 +57,7 @@ public sealed class FateSyncService
         Plugin.Log.Information($"[LG][FATE-SYNC] Sent {LevelSyncCommand} for fateId={fateId}");
     }
 
-    private static unsafe bool TryGetCurrentFateId(out ushort fateId)
+    private static unsafe bool TryReadCurrentFateId(out ushort fateId, bool logFailure)
     {
         fateId = 0;
 
@@ -67,7 +72,8 @@ public sealed class FateSyncService
         }
         catch (Exception ex)
         {
-            Plugin.Log.Debug($"[LG][FATE-SYNC] FateManager read failed: {ex.Message}");
+            if (logFailure)
+                Plugin.Log.Debug($"[LG][FATE-SYNC] FateManager read failed: {ex.Message}");
             return false;
         }
     }

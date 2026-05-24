@@ -50,6 +50,7 @@ public class Configuration : IPluginConfiguration
     public bool PartyWaitBeforeDismount { get; set; } = false;
     public bool PartyWaitBeforeDismountUseCountThreshold { get; set; } = false;
     public int PartyWaitBeforeDismountRequiredOthers { get; set; } = 7;
+    public bool AvoidTamamizuAetheryte { get; set; } = true;
 
     // Phase 5: State Machine
     public bool AutoStartNextMap { get; set; } = true;

@@ -230,6 +230,15 @@ public class StateManager : IDisposable
     private bool teleportSawBetweenAreas;
     private DateTime teleportLastLoadingAt = DateTime.MinValue;
     private DateTime teleportLoadingClearedAt = DateTime.MinValue;
+    private bool outdoorMapFlowHoldActive;
+    private BotState outdoorMapFlowHoldState = BotState.Idle;
+    private string outdoorMapFlowHoldReason = string.Empty;
+    private DateTime outdoorMapFlowHoldStartedAt = DateTime.MinValue;
+    private DateTime outdoorMapFlowHoldLastLogAt = DateTime.MinValue;
+    private bool outdoorMapFlowHoldStagedAtTarget;
+    private bool joinedFateCombatAutomationActive;
+    private ushort joinedFateCombatAutomationFateId;
+    private readonly HashSet<string> loggedUnavailableCombatAutomationCommands = [];
     
     // Map opening validation variables
     private int initialMapCount;
@@ -242,6 +251,7 @@ public class StateManager : IDisposable
     private static readonly TimeSpan CameraResetBeforeInteractDelay = TimeSpan.FromMilliseconds(150);
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float MapDigXZRange = 5.0f;
+    private const float OutdoorMapFlowLandingRecoveryXZRange = 8.0f;
     private const double SameZoneAetheryteTeleportSkipXZRange = 50.0;
     private const float OverworldRecoveryArrivedDistance = 5.0f;
     private const float OverworldRecoveryProgressMargin = 0.5f;
@@ -306,6 +316,8 @@ public class StateManager : IDisposable
     private static readonly TimeSpan OpeningChestInitialCofferWaitAfterDig = TimeSpan.FromSeconds(6.0);
     private static readonly TimeSpan KeyItemMapRecoveryTimeout = TimeSpan.FromSeconds(30.0);
     private static readonly TimeSpan KeyItemMapOpenRetryInterval = TimeSpan.FromSeconds(3.0);
+    private static readonly TimeSpan OutdoorMapFlowHoldLogInterval = TimeSpan.FromSeconds(10.0);
+    private static readonly TimeSpan OpeningChestJoinedFateSettleDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalSearchTimeout = TimeSpan.FromSeconds(15.0);
@@ -376,6 +388,10 @@ public class StateManager : IDisposable
     private uint lastGlobalTerritoryId; // Track territory changes globally for map refresh
     private DateTime chestDisappearedTime = DateTime.MinValue; // Track when chest first disappeared for grace period
     private bool openingChestCombatInterrupted; // Combat started while recovering an overworld chest
+    private bool openingChestJoinedFateHoldActive; // Joined FATE paused overworld coffer/portal work
+    private ushort openingChestJoinedFateId;
+    private DateTime openingChestJoinedFateHoldStartedAt = DateTime.MinValue;
+    private DateTime openingChestJoinedFateHoldLastLogAt = DateTime.MinValue;
     private bool openingChestRecoveryDigIssued; // One-shot dig retry after combat interruption
     private bool openingChestReturningToFlag; // One-shot path back to the flag after combat displacement
     private HashSet<uint> attemptedCoffers = new HashSet<uint>(); // Track which coffers we've tried to interact with
@@ -700,6 +716,18 @@ public class StateManager : IDisposable
             return;
         }
 
+        if (ShouldHoldOutdoorMapFlowState(State) && TryGetOutdoorMapFlowHoldReason(out _))
+        {
+            stateStartTime = DateTime.Now;
+            return;
+        }
+
+        if (State == BotState.OpeningChest && TryGetOutdoorMapFlowHoldReason(out _))
+        {
+            stateStartTime = DateTime.Now;
+            return;
+        }
+
         if (State == BotState.DetectingLocation && _plugin.InventoryService.HasTreasureMapKeyItem())
         {
             // Active key-item recovery has its own bounded timer in TickDetectingLocation.
@@ -747,8 +775,14 @@ public class StateManager : IDisposable
         UpdateBossModOutdoorSuppression();
 
         bool currentlyInCombat = Plugin.Condition[ConditionFlag.InCombat];
-        if (!currentlyInCombat)
+        if (!currentlyInCombat && TryKeepCombatAutomationForJoinedFate("active joined-FATE tick"))
+        {
+            // Joined FATE owns combat automation until the hold clears.
+        }
+        else if (!currentlyInCombat)
+        {
             SetCombatAutomationForCombatState(inCombat: false, "active non-combat tick");
+        }
 
         // Universal combat pathfinding stop - only stop when actually in combat
         if (currentlyInCombat && autoMoveActive)
@@ -795,6 +829,9 @@ public class StateManager : IDisposable
         if (TryYieldToActiveAdsDutyOwnership(currentTerritory))
             return;
 
+        if (TryHoldOutdoorMapFlowTick())
+            return;
+
         switch (State)
         {
             case BotState.SelectingMap:     TickSelectingMap();     break;
@@ -816,6 +853,431 @@ public class StateManager : IDisposable
             case BotState.Completed:        TickCompleted();        break;
         }
     }
+
+    private bool TryHoldOutdoorMapFlowTick()
+    {
+        if (!ShouldHoldOutdoorMapFlowState(State))
+            return false;
+
+        if (!TryGetOutdoorMapFlowHoldReason(out var reason))
+        {
+            return ReleaseOutdoorMapFlowHoldIfNeeded();
+        }
+
+        EnterOutdoorMapFlowHold(reason, $"[{State}]");
+        return true;
+    }
+
+    private bool TryHoldCompletedNextMapStartup(string source)
+    {
+        if (!TryGetOutdoorMapFlowHoldReason(out var reason))
+        {
+            return ReleaseOutdoorMapFlowHoldIfNeeded();
+        }
+
+        EnterOutdoorMapFlowHold(reason, source);
+        return true;
+    }
+
+    private static bool ShouldHoldOutdoorMapFlowState(BotState state)
+        => state is BotState.SelectingMap
+            or BotState.DetectingLocation
+            or BotState.Teleporting
+            or BotState.Mounting
+            or BotState.WaitingForParty
+            or BotState.Flying;
+
+    private bool TryGetOutdoorMapFlowHoldReason(out string reason)
+    {
+        var joinedFate = _plugin.FateSyncService.TryGetJoinedFateId(out var fateId);
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            reason = joinedFate
+                ? $"in combat during joined FATE {fateId}"
+                : "in combat";
+            return true;
+        }
+
+        reason = string.Empty;
+        return false;
+    }
+
+    private void EnterOutdoorMapFlowHold(string reason, string source)
+    {
+        var now = DateTime.Now;
+        var entering = !outdoorMapFlowHoldActive ||
+                       outdoorMapFlowHoldState != State ||
+                       !string.Equals(outdoorMapFlowHoldReason, reason, StringComparison.Ordinal);
+
+        if (entering)
+        {
+            outdoorMapFlowHoldActive = true;
+            outdoorMapFlowHoldState = State;
+            outdoorMapFlowHoldReason = reason;
+            outdoorMapFlowHoldStartedAt = now;
+            outdoorMapFlowHoldLastLogAt = now;
+            outdoorMapFlowHoldStagedAtTarget = false;
+
+            PrepareOutdoorMapFlowHoldEntry(source, reason);
+            _plugin.AddDebugLog($"{source}[OutdoorHold] Holding outdoor map flow in {State}: {reason}.");
+        }
+        else if (now - outdoorMapFlowHoldLastLogAt >= OutdoorMapFlowHoldLogInterval)
+        {
+            outdoorMapFlowHoldLastLogAt = now;
+            _plugin.AddDebugLog($"{source}[OutdoorHold] Still holding outdoor map flow in {State}: {reason}.");
+        }
+
+        stateStartTime = now;
+        TryKeepCombatAutomationForJoinedFate($"{source} outdoor hold");
+        TryStageOutdoorMapTargetForJoinedFate(reason, source, now);
+        var elapsed = outdoorMapFlowHoldStartedAt == DateTime.MinValue
+            ? TimeSpan.Zero
+            : now - outdoorMapFlowHoldStartedAt;
+        if (!outdoorMapFlowHoldStagedAtTarget)
+        {
+            StateDetail = State == BotState.Teleporting
+                ? $"Holding teleport while {reason} ({elapsed.TotalSeconds:F0}s)..."
+                : $"Outdoor map flow paused while {reason} ({elapsed.TotalSeconds:F0}s)...";
+        }
+    }
+
+    private void PrepareOutdoorMapFlowHoldEntry(string source, string reason)
+    {
+        if (autoMoveActive)
+        {
+            CommandHelper.SendCommand("/automove off");
+            autoMoveActive = false;
+        }
+
+        if (descentInProgress)
+        {
+            CommandHelper.SendCommand("/automove off");
+            GameHelpers.KeyRelease(VirtualKey.W);
+            GameHelpers.KeyRelease(VirtualKey.CONTROL);
+            GameHelpers.KeyRelease(VirtualKey.SPACE);
+            descentInProgress = false;
+        }
+
+        if (State == BotState.Teleporting)
+        {
+            if (!teleportSawBetweenAreas)
+                ResetOutdoorMapTeleportAttempt($"{source}[OutdoorHold] {reason}");
+            return;
+        }
+
+        if (State is BotState.Flying or BotState.Mounting or BotState.WaitingForParty)
+        {
+            if (_plugin.NavigationService.State != NavigationState.Idle)
+                _plugin.NavigationService.StopNavigation();
+        }
+
+        if (State == BotState.Flying)
+        {
+            stateActionIssued = false;
+            ResetVnavFlyFlagFallbackState();
+            ResetOverworldRecoveryState();
+            dismountAttemptStart = DateTime.MinValue;
+        }
+        else if (State == BotState.Mounting)
+        {
+            mountAttemptStart = DateTime.MinValue;
+            mountAttempts = 0;
+        }
+        else if (State == BotState.SelectingMap)
+        {
+            lastMapScanTime = DateTime.MinValue;
+        }
+        else if (State == BotState.DetectingLocation)
+        {
+            keyItemMapRecoveryStartedAt = DateTime.MinValue;
+        }
+    }
+
+    private bool TryStageOutdoorMapTargetForJoinedFate(string reason, string source, DateTime now)
+    {
+        if (State != BotState.Flying ||
+            Plugin.Condition[ConditionFlag.InCombat] ||
+            !_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) ||
+            CurrentLocation == null)
+        {
+            return false;
+        }
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            return false;
+
+        var targets = ResolveOverworldNavigationTargets();
+        if (targets.LandingTarget == Vector3.Zero)
+            return false;
+
+        var xzDist = CalculateXZDistance(player.Position, targets.LandingTarget);
+        var stagingRange = currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            ? UnderwaterBounceTriggerXZRange
+            : MapDigXZRange;
+        if (xzDist > stagingRange)
+            return false;
+
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+        if (autoMoveActive)
+        {
+            CommandHelper.SendCommand("/automove off");
+            autoMoveActive = false;
+        }
+
+        var mountedOrFlying = _plugin.NavigationService.IsMounted() ||
+                              _plugin.NavigationService.IsFlying() ||
+                              Plugin.Condition[ConditionFlag.Mounting71];
+        if (mountedOrFlying)
+        {
+            if (dismountAttemptStart == DateTime.MinValue)
+            {
+                dismountAttemptStart = now;
+                _plugin.AddDebugLog(
+                    $"{source}[OutdoorHold] Joined FATE {fateId}: staging/landing at map target; " +
+                    $"landingXZ={xzDist:F1}y; target={FormatVectorCompact(targets.LandingTarget)}; basis={targets.Basis}.");
+            }
+
+            if (!Plugin.Condition[ConditionFlag.Mounting71])
+                _mountService.TryLandingToggle();
+
+            outdoorMapFlowHoldStagedAtTarget = true;
+            StateDetail = $"Joined FATE {fateId} active - staging/landing at map target ({xzDist:F1}y)...";
+            return true;
+        }
+
+        if (!outdoorMapFlowHoldStagedAtTarget)
+        {
+            _plugin.AddDebugLog(
+                $"{source}[OutdoorHold] Joined FATE {fateId}: staged at map target without digging; " +
+                $"landingXZ={xzDist:F1}y; target={FormatVectorCompact(targets.LandingTarget)}; basis={targets.Basis}.");
+        }
+
+        outdoorMapFlowHoldStagedAtTarget = true;
+        StateDetail = $"Joined FATE {fateId} active - staged at map target; waiting to dig ({xzDist:F1}y)...";
+        return true;
+    }
+
+    private bool ReleaseOutdoorMapFlowHoldIfNeeded()
+    {
+        if (!outdoorMapFlowHoldActive)
+            return false;
+
+        var now = DateTime.Now;
+        var elapsed = outdoorMapFlowHoldStartedAt == DateTime.MinValue
+            ? TimeSpan.Zero
+            : now - outdoorMapFlowHoldStartedAt;
+        var heldState = outdoorMapFlowHoldState;
+        var heldReason = outdoorMapFlowHoldReason;
+        _plugin.AddDebugLog($"[OutdoorHold] Released after {elapsed.TotalSeconds:F1}s from {heldState} ({heldReason}); recovering forward from {State}.");
+
+        outdoorMapFlowHoldActive = false;
+        outdoorMapFlowHoldState = BotState.Idle;
+        outdoorMapFlowHoldReason = string.Empty;
+        outdoorMapFlowHoldStartedAt = DateTime.MinValue;
+        outdoorMapFlowHoldLastLogAt = DateTime.MinValue;
+        outdoorMapFlowHoldStagedAtTarget = false;
+        stateStartTime = now;
+
+        if (State == BotState.Teleporting)
+            stateActionIssued = teleportSawBetweenAreas;
+        else if (State == BotState.DetectingLocation)
+            keyItemMapRecoveryStartedAt = DateTime.MinValue;
+
+        return TryRecoverForwardAfterOutdoorMapFlowHold(heldState, heldReason);
+    }
+
+    private void ClearOutdoorMapFlowHold()
+    {
+        outdoorMapFlowHoldActive = false;
+        outdoorMapFlowHoldState = BotState.Idle;
+        outdoorMapFlowHoldReason = string.Empty;
+        outdoorMapFlowHoldStartedAt = DateTime.MinValue;
+        outdoorMapFlowHoldLastLogAt = DateTime.MinValue;
+        outdoorMapFlowHoldStagedAtTarget = false;
+    }
+
+    private void ClearOpeningChestJoinedFateHold()
+    {
+        openingChestJoinedFateHoldActive = false;
+        openingChestJoinedFateId = 0;
+        openingChestJoinedFateHoldStartedAt = DateTime.MinValue;
+        openingChestJoinedFateHoldLastLogAt = DateTime.MinValue;
+    }
+
+    private bool TryRecoverForwardAfterOutdoorMapFlowHold(BotState heldState, string heldReason)
+    {
+        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                      Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (loading || IsTreasureDungeonTerritory(Plugin.ClientState.TerritoryType))
+            return false;
+
+        if (heldState == BotState.Flying && digIssuedThisMap)
+        {
+            StopOutdoorMapFlowRecoveryNavigation();
+            _plugin.AddDebugLog($"[OutdoorHold] FATE/combat cleared after {heldReason}; dig was already issued - resuming chest recovery.");
+            TransitionTo(BotState.OpeningChest, "FATE/combat cleared - looking for treasure coffer...");
+            return true;
+        }
+
+        var portal = FindNearestPortal(keepActivePortalWindow: true);
+        if (portal != null)
+        {
+            CapturePortalApproachPosition(portal);
+            ResumePortalFlowAfterOutdoorHold(
+                $"visible portal entity={portal.EntityId}",
+                $"FATE/combat cleared - resuming portal after {heldState}...");
+            return true;
+        }
+
+        if (portalApproachPosition.HasValue)
+        {
+            ResumePortalFlowAfterOutdoorHold(
+                $"captured portal XYZ {FormatVectorCompact(portalApproachPosition.Value)}",
+                $"FATE/combat cleared - resuming captured portal after {heldState}...");
+            return true;
+        }
+
+        var coffer = _plugin.ChestDetectionService.FindNearestCoffer(OverworldRecoveryObjectSearchRange);
+        if (coffer != null)
+        {
+            CaptureOpeningChestCofferPosition(coffer);
+            chestConfirmedThisMap = true;
+            chestDisappearedTime = DateTime.MinValue;
+            _plugin.AddDebugLog(
+                $"[OutdoorHold] FATE/combat cleared after {heldReason}; visible coffer '{coffer.Name.TextValue}' " +
+                $"entity={coffer.EntityId} targetable={coffer.IsTargetable} - resuming chest recovery.");
+            TransitionTo(BotState.OpeningChest, "FATE/combat cleared - resuming chest recovery...");
+            return true;
+        }
+
+        if (TryGetOpeningChestLastKnownCofferPosition(out var knownCoffer, out var knownCofferDistance))
+        {
+            chestDisappearedTime = DateTime.MinValue;
+            _plugin.AddDebugLog(
+                $"[OutdoorHold] FATE/combat cleared after {heldReason}; known coffer XYZ " +
+                $"{FormatVectorCompact(knownCoffer)} ({knownCofferDistance:F1}y) - resuming chest recovery.");
+            TransitionTo(BotState.OpeningChest, "FATE/combat cleared - returning to known coffer...");
+            return true;
+        }
+
+        if (heldState == BotState.Flying &&
+            TryGetCurrentMapLandingDistance(out var landingDistance, out var landingTarget, out var landingBasis) &&
+            landingDistance <= GetCurrentMapLandingHoldRange())
+        {
+            StopOutdoorMapFlowRecoveryNavigation();
+            var playerPosition = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+            if (currentLandingMode == OverworldLandingMode.MountToggle &&
+                playerPosition != Vector3.Zero &&
+                TryHandleMapLandingAndDig(
+                    "[OutdoorHold] landing recovery",
+                    landingBasis,
+                    playerPosition,
+                    landingTarget,
+                    landingDistance))
+            {
+                _plugin.AddDebugLog(
+                    $"[OutdoorHold] FATE/combat cleared after {heldReason}; recovered directly into landing/dig at " +
+                    $"{landingDistance:F1}y XZ from {FormatVectorCompact(landingTarget)} ({landingBasis}).");
+                return true;
+            }
+
+            _plugin.AddDebugLog(
+                $"[OutdoorHold] FATE/combat cleared after {heldReason}; already at map target " +
+                $"{FormatVectorCompact(landingTarget)} ({landingDistance:F1}y XZ, {landingBasis}) - resuming landing/dig.");
+            TransitionTo(BotState.Flying, "FATE/combat cleared - landing at map target...");
+            return true;
+        }
+
+        _plugin.AddDebugLog($"[OutdoorHold] No forward recovery target after {heldReason}; resuming held state {heldState}.");
+        return false;
+    }
+
+    private void StopOutdoorMapFlowRecoveryNavigation()
+    {
+        if (autoMoveActive)
+        {
+            CommandHelper.SendCommand("/automove off");
+            autoMoveActive = false;
+        }
+
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+    }
+
+    private void ResumePortalFlowAfterOutdoorHold(string reason, string detail)
+    {
+        if (portalRetryStart == DateTime.MinValue)
+            portalRetryStart = DateTime.Now;
+
+        _plugin.AddDebugLog($"[OutdoorHold] FATE/combat cleared; resuming portal flow from {reason}.");
+        TransitionTo(BotState.Completed, detail);
+    }
+
+    private bool TryGetCurrentMapLandingDistance(
+        out double distance,
+        out Vector3 landingTarget,
+        out string basis)
+    {
+        distance = double.MaxValue;
+        landingTarget = Vector3.Zero;
+        basis = string.Empty;
+
+        if (CurrentLocation == null ||
+            CurrentLocation.TerritoryId != Plugin.ClientState.TerritoryType)
+        {
+            return false;
+        }
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            return false;
+
+        var targets = ResolveOverworldNavigationTargets();
+        if (targets.LandingTarget == Vector3.Zero)
+            return false;
+
+        landingTarget = targets.LandingTarget;
+        basis = targets.Basis;
+        distance = CalculateXZDistance(player.Position, landingTarget);
+        return true;
+    }
+
+    private double GetCurrentMapLandingHoldRange()
+        => currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            ? UnderwaterBounceTriggerXZRange
+            : Math.Max(MapDigXZRange, OutdoorMapFlowLandingRecoveryXZRange);
+
+    private void ResetOutdoorMapTeleportAttempt(string source)
+    {
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+
+        ResetTeleportLifecycleTracking();
+        stateActionIssued = false;
+        stateStartTime = DateTime.Now;
+        _plugin.AddDebugLog($"{source}: teleport attempt reset before area load; will retry after hold clears.");
+    }
+
+    private bool TryDeferTeleportCombatError(string message)
+    {
+        if (State != BotState.Teleporting || !IsTeleportCombatBlockedMessage(message))
+            return false;
+
+        if (TryGetOutdoorMapFlowHoldReason(out var reason))
+        {
+            EnterOutdoorMapFlowHold(reason, "[Teleporting]");
+            return true;
+        }
+
+        ResetOutdoorMapTeleportAttempt("[Teleporting][OutdoorHold] combat reject");
+        StateDetail = "Teleport blocked by combat - retrying...";
+        return true;
+    }
+
+    private static bool IsTeleportCombatBlockedMessage(string message)
+        => message.Contains("Cannot teleport while in combat", StringComparison.OrdinalIgnoreCase);
 
     private void RunSelectYesnoWatchdog()
     {
@@ -1048,6 +1510,7 @@ public class StateManager : IDisposable
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
+        ClearOutdoorMapFlowHold();
         ClearWarning();
         TransitionTo(BotState.Idle, "Stopped by user.");
     }
@@ -1073,6 +1536,7 @@ public class StateManager : IDisposable
         SetCombatAutomationForCombatState(inCombat: false, "full reset", force: true);
         ClearBossModOutdoorSuppressionState("full reset");
         KrangleService.ClearCache();
+        ClearOutdoorMapFlowHold();
         ClearWarning();
         TransitionTo(BotState.Idle, "Full reset by user.");
         _plugin.AddDebugLog("All plugin states reset.");
@@ -2210,6 +2674,9 @@ public class StateManager : IDisposable
         if (string.IsNullOrWhiteSpace(text))
             return;
 
+        if (TryDeferTeleportCombatError(text))
+            return;
+
         if (IsLifestreamDestinationNotFoundMessage(text))
         {
             var navigationFailureHandled = _plugin.NavigationService.NotifyTeleportCommandFailure(text);
@@ -2896,6 +3363,39 @@ public class StateManager : IDisposable
     private static bool IsCombatAutomationCommand(string command) =>
         command.StartsWith("/bmrai", StringComparison.OrdinalIgnoreCase) ||
         command.StartsWith("/vbmai", StringComparison.OrdinalIgnoreCase);
+
+    private void SendCombatAutomationCommand(string command, string reason)
+    {
+        if (!IsCombatAutomationCommandAvailable(command, out var unavailableReason))
+        {
+            var logKey = $"{command}:{unavailableReason}";
+            if (loggedUnavailableCombatAutomationCommands.Add(logKey))
+                _plugin.AddDebugLog($"[CombatAutomation] Skipped {command} for {reason}: {unavailableReason}.");
+            return;
+        }
+
+        CommandHelper.SendCommand(command);
+    }
+
+    private bool IsCombatAutomationCommandAvailable(string command, out string reason)
+    {
+        if (command.StartsWith("/bmrai", StringComparison.OrdinalIgnoreCase) &&
+            !_plugin.RotationPluginIPC.IsBossModRebornAvailable)
+        {
+            reason = "BossModReborn plugin is not loaded";
+            return false;
+        }
+
+        if (command.StartsWith("/vbmai", StringComparison.OrdinalIgnoreCase) &&
+            !_plugin.RotationPluginIPC.IsVbmAvailable)
+        {
+            reason = "VBM plugin is not loaded";
+            return false;
+        }
+
+        reason = string.Empty;
+        return true;
+    }
 
     private bool TryDigWhileDiving(string reason)
     {
@@ -4945,6 +5445,7 @@ public class StateManager : IDisposable
         openingChestOpenedChatAt = DateTime.MinValue;
         openingChestPortalChatAt = DateTime.MinValue;
         openingChestBotInteractionAttemptedThisMap = false;
+        ClearOpeningChestJoinedFateHold();
         ResetOpeningChestCofferApproachTracking();
         ResetOpeningChestCofferWalkFailure();
         ResetOpeningChestFlagFallback("opening chest lifecycle reset");
@@ -7083,7 +7584,13 @@ public class StateManager : IDisposable
 
             if (selectedAetheryteIsCloser)
             {
-                if (playerXZDistToAetheryte is { } aetherytePlayerDistance
+                if (TryGetSameZoneTeleportProgressBlockReason(playerPos, playerXZDistToFlag, out var progressBlockReason))
+                {
+                    _plugin.AddDebugLog(
+                        $"{logPrefix} Selected aetheryte {selectedAetheryteName} (ID {aetheryteId}) is closer to target " +
+                        $"({bestAethDist:F0}y < {playerDist:F0}y), but same-zone teleport is suppressed: {progressBlockReason}.");
+                }
+                else if (playerXZDistToAetheryte is { } aetherytePlayerDistance
                     && aetherytePlayerDistance <= SameZoneAetheryteTeleportSkipXZRange)
                 {
                     _plugin.AddDebugLog(
@@ -7163,6 +7670,79 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"{logPrefix} Player is closer ({playerDist:F0}y <= {bestAethDist:F0}y) - mounting up, no teleport needed");
 
         TransitionTo(BotState.Mounting, mountTransitionDetail);
+    }
+
+    private bool TryGetSameZoneTeleportProgressBlockReason(
+        Vector3 playerPos,
+        double playerXZDistToFlag,
+        out string reason)
+    {
+        var landingRange = GetCurrentMapLandingHoldRange();
+        if (playerXZDistToFlag <= landingRange)
+        {
+            reason = $"already within landing range ({playerXZDistToFlag:F1}y XZ <= {landingRange:F1}y)";
+            return true;
+        }
+
+        if (IsOverworldMapDutyActive())
+        {
+            reason = "active outdoor map duty";
+            return true;
+        }
+
+        var coffer = _plugin.ChestDetectionService.FindNearestCoffer(OverworldRecoveryObjectSearchRange);
+        if (coffer != null)
+        {
+            CaptureOpeningChestCofferPosition(coffer);
+            var cofferDist = Vector3.Distance(playerPos, coffer.Position);
+            reason = $"visible coffer entity={coffer.EntityId} targetable={coffer.IsTargetable} dist={cofferDist:F1}y";
+            return true;
+        }
+
+        if (TryGetOpeningChestLastKnownCofferPosition(out var knownCoffer, out var knownCofferDistance))
+        {
+            reason = $"known coffer XYZ {FormatVectorCompact(knownCoffer)} dist={knownCofferDistance:F1}y";
+            return true;
+        }
+
+        var portal = FindNearestPortal(keepActivePortalWindow: true);
+        if (portal != null)
+        {
+            CapturePortalApproachPosition(portal);
+            var portalDist = Vector3.Distance(playerPos, portal.Position);
+            reason = $"visible portal entity={portal.EntityId} dist={portalDist:F1}y";
+            return true;
+        }
+
+        if (portalApproachPosition.HasValue)
+        {
+            reason = $"known portal XYZ {FormatVectorCompact(portalApproachPosition.Value)}";
+            return true;
+        }
+
+        if (portalRetryStart != DateTime.MinValue)
+        {
+            var retryAge = DateTime.Now - portalRetryStart;
+            reason = $"portal retry window active ({retryAge.TotalSeconds:F0}s)";
+            return true;
+        }
+
+        if (chestConfirmedThisMap ||
+            openingChestDiscoveredByChat ||
+            openingChestOpenedByChat ||
+            openingChestPortalByChat ||
+            portalConfirmedThisMap ||
+            dungeonConfirmedThisMap)
+        {
+            reason =
+                $"map progress evidence chest={chestConfirmedThisMap}, discoveredChat={openingChestDiscoveredByChat}, " +
+                $"openedChat={openingChestOpenedByChat}, portalChat={openingChestPortalByChat}, " +
+                $"portal={portalConfirmedThisMap}, dungeon={dungeonConfirmedThisMap}";
+            return true;
+        }
+
+        reason = string.Empty;
+        return false;
     }
 
     private void TickDetectingLocation()
@@ -7261,12 +7841,18 @@ public class StateManager : IDisposable
             teleportLastLoadingAt = DateTime.MinValue;
             teleportLoadingClearedAt = DateTime.MinValue;
             nav.TeleportToAetheryte(CurrentLocation.NearestAetheryteId);
+            if (nav.State == NavigationState.Error && TryDeferTeleportCombatError(nav.StateDetail))
+                return;
+
             stateActionIssued = true;
             return;
         }
 
         if (nav.State == NavigationState.Error)
         {
+            if (TryDeferTeleportCombatError(nav.StateDetail))
+                return;
+
             var destination = string.IsNullOrWhiteSpace(nav.LastTeleportDestinationName)
                 ? CurrentLocation?.NearestAetheryteName
                 : nav.LastTeleportDestinationName;
@@ -7954,6 +8540,109 @@ public class StateManager : IDisposable
         }
     }
 
+    private bool TryHoldOpeningChestForJoinedFate(DateTime now, IGameObject? visibleCoffer)
+    {
+        if (!_plugin.FateSyncService.TryGetJoinedFateId(out var fateId))
+        {
+            if (!openingChestJoinedFateHoldActive)
+                return false;
+
+            var heldFateId = openingChestJoinedFateId;
+            openingChestJoinedFateHoldActive = false;
+            openingChestJoinedFateId = 0;
+            openingChestJoinedFateHoldStartedAt = DateTime.MinValue;
+            openingChestJoinedFateHoldLastLogAt = DateTime.MinValue;
+            lastCombatEndTime = now;
+            openingChestCombatInterrupted = true;
+            chestDisappearedTime = DateTime.MinValue;
+            _plugin.AddDebugLog($"[OpeningChest][FATE] Joined FATE {heldFateId} cleared - resuming chest/portal recovery after settle.");
+            StateDetail = "Joined FATE cleared - settling before chest/portal recovery...";
+            return true;
+        }
+
+        if (visibleCoffer != null)
+        {
+            CaptureOpeningChestCofferPosition(visibleCoffer);
+            chestConfirmedThisMap = true;
+        }
+
+        var visiblePortal = FindNearestPortal(keepActivePortalWindow: true);
+        if (visiblePortal != null)
+            CapturePortalApproachPosition(visiblePortal);
+
+        if (!Plugin.Condition[ConditionFlag.InCombat])
+        {
+            if (!openingChestJoinedFateHoldActive)
+                return false;
+
+            var settleStart = lastCombatEndTime == DateTime.MinValue
+                ? openingChestJoinedFateHoldStartedAt
+                : lastCombatEndTime;
+            var settleElapsed = settleStart == DateTime.MinValue
+                ? OpeningChestJoinedFateSettleDelay
+                : now - settleStart;
+            if (settleElapsed < OpeningChestJoinedFateSettleDelay)
+            {
+                StateDetail = $"Joined FATE {fateId} combat cleared - settling before chest/portal recovery... ({settleElapsed.TotalSeconds:F1}/{OpeningChestJoinedFateSettleDelay.TotalSeconds:F1}s)";
+                return true;
+            }
+
+            ClearOpeningChestJoinedFateHold();
+            openingChestCombatInterrupted = visibleCoffer == null && visiblePortal == null;
+            chestDisappearedTime = DateTime.MinValue;
+            _plugin.AddDebugLog(
+                $"[OpeningChest][FATE] Joined FATE {fateId} still active but combat is clear; allowing chest/portal recovery after {settleElapsed.TotalSeconds:F1}s settle.");
+            return false;
+        }
+
+        EnsureJoinedFateCombatAutomation(fateId, "opening chest joined-FATE hold");
+
+        if (autoMoveActive || _plugin.NavigationService.State != NavigationState.Idle)
+            StopOpeningChestCofferMovement($"while joined FATE {fateId} is active");
+        ResetPortalCloseNudgeTracking(stopMovement: true);
+        ResetOpeningChestFlagFallback($"joined FATE {fateId}", logIfActive: true);
+
+        openingChestCombatInterrupted = true;
+        openingChestRecoveryDigIssued = false;
+        openingChestReturningToFlag = false;
+        openingChestReturningToLastKnownCoffer = false;
+        chestDisappearedTime = DateTime.MinValue;
+
+        var entering = !openingChestJoinedFateHoldActive || openingChestJoinedFateId != fateId;
+        if (entering)
+        {
+            openingChestJoinedFateHoldActive = true;
+            openingChestJoinedFateId = fateId;
+            openingChestJoinedFateHoldStartedAt = now;
+            openingChestJoinedFateHoldLastLogAt = now;
+            var targetText = visiblePortal != null
+                ? $"visible portal entity={visiblePortal.EntityId}"
+                : visibleCoffer != null
+                    ? $"visible coffer entity={visibleCoffer.EntityId} targetable={visibleCoffer.IsTargetable}"
+                    : openingChestLastKnownCofferPosition.HasValue
+                        ? $"known coffer XYZ {FormatVectorCompact(openingChestLastKnownCofferPosition.Value)}"
+                        : "no visible coffer/portal yet";
+            _plugin.AddDebugLog($"[OpeningChest][FATE] Holding chest recovery for joined FATE {fateId}; {targetText}.");
+        }
+        else if (now - openingChestJoinedFateHoldLastLogAt >= OutdoorMapFlowHoldLogInterval)
+        {
+            openingChestJoinedFateHoldLastLogAt = now;
+            var elapsed = openingChestJoinedFateHoldStartedAt == DateTime.MinValue
+                ? TimeSpan.Zero
+                : now - openingChestJoinedFateHoldStartedAt;
+            _plugin.AddDebugLog($"[OpeningChest][FATE] Still holding chest recovery for joined FATE {fateId} ({elapsed.TotalSeconds:F0}s).");
+        }
+
+        stateStartTime = now;
+        var holdElapsed = openingChestJoinedFateHoldStartedAt == DateTime.MinValue
+            ? TimeSpan.Zero
+            : now - openingChestJoinedFateHoldStartedAt;
+        StateDetail = visiblePortal != null
+            ? $"Joined FATE {fateId} active - holding portal recovery ({holdElapsed.TotalSeconds:F0}s)..."
+            : $"Joined FATE {fateId} active - holding chest recovery ({holdElapsed.TotalSeconds:F0}s)...";
+        return true;
+    }
+
     private void TickOpeningChest()
     {
         // Check for diving state change - if we just entered diving, go to underwater navigation
@@ -8008,11 +8697,6 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Click Yes on any dialog (Open the treasure coffer? etc)
-        GameHelpers.ClickYesIfVisible();
-        if (TrySkipCardGame())
-            return;
-
         var now = DateTime.Now;
         bool inCombat = Plugin.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat];
         bool mapDutyOutsideDungeon =
@@ -8040,12 +8724,20 @@ public class StateManager : IDisposable
         {
             CaptureOpeningChestCofferPosition(chest);
             chestConfirmedThisMap = true;
+        }
 
-            if (!chest.IsTargetable)
-            {
-                HandleVisibleUntargetableOpeningChestCoffer(chest, now);
-                return;
-            }
+        if (TryHoldOpeningChestForJoinedFate(now, chest))
+            return;
+
+        // Click Yes on any dialog (Open the treasure coffer? etc)
+        GameHelpers.ClickYesIfVisible();
+        if (TrySkipCardGame())
+            return;
+
+        if (chest != null && !chest.IsTargetable)
+        {
+            HandleVisibleUntargetableOpeningChestCoffer(chest, now);
+            return;
         }
 
         if (chest == null)
@@ -8292,6 +8984,15 @@ public class StateManager : IDisposable
 
         if (openingChestCombatInterrupted && !inCombat)
         {
+            var sinceCombatEnd = lastCombatEndTime == DateTime.MinValue
+                ? double.MaxValue
+                : (now - lastCombatEndTime).TotalSeconds;
+            if (sinceCombatEnd < 2.0)
+            {
+                StateDetail = $"Combat/FATE ended - waiting to resume chest recovery... ({sinceCombatEnd:F1}/2.0s)";
+                return;
+            }
+
             if (openingChestReturningToFlag && autoMoveActive)
             {
                 _plugin.NavigationService.StopNavigation();
@@ -8602,7 +9303,9 @@ public class StateManager : IDisposable
     
     private void OnCombatEnd()
     {
-        SetCombatAutomationForCombatState(inCombat: false, "combat end");
+        if (!TryKeepCombatAutomationForJoinedFate("combat end while joined FATE"))
+            SetCombatAutomationForCombatState(inCombat: false, "combat end");
+
         combatMovementForbidSentThisCombat = false;
         lastCombatEndTime = DateTime.Now;
         
@@ -10094,6 +10797,9 @@ public class StateManager : IDisposable
 
         if (_plugin.Configuration.AutoStartNextMap)
         {
+            if (TryHoldCompletedNextMapStartup("[CompletedNextMap]"))
+                return;
+
             if (!CanStartNextMapAfterPartyWait())
                 return;
 
@@ -10173,6 +10879,9 @@ public class StateManager : IDisposable
             return true;
         if (suppressRecovery || HasCompletedKeyItemCompletionEvidence() || hadSuppressedKey)
             return false;
+
+        if (TryHoldCompletedNextMapStartup(source))
+            return true;
 
         var now = DateTime.Now;
         if (now - lastKeyItemCompletionGuardLogAt >= TimeSpan.FromSeconds(5.0))
@@ -11016,10 +11725,12 @@ public class StateManager : IDisposable
 
         if (!_plugin.IsAdsAvailable)
         {
+            var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
+            var diagnostic = BuildAdsRepairFailureDiagnostic(adsStatus, lowestCondition, threshold);
             ResetAdsRepairHandoffTracking();
             TransitionTo(
                 BotState.Error,
-                $"Equipped gear durability is {lowestCondition}% below repair threshold {threshold}%, but ADS unloaded before repair retry.");
+                $"ADS unloaded before repair retry. {diagnostic}");
             return true;
         }
 
@@ -11082,7 +11793,7 @@ public class StateManager : IDisposable
             if (lowestCondition < threshold)
             {
                 ScheduleAdsRepairRetry(
-                    "ADS repair stopped before durability reached threshold.",
+                    BuildAdsRepairStoppedFailureMessage(adsStatus),
                     adsStatus,
                     lowestCondition,
                     threshold);
@@ -11120,14 +11831,15 @@ public class StateManager : IDisposable
         int threshold)
     {
         var source = GetAdsRepairSource();
-        var statusText = GetAdsRepairStatusText(adsStatus);
+        var statusText = GetAdsRepairFailureOrStatusText(adsStatus);
+        var diagnostic = BuildAdsRepairFailureDiagnostic(adsStatus, lowestCondition, threshold);
 
         if (!_plugin.IsAdsAvailable)
         {
             ResetAdsRepairHandoffTracking();
             TransitionTo(
                 BotState.Error,
-                $"{failureMessage} Durability is still {lowestCondition}% below threshold {threshold}%, but ADS is not loaded.");
+                $"{failureMessage} {diagnostic} ADS is not loaded.");
             return;
         }
 
@@ -11136,8 +11848,7 @@ public class StateManager : IDisposable
             ResetAdsRepairHandoffTracking();
             TransitionTo(
                 BotState.Error,
-                $"{failureMessage} Durability is still {lowestCondition}% below threshold {threshold}% " +
-                $"after {AdsRepairMaxRetryAttempts} ADS repair retry attempts. ADS: {statusText}");
+                $"{failureMessage} {diagnostic}");
             return;
         }
 
@@ -11148,7 +11859,7 @@ public class StateManager : IDisposable
         ClearAdsRepairAttemptTrackingForRetry();
 
         StateDetail =
-            $"ADS repair did not raise durability ({lowestCondition}%/{threshold}%). " +
+            $"{failureMessage} Durability {lowestCondition}%/{threshold}%. " +
             $"Retrying in {AdsRepairRetryDelay.TotalSeconds:F1}s " +
             $"({adsRepairRetryAttemptCount}/{AdsRepairMaxRetryAttempts})...";
         _plugin.AddDebugLog(
@@ -11178,6 +11889,47 @@ public class StateManager : IDisposable
 
     private string ResolveAdsRepairMode()
         => _plugin.Configuration.RepairMode == RepairMode.Self ? "self" : "npc-no-inn";
+
+    private static string BuildAdsRepairStoppedFailureMessage(AdsStatusSnapshot status)
+        => $"ADS repair stopped before durability reached threshold; ADS {GetAdsRepairFailureOrStatusText(status)}.";
+
+    private string BuildAdsRepairFailureDiagnostic(AdsStatusSnapshot status, int lowestCondition, int threshold)
+    {
+        var mode = GetAdsRepairModeText(status);
+        var statusText = GetAdsRepairFailureOrStatusText(status);
+        return
+            $"Lowest durability {lowestCondition}%, threshold {threshold}%, ADS mode {mode}, " +
+            $"ADS {statusText}, retry count {adsRepairRetryAttemptCount}/{AdsRepairMaxRetryAttempts}, " +
+            $"territory {Plugin.ClientState.TerritoryType}.";
+    }
+
+    private string GetAdsRepairModeText(AdsStatusSnapshot status)
+    {
+        if (!string.IsNullOrWhiteSpace(status.UtilityMode))
+            return status.UtilityMode;
+
+        if (!string.IsNullOrWhiteSpace(adsRepairRequestedMode))
+            return adsRepairRequestedMode;
+
+        return ResolveAdsRepairMode();
+    }
+
+    private static string GetAdsRepairFailureOrStatusText(AdsStatusSnapshot status)
+    {
+        if (!status.StatusReadable)
+            return "status unavailable";
+
+        if (!string.IsNullOrWhiteSpace(status.UtilityLastFailure))
+            return $"failure: {status.UtilityLastFailure}";
+
+        if (!string.IsNullOrWhiteSpace(status.UtilityStatus))
+            return $"status: {status.UtilityStatus}";
+
+        if (!string.IsNullOrWhiteSpace(status.UtilityLastSuccess))
+            return $"last success: {status.UtilityLastSuccess}";
+
+        return "utility status unavailable";
+    }
 
     private static string GetAdsRepairStatusText(AdsStatusSnapshot status)
     {
@@ -11402,6 +12154,16 @@ public class StateManager : IDisposable
         if (loading)
             return;
 
+        if (_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
+            IsJoinedFateCombatAutomationFlowActive())
+        {
+            if (bossModOutdoorSuppressionActive)
+                RestoreBossModOutdoorSuppression($"joined FATE {fateId} combat automation", markCombatAutomationEnabled: true);
+
+            bossModOutdoorSuppressionReason = $"joined FATE {fateId} combat automation active";
+            return;
+        }
+
         var dangerDetected = _plugin.RotationPluginIPC.BossModDangerDetected;
         var outdoorFlow = IsOutdoorBossModSuppressionFlowActive();
         var shouldSuppress = outdoorFlow && dangerDetected;
@@ -11463,10 +12225,10 @@ public class StateManager : IDisposable
     {
         bossModOutdoorSuppressionActive = true;
         bossModOutdoorSuppressionReason = reason;
-        CommandHelper.SendCommand("/bmrai off");
-        CommandHelper.SendCommand("/vbmai off");
+        SendCombatAutomationCommand("/bmrai off", $"outdoor suppression start: {reason}");
+        SendCombatAutomationCommand("/vbmai off", $"outdoor suppression start: {reason}");
         combatAutomationEnabledState = false;
-        _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression started: {reason}. Sent /bmrai off and /vbmai off.");
+        _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression started: {reason}. Requested BMR/VBM off.");
     }
 
     private void RestoreBossModOutdoorSuppressionIfActive(string reason)
@@ -11479,13 +12241,13 @@ public class StateManager : IDisposable
 
     private void RestoreBossModOutdoorSuppression(string reason, bool markCombatAutomationEnabled = false)
     {
-        CommandHelper.SendCommand("/bmrai on");
-        CommandHelper.SendCommand("/vbmai on");
+        SendCombatAutomationCommand("/bmrai on", $"outdoor suppression restore: {reason}");
+        SendCombatAutomationCommand("/vbmai on", $"outdoor suppression restore: {reason}");
         bossModOutdoorSuppressionActive = false;
         bossModOutdoorSuppressionReason = $"restored: {reason}";
         if (markCombatAutomationEnabled)
             combatAutomationEnabledState = true;
-        _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression restored ({reason}). Sent /bmrai on and /vbmai on.");
+        _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression restored ({reason}). Requested BMR/VBM on.");
     }
 
     private void ClearBossModOutdoorSuppressionState(string reason)
@@ -11548,10 +12310,74 @@ public class StateManager : IDisposable
             or BotState.DungeonLooting
             or BotState.DungeonProgressing;
 
+    private bool TryKeepCombatAutomationForJoinedFate(string reason)
+    {
+        if (!_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) ||
+            !IsJoinedFateCombatAutomationFlowActive())
+        {
+            return false;
+        }
+
+        EnsureJoinedFateCombatAutomation(fateId, reason);
+        return true;
+    }
+
+    private bool IsJoinedFateCombatAutomationFlowActive()
+    {
+        if (State is BotState.Idle or BotState.Error)
+            return false;
+
+        if (IsTreasureDungeonTerritory(Plugin.ClientState.TerritoryType))
+            return false;
+
+        var activeTreasureState = State is BotState.SelectingMap
+            or BotState.OpeningMap
+            or BotState.DetectingLocation
+            or BotState.Teleporting
+            or BotState.Mounting
+            or BotState.WaitingForParty
+            or BotState.Flying
+            or BotState.OpeningChest
+            || (State == BotState.Completed && _plugin.Configuration.AutoStartNextMap);
+
+        return activeTreasureState
+            || IsOverworldMapDutyActive()
+            || portalRetryStart != DateTime.MinValue
+            || portalApproachPosition.HasValue
+            || CurrentLocation?.TerritoryId == Plugin.ClientState.TerritoryType;
+    }
+
+    private void EnsureJoinedFateCombatAutomation(ushort fateId, string reason)
+    {
+        if (bossModOutdoorSuppressionActive)
+            RestoreBossModOutdoorSuppression($"joined FATE {fateId} combat automation for {reason}", markCombatAutomationEnabled: true);
+
+        if (joinedFateCombatAutomationActive &&
+            joinedFateCombatAutomationFateId == fateId &&
+            combatAutomationEnabledState == true)
+        {
+            return;
+        }
+
+        SendCombatAutomationCommand("/bmrai on", $"joined FATE {fateId} combat automation: {reason}");
+        SendCombatAutomationCommand("/vbmai on", $"joined FATE {fateId} combat automation: {reason}");
+        combatAutomationEnabledState = true;
+        joinedFateCombatAutomationActive = true;
+        joinedFateCombatAutomationFateId = fateId;
+        _plugin.AddDebugLog($"[FATE] Joined FATE {fateId} combat automation active for {reason}. Requested BMR/VBM on.");
+    }
+
     private void SetCombatAutomationForCombatState(bool inCombat, string reason, bool force = false)
     {
         if (inCombat && bossModOutdoorSuppressionActive)
         {
+            if (_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
+                IsJoinedFateCombatAutomationFlowActive())
+            {
+                EnsureJoinedFateCombatAutomation(fateId, $"combat enable for {reason}");
+                return;
+            }
+
             if (IsOutdoorBossModSuppressionFlowActive() && _plugin.RotationPluginIPC.BossModDangerDetected)
             {
                 _plugin.AddDebugLog($"[BossModDanger] Suppression active; skipped BMR/VBM combat enable for {reason}.");
@@ -11565,9 +12391,14 @@ public class StateManager : IDisposable
         if (!force && combatAutomationEnabledState == inCombat)
             return;
 
-        CommandHelper.SendCommand(inCombat ? "/bmrai on" : "/bmrai off");
-        CommandHelper.SendCommand(inCombat ? "/vbmai on" : "/vbmai off");
+        SendCombatAutomationCommand(inCombat ? "/bmrai on" : "/bmrai off", reason);
+        SendCombatAutomationCommand(inCombat ? "/vbmai on" : "/vbmai off", reason);
         combatAutomationEnabledState = inCombat;
+        if (!inCombat)
+        {
+            joinedFateCombatAutomationActive = false;
+            joinedFateCombatAutomationFateId = 0;
+        }
         _plugin.AddDebugLog($"[CombatAutomation] BMR/VBM {(inCombat ? "enabled" : "disabled")} for {reason}.");
     }
 
@@ -11576,8 +12407,8 @@ public class StateManager : IDisposable
         if (combatMovementForbidSentThisCombat)
             return;
 
-        CommandHelper.SendCommand("/bmrai forbidmovement on");
-        CommandHelper.SendCommand("/vbmai forbidmovement on");
+        SendCombatAutomationCommand("/bmrai forbidmovement on", "combat movement forbid");
+        SendCombatAutomationCommand("/vbmai forbidmovement on", "combat movement forbid");
         combatMovementForbidSentThisCombat = true;
         _plugin.AddDebugLog("[CombatAutomation] BMR/VBM forbidmovement enabled for combat start.");
     }
@@ -12303,6 +13134,9 @@ public class StateManager : IDisposable
 
     private void HandleError(string message)
     {
+        if (TryDeferTeleportCombatError(message))
+            return;
+
         RetryCount++;
         _plugin.AddDebugLog($"[Error #{RetryCount}] {message}");
         ResetAllCameraResetBeforeInteractTracking();
@@ -12406,6 +13240,9 @@ public class StateManager : IDisposable
         if (newState is BotState.Idle or BotState.Error or BotState.Completed or BotState.InDungeon)
             overworldRecoveryRequiresPartyMountWait = false;
 
+        if (newState is BotState.Idle or BotState.Error or BotState.InDungeon)
+            ClearOutdoorMapFlowHold();
+
         State = newState;
         StateDetail = detail;
         stateStartTime = DateTime.Now;
@@ -12440,6 +13277,7 @@ public class StateManager : IDisposable
 
         if (prev == BotState.OpeningChest && newState != BotState.OpeningChest)
         {
+            ClearOpeningChestJoinedFateHold();
             ResetOpeningChestCofferMountRecovery();
             ResetOpeningChestCofferMemory();
         }

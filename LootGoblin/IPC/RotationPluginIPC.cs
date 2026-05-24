@@ -57,6 +57,8 @@ public class RotationPluginIPC : IDisposable
     public bool BmrHasActiveModule { get; private set; }
     public string BmrActiveModuleName { get; private set; } = string.Empty;
     public int VbmForbiddenZonesCount { get; private set; }
+    public bool IsBossModRebornAvailable => IsRotationPluginAvailable("BossModReborn");
+    public bool IsVbmAvailable => IsRotationPluginAvailable("vbm");
 
     public bool BossModDangerDetected => BmrHasActiveModule || VbmForbiddenZonesCount > 0;
 

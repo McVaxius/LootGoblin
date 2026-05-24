@@ -46,6 +46,7 @@ public class NavigationService : IDisposable
     }
 
     private const float PositionCommandReuseTolerance = 1.0f;
+    private const uint TamamizuAetheryteId = 105;
 
     private readonly Plugin _plugin;
     private readonly IPluginLog _log;
@@ -331,6 +332,11 @@ public class NavigationService : IDisposable
             {
                 var entry = telepo->TeleportList[i];
                 if (entry.AetheryteId == 0) continue;
+                if (_plugin.Configuration.AvoidTamamizuAetheryte && entry.AetheryteId == TamamizuAetheryteId)
+                {
+                    _plugin.AddDebugLog("[Aetheryte] Skipping Tamamizu (ID 105) due to party setting.");
+                    continue;
+                }
 
                 var aetheryte = aetheryteSheet.GetRow(entry.AetheryteId);
 
