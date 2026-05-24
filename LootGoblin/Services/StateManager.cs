@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -104,6 +105,9 @@ public class StateManager : IDisposable
 
     private DateTime stateStartTime = DateTime.Now;
     private DateTime lastTickTime = DateTime.MinValue;
+    private DateTime nextFrameworkHitchLogUtc = DateTime.MinValue;
+    private double lastSlowUpdateMs;
+    private string lastSlowUpdateSource = "none";
     private DateTime lastSelectYesnoWatchdogTime = DateTime.MinValue;
     private DateTime lastMapScanTime = DateTime.MinValue;
     private int mapScanCounter = 0; // Counter for reducing log spam
@@ -596,10 +600,45 @@ public class StateManager : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        var updateStopwatch = Stopwatch.StartNew();
+        var currentSection = "delayed-callbacks";
+        var sectionStopwatch = Stopwatch.StartNew();
+        var slowestSection = "none";
+        var slowestMs = 0d;
+
+        void CompleteSection()
+        {
+            var elapsedMs = sectionStopwatch.Elapsed.TotalMilliseconds;
+            if (elapsedMs > slowestMs)
+            {
+                slowestMs = elapsedMs;
+                slowestSection = currentSection;
+            }
+        }
+
+        void StartSection(string section)
+        {
+            CompleteSection();
+            currentSection = section;
+            sectionStopwatch.Restart();
+        }
+
+        try
+        {
         // Update delayed callbacks for SelectIconString
         GameHelpers.UpdateDelayedCallbacks();
+
+        if (IsAreaTransitionActive())
+        {
+            StartSection("between-areas");
+            HandleBetweenAreasTick();
+            return;
+        }
+
+        betweenAreasMovementStopped = false;
         
         // Auto-discard runs when bot is enabled (any state)
+        StartSection("auto-discard");
         if (_plugin.Configuration.Enabled && _plugin.Configuration.EnableAutoDiscard && Plugin.ClientState.IsLoggedIn)
         {
             var now = DateTime.Now;
@@ -621,6 +660,7 @@ public class StateManager : IDisposable
             }
         }
 
+        StartSection("companion");
         var companionOperationActive = _plugin.Configuration.Enabled
             && !IsPaused
             && State is not BotState.Idle and not BotState.Error;
@@ -678,6 +718,7 @@ public class StateManager : IDisposable
             }
         }
 
+        StartSection("state-tick");
         var allowCycling = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations or BotState.AlexandriteFarming;
         if (!_plugin.Configuration.Enabled && !allowCycling)
         {
@@ -704,6 +745,39 @@ public class StateManager : IDisposable
 
         CheckStateTimeout();
         Tick();
+        }
+        finally
+        {
+            CompleteSection();
+            updateStopwatch.Stop();
+            ReportFrameworkHitch(updateStopwatch.Elapsed.TotalMilliseconds, slowestSection, slowestMs);
+        }
+    }
+
+    private static bool IsAreaTransitionActive()
+        => Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51];
+
+    private void ReportFrameworkHitch(double elapsedMs, string slowestSection, double slowestMs)
+    {
+        lastSlowUpdateMs = elapsedMs;
+        lastSlowUpdateSource = slowestSection;
+        if (elapsedMs < 100d)
+            return;
+
+        var now = DateTime.UtcNow;
+        if (now < nextFrameworkHitchLogUtc)
+            return;
+
+        nextFrameworkHitchLogUtc = now.AddSeconds(5);
+        _log.Warning(
+            "[LootGoblin][HITCH] state framework update slow elapsedMs={ElapsedMs:0.0}; slowSection={SlowSection}; slowSectionMs={SlowSectionMs:0.0}; transition={Transition}; state={State}; navState={NavState}; detail='{Detail}'.",
+            elapsedMs,
+            slowestSection,
+            slowestMs,
+            IsAreaTransitionActive(),
+            State,
+            _plugin.NavigationService.State,
+            StateDetail);
     }
 
     private void CheckStateTimeout()

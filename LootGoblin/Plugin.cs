@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -86,6 +88,9 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly string[] LegacyFinishCommandDefaults = { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty };
     private static readonly string[] CurrentFinishCommandDefaults = { "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty, string.Empty };
     private bool ecommonsInitialized;
+    private DateTime nextFrameworkHitchLogUtc = DateTime.MinValue;
+    private double lastSlowUpdateMs;
+    private string lastSlowUpdateSource = "none";
 
     public bool IsAdsAvailable
     {
@@ -301,24 +306,83 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        var updateStopwatch = Stopwatch.StartNew();
+        var slowestSection = "none";
+        var slowestMs = 0d;
         var now = DateTime.Now;
 
-        FateSyncService.Update();
-        FoodService.Update();
-        AdsReflectionIpcService.Update();
-        NavigationService.Update();
-
-        if (RetainerMapRetrievalService.IsRunning)
+        void Measure(string section, Action action)
         {
-            var enabledMaps = Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
-            RetainerMapRetrievalService.StartOrTick(enabledMaps);
+            var sectionStopwatch = Stopwatch.StartNew();
+            action();
+            sectionStopwatch.Stop();
+
+            var elapsedMs = sectionStopwatch.Elapsed.TotalMilliseconds;
+            if (elapsedMs > slowestMs)
+            {
+                slowestMs = elapsedMs;
+                slowestSection = section;
+            }
         }
 
-        if (now - lastDependencyRefreshAt < DependencyRefreshInterval)
+        try
+        {
+            var loading = IsAreaTransitionActive();
+            if (!loading)
+            {
+                Measure("fate-sync", FateSyncService.Update);
+                Measure("food", FoodService.Update);
+                Measure("ads-reflection", () => AdsReflectionIpcService.Update());
+            }
+
+            Measure("navigation", NavigationService.Update);
+
+            if (!loading && RetainerMapRetrievalService.IsRunning)
+            {
+                Measure("retainer-map", () =>
+                {
+                    var enabledMaps = Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+                    RetainerMapRetrievalService.StartOrTick(enabledMaps);
+                });
+            }
+
+            if (!loading && now - lastDependencyRefreshAt >= DependencyRefreshInterval)
+            {
+                lastDependencyRefreshAt = now;
+                Measure("dependency-refresh", () => RefreshDependencyStatus(logStatus: false));
+            }
+        }
+        finally
+        {
+            updateStopwatch.Stop();
+            ReportFrameworkHitch(updateStopwatch.Elapsed.TotalMilliseconds, slowestSection, slowestMs);
+        }
+    }
+
+    private static bool IsAreaTransitionActive()
+        => Condition[ConditionFlag.BetweenAreas] || Condition[ConditionFlag.BetweenAreas51];
+
+    private void ReportFrameworkHitch(double elapsedMs, string slowestSection, double slowestMs)
+    {
+        lastSlowUpdateMs = elapsedMs;
+        lastSlowUpdateSource = slowestSection;
+        if (elapsedMs < 100d)
             return;
 
-        lastDependencyRefreshAt = now;
-        RefreshDependencyStatus(logStatus: false);
+        var now = DateTime.UtcNow;
+        if (now < nextFrameworkHitchLogUtc)
+            return;
+
+        nextFrameworkHitchLogUtc = now.AddSeconds(5);
+        Log.Warning(
+            "[LootGoblin][HITCH] plugin framework update slow elapsedMs={ElapsedMs:0.0}; slowSection={SlowSection}; slowSectionMs={SlowSectionMs:0.0}; transition={Transition}; state={State}; navState={NavState}; enabled={Enabled}.",
+            elapsedMs,
+            slowestSection,
+            slowestMs,
+            IsAreaTransitionActive(),
+            StateManager.State,
+            NavigationService.State,
+            Configuration.Enabled);
     }
 
     public void RefreshDependencyStatus(bool logStatus = false)
