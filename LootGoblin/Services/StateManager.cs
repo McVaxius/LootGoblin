@@ -240,6 +240,10 @@ public class StateManager : IDisposable
     private DateTime outdoorMapFlowHoldStartedAt = DateTime.MinValue;
     private DateTime outdoorMapFlowHoldLastLogAt = DateTime.MinValue;
     private bool outdoorMapFlowHoldStagedAtTarget;
+    private bool outdoorMapFlowHoldWasJoinedFate;
+    private ushort outdoorMapFlowHoldFateId;
+    private bool joinedFateMapProgressBypassPartyWait;
+    private DateTime lastJoinedFateLandingToggleAt = DateTime.MinValue;
     private bool joinedFateCombatAutomationActive;
     private ushort joinedFateCombatAutomationFateId;
     private readonly HashSet<string> loggedUnavailableCombatAutomationCommands = [];
@@ -321,6 +325,7 @@ public class StateManager : IDisposable
     private static readonly TimeSpan KeyItemMapRecoveryTimeout = TimeSpan.FromSeconds(30.0);
     private static readonly TimeSpan KeyItemMapOpenRetryInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan OutdoorMapFlowHoldLogInterval = TimeSpan.FromSeconds(10.0);
+    private static readonly TimeSpan JoinedFateLandingToggleInterval = TimeSpan.FromSeconds(1.0);
     private static readonly TimeSpan OpeningChestJoinedFateSettleDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRunawayCheckDelay = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan PortalRepathInterval = TimeSpan.FromSeconds(2.0);
@@ -972,13 +977,54 @@ public class StateManager : IDisposable
             return true;
         }
 
+        if (joinedFate && IsJoinedFateOutdoorInterventionFlowActive())
+        {
+            reason = $"joined FATE {fateId}";
+            return true;
+        }
+
         reason = string.Empty;
         return false;
+    }
+
+    private bool IsJoinedFateOutdoorInterventionFlowActive()
+    {
+        if (State is BotState.Idle or BotState.Error)
+            return false;
+
+        if (IsTreasureDungeonTerritory(Plugin.ClientState.TerritoryType))
+            return false;
+
+        var activeOutdoorState = State is BotState.SelectingMap
+            or BotState.OpeningMap
+            or BotState.DetectingLocation
+            or BotState.Teleporting
+            or BotState.Mounting
+            or BotState.WaitingForParty
+            or BotState.Flying
+            or BotState.OpeningChest
+            || (State == BotState.Completed && _plugin.Configuration.AutoStartNextMap);
+
+        if (!activeOutdoorState)
+            return false;
+
+        return CurrentLocation != null
+            || SelectedMapItemId != 0
+            || _plugin.InventoryService.HasTreasureMapKeyItem()
+            || IsOverworldMapDutyActive()
+            || digIssuedThisMap
+            || chestConfirmedThisMap
+            || portalConfirmedThisMap
+            || openingChestLastKnownCofferPosition.HasValue
+            || portalRetryStart != DateTime.MinValue
+            || portalApproachPosition.HasValue;
     }
 
     private void EnterOutdoorMapFlowHold(string reason, string source)
     {
         var now = DateTime.Now;
+        var joinedFateHold = _plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
+                             IsJoinedFateOutdoorInterventionFlowActive();
         var entering = !outdoorMapFlowHoldActive ||
                        outdoorMapFlowHoldState != State ||
                        !string.Equals(outdoorMapFlowHoldReason, reason, StringComparison.Ordinal);
@@ -991,9 +1037,16 @@ public class StateManager : IDisposable
             outdoorMapFlowHoldStartedAt = now;
             outdoorMapFlowHoldLastLogAt = now;
             outdoorMapFlowHoldStagedAtTarget = false;
+            outdoorMapFlowHoldWasJoinedFate = joinedFateHold;
+            outdoorMapFlowHoldFateId = joinedFateHold ? fateId : (ushort)0;
 
             PrepareOutdoorMapFlowHoldEntry(source, reason);
             _plugin.AddDebugLog($"{source}[OutdoorHold] Holding outdoor map flow in {State}: {reason}.");
+        }
+        else if (joinedFateHold)
+        {
+            outdoorMapFlowHoldWasJoinedFate = true;
+            outdoorMapFlowHoldFateId = fateId;
         }
         else if (now - outdoorMapFlowHoldLastLogAt >= OutdoorMapFlowHoldLogInterval)
         {
@@ -1003,11 +1056,13 @@ public class StateManager : IDisposable
 
         stateStartTime = now;
         TryKeepCombatAutomationForJoinedFate($"{source} outdoor hold");
-        TryStageOutdoorMapTargetForJoinedFate(reason, source, now);
+        var stagedAtTarget = TryStageOutdoorMapTargetForJoinedFate(reason, source, now);
+        var landingForFate = !stagedAtTarget && joinedFateHold &&
+                             TryHandleJoinedFateMountedIntervention(fateId, source, now, updateStateDetail: true);
         var elapsed = outdoorMapFlowHoldStartedAt == DateTime.MinValue
             ? TimeSpan.Zero
             : now - outdoorMapFlowHoldStartedAt;
-        if (!outdoorMapFlowHoldStagedAtTarget)
+        if (!outdoorMapFlowHoldStagedAtTarget && !landingForFate)
         {
             StateDetail = State == BotState.Teleporting
                 ? $"Holding teleport while {reason} ({elapsed.TotalSeconds:F0}s)..."
@@ -1017,6 +1072,15 @@ public class StateManager : IDisposable
 
     private void PrepareOutdoorMapFlowHoldEntry(string source, string reason)
     {
+        if (_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
+            IsJoinedFateOutdoorInterventionFlowActive())
+        {
+            overworldRecoveryRequiresPartyMountWait = false;
+            if (State == BotState.WaitingForParty)
+                waitingForPartyExpectedMemberCount = 0;
+            _plugin.AddDebugLog($"{source}[OutdoorHold] Joined FATE {fateId}: suspending party mount wait for this interruption.");
+        }
+
         if (autoMoveActive)
         {
             CommandHelper.SendCommand("/automove off");
@@ -1065,6 +1129,44 @@ public class StateManager : IDisposable
         {
             keyItemMapRecoveryStartedAt = DateTime.MinValue;
         }
+    }
+
+    private bool TryHandleJoinedFateMountedIntervention(
+        ushort fateId,
+        string source,
+        DateTime now,
+        bool updateStateDetail)
+    {
+        var mountedOrFlying = _plugin.NavigationService.IsMounted() ||
+                              _plugin.NavigationService.IsFlying() ||
+                              Plugin.Condition[ConditionFlag.Mounting71] ||
+                              Plugin.Condition[ConditionFlag.RidingPillion];
+        if (!mountedOrFlying)
+            return false;
+
+        StopOutdoorMapFlowRecoveryNavigation();
+
+        if (descentInProgress)
+        {
+            CommandHelper.SendCommand("/automove off");
+            GameHelpers.KeyRelease(VirtualKey.W);
+            GameHelpers.KeyRelease(VirtualKey.CONTROL);
+            GameHelpers.KeyRelease(VirtualKey.SPACE);
+            descentInProgress = false;
+        }
+
+        if (!Plugin.Condition[ConditionFlag.Mounting71] &&
+            now - lastJoinedFateLandingToggleAt >= JoinedFateLandingToggleInterval)
+        {
+            lastJoinedFateLandingToggleAt = now;
+            _mountService.TryLandingToggle();
+            _plugin.AddDebugLog($"{source}[OutdoorHold] Joined FATE {fateId}: landing/dismount toggle sent for level sync.");
+        }
+
+        if (updateStateDetail)
+            StateDetail = $"Joined FATE {fateId} active - landing/dismounting before level sync...";
+
+        return true;
     }
 
     private bool TryStageOutdoorMapTargetForJoinedFate(string reason, string source, DateTime now)
@@ -1144,6 +1246,8 @@ public class StateManager : IDisposable
             : now - outdoorMapFlowHoldStartedAt;
         var heldState = outdoorMapFlowHoldState;
         var heldReason = outdoorMapFlowHoldReason;
+        var heldWasJoinedFate = outdoorMapFlowHoldWasJoinedFate;
+        var heldFateId = outdoorMapFlowHoldFateId;
         _plugin.AddDebugLog($"[OutdoorHold] Released after {elapsed.TotalSeconds:F1}s from {heldState} ({heldReason}); recovering forward from {State}.");
 
         outdoorMapFlowHoldActive = false;
@@ -1152,7 +1256,12 @@ public class StateManager : IDisposable
         outdoorMapFlowHoldStartedAt = DateTime.MinValue;
         outdoorMapFlowHoldLastLogAt = DateTime.MinValue;
         outdoorMapFlowHoldStagedAtTarget = false;
+        outdoorMapFlowHoldWasJoinedFate = false;
+        outdoorMapFlowHoldFateId = 0;
         stateStartTime = now;
+
+        if (heldWasJoinedFate)
+            ArmJoinedFateMapProgressBypass(heldFateId, heldState);
 
         if (State == BotState.Teleporting)
             stateActionIssued = teleportSawBetweenAreas;
@@ -1170,6 +1279,27 @@ public class StateManager : IDisposable
         outdoorMapFlowHoldStartedAt = DateTime.MinValue;
         outdoorMapFlowHoldLastLogAt = DateTime.MinValue;
         outdoorMapFlowHoldStagedAtTarget = false;
+        outdoorMapFlowHoldWasJoinedFate = false;
+        outdoorMapFlowHoldFateId = 0;
+    }
+
+    private void ArmJoinedFateMapProgressBypass(ushort fateId, BotState heldState)
+    {
+        joinedFateMapProgressBypassPartyWait = true;
+        overworldRecoveryRequiresPartyMountWait = false;
+        waitingForPartyExpectedMemberCount = 0;
+        var fateText = fateId == 0 ? "joined FATE" : $"joined FATE {fateId}";
+        _plugin.AddDebugLog($"[OutdoorHold] {fateText} cleared from {heldState}; bypassing party waits until current map progress resumes.");
+    }
+
+    private bool ConsumeJoinedFateMountWaitBypass(string source)
+    {
+        if (!joinedFateMapProgressBypassPartyWait)
+            return false;
+
+        overworldRecoveryRequiresPartyMountWait = false;
+        _plugin.AddDebugLog($"{source} Joined-FATE recovery bypassed party mount wait.");
+        return true;
     }
 
     private void ClearOpeningChestJoinedFateHold()
@@ -1186,14 +1316,6 @@ public class StateManager : IDisposable
                       Plugin.Condition[ConditionFlag.BetweenAreas51];
         if (loading || IsTreasureDungeonTerritory(Plugin.ClientState.TerritoryType))
             return false;
-
-        if (heldState == BotState.Flying && digIssuedThisMap)
-        {
-            StopOutdoorMapFlowRecoveryNavigation();
-            _plugin.AddDebugLog($"[OutdoorHold] FATE/combat cleared after {heldReason}; dig was already issued - resuming chest recovery.");
-            TransitionTo(BotState.OpeningChest, "FATE/combat cleared - looking for treasure coffer...");
-            return true;
-        }
 
         var portal = FindNearestPortal(keepActivePortalWindow: true);
         if (portal != null)
@@ -1236,8 +1358,15 @@ public class StateManager : IDisposable
             return true;
         }
 
-        if (heldState == BotState.Flying &&
-            TryGetCurrentMapLandingDistance(out var landingDistance, out var landingTarget, out var landingBasis) &&
+        if (digIssuedThisMap)
+        {
+            StopOutdoorMapFlowRecoveryNavigation();
+            _plugin.AddDebugLog($"[OutdoorHold] FATE/combat cleared after {heldReason}; dig was already issued - resuming chest recovery.");
+            TransitionTo(BotState.OpeningChest, "FATE/combat cleared - looking for treasure coffer...");
+            return true;
+        }
+
+        if (TryGetCurrentMapLandingDistance(out var landingDistance, out var landingTarget, out var landingBasis) &&
             landingDistance <= GetCurrentMapLandingHoldRange())
         {
             StopOutdoorMapFlowRecoveryNavigation();
@@ -1264,8 +1393,43 @@ public class StateManager : IDisposable
             return true;
         }
 
+        if (TryResumeActiveMapTargetAfterOutdoorHold(heldState, heldReason))
+            return true;
+
         _plugin.AddDebugLog($"[OutdoorHold] No forward recovery target after {heldReason}; resuming held state {heldState}.");
         return false;
+    }
+
+    private bool TryResumeActiveMapTargetAfterOutdoorHold(BotState heldState, string heldReason)
+    {
+        if (CurrentLocation == null)
+            return false;
+
+        StopOutdoorMapFlowRecoveryNavigation();
+        stateActionIssued = false;
+        dismountAttemptStart = DateTime.MinValue;
+
+        if (CurrentLocation.TerritoryId != Plugin.ClientState.TerritoryType)
+        {
+            _plugin.AddDebugLog(
+                $"[OutdoorHold] FATE/combat cleared after {heldReason}; active map target is in territory {CurrentLocation.TerritoryId}, " +
+                $"current territory is {Plugin.ClientState.TerritoryType} - retrying teleport.");
+            TransitionTo(BotState.Teleporting, "FATE/combat cleared - teleporting back to map zone...");
+            return true;
+        }
+
+        if (_plugin.NavigationService.IsMounted() || _plugin.NavigationService.IsFlying())
+        {
+            _plugin.AddDebugLog(
+                $"[OutdoorHold] FATE/combat cleared after {heldReason}; resuming mounted travel to active map target from {heldState}.");
+            TransitionTo(BotState.Flying, "FATE/combat cleared - flying to active map target...");
+            return true;
+        }
+
+        _plugin.AddDebugLog(
+            $"[OutdoorHold] FATE/combat cleared after {heldReason}; remounting to resume active map target from {heldState}.");
+        TransitionTo(BotState.Mounting, "FATE/combat cleared - remounting for active map target...");
+        return true;
     }
 
     private void StopOutdoorMapFlowRecoveryNavigation()
@@ -3641,6 +3805,15 @@ public class StateManager : IDisposable
     {
         if (!_plugin.Configuration.PartyWaitBeforeDismount)
             return false;
+
+        if (joinedFateMapProgressBypassPartyWait)
+        {
+            overworldRecoveryRequiresPartyMountWait = false;
+            LogLandingPartyWaitOnce(
+                "JoinedFateRecovery:content-bypass",
+                "[PartyWait][OverworldLanding] Joined-FATE recovery bypassing party wait for current map progress.");
+            return false;
+        }
 
         var partyWait = EvaluateOverworldLandingPartyWait(maxDistance);
         if (partyWait.CanProceed)
@@ -8099,13 +8272,20 @@ public class StateManager : IDisposable
             
             var partySize = Plugin.PartyList.Length;
             var recoveryWaitRequested = overworldRecoveryRequiresPartyMountWait;
-            var recoveryWait = recoveryWaitRequested && waitForParty;
+            var bypassPartyWait = ConsumeJoinedFateMountWaitBypass("[Mounting]");
+            var recoveryWait = recoveryWaitRequested && waitForParty && !bypassPartyWait;
             _plugin.AddDebugLog($"[Mounting] PartySize={partySize}, WaitForParty={waitForParty}, RecoveryPartyWait={recoveryWaitRequested}");
 
             if (recoveryWaitRequested && !waitForParty)
             {
                 overworldRecoveryRequiresPartyMountWait = false;
                 _plugin.AddDebugLog("[Mounting] Recovery party wait skipped because WaitForParty is disabled.");
+            }
+
+            if (bypassPartyWait)
+            {
+                TransitionTo(BotState.Flying, "Joined-FATE recovery mounted - flying to location...");
+                return;
             }
 
             if (recoveryWait)
@@ -8194,6 +8374,19 @@ public class StateManager : IDisposable
     private void TickWaitingForParty()
     {
         var snapshotValid = _plugin.PartyService.UpdatePartyStatus();
+
+        if (ConsumeJoinedFateMountWaitBypass("[WaitingForParty]"))
+        {
+            if (_plugin.NavigationService.IsMounted())
+            {
+                TransitionTo(BotState.Flying, "Joined-FATE recovery - flying to location...");
+            }
+            else
+            {
+                TransitionTo(BotState.Mounting, "Joined-FATE recovery - remounting for map target...");
+            }
+            return;
+        }
 
         if (!_plugin.Configuration.WaitForParty)
         {
@@ -8644,37 +8837,15 @@ public class StateManager : IDisposable
         if (visiblePortal != null)
             CapturePortalApproachPosition(visiblePortal);
 
-        if (!Plugin.Condition[ConditionFlag.InCombat])
-        {
-            if (!openingChestJoinedFateHoldActive)
-                return false;
-
-            var settleStart = lastCombatEndTime == DateTime.MinValue
-                ? openingChestJoinedFateHoldStartedAt
-                : lastCombatEndTime;
-            var settleElapsed = settleStart == DateTime.MinValue
-                ? OpeningChestJoinedFateSettleDelay
-                : now - settleStart;
-            if (settleElapsed < OpeningChestJoinedFateSettleDelay)
-            {
-                StateDetail = $"Joined FATE {fateId} combat cleared - settling before chest/portal recovery... ({settleElapsed.TotalSeconds:F1}/{OpeningChestJoinedFateSettleDelay.TotalSeconds:F1}s)";
-                return true;
-            }
-
-            ClearOpeningChestJoinedFateHold();
-            openingChestCombatInterrupted = visibleCoffer == null && visiblePortal == null;
-            chestDisappearedTime = DateTime.MinValue;
-            _plugin.AddDebugLog(
-                $"[OpeningChest][FATE] Joined FATE {fateId} still active but combat is clear; allowing chest/portal recovery after {settleElapsed.TotalSeconds:F1}s settle.");
-            return false;
-        }
-
-        EnsureJoinedFateCombatAutomation(fateId, "opening chest joined-FATE hold");
+        var inJoinedFateCombat = Plugin.Condition[ConditionFlag.InCombat];
+        if (inJoinedFateCombat)
+            EnsureJoinedFateCombatAutomation(fateId, "opening chest joined-FATE hold");
 
         if (autoMoveActive || _plugin.NavigationService.State != NavigationState.Idle)
             StopOpeningChestCofferMovement($"while joined FATE {fateId} is active");
         ResetPortalCloseNudgeTracking(stopMovement: true);
         ResetOpeningChestFlagFallback($"joined FATE {fateId}", logIfActive: true);
+        TryHandleJoinedFateMountedIntervention(fateId, "[OpeningChest][FATE]", now, updateStateDetail: false);
 
         openingChestCombatInterrupted = true;
         openingChestRecoveryDigIssued = false;
@@ -8711,9 +8882,10 @@ public class StateManager : IDisposable
         var holdElapsed = openingChestJoinedFateHoldStartedAt == DateTime.MinValue
             ? TimeSpan.Zero
             : now - openingChestJoinedFateHoldStartedAt;
+        var activityText = inJoinedFateCombat ? "combat" : "level sync/engagement";
         StateDetail = visiblePortal != null
-            ? $"Joined FATE {fateId} active - holding portal recovery ({holdElapsed.TotalSeconds:F0}s)..."
-            : $"Joined FATE {fateId} active - holding chest recovery ({holdElapsed.TotalSeconds:F0}s)...";
+            ? $"Joined FATE {fateId} active - holding portal recovery during {activityText} ({holdElapsed.TotalSeconds:F0}s)..."
+            : $"Joined FATE {fateId} active - holding chest recovery during {activityText} ({holdElapsed.TotalSeconds:F0}s)...";
         return true;
     }
 
@@ -13313,6 +13485,9 @@ public class StateManager : IDisposable
 
         if (newState is BotState.Idle or BotState.Error or BotState.Completed or BotState.InDungeon)
             overworldRecoveryRequiresPartyMountWait = false;
+
+        if (newState is BotState.Idle or BotState.Error or BotState.SelectingMap or BotState.OpeningChest or BotState.Completed or BotState.InDungeon)
+            joinedFateMapProgressBypassPartyWait = false;
 
         if (newState is BotState.Idle or BotState.Error or BotState.InDungeon)
             ClearOutdoorMapFlowHold();
