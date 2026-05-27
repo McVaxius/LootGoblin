@@ -1603,6 +1603,12 @@ public class StateManager : IDisposable
             return;
         }
 
+        var startMapFlagCleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
+        _plugin.AddDebugLog($"[Start] Preflight cleared map flag before start flow: verified={startMapFlagCleared}.");
+
+        var startMountCommandSent = CommandHelper.TrySendCommand("/mount");
+        _plugin.AddDebugLog($"[Start] Preflight sent raw /mount dismount attempt: sent={startMountCommandSent}.");
+
         ClearWarning();
         ResetRunCommandTriggers();
         ClearSelectedMapRunCountDecrement("[Start]");
