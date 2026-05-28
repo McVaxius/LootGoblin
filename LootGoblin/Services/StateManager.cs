@@ -356,6 +356,9 @@ public class StateManager : IDisposable
     private const int AdsRepairMaxRetryAttempts = 3;
     private const float AdsRepairRecoveryTeleportPositionDeltaThreshold = 5.0f;
     private const int AdsRepairRecoveryTeleportMaxRetries = 2;
+    private const string AdsRepairModeSelf = "self";
+    private const string AdsRepairModeNpcNoInn = "npc-no-inn";
+    private const string AdsRepairModeNpcNoTeleportNoInn = "npc-no-teleport-no-inn";
     private static readonly TimeSpan TreasureHighLowSettleDelay = TimeSpan.FromMilliseconds(350);
     private static readonly TimeSpan TreasureHighLowReopenRetryInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan TreasureHighLowStatusLogInterval = TimeSpan.FromSeconds(5.0);
@@ -11734,14 +11737,13 @@ public class StateManager : IDisposable
         }
 
         var repairMode = ResolveAdsRepairMode();
-        if (repairMode == "npc-no-inn" && !GameHelpers.IsInSanctuary())
+        if (repairMode == AdsRepairModeNpcNoInn && !GameHelpers.IsInSanctuary())
         {
             return BeginAdsRepairTeleportRecovery(source, repairMode, lowestCondition, threshold, resumeStartAfterRepair);
         }
 
         continueStartAfterAdsRepair = resumeStartAfterRepair;
-        TryRequestAdsRepair(source, repairMode, lowestCondition, threshold);
-        return true;
+        return TryRequestAdsRepair(source, repairMode, lowestCondition, threshold);
     }
 
     private bool BeginAdsRepairTeleportRecovery(
@@ -11819,12 +11821,22 @@ public class StateManager : IDisposable
         if (!_plugin.AdsStatusService.StartRepair(repairMode))
         {
             var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
+            if (IsNpcNoTeleportNoInnNoMenderSkip(repairMode, adsStatus))
+            {
+                var statusText = GetAdsRepairStatusText(adsStatus);
+                ResetAdsRepairHandoffTracking();
+                StateDetail = $"No nearby repair NPC for ADS {repairMode}; continuing map flow.";
+                _plugin.AddDebugLog(
+                    $"{source}[Repair] ADS {repairMode} soft skip: {statusText} Continuing map flow without repair.");
+                return false;
+            }
+
             ScheduleAdsRepairRetry(
                 $"Could not start ADS repair ({repairMode}) at {lowestCondition}% durability.",
                 adsStatus,
                 lowestCondition,
                 threshold);
-            return false;
+            return true;
         }
 
         adsRepairHandoffActive = true;
@@ -12123,11 +12135,20 @@ public class StateManager : IDisposable
             $"{source}[Repair] Retrying ADS repair {adsRepairRetryAttemptCount}/{AdsRepairMaxRetryAttempts}; " +
             $"lowest durability {lowestCondition}%, threshold {threshold}%, mode {repairMode}.");
 
-        if (repairMode == "npc-no-inn" && !GameHelpers.IsInSanctuary())
+        if (repairMode == AdsRepairModeNpcNoInn && !GameHelpers.IsInSanctuary())
             return BeginAdsRepairTeleportRecovery(source, repairMode, lowestCondition, threshold, continueStartAfterAdsRepair);
 
-        TryRequestAdsRepair(source, repairMode, lowestCondition, threshold);
-        return true;
+        var resumeStartAfterSoftSkip = continueStartAfterAdsRepair;
+        if (TryRequestAdsRepair(source, repairMode, lowestCondition, threshold))
+            return true;
+
+        if (resumeStartAfterSoftSkip)
+        {
+            ContinueStartAfterRepair();
+            return true;
+        }
+
+        return false;
     }
 
     private bool TickAdsRepairHandoff()
@@ -12272,7 +12293,25 @@ public class StateManager : IDisposable
         => string.IsNullOrWhiteSpace(adsRepairSource) ? "[Repair]" : adsRepairSource;
 
     private string ResolveAdsRepairMode()
-        => _plugin.Configuration.RepairMode == RepairMode.Self ? "self" : "npc-no-inn";
+        => _plugin.Configuration.RepairMode switch
+        {
+            RepairMode.Self => AdsRepairModeSelf,
+            RepairMode.NpcNoInnNoTeleport => AdsRepairModeNpcNoTeleportNoInn,
+            _ => AdsRepairModeNpcNoInn,
+        };
+
+    private static bool IsNpcNoTeleportNoInnNoMenderSkip(string repairMode, AdsStatusSnapshot status)
+    {
+        if (!string.Equals(repairMode, AdsRepairModeNpcNoTeleportNoInn, StringComparison.Ordinal))
+            return false;
+
+        return ContainsNoMenderWithin120Y(status.UtilityLastFailure)
+               || ContainsNoMenderWithin120Y(status.UtilityStatus);
+    }
+
+    private static bool ContainsNoMenderWithin120Y(string value)
+        => !string.IsNullOrWhiteSpace(value)
+           && value.Contains("No repair NPC found within 120y", StringComparison.OrdinalIgnoreCase);
 
     private static string BuildAdsRepairStoppedFailureMessage(AdsStatusSnapshot status)
         => $"ADS repair stopped before durability reached threshold; ADS {GetAdsRepairFailureOrStatusText(status)}.";

@@ -9,6 +9,7 @@ public enum RepairMode
 {
     Self,
     NpcNoInn,
+    NpcNoInnNoTeleport,
 }
 
 public enum ReturnWhenDoneDestination

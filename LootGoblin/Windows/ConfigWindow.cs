@@ -195,12 +195,22 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing.");
 
-        var repairModes = new[] { "Self", "NPC no inn" };
-        var repairModeIndex = configuration.RepairMode == RepairMode.Self ? 0 : 1;
+        var repairModes = new[] { "Self", "NPC no inn", "NPC No Inn + No TP" };
+        var repairModeIndex = configuration.RepairMode switch
+        {
+            RepairMode.Self => 0,
+            RepairMode.NpcNoInnNoTeleport => 2,
+            _ => 1,
+        };
         ImGui.SetNextItemWidth(180);
         if (ImGui.Combo("Repair mode", ref repairModeIndex, repairModes, repairModes.Length))
         {
-            configuration.RepairMode = repairModeIndex == 0 ? RepairMode.Self : RepairMode.NpcNoInn;
+            configuration.RepairMode = repairModeIndex switch
+            {
+                0 => RepairMode.Self,
+                2 => RepairMode.NpcNoInnNoTeleport,
+                _ => RepairMode.NpcNoInn,
+            };
             configuration.Save();
         }
     }
@@ -490,23 +500,25 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawAdsRepairTestButton()
     {
-        if (ImGui.Button("Test ADS NPC No-Inn Repair"))
+        var repairMode = ResolveAdsRepairMode(configuration.RepairMode);
+        var repairModeLabel = GetRepairModeLabel(configuration.RepairMode);
+        if (ImGui.Button("Test ADS Repair Mode"))
         {
             if (!plugin.IsAdsAvailable)
             {
-                const string message = "ADS is not loaded; NPC no-inn repair test not started.";
+                var message = $"ADS is not loaded; {repairModeLabel} repair test not started.";
                 plugin.PrintChat(message);
                 plugin.AddDebugLog($"[Repair] {message}");
             }
-            else if (!GameHelpers.IsInSanctuary())
+            else if (configuration.RepairMode == RepairMode.NpcNoInn && !GameHelpers.IsInSanctuary())
             {
                 const string message = "ADS NPC no-inn repair can only start from a sanctuary.";
                 plugin.PrintChat(message);
                 plugin.AddDebugLog($"[Repair] {message}");
             }
-            else if (plugin.AdsStatusService.StartRepair("npc-no-inn"))
+            else if (plugin.AdsStatusService.StartRepair(repairMode))
             {
-                const string message = "ADS NPC no-inn repair test requested.";
+                var message = $"ADS {repairModeLabel} repair test requested.";
                 plugin.PrintChat(message);
                 plugin.AddDebugLog($"[Repair] {message}");
             }
@@ -516,14 +528,30 @@ public class ConfigWindow : Window, IDisposable
                 var statusText = string.IsNullOrWhiteSpace(adsStatus.UtilityStatus)
                     ? "ADS did not accept the repair request."
                     : adsStatus.UtilityStatus;
-                var message = $"ADS NPC no-inn repair test failed: {statusText}";
+                var message = $"ADS {repairModeLabel} repair test failed: {statusText}";
                 plugin.PrintChat(message);
                 plugin.AddDebugLog($"[Repair] {message}");
             }
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Debug-only IPC test: ADS.StartRepair(\"npc-no-inn\").");
+            ImGui.SetTooltip($"Debug-only IPC test: ADS.StartRepair(\"{repairMode}\").");
     }
+
+    private static string ResolveAdsRepairMode(RepairMode repairMode)
+        => repairMode switch
+        {
+            RepairMode.Self => "self",
+            RepairMode.NpcNoInnNoTeleport => "npc-no-teleport-no-inn",
+            _ => "npc-no-inn",
+        };
+
+    private static string GetRepairModeLabel(RepairMode repairMode)
+        => repairMode switch
+        {
+            RepairMode.Self => "self",
+            RepairMode.NpcNoInnNoTeleport => "NPC no-inn/no-teleport",
+            _ => "NPC no-inn",
+        };
 
     private void DrawAdsBmrAdjustmentsSection()
     {
