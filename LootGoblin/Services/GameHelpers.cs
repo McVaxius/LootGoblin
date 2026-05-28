@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -31,6 +32,11 @@ public static class GameHelpers
     private const float AetheryteSanctuaryFallbackDistanceSquared = AetheryteSanctuaryFallbackDistance * AetheryteSanctuaryFallbackDistance;
 
     public const uint WellFedStatusId = 48;
+    private static readonly object ItemLookupLock = new();
+    private static readonly Dictionary<uint, string> ItemNameCache = new();
+    private static readonly Dictionary<string, (uint Id, string Name)> FoodLookupByName = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<uint, uint?> TerritoryMapIdCache = new();
+    private static bool foodLookupLoaded;
 
     // Known food items in order of priority (least to most preferred), matching FrenRider.
     public static readonly (uint Id, string Name)[] FoodList =
@@ -263,23 +269,20 @@ public static class GameHelpers
 
             // Each entry in AddonMaster has a Text property we can check
             // The text should contain the map name, which we can match against our target
+            var targetItemName = LookupItemName(targetItemId);
+            if (string.IsNullOrWhiteSpace(targetItemName))
+                return -1;
+
             for (int i = 0; i < entryCount; i++)
             {
                 var entry = addonMaster.Entries[i];
                 var text = entry.Text;
                 Plugin.Log.Debug($"[FIND] Entry[{i}]: Text='{text}'");
-                
-                // Get the item name for our target map
-                var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
-                var item = itemSheet?.GetRow(targetItemId);
-                if (item != null)
+
+                if (text.Contains(targetItemName))
                 {
-                    var targetItemName = item.Value.Name.ToString();
-                    if (text.Contains(targetItemName))
-                    {
-                        Plugin.Log.Information($"[FIND] Found target map '{targetItemName}' at entry index {i}");
-                        return i;
-                    }
+                    Plugin.Log.Information($"[FIND] Found target map '{targetItemName}' at entry index {i}");
+                    return i;
                 }
             }
 
@@ -1022,15 +1025,12 @@ public static class GameHelpers
                 return;
             }
 
-            var territorySheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>();
-            var territory = territorySheet?.GetRow(territoryId);
-            if (territory == null)
+            if (!TryGetTerritoryMapId(territoryId, out var mapId))
             {
                 Plugin.Log.Warning($"[MapFlag] Territory {territoryId} not found");
                 return;
             }
 
-            var mapId = territory.Value.Map.RowId;
             SetMapFlag(territoryId, mapId, worldX, worldZ);
         }
         catch (Exception ex)
@@ -1335,20 +1335,13 @@ public static class GameHelpers
 
         try
         {
-            var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
-            if (itemSheet == null) return (0, "");
-
             var trimmedName = foodName.Trim();
-            foreach (var row in itemSheet)
+            lock (ItemLookupLock)
             {
-                if (row.ItemUICategory.RowId != 46) continue;
-
-                var name = row.Name.ToString();
-                if (!string.IsNullOrEmpty(name) &&
-                    name.Equals(trimmedName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return (row.RowId, name);
-                }
+                EnsureFoodLookupLoadedLocked();
+                return FoodLookupByName.TryGetValue(trimmedName, out var food)
+                    ? food
+                    : (0, "");
             }
         }
         catch (Exception ex)
@@ -1359,15 +1352,55 @@ public static class GameHelpers
         return (0, "");
     }
 
+    private static void EnsureFoodLookupLoadedLocked()
+    {
+        if (foodLookupLoaded)
+            return;
+
+        var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
+        if (itemSheet == null)
+            return;
+
+        foreach (var row in itemSheet)
+        {
+            if (row.ItemUICategory.RowId != 46)
+                continue;
+
+            var name = row.Name.ToString();
+            if (!string.IsNullOrEmpty(name) && !FoodLookupByName.ContainsKey(name))
+            {
+                FoodLookupByName[name] = (row.RowId, name);
+                ItemNameCache.TryAdd(row.RowId, name);
+            }
+        }
+
+        foodLookupLoaded = true;
+    }
+
     public static string LookupItemName(uint itemId)
     {
         if (itemId == 0) return "";
 
         try
         {
-            var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
-            if (itemSheet != null && itemSheet.TryGetRow(itemId, out var item))
-                return item.Name.ToString();
+            lock (ItemLookupLock)
+            {
+                if (ItemNameCache.TryGetValue(itemId, out var cachedName))
+                    return cachedName;
+
+                var itemSheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
+                if (itemSheet == null)
+                    return "";
+
+                if (itemSheet.TryGetRow(itemId, out var item))
+                {
+                    var name = item.Name.ToString();
+                    ItemNameCache[itemId] = name;
+                    return name;
+                }
+
+                ItemNameCache[itemId] = "";
+            }
         }
         catch (Exception ex)
         {
@@ -1375,6 +1408,37 @@ public static class GameHelpers
         }
 
         return "";
+    }
+
+    private static bool TryGetTerritoryMapId(uint territoryId, out uint mapId)
+    {
+        mapId = 0;
+        lock (ItemLookupLock)
+        {
+            if (TerritoryMapIdCache.TryGetValue(territoryId, out var cachedMapId))
+            {
+                mapId = cachedMapId ?? 0;
+                return cachedMapId.HasValue;
+            }
+
+            try
+            {
+                var territorySheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.TerritoryType>();
+                if (territorySheet != null && territorySheet.TryGetRow(territoryId, out var territory))
+                {
+                    mapId = territory.Map.RowId;
+                    TerritoryMapIdCache[territoryId] = mapId;
+                    return true;
+                }
+            }
+            catch
+            {
+                // Fall through and cache a miss for this static lookup.
+            }
+
+            TerritoryMapIdCache[territoryId] = null;
+            return false;
+        }
     }
 
     public static (uint Id, string Name, bool HighQuality, int Count) FindBestAvailableFood()

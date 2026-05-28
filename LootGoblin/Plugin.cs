@@ -93,6 +93,8 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime nextFrameworkHitchLogUtc = DateTime.MinValue;
     private double lastSlowUpdateMs;
     private string lastSlowUpdateSource = "none";
+    private IReadOnlyList<uint> cachedRetainerRunnableMapIds = Array.Empty<uint>();
+    private string cachedRetainerRunnableMapIdsSignature = string.Empty;
 
     private sealed record PluginAvailabilityCacheEntry(bool IsLoaded, DateTime ExpiresAtUtc);
 
@@ -345,7 +347,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 Measure("retainer-map", () =>
                 {
-                    var enabledMaps = Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+                    var enabledMaps = GetCachedRetainerRunnableMapIds();
                     RetainerMapRetrievalService.StartOrTick(enabledMaps);
                 });
             }
@@ -396,6 +398,27 @@ public sealed class Plugin : IDalamudPlugin
         MapFlagService.CheckAvailability(logStatus);
         TreasureMapLocationService.CheckAvailability(logStatus);
         RotationPluginIPC.CheckAvailability(logStatus);
+    }
+
+    private IReadOnlyList<uint> GetCachedRetainerRunnableMapIds()
+    {
+        var enabledSignature = Configuration.EnabledMapTypes is { } enabledMapTypes
+            ? string.Join(",", enabledMapTypes)
+            : string.Empty;
+        var countSignature = Configuration.MapRunCounts == null
+            ? string.Empty
+            : string.Join(
+                ",",
+                Configuration.MapRunCounts
+                    .OrderBy(kvp => kvp.Key)
+                    .Select(kvp => $"{kvp.Key}:{kvp.Value}"));
+        var signature = $"{enabledSignature}|{countSignature}";
+        if (string.Equals(signature, cachedRetainerRunnableMapIdsSignature, StringComparison.Ordinal))
+            return cachedRetainerRunnableMapIds;
+
+        cachedRetainerRunnableMapIds = Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+        cachedRetainerRunnableMapIdsSignature = signature;
+        return cachedRetainerRunnableMapIds;
     }
 
     private void OnCommand(string command, string args)

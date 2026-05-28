@@ -51,8 +51,40 @@ public class InventoryService : IDisposable
     private readonly IPluginLog _log;
     private readonly Plugin _plugin;
     private readonly IDataManager _dataManager;
+    private Lumina.Excel.ExcelSheet<Item>? itemSheet;
+    private Lumina.Excel.ExcelSheet<EventItem>? eventItemSheet;
+    private Lumina.Excel.ExcelSheet<EventItemHelp>? eventItemHelpSheet;
     private static int scanCounter = 0; // Static counter for reducing log spam across all instances
     private const InventoryType KeyItemsInventoryType = (InventoryType)2004;
+    private static readonly IReadOnlyList<ContainerSpec> InventoryContainerSpecs =
+    [
+        new ContainerSpec(InventoryType.Inventory1, (count, quantity) => count.Inventory += quantity),
+        new ContainerSpec(InventoryType.Inventory2, (count, quantity) => count.Inventory += quantity),
+        new ContainerSpec(InventoryType.Inventory3, (count, quantity) => count.Inventory += quantity),
+        new ContainerSpec(InventoryType.Inventory4, (count, quantity) => count.Inventory += quantity),
+    ];
+
+    private static readonly IReadOnlyList<ContainerSpec> SaddlebagContainerSpecs =
+    [
+        new ContainerSpec(InventoryType.SaddleBag1, (count, quantity) => count.Saddlebag += quantity),
+        new ContainerSpec(InventoryType.SaddleBag2, (count, quantity) => count.Saddlebag += quantity),
+        new ContainerSpec(InventoryType.PremiumSaddleBag1, (count, quantity) => count.PremiumSaddlebag += quantity),
+        new ContainerSpec(InventoryType.PremiumSaddleBag2, (count, quantity) => count.PremiumSaddlebag += quantity),
+    ];
+
+    private static readonly IReadOnlyList<ContainerSpec> InventoryAndSaddlebagContainerSpecs =
+        InventoryContainerSpecs.Concat(SaddlebagContainerSpecs).ToArray();
+
+    private static readonly IReadOnlyList<ContainerSpec> RetainerContainerSpecs =
+    [
+        new ContainerSpec(InventoryType.RetainerPage1, (count, quantity) => count.Retainer += quantity),
+        new ContainerSpec(InventoryType.RetainerPage2, (count, quantity) => count.Retainer += quantity),
+        new ContainerSpec(InventoryType.RetainerPage3, (count, quantity) => count.Retainer += quantity),
+        new ContainerSpec(InventoryType.RetainerPage4, (count, quantity) => count.Retainer += quantity),
+        new ContainerSpec(InventoryType.RetainerPage5, (count, quantity) => count.Retainer += quantity),
+        new ContainerSpec(InventoryType.RetainerPage6, (count, quantity) => count.Retainer += quantity),
+        new ContainerSpec(InventoryType.RetainerPage7, (count, quantity) => count.Retainer += quantity),
+    ];
     private static readonly Dictionary<string, uint> KeyItemNameAliases = new(StringComparer.OrdinalIgnoreCase)
     {
         { "alexandrite", 7884 },
@@ -136,7 +168,7 @@ public class InventoryService : IDisposable
                 return results;
             }
 
-            var itemSheet = _dataManager.GetExcelSheet<Item>();
+            var itemSheet = GetItemSheet();
             if (itemSheet == null)
             {
                 _plugin.AddDebugLog("Item sheet is null.");
@@ -157,8 +189,9 @@ public class InventoryService : IDisposable
                     if (slot == null || slot->ItemId == 0) continue;
 
                     var itemId = slot->ItemId;
-                    var item = itemSheet.GetRow(itemId);
-                    var itemName = item.Name.ToString();
+                    var itemName = TreasureMapData.KnownMaps.ContainsKey(itemId)
+                        ? string.Empty
+                        : ResolveItemName(itemSheet, itemId);
 
                     if (IsTreasureMapSource(itemId, itemName))
                     {
@@ -192,8 +225,7 @@ public class InventoryService : IDisposable
                     _plugin.AddDebugLog($"Found {results.Count} map types (scan #{scanCounter}):");
                     foreach (var kvp in results)
                     {
-                        var item = itemSheet.GetRow(kvp.Key);
-                        var name = GetMapSourceDisplayName(kvp.Key, item.Name.ToString());
+                        var name = GetMapSourceDisplayName(kvp.Key, ResolveItemName(itemSheet, kvp.Key));
                         var counts = kvp.Value;
                         _plugin.AddDebugLog(
                             $"  Found {counts.Total}x {name} (ID: {kvp.Key}) " +
@@ -228,9 +260,9 @@ public class InventoryService : IDisposable
             if (container == null || !container->IsLoaded)
                 return false;
 
-            var itemSheet = _dataManager.GetExcelSheet<Item>();
-            var eventItemSheet = _dataManager.GetExcelSheet<EventItem>();
-            var eventItemHelpSheet = _dataManager.GetExcelSheet<EventItemHelp>();
+            var itemSheet = GetItemSheet();
+            var eventItemSheet = GetEventItemSheet();
+            var eventItemHelpSheet = GetEventItemHelpSheet();
 
             for (int i = 0; i < container->Size; i++)
             {
@@ -685,44 +717,40 @@ public class InventoryService : IDisposable
     private static IReadOnlyList<ContainerSpec> GetContainerSpecs(bool includeSaddlebags)
     {
         return includeSaddlebags
-            ? GetInventoryContainerSpecs().Concat(GetSaddlebagContainerSpecs()).ToList()
-            : GetInventoryContainerSpecs();
+            ? InventoryAndSaddlebagContainerSpecs
+            : InventoryContainerSpecs;
     }
 
     private static IReadOnlyList<ContainerSpec> GetInventoryContainerSpecs()
-    {
-        return new[]
-        {
-            new ContainerSpec(InventoryType.Inventory1, (count, quantity) => count.Inventory += quantity),
-            new ContainerSpec(InventoryType.Inventory2, (count, quantity) => count.Inventory += quantity),
-            new ContainerSpec(InventoryType.Inventory3, (count, quantity) => count.Inventory += quantity),
-            new ContainerSpec(InventoryType.Inventory4, (count, quantity) => count.Inventory += quantity),
-        };
-    }
+        => InventoryContainerSpecs;
 
     private static IReadOnlyList<ContainerSpec> GetSaddlebagContainerSpecs()
-    {
-        return new[]
-        {
-            new ContainerSpec(InventoryType.SaddleBag1, (count, quantity) => count.Saddlebag += quantity),
-            new ContainerSpec(InventoryType.SaddleBag2, (count, quantity) => count.Saddlebag += quantity),
-            new ContainerSpec(InventoryType.PremiumSaddleBag1, (count, quantity) => count.PremiumSaddlebag += quantity),
-            new ContainerSpec(InventoryType.PremiumSaddleBag2, (count, quantity) => count.PremiumSaddlebag += quantity),
-        };
-    }
+        => SaddlebagContainerSpecs;
 
     private static IReadOnlyList<ContainerSpec> GetRetainerContainerSpecs()
+        => RetainerContainerSpecs;
+
+    private Lumina.Excel.ExcelSheet<Item>? GetItemSheet()
+        => itemSheet ??= _dataManager.GetExcelSheet<Item>();
+
+    private Lumina.Excel.ExcelSheet<EventItem>? GetEventItemSheet()
+        => eventItemSheet ??= _dataManager.GetExcelSheet<EventItem>();
+
+    private Lumina.Excel.ExcelSheet<EventItemHelp>? GetEventItemHelpSheet()
+        => eventItemHelpSheet ??= _dataManager.GetExcelSheet<EventItemHelp>();
+
+    private static string ResolveItemName(Lumina.Excel.ExcelSheet<Item>? sheet, uint itemId)
     {
-        return new[]
+        try
         {
-            new ContainerSpec(InventoryType.RetainerPage1, (count, quantity) => count.Retainer += quantity),
-            new ContainerSpec(InventoryType.RetainerPage2, (count, quantity) => count.Retainer += quantity),
-            new ContainerSpec(InventoryType.RetainerPage3, (count, quantity) => count.Retainer += quantity),
-            new ContainerSpec(InventoryType.RetainerPage4, (count, quantity) => count.Retainer += quantity),
-            new ContainerSpec(InventoryType.RetainerPage5, (count, quantity) => count.Retainer += quantity),
-            new ContainerSpec(InventoryType.RetainerPage6, (count, quantity) => count.Retainer += quantity),
-            new ContainerSpec(InventoryType.RetainerPage7, (count, quantity) => count.Retainer += quantity),
-        };
+            return sheet != null && sheet.TryGetRow(itemId, out var item)
+                ? item.Name.ToString()
+                : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     private static bool IsTreasureMapSource(uint itemId, string itemName)
