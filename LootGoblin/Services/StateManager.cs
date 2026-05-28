@@ -109,6 +109,12 @@ public class StateManager : IDisposable
     private double lastSlowUpdateMs;
     private string lastSlowUpdateSource = "none";
     private DateTime lastSelectYesnoWatchdogTime = DateTime.MinValue;
+    private DateTime pendingPartyTeleportOfferObservedAt = DateTime.MinValue;
+    private string pendingPartyTeleportOfferText = string.Empty;
+    private bool acceptedPartyTeleportOfferRestartPending;
+    private DateTime acceptedPartyTeleportOfferAt = DateTime.MinValue;
+    private bool acceptedPartyTeleportOfferSawBetweenAreas;
+    private DateTime acceptedPartyTeleportOfferLastLoadingAt = DateTime.MinValue;
     private DateTime lastMapScanTime = DateTime.MinValue;
     private int mapScanCounter = 0; // Counter for reducing log spam
     private bool stateActionIssued;
@@ -255,6 +261,9 @@ public class StateManager : IDisposable
     private bool selectedMapRunCountDecremented;
     private const double TickIntervalSeconds = 0.5;
     private static readonly TimeSpan SelectYesnoWatchdogInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan PartyTeleportOfferPendingTtl = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan PartyTeleportAcceptedSettleDelay = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan PartyTeleportPostLoadingSettleDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan CameraResetBeforeInteractDelay = TimeSpan.FromMilliseconds(150);
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float MapDigXZRange = 5.0f;
@@ -640,6 +649,9 @@ public class StateManager : IDisposable
         }
 
         betweenAreasMovementStopped = false;
+
+        if (TickAcceptedPartyTeleportOfferRestart())
+            return;
         
         // Auto-discard runs when bot is enabled (any state)
         StartSection("auto-discard");
@@ -850,6 +862,9 @@ public class StateManager : IDisposable
             return;
 
         RunSelectYesnoWatchdog();
+        if (TickAcceptedPartyTeleportOfferRestart())
+            return;
+
         UpdateBossModOutdoorSuppression();
 
         bool currentlyInCombat = Plugin.Condition[ConditionFlag.InCombat];
@@ -1443,12 +1458,205 @@ public class StateManager : IDisposable
 
         lastSelectYesnoWatchdogTime = now;
 
-        if (GameHelpers.ClickYesIfVisible())
+        if (ClickYesIfVisibleWithTeleportOfferCheck())
             _plugin.AddDebugLog("[SelectYesnoWatchdog] Clicked Yes on visible SelectYesno dialog.");
+    }
+
+    private bool ClickYesIfVisibleWithTeleportOfferCheck()
+    {
+        if (!GameHelpers.ClickYesIfVisible())
+            return false;
+
+        var now = DateTime.Now;
+        if (IsPendingPartyTeleportOfferActive(now))
+            QueueAcceptedPartyTeleportOfferRestart(now);
+
+        return true;
+    }
+
+    private void ObservePartyTeleportOffer(string text)
+    {
+        if (acceptedPartyTeleportOfferRestartPending)
+            return;
+
+        if (!IsPartyTeleportOfferMessage(text))
+            return;
+
+        pendingPartyTeleportOfferObservedAt = DateTime.Now;
+        pendingPartyTeleportOfferText = text.Trim();
+        _plugin.AddDebugLog("[PartyTeleport] Offer observed; next accepted SelectYesno will restart LootGoblin after teleport settles.");
+    }
+
+    private static bool IsPartyTeleportOfferMessage(string text)
+    {
+        var trimmed = text.Trim();
+        return trimmed.StartsWith("You have been offered a Teleport to ", StringComparison.OrdinalIgnoreCase) &&
+               trimmed.Contains(" from ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsPendingPartyTeleportOfferActive(DateTime now)
+    {
+        if (pendingPartyTeleportOfferObservedAt == DateTime.MinValue)
+            return false;
+
+        if (now - pendingPartyTeleportOfferObservedAt <= PartyTeleportOfferPendingTtl)
+            return true;
+
+        ClearPendingPartyTeleportOffer("[PartyTeleport] Offer expired before SelectYesno was accepted.");
+        return false;
+    }
+
+    private void QueueAcceptedPartyTeleportOfferRestart(DateTime acceptedAt)
+    {
+        if (acceptedPartyTeleportOfferRestartPending)
+            return;
+
+        var offerText = pendingPartyTeleportOfferText;
+        ClearPendingPartyTeleportOffer(null);
+
+        acceptedPartyTeleportOfferRestartPending = true;
+        acceptedPartyTeleportOfferAt = acceptedAt;
+        acceptedPartyTeleportOfferSawBetweenAreas = false;
+        acceptedPartyTeleportOfferLastLoadingAt = DateTime.MinValue;
+
+        StopMovementForAcceptedPartyTeleportOffer();
+        _plugin.AddDebugLog(
+            string.IsNullOrWhiteSpace(offerText)
+                ? "[PartyTeleport] Accepted party teleport offer; queued LootGoblin fresh start after teleport settles."
+                : $"[PartyTeleport] Accepted party teleport offer; queued LootGoblin fresh start after teleport settles. Offer='{offerText}'");
+    }
+
+    private bool TickAcceptedPartyTeleportOfferRestart()
+    {
+        if (!acceptedPartyTeleportOfferRestartPending)
+            return false;
+
+        if (!_plugin.Configuration.Enabled)
+        {
+            ClearAcceptedPartyTeleportOfferRestart("[PartyTeleport] Restart cancelled because LootGoblin is disabled.");
+            return false;
+        }
+
+        var now = DateTime.Now;
+        var loading = IsAreaTransitionActive() || _plugin.NavigationService.IsTeleporting();
+        if (loading)
+        {
+            acceptedPartyTeleportOfferSawBetweenAreas = true;
+            acceptedPartyTeleportOfferLastLoadingAt = now;
+            StateDetail = "Accepted party teleport - waiting for loading to finish...";
+            return true;
+        }
+
+        if (acceptedPartyTeleportOfferSawBetweenAreas &&
+            now - acceptedPartyTeleportOfferLastLoadingAt < PartyTeleportPostLoadingSettleDelay)
+        {
+            StateDetail = "Accepted party teleport - waiting for arrival to settle...";
+            return true;
+        }
+
+        if (!acceptedPartyTeleportOfferSawBetweenAreas &&
+            now - acceptedPartyTeleportOfferAt < PartyTeleportAcceptedSettleDelay)
+        {
+            StateDetail = "Accepted party teleport - waiting for teleport handoff...";
+            return true;
+        }
+
+        if (!GameHelpers.IsPlayerAvailable())
+        {
+            StateDetail = "Accepted party teleport - waiting for player to become available...";
+            return true;
+        }
+
+        RestartAfterAcceptedPartyTeleportOffer();
+        return true;
+    }
+
+    private void RestartAfterAcceptedPartyTeleportOffer()
+    {
+        ClearAcceptedPartyTeleportOfferRestart(null);
+        PrepareFreshStartAfterAcceptedPartyTeleportOffer();
+        TransitionTo(BotState.Idle, "Restarting after accepted party teleport offer...");
+        _plugin.AddDebugLog("[PartyTeleport] Teleport settled; restarting LootGoblin through Start flow.");
+        Start();
+    }
+
+    private void PrepareFreshStartAfterAcceptedPartyTeleportOffer()
+    {
+        StopMovementForAcceptedPartyTeleportOffer();
+        ResetVnavFlyFlagFallbackState();
+        ResetPortalApproachTrackingForAreaChange();
+        EndPortalRetryWindow();
+        ResetAdsHandoffTracking(resetStatus: true);
+        ResetAdsRepairHandoffTracking();
+        _plugin.RetainerMapRetrievalService.Reset();
+        ClearSelectedMapRunCountDecrement("[PartyTeleport]");
+        ResetSaddlebagRetrieval();
+        ResetStartMapRefresh();
+        ResetOpeningChestLifecycleState();
+        ResetOpeningChestCofferMemory();
+        ResetPortalGroundApproachTracking(resetFailure: true);
+        ResetOverworldRecoveryState(clearTeleportedTarget: true);
+        ResetKeyItemMapRecoveryState(clearActiveKey: true);
+        _plugin.TreasureMapLocationService.ClearCapturedLocation();
+
+        IsPaused = false;
+        RetryCount = 0;
+        CurrentLocation = null;
+        SelectedMapItemId = 0;
+        currentLandingMode = OverworldLandingMode.MountToggle;
+        pendingDungeonMapFlagClear = false;
+        completedSaddlebagRefreshAttempted = false;
+        ResetRunCommandTriggers();
+        ClearWarning();
+    }
+
+    private void StopMovementForAcceptedPartyTeleportOffer()
+    {
+        CommandHelper.SendCommand("/automove off");
+        autoMoveActive = false;
+        descentMode = false;
+        if (descentInProgress)
+        {
+            GameHelpers.KeyRelease(VirtualKey.W);
+            GameHelpers.KeyRelease(VirtualKey.CONTROL);
+            GameHelpers.KeyRelease(VirtualKey.SPACE);
+        }
+
+        descentInProgress = false;
+        underwaterTargetPosition = Vector3.Zero;
+        ResetPendingUnderwaterFlagApproachReissue();
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+    }
+
+    private void ClearPendingPartyTeleportOffer(string? logMessage)
+    {
+        pendingPartyTeleportOfferObservedAt = DateTime.MinValue;
+        pendingPartyTeleportOfferText = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(logMessage))
+            _plugin.AddDebugLog(logMessage);
+    }
+
+    private void ClearAcceptedPartyTeleportOfferRestart(string? logMessage)
+    {
+        acceptedPartyTeleportOfferRestartPending = false;
+        acceptedPartyTeleportOfferAt = DateTime.MinValue;
+        acceptedPartyTeleportOfferSawBetweenAreas = false;
+        acceptedPartyTeleportOfferLastLoadingAt = DateTime.MinValue;
+
+        if (!string.IsNullOrWhiteSpace(logMessage))
+            _plugin.AddDebugLog(logMessage);
     }
 
     private void HandleBetweenAreasTick()
     {
+        if (acceptedPartyTeleportOfferRestartPending)
+        {
+            acceptedPartyTeleportOfferSawBetweenAreas = true;
+            acceptedPartyTeleportOfferLastLoadingAt = DateTime.Now;
+        }
+
         if (adsRepairRecoveryActive)
         {
             adsRepairRecoverySawBetweenAreas = true;
@@ -1655,6 +1863,8 @@ public class StateManager : IDisposable
 
     public void Stop()
     {
+        ClearPendingPartyTeleportOffer(null);
+        ClearAcceptedPartyTeleportOfferRestart(null);
         _plugin.NavigationService.StopNavigation(clearFlag: true);
         ResetVnavFlyFlagFallbackState();
         SetCombatAutomationForCombatState(inCombat: false, "bot stop", force: true);
@@ -1679,6 +1889,8 @@ public class StateManager : IDisposable
 
     public void ResetAll()
     {
+        ClearPendingPartyTeleportOffer(null);
+        ClearAcceptedPartyTeleportOfferRestart(null);
         _plugin.NavigationService.StopNavigation(clearFlag: true);
         ResetVnavFlyFlagFallbackState();
         IsPaused = false;
@@ -2835,6 +3047,8 @@ public class StateManager : IDisposable
     {
         if (string.IsNullOrWhiteSpace(text))
             return;
+
+        ObservePartyTeleportOffer(text);
 
         if (TryDeferTeleportCombatError(text))
             return;
@@ -7591,7 +7805,7 @@ public class StateManager : IDisposable
 
         // Safety net: click Yes on any decipher confirmation dialog that might be stuck
         // Fire more frequently to handle confirmation dialogs better
-        if (GameHelpers.ClickYesIfVisible())
+        if (ClickYesIfVisibleWithTeleportOfferCheck())
         {
             _plugin.AddDebugLog("[OpeningMap] Clicked Yes on decipher confirmation dialog");
         }
@@ -8900,7 +9114,7 @@ public class StateManager : IDisposable
             return;
 
         // Click Yes on any dialog (Open the treasure coffer? etc)
-        GameHelpers.ClickYesIfVisible();
+        ClickYesIfVisibleWithTeleportOfferCheck();
         if (TrySkipCardGame())
             return;
 
@@ -9499,7 +9713,7 @@ public class StateManager : IDisposable
 
     private void TickInDungeon()
     {
-        GameHelpers.ClickYesIfVisible();
+        ClickYesIfVisibleWithTeleportOfferCheck();
 
         // Grace period: don't check for portal immediately after entering InDungeon state
         // This prevents rapid toggling between InDungeon and Completed states
@@ -9896,7 +10110,7 @@ public class StateManager : IDisposable
 
     private void TickDungeonCombat()
     {
-        GameHelpers.ClickYesIfVisible();
+        ClickYesIfVisibleWithTeleportOfferCheck();
 
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                        Plugin.Condition[ConditionFlag.BetweenAreas51];
@@ -10265,7 +10479,7 @@ public class StateManager : IDisposable
 
     private void TickDungeonLooting()
     {
-        GameHelpers.ClickYesIfVisible();
+        ClickYesIfVisibleWithTeleportOfferCheck();
 
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                        Plugin.Condition[ConditionFlag.BetweenAreas51];
@@ -10486,7 +10700,7 @@ public class StateManager : IDisposable
 
     private void TickDungeonProgressing()
     {
-        GameHelpers.ClickYesIfVisible();
+        ClickYesIfVisibleWithTeleportOfferCheck();
 
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                        Plugin.Condition[ConditionFlag.BetweenAreas51];
@@ -10749,7 +10963,7 @@ public class StateManager : IDisposable
             if (sinceStart <= portalWindowTimeout)
             {
                 // Click Yes on any visible dialog (portal confirmation from previous tick)
-                if (GameHelpers.ClickYesIfVisible())
+                if (ClickYesIfVisibleWithTeleportOfferCheck())
                 {
                     MarkPortalInteractionProgress(now, "SelectYesno");
                     _plugin.AddDebugLog("[Portal] Clicked Yes on portal dialog - waiting for loading screen...");

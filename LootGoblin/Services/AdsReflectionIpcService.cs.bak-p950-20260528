@@ -9,6 +9,8 @@ public sealed class AdsReflectionIpcService : IDisposable
 {
     public const float ReducedOutdoorMaxLoadDistance = 35f;
 
+    private static readonly TimeSpan ReassertDelay = TimeSpan.FromSeconds(30);
+
     private readonly Plugin plugin;
     private readonly IDalamudPluginInterface pluginInterface;
     private readonly IPluginLog log;
@@ -19,8 +21,6 @@ public sealed class AdsReflectionIpcService : IDisposable
     private bool huntsApplied;
     private bool lastDesiredRange;
     private bool lastDesiredHunts;
-    private bool lastAdsAvailable;
-    private bool lastApplyFailed;
 
     public AdsReflectionIpcService(Plugin plugin, IDalamudPluginInterface pluginInterface, IPluginLog log)
     {
@@ -60,7 +60,6 @@ public sealed class AdsReflectionIpcService : IDisposable
         if (!HasPendingActions)
         {
             consecutiveFailures = 0;
-            lastApplyFailed = false;
             nextAttemptUtc = DateTime.MaxValue;
             StatusText = "No ADS reflection hacks enabled.";
             return;
@@ -71,26 +70,15 @@ public sealed class AdsReflectionIpcService : IDisposable
             return;
 
         IsAdsAvailable = plugin.IsAdsAvailable;
-        var adsReloadDetected = IsAdsAvailable && !lastAdsAvailable;
-        lastAdsAvailable = IsAdsAvailable;
         if (!IsAdsAvailable)
         {
-            lastApplyFailed = true;
             ScheduleFailure(now, "ADS unavailable; reflection hacks pending.");
-            return;
-        }
-
-        force = force || adsReloadDetected || lastApplyFailed;
-        if (!force && rangeApplied == desiredRange && huntsApplied == desiredHunts)
-        {
-            nextAttemptUtc = DateTime.MaxValue;
-            StatusText = "ADS reflection applied; no reassert pending.";
             return;
         }
 
         var failures = new List<string>();
 
-        if (desiredRange && (!rangeApplied || force))
+        if (desiredRange)
         {
             if (TrySetMaxLoadDistance(ReducedOutdoorMaxLoadDistance, out var error))
                 rangeApplied = true;
@@ -105,7 +93,7 @@ public sealed class AdsReflectionIpcService : IDisposable
                 failures.Add($"range reset ({error})");
         }
 
-        if (desiredHunts && (!huntsApplied || force))
+        if (desiredHunts)
         {
             if (TrySetHuntsDisabled(true, out var error))
                 huntsApplied = true;
@@ -122,19 +110,17 @@ public sealed class AdsReflectionIpcService : IDisposable
 
         if (failures.Count > 0)
         {
-            lastApplyFailed = true;
             ScheduleFailure(now, $"ADS unavailable/pending: {string.Join(", ", failures)}.");
             return;
         }
 
         consecutiveFailures = 0;
-        lastApplyFailed = false;
         LastSuccessAtUtc = now;
 
         if (desiredRange || desiredHunts)
         {
-            nextAttemptUtc = DateTime.MaxValue;
-            StatusText = "ADS reflection applied; waiting for desired-state change or ADS reload.";
+            nextAttemptUtc = now + ReassertDelay;
+            StatusText = $"ADS reflection applied; reasserting every {ReassertDelay.TotalSeconds:0}s.";
         }
         else
         {

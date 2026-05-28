@@ -85,16 +85,12 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime lastDependencyRefreshAt = DateTime.MinValue;
     private IChatGui.OnHandleableChatMessageDelegate? chatMessageObserver;
     private static readonly TimeSpan DependencyRefreshInterval = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan PluginAvailabilityCacheTtl = TimeSpan.FromSeconds(2);
     private static readonly string[] LegacyFinishCommandDefaults = { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty };
     private static readonly string[] CurrentFinishCommandDefaults = { "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty, string.Empty };
-    private readonly Dictionary<string, PluginAvailabilityCacheEntry> pluginAvailabilityCache = new(StringComparer.Ordinal);
     private bool ecommonsInitialized;
     private DateTime nextFrameworkHitchLogUtc = DateTime.MinValue;
     private double lastSlowUpdateMs;
     private string lastSlowUpdateSource = "none";
-
-    private sealed record PluginAvailabilityCacheEntry(bool IsLoaded, DateTime ExpiresAtUtc);
 
     public bool IsAdsAvailable
     {
@@ -391,7 +387,6 @@ public sealed class Plugin : IDalamudPlugin
 
     public void RefreshDependencyStatus(bool logStatus = false)
     {
-        pluginAvailabilityCache.Clear();
         VNavIPC.CheckAvailability(logStatus);
         MapFlagService.CheckAvailability(logStatus);
         TreasureMapLocationService.CheckAvailability(logStatus);
@@ -501,12 +496,6 @@ public sealed class Plugin : IDalamudPlugin
 
     private bool IsPluginLoaded(string internalName, string? nameFragment = null)
     {
-        var key = $"{internalName}|{nameFragment ?? string.Empty}";
-        var now = DateTime.UtcNow;
-        if (pluginAvailabilityCache.TryGetValue(key, out var cached) && now < cached.ExpiresAtUtc)
-            return cached.IsLoaded;
-
-        var loaded = false;
         try
         {
             foreach (var p in PluginInterface.InstalledPlugins)
@@ -515,17 +504,13 @@ public sealed class Plugin : IDalamudPlugin
                     continue;
 
                 if (string.Equals(p.InternalName, internalName, StringComparison.OrdinalIgnoreCase))
-                {
-                    loaded = true;
-                    break;
-                }
+                    return true;
 
                 if (!string.IsNullOrWhiteSpace(nameFragment) &&
                     (p.Name.Contains(nameFragment, StringComparison.OrdinalIgnoreCase) ||
                      p.InternalName.Contains(nameFragment, StringComparison.OrdinalIgnoreCase)))
                 {
-                    loaded = true;
-                    break;
+                    return true;
                 }
             }
         }
@@ -533,8 +518,7 @@ public sealed class Plugin : IDalamudPlugin
         {
         }
 
-        pluginAvailabilityCache[key] = new PluginAvailabilityCacheEntry(loaded, now + PluginAvailabilityCacheTtl);
-        return loaded;
+        return false;
     }
 
     public void ShowAdsMissingToast()
