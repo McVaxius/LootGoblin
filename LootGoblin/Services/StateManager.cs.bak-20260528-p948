@@ -239,6 +239,7 @@ public class StateManager : IDisposable
     private string outdoorMapFlowHoldReason = string.Empty;
     private DateTime outdoorMapFlowHoldStartedAt = DateTime.MinValue;
     private DateTime outdoorMapFlowHoldLastLogAt = DateTime.MinValue;
+    private bool outdoorMapFlowHoldStagedAtTarget;
     private bool outdoorMapFlowHoldWasJoinedFate;
     private ushort outdoorMapFlowHoldFateId;
     private bool joinedFateMapProgressBypassPartyWait;
@@ -976,6 +977,12 @@ public class StateManager : IDisposable
             return true;
         }
 
+        if (joinedFate && IsJoinedFateOutdoorInterventionFlowActive())
+        {
+            reason = $"joined FATE {fateId}";
+            return true;
+        }
+
         reason = string.Empty;
         return false;
     }
@@ -1029,6 +1036,7 @@ public class StateManager : IDisposable
             outdoorMapFlowHoldReason = reason;
             outdoorMapFlowHoldStartedAt = now;
             outdoorMapFlowHoldLastLogAt = now;
+            outdoorMapFlowHoldStagedAtTarget = false;
             outdoorMapFlowHoldWasJoinedFate = joinedFateHold;
             outdoorMapFlowHoldFateId = joinedFateHold ? fateId : (ushort)0;
 
@@ -1048,12 +1056,18 @@ public class StateManager : IDisposable
 
         stateStartTime = now;
         TryKeepCombatAutomationForJoinedFate($"{source} outdoor hold");
+        var stagedAtTarget = TryStageOutdoorMapTargetForJoinedFate(reason, source, now);
+        var landingForFate = !stagedAtTarget && joinedFateHold &&
+                             TryHandleJoinedFateMountedIntervention(fateId, source, now, updateStateDetail: true);
         var elapsed = outdoorMapFlowHoldStartedAt == DateTime.MinValue
             ? TimeSpan.Zero
             : now - outdoorMapFlowHoldStartedAt;
-        StateDetail = State == BotState.Teleporting
-            ? $"Holding teleport while {reason} ({elapsed.TotalSeconds:F0}s)..."
-            : $"Outdoor map flow paused while {reason} ({elapsed.TotalSeconds:F0}s)...";
+        if (!outdoorMapFlowHoldStagedAtTarget && !landingForFate)
+        {
+            StateDetail = State == BotState.Teleporting
+                ? $"Holding teleport while {reason} ({elapsed.TotalSeconds:F0}s)..."
+                : $"Outdoor map flow paused while {reason} ({elapsed.TotalSeconds:F0}s)...";
+        }
     }
 
     private void PrepareOutdoorMapFlowHoldEntry(string source, string reason)
@@ -1155,6 +1169,72 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private bool TryStageOutdoorMapTargetForJoinedFate(string reason, string source, DateTime now)
+    {
+        if (State != BotState.Flying ||
+            Plugin.Condition[ConditionFlag.InCombat] ||
+            !_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) ||
+            CurrentLocation == null)
+        {
+            return false;
+        }
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            return false;
+
+        var targets = ResolveOverworldNavigationTargets();
+        if (targets.LandingTarget == Vector3.Zero)
+            return false;
+
+        var xzDist = CalculateXZDistance(player.Position, targets.LandingTarget);
+        var stagingRange = currentLandingMode == OverworldLandingMode.UnderwaterBounce
+            ? UnderwaterBounceTriggerXZRange
+            : MapDigXZRange;
+        if (xzDist > stagingRange)
+            return false;
+
+        if (_plugin.NavigationService.State != NavigationState.Idle)
+            _plugin.NavigationService.StopNavigation();
+        if (autoMoveActive)
+        {
+            CommandHelper.SendCommand("/automove off");
+            autoMoveActive = false;
+        }
+
+        var mountedOrFlying = _plugin.NavigationService.IsMounted() ||
+                              _plugin.NavigationService.IsFlying() ||
+                              Plugin.Condition[ConditionFlag.Mounting71];
+        if (mountedOrFlying)
+        {
+            if (dismountAttemptStart == DateTime.MinValue)
+            {
+                dismountAttemptStart = now;
+                _plugin.AddDebugLog(
+                    $"{source}[OutdoorHold] Joined FATE {fateId}: staging/landing at map target; " +
+                    $"landingXZ={xzDist:F1}y; target={FormatVectorCompact(targets.LandingTarget)}; basis={targets.Basis}.");
+            }
+
+            if (!Plugin.Condition[ConditionFlag.Mounting71])
+                _mountService.TryLandingToggle();
+
+            outdoorMapFlowHoldStagedAtTarget = true;
+            StateDetail = $"Joined FATE {fateId} active - staging/landing at map target ({xzDist:F1}y)...";
+            return true;
+        }
+
+        if (!outdoorMapFlowHoldStagedAtTarget)
+        {
+            _plugin.AddDebugLog(
+                $"{source}[OutdoorHold] Joined FATE {fateId}: staged at map target without digging; " +
+                $"landingXZ={xzDist:F1}y; target={FormatVectorCompact(targets.LandingTarget)}; basis={targets.Basis}.");
+        }
+
+        outdoorMapFlowHoldStagedAtTarget = true;
+        StateDetail = $"Joined FATE {fateId} active - staged at map target; waiting to dig ({xzDist:F1}y)...";
+        return true;
+    }
+
     private bool ReleaseOutdoorMapFlowHoldIfNeeded()
     {
         if (!outdoorMapFlowHoldActive)
@@ -1175,6 +1255,7 @@ public class StateManager : IDisposable
         outdoorMapFlowHoldReason = string.Empty;
         outdoorMapFlowHoldStartedAt = DateTime.MinValue;
         outdoorMapFlowHoldLastLogAt = DateTime.MinValue;
+        outdoorMapFlowHoldStagedAtTarget = false;
         outdoorMapFlowHoldWasJoinedFate = false;
         outdoorMapFlowHoldFateId = 0;
         stateStartTime = now;
@@ -1197,6 +1278,7 @@ public class StateManager : IDisposable
         outdoorMapFlowHoldReason = string.Empty;
         outdoorMapFlowHoldStartedAt = DateTime.MinValue;
         outdoorMapFlowHoldLastLogAt = DateTime.MinValue;
+        outdoorMapFlowHoldStagedAtTarget = false;
         outdoorMapFlowHoldWasJoinedFate = false;
         outdoorMapFlowHoldFateId = 0;
     }
