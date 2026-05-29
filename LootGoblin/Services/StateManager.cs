@@ -3372,6 +3372,9 @@ public class StateManager : IDisposable
         }
 
         var distanceFromTarget = Vector3.Distance(currentPos, target);
+        if (TryHandleCloseMapTargetOverworldRecovery(source, targetKind, territoryId, currentPos))
+            return true;
+
         if (distanceFromTarget <= OverworldRecoveryArrivedDistance)
         {
             ResetOverworldRecoveryState();
@@ -3480,6 +3483,46 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private bool TryHandleCloseMapTargetOverworldRecovery(
+        string source,
+        string targetKind,
+        uint territoryId,
+        Vector3 currentPos)
+    {
+        if (!IsOverworldRecoveryMapTarget(targetKind) ||
+            currentLandingMode != OverworldLandingMode.MountToggle ||
+            CurrentLocation == null ||
+            CurrentLocation.TerritoryId != territoryId ||
+            Plugin.ClientState.TerritoryType != territoryId)
+        {
+            return false;
+        }
+
+        if (!TryGetCurrentMapLandingDistance(out var landingDistance, out var landingTarget, out var landingBasis))
+            return false;
+
+        var landingRange = GetCurrentMapLandingHoldRange();
+        if (landingDistance > landingRange)
+            return false;
+
+        StopOutdoorMapFlowRecoveryNavigation();
+        if (!TryHandleMapLandingAndDig(
+                $"[{source}][Recovery] close map target",
+                landingBasis,
+                currentPos,
+                landingTarget,
+                landingDistance))
+        {
+            return false;
+        }
+
+        _plugin.AddDebugLog(
+            $"[{source}][Recovery] Stuck map target teleport suppressed: already within landing range " +
+            $"({landingDistance:F1}y XZ <= {landingRange:F1}y) of {FormatVectorCompact(landingTarget)} ({landingBasis}).");
+        ResetOverworldRecoveryState();
+        return true;
+    }
+
     private void IssueOverworldRecoveryNavigation(OverworldRecoveryNavigationKind navigationKind, Vector3 target)
     {
         if (navigationKind == OverworldRecoveryNavigationKind.FlyTo)
@@ -3504,9 +3547,11 @@ public class StateManager : IDisposable
         NavigationState navState)
     {
         var blockedReason = GetOverworldRecoveryTeleportBlockReason(
+            targetKind,
             targetKey,
             territoryId,
             target,
+            currentPos,
             distanceFromTarget,
             out var aetheryteId,
             out var aetheryteName,
@@ -3552,9 +3597,11 @@ public class StateManager : IDisposable
     }
 
     private string? GetOverworldRecoveryTeleportBlockReason(
+        string targetKind,
         string targetKey,
         uint territoryId,
         Vector3 target,
+        Vector3 currentPos,
         float distanceFromTarget,
         out uint aetheryteId,
         out string aetheryteName,
@@ -3594,6 +3641,12 @@ public class StateManager : IDisposable
         if (!_plugin.IsLifestreamAvailable)
             return "Lifestream unavailable";
 
+        if (IsOverworldRecoveryMapTarget(targetKind) &&
+            TryGetMapTargetTeleportBlockReason(currentPos, out var mapTargetBlockReason))
+        {
+            return mapTargetBlockReason;
+        }
+
         aetheryteId = _plugin.NavigationService.FindNearestAetheryte(territoryId, target, out _, out _);
         if (aetheryteId == 0)
             return "no same-zone aetheryte";
@@ -3611,6 +3664,9 @@ public class StateManager : IDisposable
 
         return null;
     }
+
+    private static bool IsOverworldRecoveryMapTarget(string targetKind)
+        => string.Equals(targetKind, "map target", StringComparison.Ordinal);
 
     private string GetAetheryteName(uint aetheryteId)
     {
@@ -7906,25 +7962,6 @@ public class StateManager : IDisposable
         }
     }
 
-    private double CalculatePlayerDistanceToMapTarget(MapLocation location, Vector3 playerPos, bool usedXyz)
-    {
-        if (usedXyz)
-        {
-            var dbEntry = _plugin.MapLocationDatabase?.FindEntry(location.TerritoryId, location.X, location.Z);
-            if (dbEntry != null && dbEntry.HasRealXYZ)
-            {
-                var realDx = playerPos.X - dbEntry.RealX;
-                var realDy = playerPos.Y - dbEntry.RealY;
-                var realDz = playerPos.Z - dbEntry.RealZ;
-                return Math.Sqrt(realDx * realDx + realDy * realDy + realDz * realDz);
-            }
-        }
-
-        var dx = playerPos.X - location.X;
-        var dz = playerPos.Z - location.Z;
-        return Math.Sqrt(dx * dx + dz * dz);
-    }
-
     private void RouteSameTerritoryMapTarget(
         MapLocation location,
         uint aetheryteId,
@@ -7938,15 +7975,27 @@ public class StateManager : IDisposable
     {
         var flagPos = new Vector3(location.X, location.Y, location.Z);
         var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-        var playerDist = CalculatePlayerDistanceToMapTarget(location, playerPos, usedXyz);
+        var resolvedTargets = ResolveOverworldNavigationTargets();
+        var resolvedLandingTarget = resolvedTargets.LandingTarget != Vector3.Zero
+            ? resolvedTargets.LandingTarget
+            : flagPos;
+        var playerXZDistToLanding = CalculateXZDistance(playerPos, resolvedLandingTarget);
+        var playerDist = playerXZDistToLanding;
+        var targetBasis = resolvedTargets.Basis == "none"
+            ? (usedXyz ? "stored XYZ" : "flag XZ")
+            : resolvedTargets.Basis;
 
-        _plugin.AddDebugLog($"{logPrefix} Already in zone: player {(usedXyz ? "XYZ" : "XZ")} dist={playerDist:F0}y, best aetheryte dist={bestAethDist:F0}y");
+        _plugin.AddDebugLog(
+            $"{logPrefix} Already in zone: player landing XZ dist={playerDist:F0}y ({targetBasis}), " +
+            $"best aetheryte dist={bestAethDist:F0}y");
         _plugin.AddDebugLog($"{logPrefix} Player pos: ({playerPos.X:F1}, {playerPos.Y:F1}, {playerPos.Z:F1}), Aetheryte ID: {aetheryteId}");
 
-        var playerXZDistToFlag = CalculateXZDistance(playerPos, flagPos);
-        if (playerXZDistToFlag <= MapDigXZRange)
+        var landingRange = GetCurrentMapLandingHoldRange();
+        if (playerXZDistToLanding <= landingRange)
         {
-            _plugin.AddDebugLog($"{logPrefix} Already within dig range ({playerXZDistToFlag:F1}y XZ) - landing/digging without teleport or mount setup.");
+            _plugin.AddDebugLog(
+                $"{logPrefix} Already within landing range ({playerXZDistToLanding:F1}y XZ <= {landingRange:F1}y) " +
+                $"of {FormatVectorCompact(resolvedLandingTarget)} ({targetBasis}) - landing/digging without teleport or mount setup.");
             TransitionTo(BotState.Flying, closeTransitionDetail);
             return;
         }
@@ -7976,7 +8025,7 @@ public class StateManager : IDisposable
 
             if (selectedAetheryteIsCloser)
             {
-                if (TryGetSameZoneTeleportProgressBlockReason(playerPos, playerXZDistToFlag, out var progressBlockReason))
+                if (TryGetSameZoneTeleportProgressBlockReason(playerPos, out var progressBlockReason))
                 {
                     _plugin.AddDebugLog(
                         $"{logPrefix} Selected aetheryte {selectedAetheryteName} (ID {aetheryteId}) is closer to target " +
@@ -8066,13 +8115,28 @@ public class StateManager : IDisposable
 
     private bool TryGetSameZoneTeleportProgressBlockReason(
         Vector3 playerPos,
-        double playerXZDistToFlag,
+        out string reason)
+        => TryGetMapTargetTeleportBlockReason(playerPos, out reason);
+
+    private bool TryGetMapTargetTeleportBlockReason(
+        Vector3 playerPos,
         out string reason)
     {
-        var landingRange = GetCurrentMapLandingHoldRange();
-        if (playerXZDistToFlag <= landingRange)
+        if (TryGetCurrentMapLandingDistance(out var landingDistance, out var landingTarget, out var landingBasis))
         {
-            reason = $"already within landing range ({playerXZDistToFlag:F1}y XZ <= {landingRange:F1}y)";
+            var landingRange = GetCurrentMapLandingHoldRange();
+            if (landingDistance <= landingRange)
+            {
+                reason =
+                    $"already within landing range ({landingDistance:F1}y XZ <= {landingRange:F1}y) " +
+                    $"of {FormatVectorCompact(landingTarget)} ({landingBasis})";
+                return true;
+            }
+        }
+
+        if (digIssuedThisMap)
+        {
+            reason = "dig already issued for active map";
             return true;
         }
 
@@ -8709,7 +8773,8 @@ public class StateManager : IDisposable
             var playerPos = currentPos;
             var initialNavTargets = activeNavTargets;
             var xzDist2 = CalculateXZDistance(playerPos, initialNavTargets.LandingTarget);
-            if (xzDist2 <= MapDigXZRange)
+            var initialLandingHoldRange = GetCurrentMapLandingHoldRange();
+            if (xzDist2 <= initialLandingHoldRange)
             {
                 if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
                 {
@@ -8768,6 +8833,7 @@ public class StateManager : IDisposable
         currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         activeNavTargets = ResolveOverworldNavigationTargets();
         var xzDist = CalculateXZDistance(currentPos, activeNavTargets.LandingTarget);
+        var landingHoldRange = GetCurrentMapLandingHoldRange();
         if (currentLandingMode == OverworldLandingMode.UnderwaterBounce
             && xzDist <= UnderwaterBounceTriggerXZRange
             && TryHandleUnderwaterBounceTriggerFlow(isDiving))
@@ -8794,7 +8860,7 @@ public class StateManager : IDisposable
             return;
         }
         
-        // Check if we're close enough to X,Z coordinates (within 5 yalms) — uses ground target, not elevated
+        // Check if we're close enough to the resolved landing target; uses ground target, not elevated.
         // If we're not mounted, we've already dismounted - proceed with dig regardless of nav state
         if (!_plugin.NavigationService.IsMounted() && dismountAttemptStart != DateTime.MinValue)
         {
@@ -8808,7 +8874,8 @@ public class StateManager : IDisposable
                 return;
         }
         
-        if ((activeNavTargets.UseNavStateForLanding && (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle)) || xzDist < 5.0f)
+        if ((activeNavTargets.UseNavStateForLanding && (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle)) ||
+            xzDist <= landingHoldRange)
         {
             if (currentLandingMode == OverworldLandingMode.MountToggle &&
                 TryHandleMapLandingAndDig(
