@@ -90,8 +90,8 @@ public class Configuration : IPluginConfiguration
         "/rotation Auto",
         "/bmrai on",
         "/vbmai on",
-        "/echo wheee",
-        string.Empty,
+        "/fr off",
+        "/cbt disable AutoFollow",
     };
 
     public List<string> FinishCommandTriggers { get; set; } = new()
