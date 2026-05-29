@@ -6546,7 +6546,11 @@ public class StateManager : IDisposable
             if (distance <= range)
                 return false;
 
-            return TryRunOpeningChestCofferGroundApproach(chest, chestName, distance, yDistance, now);
+            if (TryRunOpeningChestCofferGroundApproach(chest, chestName, distance, yDistance, now))
+                return true;
+
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Ground approach to '{chestName}' failed at {distance:F1}y, Y {yDistance:F1}y - mounted recovery taking over.");
         }
 
         var displaced = distance > OpeningChestCofferMountRecoveryDistance ||
