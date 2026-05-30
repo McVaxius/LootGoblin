@@ -11,13 +11,10 @@ namespace LootGoblin.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
-    private const int CommandTriggerSlotCount = 5;
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
-    private static readonly string[] LandingOrDutyCommandDefaults = { "/rotation Auto", "/bmrai on", "/vbmai on", "/echo wheee", string.Empty };
-    private static readonly string[] FinishCommandDefaults = { "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty, string.Empty };
     
     private readonly Configuration configuration;
     private readonly Plugin plugin;
@@ -25,8 +22,8 @@ public class ConfigWindow : Window, IDisposable
     private string foodSearch = "";
     private readonly List<(uint Id, string Name)> foodItems = new();
     private bool foodItemsLoaded = false;
-    private readonly string[] landingCommandTriggerDrafts = new string[CommandTriggerSlotCount];
-    private readonly string[] finishCommandTriggerDrafts = new string[CommandTriggerSlotCount];
+    private readonly List<string> landingCommandTriggerDrafts = new();
+    private readonly List<string> finishCommandTriggerDrafts = new();
     private bool commandTriggerDraftsDirty;
     private bool commandTriggerDraftsInitialized;
     private string commandTriggerStatus = string.Empty;
@@ -379,9 +376,9 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Text("Command Triggers");
         ImGui.Spacing();
 
-        DrawCommandTriggerList("Landing / Duty Entry", landingCommandTriggerDrafts, LandingOrDutyCommandDefaults);
+        DrawCommandTriggerList("Landing / Duty Entry", landingCommandTriggerDrafts, Configuration.LandingOrDutyCommandTriggerDefaults);
         ImGui.Spacing();
-        DrawCommandTriggerList("Finish", finishCommandTriggerDrafts, FinishCommandDefaults);
+        DrawCommandTriggerList("Finish", finishCommandTriggerDrafts, Configuration.FinishCommandTriggerDefaults);
 
         if (!string.IsNullOrWhiteSpace(commandTriggerStatus))
             ImGui.TextDisabled(commandTriggerStatus);
@@ -743,18 +740,20 @@ public class ConfigWindow : Window, IDisposable
         return changed;
     }
 
-    private void DrawCommandTriggerList(string label, string[] drafts, string[] defaults)
+    private void DrawCommandTriggerList(string label, List<string> drafts, IReadOnlyList<string> defaults)
     {
+        EnsureCommandTriggerDraftRows(drafts);
+
         ImGui.Text(label);
         ImGui.SameLine();
         if (ImGui.SmallButton($"Defaults##{label}"))
         {
-            CopyCommandTriggerValues(defaults, drafts);
+            ReplaceCommandTriggerValues(drafts, defaults);
             commandTriggerDraftsDirty = true;
             SaveCommandTriggerDraftsIfDirty($"{label} defaults");
         }
 
-        for (var i = 0; i < CommandTriggerSlotCount; i++)
+        for (var i = 0; i < drafts.Count; i++)
         {
             ImGui.SetNextItemWidth(300);
             var command = drafts[i];
@@ -775,23 +774,40 @@ public class ConfigWindow : Window, IDisposable
 
             if (commandTriggerDraftsDirty && ImGui.IsItemDeactivatedAfterEdit())
                 SaveCommandTriggerDraftsIfDirty($"{label} slot {i + 1} edit");
+
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"+##{label}_{i}"))
+            {
+                drafts.Insert(i + 1, string.Empty);
+                commandTriggerDraftsDirty = true;
+                SaveCommandTriggerDraftsIfDirty($"{label} insert {i + 2}");
+            }
+
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"-##{label}_{i}"))
+            {
+                if (drafts.Count > 1)
+                {
+                    drafts.RemoveAt(i);
+                    i--;
+                }
+                else if (!string.IsNullOrEmpty(drafts[0]))
+                {
+                    drafts[0] = string.Empty;
+                }
+                else
+                {
+                    continue;
+                }
+
+                commandTriggerDraftsDirty = true;
+                SaveCommandTriggerDraftsIfDirty($"{label} remove {i + 2}");
+            }
         }
     }
 
     private void RefreshCommandTriggerDrafts()
     {
-        configuration.LandingOrDutyCommandTriggers ??= new List<string>();
-        configuration.FinishCommandTriggers ??= new List<string>();
-
-        var changed = EnsureCommandTriggerSlots(configuration.LandingOrDutyCommandTriggers, LandingOrDutyCommandDefaults);
-        changed |= EnsureCommandTriggerSlots(configuration.FinishCommandTriggers, FinishCommandDefaults);
-        if (changed)
-        {
-            configuration.Save();
-            commandTriggerStatus = "Command triggers normalized.";
-            Plugin.Log.Information("[ConfigWindow] Command triggers normalized to 5 slots.");
-        }
-
         CopyCommandTriggerValues(configuration.LandingOrDutyCommandTriggers, landingCommandTriggerDrafts);
         CopyCommandTriggerValues(configuration.FinishCommandTriggers, finishCommandTriggerDrafts);
         commandTriggerDraftsDirty = false;
@@ -803,8 +819,8 @@ public class ConfigWindow : Window, IDisposable
         if (!commandTriggerDraftsDirty)
             return;
 
-        configuration.LandingOrDutyCommandTriggers ??= new List<string>();
-        configuration.FinishCommandTriggers ??= new List<string>();
+        configuration.LandingOrDutyCommandTriggers ??= Configuration.CreateDefaultLandingOrDutyCommandTriggers();
+        configuration.FinishCommandTriggers ??= Configuration.CreateDefaultFinishCommandTriggers();
 
         ReplaceCommandTriggerValues(configuration.LandingOrDutyCommandTriggers, landingCommandTriggerDrafts);
         ReplaceCommandTriggerValues(configuration.FinishCommandTriggers, finishCommandTriggerDrafts);
@@ -814,34 +830,30 @@ public class ConfigWindow : Window, IDisposable
         Plugin.Log.Information($"[ConfigWindow] Command triggers saved ({reason}).");
     }
 
-    private static void CopyCommandTriggerValues(IReadOnlyList<string> source, string[] destination)
+    private static void CopyCommandTriggerValues(IReadOnlyList<string>? source, List<string> destination)
     {
-        for (var i = 0; i < CommandTriggerSlotCount; i++)
-            destination[i] = i < source.Count ? source[i] ?? string.Empty : string.Empty;
+        destination.Clear();
+        if (source != null)
+        {
+            foreach (var value in source)
+                destination.Add(value ?? string.Empty);
+        }
+
+        EnsureCommandTriggerDraftRows(destination);
     }
 
     private static void ReplaceCommandTriggerValues(List<string> destination, IReadOnlyList<string> source)
     {
         destination.Clear();
-        for (var i = 0; i < CommandTriggerSlotCount; i++)
-            destination.Add(source[i] ?? string.Empty);
+        foreach (var value in source)
+            destination.Add(value ?? string.Empty);
+
+        EnsureCommandTriggerDraftRows(destination);
     }
 
-    private static bool EnsureCommandTriggerSlots(List<string> commands, string[] defaults)
+    private static void EnsureCommandTriggerDraftRows(List<string> commands)
     {
-        var changed = false;
-        while (commands.Count < CommandTriggerSlotCount)
-        {
-            commands.Add(commands.Count < defaults.Length ? defaults[commands.Count] : string.Empty);
-            changed = true;
-        }
-
-        while (commands.Count > CommandTriggerSlotCount)
-        {
-            commands.RemoveAt(commands.Count - 1);
-            changed = true;
-        }
-
-        return changed;
+        if (commands.Count == 0)
+            commands.Add(string.Empty);
     }
 }

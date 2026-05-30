@@ -30,6 +30,40 @@ public enum TreasureHighLowMode
 public class Configuration : IPluginConfiguration
 {
     public const int MapRunCountMax = int.MaxValue;
+    public const int DefaultCommandTriggerRowCount = 10;
+
+    private static readonly string[] LandingOrDutyCommandTriggerDefaultValues =
+    {
+        "/rotation Auto",
+        "/bmrai on",
+        "/vbmai on",
+        "/fr off",
+        "/cbt disable AutoFollow",
+        "/bmrai followoutofcombat off",
+        "/bmrai followcombat off",
+        "/vbmai follow Slot1",
+        string.Empty,
+        string.Empty,
+    };
+
+    private static readonly string[] FinishCommandTriggerDefaultValues =
+    {
+        "/rotation cancel",
+        "/bmrai off",
+        "/vbmai off",
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+    };
+
+    public static IReadOnlyList<string> LandingOrDutyCommandTriggerDefaults => LandingOrDutyCommandTriggerDefaultValues;
+    public static IReadOnlyList<string> FinishCommandTriggerDefaults => FinishCommandTriggerDefaultValues;
+    public static List<string> CreateDefaultLandingOrDutyCommandTriggers() => new(LandingOrDutyCommandTriggerDefaultValues);
+    public static List<string> CreateDefaultFinishCommandTriggers() => new(FinishCommandTriggerDefaultValues);
 
     public int Version { get; set; } = 0;
 
@@ -85,23 +119,8 @@ public class Configuration : IPluginConfiguration
     public bool FeedMeSearch { get; set; } = true;
     public bool SummonChocobo { get; set; } = false;
     public string CompanionStance { get; set; } = "Free Stance";
-    public List<string> LandingOrDutyCommandTriggers { get; set; } = new()
-    {
-        "/rotation Auto",
-        "/bmrai on",
-        "/vbmai on",
-        "/fr off",
-        "/cbt disable AutoFollow",
-    };
-
-    public List<string> FinishCommandTriggers { get; set; } = new()
-    {
-        "/rotation cancel",
-        "/bmrai off",
-        "/vbmai off",
-        string.Empty,
-        string.Empty,
-    };
+    public List<string> LandingOrDutyCommandTriggers { get; set; } = CreateDefaultLandingOrDutyCommandTriggers();
+    public List<string> FinishCommandTriggers { get; set; } = CreateDefaultFinishCommandTriggers();
 
     // Mount Settings
     public string SelectedMount { get; set; } = "Company Chocobo";

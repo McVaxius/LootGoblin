@@ -87,7 +87,6 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly TimeSpan DependencyRefreshInterval = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan PluginAvailabilityCacheTtl = TimeSpan.FromSeconds(2);
     private static readonly string[] LegacyFinishCommandDefaults = { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty };
-    private static readonly string[] CurrentFinishCommandDefaults = { "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty, string.Empty };
     private readonly Dictionary<string, PluginAvailabilityCacheEntry> pluginAvailabilityCache = new(StringComparer.Ordinal);
     private bool ecommonsInitialized;
     private DateTime nextFrameworkHitchLogUtc = DateTime.MinValue;
@@ -609,7 +608,7 @@ public sealed class Plugin : IDalamudPlugin
                 && configuration.FinishCommandTriggers.SequenceEqual(LegacyFinishCommandDefaults, StringComparer.Ordinal))
             {
                 configuration.FinishCommandTriggers.Clear();
-                configuration.FinishCommandTriggers.AddRange(CurrentFinishCommandDefaults);
+                configuration.FinishCommandTriggers.AddRange(Configuration.FinishCommandTriggerDefaults);
                 changed = true;
             }
 
@@ -674,13 +673,13 @@ public sealed class Plugin : IDalamudPlugin
 
         if (configuration.LandingOrDutyCommandTriggers == null)
         {
-            configuration.LandingOrDutyCommandTriggers = new List<string>();
+            configuration.LandingOrDutyCommandTriggers = Configuration.CreateDefaultLandingOrDutyCommandTriggers();
             changed = true;
         }
 
         if (configuration.FinishCommandTriggers == null)
         {
-            configuration.FinishCommandTriggers = new List<string>(CurrentFinishCommandDefaults);
+            configuration.FinishCommandTriggers = Configuration.CreateDefaultFinishCommandTriggers();
             changed = true;
         }
 

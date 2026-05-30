@@ -3783,7 +3783,8 @@ public class StateManager : IDisposable
 
             if (IsCombatAutomationCommand(trimmed))
             {
-                _plugin.AddDebugLog($"[CommandTrigger] Skipped combat automation command for {reason}: {trimmed}");
+                if (SendCombatAutomationCommand(trimmed, $"command trigger for {reason}"))
+                    sent++;
                 continue;
             }
 
@@ -3799,17 +3800,17 @@ public class StateManager : IDisposable
         command.StartsWith("/bmrai", StringComparison.OrdinalIgnoreCase) ||
         command.StartsWith("/vbmai", StringComparison.OrdinalIgnoreCase);
 
-    private void SendCombatAutomationCommand(string command, string reason)
+    private bool SendCombatAutomationCommand(string command, string reason)
     {
         if (!IsCombatAutomationCommandAvailable(command, out var unavailableReason))
         {
             var logKey = $"{command}:{unavailableReason}";
             if (loggedUnavailableCombatAutomationCommands.Add(logKey))
                 _plugin.AddDebugLog($"[CombatAutomation] Skipped {command} for {reason}: {unavailableReason}.");
-            return;
+            return false;
         }
 
-        CommandHelper.SendCommand(command);
+        return CommandHelper.TrySendCommand(command);
     }
 
     private bool IsCombatAutomationCommandAvailable(string command, out string reason)

@@ -22,7 +22,7 @@
       },
       "PInvoke.User32": {
         "type": "Direct",
-        "requested": "[0.7.0, )",
+        "requested": "[0.7.78, )",
         "resolved": "0.7.78",
         "contentHash": "o8mdj5SwCCj4+oJXNEg+bdaihvCqfqDXdBe8/ggDJSDUs2JpXvWca44WI4PWOEJ//lwQdCLXSn5fV+Vbufi1yA==",
         "dependencies": {
