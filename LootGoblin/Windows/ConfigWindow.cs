@@ -248,6 +248,8 @@ public class ConfigWindow : Window, IDisposable
     {
         DrawConfigCheckbox("Auto Teleport", configuration.AutoTeleport, value => configuration.AutoTeleport = value);
         DrawConfigCheckbox("Require vnavmesh", configuration.RequireVNav, value => configuration.RequireVNav = value);
+        DrawConfigCheckbox("Do not use Tamamizu aetheryte", configuration.AvoidTamamizuAetheryte, value => configuration.AvoidTamamizuAetheryte = value,
+            "Skips Tamamizu when choosing the map teleport destination.");
 
         var navTimeout = configuration.NavigationTimeout;
         if (ImGui.SliderFloat("Nav Timeout (s)", ref navTimeout, 30f, 600f, "%.0f"))
@@ -275,9 +277,9 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("When enabled, the bot waits for party members to mount before taking off.");
 
+        DrawConfigCheckbox("Wait for Party for thief maps / underwater", configuration.WaitForPartyForThiefMapsUnderwater, value => configuration.WaitForPartyForThiefMapsUnderwater = value,
+            "Overrides the general Wait for Party setting for thief-map underwater travel, remount recovery, and descent/dig waits.");
         DrawConfigCheckbox("Require All Mounted", configuration.RequireAllMounted, value => configuration.RequireAllMounted = value);
-        DrawConfigCheckbox("Do not use Tamamizu aetheryte", configuration.AvoidTamamizuAetheryte, value => configuration.AvoidTamamizuAetheryte = value,
-            "Skips Tamamizu when choosing the map teleport destination.");
 
         var partyTimeout = configuration.PartyWaitTimeout;
         if (ImGui.SliderInt("Party Wait Timeout (s)", ref partyTimeout, 30, 300))
@@ -292,10 +294,10 @@ public class ConfigWindow : Window, IDisposable
 
         DrawConfigCheckbox("Wait for party before dismounting", configuration.PartyWaitBeforeDismount, value => configuration.PartyWaitBeforeDismount = value,
             "Wait at the destination until party members are within 10 yalms before dismounting.");
-        if (configuration.PartyWaitBeforeDismount)
+        if (configuration.PartyWaitBeforeDismount || configuration.WaitForPartyForThiefMapsUnderwater)
         {
             DrawConfigCheckbox("Specify number of party to wait for", configuration.PartyWaitBeforeDismountUseCountThreshold, value => configuration.PartyWaitBeforeDismountUseCountThreshold = value,
-                "Use a count of other party members instead of waiting for the entire party roster.");
+                "Use a count of other party members instead of waiting for the entire party roster. Applies to landing waits and thief-map underwater trigger waits.");
             if (configuration.PartyWaitBeforeDismountUseCountThreshold)
             {
                 var requiredOthers = Math.Clamp(configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);

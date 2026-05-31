@@ -4050,6 +4050,55 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private bool IsThiefUnderwaterPartyWaitContext()
+    {
+        return IsThiefMap(SelectedMapItemId)
+            || currentLandingMode == OverworldLandingMode.UnderwaterBounce;
+    }
+
+    private bool ShouldWaitForPartyBeforeTakeoffForCurrentMap()
+    {
+        return IsThiefUnderwaterPartyWaitContext()
+            ? _plugin.Configuration.WaitForPartyForThiefMapsUnderwater
+            : _plugin.Configuration.WaitForParty;
+    }
+
+    private string GetCurrentTakeoffPartyWaitSettingName()
+    {
+        return IsThiefUnderwaterPartyWaitContext()
+            ? "WaitForPartyForThiefMapsUnderwater"
+            : "WaitForParty";
+    }
+
+    private bool ShouldWaitForUnderwaterMapContentParty()
+    {
+        return IsThiefUnderwaterPartyWaitContext()
+            && _plugin.Configuration.WaitForPartyForThiefMapsUnderwater;
+    }
+
+    private bool TryHoldForUnderwaterMapContentPartyWait(double maxDistance)
+    {
+        if (!ShouldWaitForUnderwaterMapContentParty())
+            return false;
+
+        if (joinedFateMapProgressBypassPartyWait)
+        {
+            overworldRecoveryRequiresPartyMountWait = false;
+            LogLandingPartyWaitOnce(
+                "JoinedFateRecovery:underwater-content-bypass",
+                "[PartyWait][UnderwaterTrigger] Joined-FATE recovery bypassing party wait for current thief-map progress.");
+            return false;
+        }
+
+        var partyWait = EvaluateOverworldLandingPartyWait(maxDistance);
+        if (partyWait.CanProceed)
+            return false;
+
+        PauseUnderwaterBounceDescentForPartyWait();
+        StateDetail = BuildOverworldLandingPartyWaitDetail(partyWait, maxDistance);
+        return true;
+    }
+
     private void RecordMapLandingPosition()
     {
         if (CurrentLocation == null)
@@ -4176,7 +4225,7 @@ public class StateManager : IDisposable
         mounted = 0;
         total = 0;
 
-        if (!_plugin.Configuration.WaitForParty)
+        if (!ShouldWaitForPartyBeforeTakeoffForCurrentMap())
             return false;
 
         if (State is not (BotState.Idle
@@ -4212,8 +4261,9 @@ public class StateManager : IDisposable
             return false;
 
         var detail = $"Waiting for party before takeoff ({mounted}/{total} mounted)...";
+        var settingName = GetCurrentTakeoffPartyWaitSettingName();
         _plugin.AddDebugLog(
-            $"{logPrefix} Already mounted, but WaitForParty is enabled and party is not fully mounted ({mounted}/{total}) - holding before flight.");
+            $"{logPrefix} Already mounted, but {settingName} is enabled and party is not fully mounted ({mounted}/{total}) - holding before flight.");
 
         if (State == BotState.WaitingForParty)
             StateDetail = detail;
@@ -4732,6 +4782,20 @@ public class StateManager : IDisposable
         descentInProgress = false;
         lastUnderwaterBounceDescentStart = DateTime.MinValue;
         _plugin.AddDebugLog("[Underwater] Paused thief-map descent until flag X/Z arrival.");
+    }
+
+    private void PauseUnderwaterBounceDescentForPartyWait()
+    {
+        if (!descentInProgress)
+            return;
+
+        CommandHelper.SendCommand("/automove off");
+        GameHelpers.KeyRelease(VirtualKey.W);
+        GameHelpers.KeyRelease(VirtualKey.CONTROL);
+        GameHelpers.KeyRelease(VirtualKey.SPACE);
+        descentInProgress = false;
+        lastUnderwaterBounceDescentStart = DateTime.MinValue;
+        _plugin.AddDebugLog("[Underwater] Paused thief-map descent until party wait clears.");
     }
 
     private void TrackUnderwaterFlagApproachProgress(DateTime now, Vector3 target, double xzDistance)
@@ -5525,6 +5589,9 @@ public class StateManager : IDisposable
             return true;
         }
 
+        if (underwaterBounceHandoffLogged && TryHoldForUnderwaterMapContentPartyWait(10.0))
+            return true;
+
         if (underwaterBounceHandoffLogged)
         {
             if (TryHandleUnderwaterBounceObjectHandoff(out var yieldToOpeningChest))
@@ -5629,6 +5696,9 @@ public class StateManager : IDisposable
             ResetPendingUnderwaterFlagApproachReissue();
             ResetUnderwaterFlagApproachStallSample();
 
+            if (TryHoldForUnderwaterMapContentPartyWait(10.0))
+                return true;
+
             if (TryHandleUnderwaterBounceObjectHandoff(out var yieldToOpeningChest))
                 return true;
 
@@ -5664,6 +5734,9 @@ public class StateManager : IDisposable
 
         if (!isDiving)
             SuppressUnderwaterBounceVnav();
+
+        if (TryHoldForUnderwaterMapContentPartyWait(10.0))
+            return true;
 
         EnsureUnderwaterBounceDescent(now, currentPos);
         StateDetail = isDiving
@@ -8465,7 +8538,8 @@ public class StateManager : IDisposable
         if (nav.IsMounted())
         {
             var thiefWaterRemountRecovered = thiefWaterRemountRecoveryActive;
-            var waitForParty = _plugin.Configuration.WaitForParty;
+            var waitForParty = ShouldWaitForPartyBeforeTakeoffForCurrentMap();
+            var waitForPartySettingName = GetCurrentTakeoffPartyWaitSettingName();
 
             // Successfully mounted - reset counters and proceed
             mountAttemptStart = DateTime.MinValue;
@@ -8482,7 +8556,7 @@ public class StateManager : IDisposable
 
                 if (!waitForParty)
                 {
-                    LogThiefWaterInfo("[Underwater] Remount recovery succeeded; WaitForParty disabled, bypassing party wait for thief-map travel.");
+                    LogThiefWaterInfo($"[Underwater] Remount recovery succeeded; {waitForPartySettingName} disabled, bypassing party wait for thief-map travel.");
                     ResumeThiefWaterTravelAfterRemount("Thief-map remount recovered - flying to location...");
                     return;
                 }
@@ -8513,12 +8587,12 @@ public class StateManager : IDisposable
             var recoveryWaitRequested = overworldRecoveryRequiresPartyMountWait;
             var bypassPartyWait = ConsumeJoinedFateMountWaitBypass("[Mounting]");
             var recoveryWait = recoveryWaitRequested && waitForParty && !bypassPartyWait;
-            _plugin.AddDebugLog($"[Mounting] PartySize={partySize}, WaitForParty={waitForParty}, RecoveryPartyWait={recoveryWaitRequested}");
+            _plugin.AddDebugLog($"[Mounting] PartySize={partySize}, {waitForPartySettingName}={waitForParty}, RecoveryPartyWait={recoveryWaitRequested}");
 
             if (recoveryWaitRequested && !waitForParty)
             {
                 overworldRecoveryRequiresPartyMountWait = false;
-                _plugin.AddDebugLog("[Mounting] Recovery party wait skipped because WaitForParty is disabled.");
+                _plugin.AddDebugLog($"[Mounting] Recovery party wait skipped because {waitForPartySettingName} is disabled.");
             }
 
             if (bypassPartyWait)
@@ -8613,6 +8687,8 @@ public class StateManager : IDisposable
     private void TickWaitingForParty()
     {
         var snapshotValid = _plugin.PartyService.UpdatePartyStatus();
+        var waitForParty = ShouldWaitForPartyBeforeTakeoffForCurrentMap();
+        var waitForPartySettingName = GetCurrentTakeoffPartyWaitSettingName();
 
         if (ConsumeJoinedFateMountWaitBypass("[WaitingForParty]"))
         {
@@ -8627,12 +8703,12 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (!_plugin.Configuration.WaitForParty)
+        if (!waitForParty)
         {
             overworldRecoveryRequiresPartyMountWait = false;
             if (thiefWaterRemountRecoveryZoneWaitActive)
             {
-                LogThiefWaterInfo("[Underwater] WaitForParty disabled; bypassing thief-map party wait after remount.");
+                LogThiefWaterInfo($"[Underwater] {waitForPartySettingName} disabled; bypassing thief-map party wait after remount.");
                 ResumeThiefWaterTravelAfterRemount("Wait for party disabled - flying to thief-map location...");
                 return;
             }
@@ -8922,20 +8998,22 @@ public class StateManager : IDisposable
             if (_plugin.NavigationService.IsMounted())
             {
                 // Check if all party members are within 10y before dismounting (Issue 3)
-                var bypassPartyWaitForDive = currentLandingMode == OverworldLandingMode.UnderwaterBounce;
-                var waitForPartyDismount = _plugin.Configuration.PartyWaitBeforeDismount && !bypassPartyWaitForDive;
+                var waitForUnderwaterParty = currentLandingMode == OverworldLandingMode.UnderwaterBounce
+                    && ShouldWaitForUnderwaterMapContentParty();
+                var waitForPartyDismount = currentLandingMode == OverworldLandingMode.UnderwaterBounce
+                    ? waitForUnderwaterParty
+                    : _plugin.Configuration.PartyWaitBeforeDismount;
                 _plugin.AddDebugLog(
                     $"[Dismount] PartyWaitBeforeDismount={_plugin.Configuration.PartyWaitBeforeDismount}, " +
-                    $"LandingMode={currentLandingMode}, BypassForDive={bypassPartyWaitForDive}");
-                if (bypassPartyWaitForDive)
-                {
-                    _plugin.AddDebugLog("[Dismount] Skipping party wait for thief-map dive landing.");
-                }
+                    $"WaitForPartyForThiefMapsUnderwater={_plugin.Configuration.WaitForPartyForThiefMapsUnderwater}, " +
+                    $"LandingMode={currentLandingMode}, UnderwaterPartyWait={waitForUnderwaterParty}");
                 if (waitForPartyDismount)
                 {
                     var partyWait = EvaluateOverworldLandingPartyWait(10.0);
                     if (!partyWait.CanProceed)
                     {
+                        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+                            PauseUnderwaterBounceDescentForPartyWait();
                         StateDetail = BuildOverworldLandingPartyWaitDetail(partyWait, 10.0);
                         return; // Don't attempt dismount yet
                     }

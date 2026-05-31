@@ -334,7 +334,7 @@ public class NavigationService : IDisposable
                 if (entry.AetheryteId == 0) continue;
                 if (_plugin.Configuration.AvoidTamamizuAetheryte && entry.AetheryteId == TamamizuAetheryteId)
                 {
-                    _plugin.AddDebugLog("[Aetheryte] Skipping Tamamizu (ID 105) due to party setting.");
+                    _plugin.AddDebugLog("[Aetheryte] Skipping Tamamizu (ID 105) due to travel setting.");
                     continue;
                 }
 

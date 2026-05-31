@@ -80,6 +80,7 @@ public class Configuration : IPluginConfiguration
 
     // Phase 4: Party Coordination
     public bool WaitForParty { get; set; } = true;
+    public bool WaitForPartyForThiefMapsUnderwater { get; set; } = true;
     public bool RequireAllMounted { get; set; } = true;
     public int PartyWaitTimeout { get; set; } = 60;
     public bool PartyWaitBeforeDismount { get; set; } = false;
