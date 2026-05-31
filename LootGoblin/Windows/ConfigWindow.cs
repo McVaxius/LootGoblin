@@ -288,6 +288,9 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
+        if (ImGui.Button("OPEN ADS LOOT OPTIONS"))
+            OpenAdsLootOptions();
+
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -318,6 +321,22 @@ public class ConfigWindow : Window, IDisposable
             "Auto-summon chocobo companion using Gysahl Greens when timer is low. Will not summon in sanctuaries or duties.");
         if (configuration.SummonChocobo)
             DrawCompanionStanceCombo();
+    }
+
+    private static void OpenAdsLootOptions()
+    {
+        try
+        {
+            if (Plugin.PluginInterface.GetIpcSubscriber<bool>("ADS.ToggleLootUi").InvokeFunc())
+                return;
+
+            Plugin.Log.Warning("[LootGoblin][ADS] ADS.ToggleLootUi returned false; not falling back to /ads loot.");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug($"[LootGoblin][ADS] ADS.ToggleLootUi unavailable: {ex.Message}");
+            CommandHelper.SendCommand("/ads loot");
+        }
     }
 
     private void DrawDungeonLootTab()
