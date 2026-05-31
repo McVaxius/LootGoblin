@@ -1209,6 +1209,10 @@ public class StateManager : IDisposable
         else if (State == BotState.DetectingLocation)
             keyItemMapRecoveryStartedAt = DateTime.MinValue;
 
+        NormalizeLandingModeForSelectedMap("[OutdoorHold] release");
+        _plugin.AddDebugLog(
+            $"[OutdoorHold] Release map context: mapId={SelectedMapItemId}; landing={currentLandingMode}.");
+
         return TryRecoverForwardAfterOutdoorMapFlowHold(heldState, heldReason);
     }
 
@@ -1311,7 +1315,7 @@ public class StateManager : IDisposable
         {
             StopOutdoorMapFlowRecoveryNavigation();
             var playerPosition = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-            if (currentLandingMode == OverworldLandingMode.MountToggle &&
+            if (!IsThiefUnderwaterLandingMode() &&
                 playerPosition != Vector3.Zero &&
                 TryHandleMapLandingAndDig(
                     "[OutdoorHold] landing recovery",
@@ -1423,7 +1427,7 @@ public class StateManager : IDisposable
     }
 
     private double GetCurrentMapLandingHoldRange()
-        => currentLandingMode == OverworldLandingMode.UnderwaterBounce
+        => IsThiefUnderwaterLandingMode()
             ? UnderwaterBounceTriggerXZRange
             : Math.Max(MapDigXZRange, OutdoorMapFlowLandingRecoveryXZRange);
 
@@ -2294,15 +2298,15 @@ public class StateManager : IDisposable
 
         if (keyItem.KnownMapItemId != 0)
         {
-            var landingMode = ResolveLandingMode(keyItem.KnownMapItemId);
-            if (SelectedMapItemId != keyItem.KnownMapItemId || currentLandingMode != landingMode)
+            if (SelectedMapItemId != keyItem.KnownMapItemId ||
+                currentLandingMode != ResolveLandingMode(keyItem.KnownMapItemId))
             {
                 SelectedMapItemId = keyItem.KnownMapItemId;
-                currentLandingMode = landingMode;
-                if (currentLandingMode != OverworldLandingMode.UnderwaterBounce)
+                NormalizeLandingModeForSelectedMap(source);
+                if (!IsThiefUnderwaterLandingMode())
                     ResetUnderwaterLandingState();
                 _plugin.AddDebugLog($"{source} Matched key item to known map ID {SelectedMapItemId}; landing mode {currentLandingMode}.");
-                if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+                if (IsThiefUnderwaterLandingMode())
                     LogThiefWaterInfo($"{source} Thief map key item matched; using underwater bounce landing mode.");
             }
         }
@@ -4052,8 +4056,7 @@ public class StateManager : IDisposable
 
     private bool IsThiefUnderwaterPartyWaitContext()
     {
-        return IsThiefMap(SelectedMapItemId)
-            || currentLandingMode == OverworldLandingMode.UnderwaterBounce;
+        return CanUseUnderwaterNavigation();
     }
 
     private bool ShouldWaitForPartyBeforeTakeoffForCurrentMap()
@@ -4133,6 +4136,36 @@ public class StateManager : IDisposable
         return IsThiefMap(SelectedMapItemId);
     }
 
+    private bool IsThiefUnderwaterLandingMode()
+    {
+        return IsThiefMap(SelectedMapItemId)
+            && currentLandingMode == OverworldLandingMode.UnderwaterBounce;
+    }
+
+    private void NormalizeLandingModeForSelectedMap(string source)
+    {
+        var expectedLandingMode = ResolveLandingMode(SelectedMapItemId);
+        if (currentLandingMode == expectedLandingMode)
+            return;
+
+        var correctedStaleUnderwaterMode =
+            SelectedMapItemId != 0 &&
+            !IsThiefMap(SelectedMapItemId) &&
+            currentLandingMode == OverworldLandingMode.UnderwaterBounce &&
+            expectedLandingMode == OverworldLandingMode.MountToggle;
+
+        currentLandingMode = expectedLandingMode;
+
+        if (expectedLandingMode != OverworldLandingMode.UnderwaterBounce)
+            ResetUnderwaterLandingState();
+
+        if (correctedStaleUnderwaterMode)
+        {
+            _plugin.AddDebugLog(
+                $"{source} [Landing][WARN] Corrected stale UnderwaterBounce for non-thief map ID {SelectedMapItemId}; using MountToggle.");
+        }
+    }
+
     private bool IsDivingForCurrentMap()
     {
         var isDiving = Plugin.Condition[ConditionFlag.Diving];
@@ -4145,7 +4178,8 @@ public class StateManager : IDisposable
         if (CanUseUnderwaterNavigation())
             return true;
 
-        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce
+        var correctedStaleUnderwaterMode = currentLandingMode == OverworldLandingMode.UnderwaterBounce;
+        if (correctedStaleUnderwaterMode
             || descentInProgress
             || descentMode
             || underwaterTargetPosition != Vector3.Zero
@@ -4153,6 +4187,11 @@ public class StateManager : IDisposable
         {
             currentLandingMode = OverworldLandingMode.MountToggle;
             ResetUnderwaterLandingState();
+            if (correctedStaleUnderwaterMode)
+            {
+                _plugin.AddDebugLog(
+                    $"[Underwater][WARN] Corrected stale UnderwaterBounce while diving for non-thief map ID {SelectedMapItemId}; using MountToggle.");
+            }
         }
 
         if (!nonThiefDivingIgnoredLogged)
@@ -4316,8 +4355,7 @@ public class StateManager : IDisposable
         string zoneName,
         bool alreadyDivingNewMapTarget = false)
     {
-        if (!CanUseUnderwaterNavigation()
-            || currentLandingMode != OverworldLandingMode.UnderwaterBounce
+        if (!IsThiefUnderwaterLandingMode()
             || IsMountedOrMounting()
             || Plugin.Condition[ConditionFlag.InFlight]
             || currentPos == Vector3.Zero
@@ -4376,12 +4414,12 @@ public class StateManager : IDisposable
             {
                 currentLandingMode = OverworldLandingMode.MountToggle;
                 ResetUnderwaterLandingState();
-                _plugin.AddDebugLog($"[Landing] Cleared underwater bounce for non-thief map ID {SelectedMapItemId}; using MountToggle.");
+                _plugin.AddDebugLog($"[Landing][WARN] Corrected stale UnderwaterBounce for non-thief map ID {SelectedMapItemId}; using MountToggle.");
             }
             return false;
         }
 
-        if (currentLandingMode != OverworldLandingMode.UnderwaterBounce)
+        if (!IsThiefUnderwaterLandingMode())
         {
             if (!ShouldAssumeThiefMapFromDiving())
                 return false;
@@ -4424,7 +4462,7 @@ public class StateManager : IDisposable
             return Vector3.Zero;
         }
 
-        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce
+        if (IsThiefUnderwaterLandingMode()
             && currentEntry != null
             && destinationIndex > 0)
         {
@@ -4445,7 +4483,7 @@ public class StateManager : IDisposable
             return GetStoredRealTarget(currentEntry);
         }
 
-        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+        if (IsThiefUnderwaterLandingMode())
         {
             var targets = ResolveOverworldNavigationTargets();
             if (targets.LandingTarget != Vector3.Zero)
@@ -4652,8 +4690,7 @@ public class StateManager : IDisposable
 
     private bool HasActiveUnderwaterFlagApproach()
     {
-        return CanUseUnderwaterNavigation()
-            && currentLandingMode == OverworldLandingMode.UnderwaterBounce
+        return IsThiefUnderwaterLandingMode()
             && (wasDiving
                 || underwaterFlagApproachIssued
                 || underwaterTargetPosition != Vector3.Zero
@@ -4663,8 +4700,7 @@ public class StateManager : IDisposable
 
     private bool HasLoggableUnderwaterFlagApproach()
     {
-        return CanUseUnderwaterNavigation()
-            && currentLandingMode == OverworldLandingMode.UnderwaterBounce
+        return IsThiefUnderwaterLandingMode()
             && State is not BotState.Idle
             && (underwaterTargetPosition != Vector3.Zero
                 || HasPendingUnderwaterFlagApproachReissue());
@@ -5175,8 +5211,7 @@ public class StateManager : IDisposable
         destinationIndex = -1;
 
         if (CurrentLocation == null
-            || currentLandingMode != OverworldLandingMode.UnderwaterBounce
-            || !CanUseUnderwaterNavigation()
+            || !IsThiefUnderwaterLandingMode()
             || CurrentLocation.TerritoryId != LochsTerritoryId)
         {
             return false;
@@ -5413,8 +5448,7 @@ public class StateManager : IDisposable
 
     private bool IsUnderwaterXyzDigRetryGateEligible(Vector3 target, double xzDistance)
     {
-        return CanUseUnderwaterNavigation()
-            && currentLandingMode == OverworldLandingMode.UnderwaterBounce
+        return IsThiefUnderwaterLandingMode()
             && Plugin.Condition[ConditionFlag.Diving]
             && target != Vector3.Zero
             && xzDistance <= UnderwaterFlagApproachArrivalXZRange;
@@ -6506,7 +6540,7 @@ public class StateManager : IDisposable
     private bool ShouldUseNearOpeningChestCofferGroundApproach(IGameObject chest, Vector3 playerPosition, bool ignoreFailure = false)
     {
         if (Plugin.Condition[ConditionFlag.Diving] ||
-            currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+            IsThiefUnderwaterLandingMode())
         {
             return false;
         }
@@ -7217,7 +7251,7 @@ public class StateManager : IDisposable
     private bool ShouldUsePortalGroundApproach(uint entityId, Vector3 target, Vector3 playerPosition)
     {
         if (Plugin.Condition[ConditionFlag.Diving] ||
-            currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+            IsThiefUnderwaterLandingMode())
         {
             return false;
         }
@@ -7913,10 +7947,10 @@ public class StateManager : IDisposable
         // Don't sort - use inventory order to match menu order
         SelectedMapItemId = candidates[0];
         var mapName = TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var info) ? info.Name : $"ID {SelectedMapItemId}";
-        currentLandingMode = ResolveLandingMode(SelectedMapItemId);
+        NormalizeLandingModeForSelectedMap("[SelectingMap]");
         _plugin.AddDebugLog($"Selected: {mapName} (ID {SelectedMapItemId}).");
-        _plugin.AddDebugLog($"[Landing] SelectedMapItemId={SelectedMapItemId}, Using {currentLandingMode} for this run.");
-        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+        _plugin.AddDebugLog($"[Landing] SelectedMapItemId={SelectedMapItemId}; LandingMode={currentLandingMode}.");
+        if (IsThiefUnderwaterLandingMode())
             LogThiefWaterInfo($"[Underwater] Thief map selected; using {currentLandingMode} landing mode for map ID {SelectedMapItemId}.");
         
         // Initialize map count validation variables
@@ -8076,6 +8110,8 @@ public class StateManager : IDisposable
         string mountTransitionDetail,
         bool allowSameZoneTeleport = false)
     {
+        NormalizeLandingModeForSelectedMap($"{logPrefix} same-zone route");
+
         var flagPos = new Vector3(location.X, location.Y, location.Z);
         var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         var resolvedTargets = ResolveOverworldNavigationTargets();
@@ -8165,7 +8201,7 @@ public class StateManager : IDisposable
         }
 
         var isDiving = Plugin.Condition[ConditionFlag.Diving];
-        if (isDiving && CanUseUnderwaterNavigation() && currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+        if (isDiving && IsThiefUnderwaterLandingMode())
         {
             var targets = ResolveOverworldNavigationTargets();
             var landingTarget = targets.LandingTarget != Vector3.Zero
@@ -8791,6 +8827,8 @@ public class StateManager : IDisposable
 
     private void TickFlying()
     {
+        NormalizeLandingModeForSelectedMap("[Flying]");
+
         // Check for diving state change (Condition 81)
         bool isDiving = IsDivingForCurrentMap();
         if (CurrentLocation == null)
@@ -8815,8 +8853,7 @@ public class StateManager : IDisposable
         }
 
         var mountedFarThiefTravel =
-            currentLandingMode == OverworldLandingMode.UnderwaterBounce
-            && CanUseUnderwaterNavigation()
+            IsThiefUnderwaterLandingMode()
             && !IsUnderwaterBounceSpecialEntryHandoffActive()
             && IsMountedOrActualInFlight()
             && currentPos != Vector3.Zero
@@ -8882,7 +8919,7 @@ public class StateManager : IDisposable
             var initialLandingHoldRange = GetCurrentMapLandingHoldRange();
             if (xzDist2 <= initialLandingHoldRange)
             {
-                if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+                if (IsThiefUnderwaterLandingMode())
                 {
                     _plugin.AddDebugLog(
                         $"[Flying] Already within {xzDist2:F1}y of landing target ({initialNavTargets.Basis}) - " +
@@ -8940,7 +8977,7 @@ public class StateManager : IDisposable
         activeNavTargets = ResolveOverworldNavigationTargets();
         var xzDist = CalculateXZDistance(currentPos, activeNavTargets.LandingTarget);
         var landingHoldRange = GetCurrentMapLandingHoldRange();
-        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce
+        if (IsThiefUnderwaterLandingMode()
             && xzDist <= UnderwaterBounceTriggerXZRange
             && TryHandleUnderwaterBounceTriggerFlow(isDiving))
         {
@@ -8983,7 +9020,7 @@ public class StateManager : IDisposable
         if ((activeNavTargets.UseNavStateForLanding && (nav.State == NavigationState.Arrived || nav.State == NavigationState.Idle)) ||
             xzDist <= landingHoldRange)
         {
-            if (currentLandingMode == OverworldLandingMode.MountToggle &&
+            if (!IsThiefUnderwaterLandingMode() &&
                 TryHandleMapLandingAndDig(
                     "[Flying] landing",
                     activeNavTargets.Basis,
@@ -8998,9 +9035,9 @@ public class StateManager : IDisposable
             if (_plugin.NavigationService.IsMounted())
             {
                 // Check if all party members are within 10y before dismounting (Issue 3)
-                var waitForUnderwaterParty = currentLandingMode == OverworldLandingMode.UnderwaterBounce
+                var waitForUnderwaterParty = IsThiefUnderwaterLandingMode()
                     && ShouldWaitForUnderwaterMapContentParty();
-                var waitForPartyDismount = currentLandingMode == OverworldLandingMode.UnderwaterBounce
+                var waitForPartyDismount = IsThiefUnderwaterLandingMode()
                     ? waitForUnderwaterParty
                     : _plugin.Configuration.PartyWaitBeforeDismount;
                 _plugin.AddDebugLog(
@@ -9012,7 +9049,7 @@ public class StateManager : IDisposable
                     var partyWait = EvaluateOverworldLandingPartyWait(10.0);
                     if (!partyWait.CanProceed)
                     {
-                        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+                        if (IsThiefUnderwaterLandingMode())
                             PauseUnderwaterBounceDescentForPartyWait();
                         StateDetail = BuildOverworldLandingPartyWaitDetail(partyWait, 10.0);
                         return; // Don't attempt dismount yet
@@ -9023,14 +9060,14 @@ public class StateManager : IDisposable
                 if (dismountAttemptStart == DateTime.MinValue)
                 {
                     dismountAttemptStart = DateTime.Now;
-                    descentMode = currentLandingMode == OverworldLandingMode.UnderwaterBounce;
+                    descentMode = IsThiefUnderwaterLandingMode();
                     descentStartTime = DateTime.Now;
                     descentStartY = Plugin.ObjectTable.LocalPlayer?.Position.Y ?? 0f;
                     _plugin.AddDebugLog(
                         $"[Flying] Landing phase ready via {activeNavTargets.Basis}; navState={nav.State}; " +
                         $"landingXZ={xzDist:F1}y; current={FormatVectorCompact(currentPos)}; " +
                         $"landingTarget={FormatVectorCompact(activeNavTargets.LandingTarget)}");
-                    _plugin.AddDebugLog(currentLandingMode == OverworldLandingMode.UnderwaterBounce
+                    _plugin.AddDebugLog(IsThiefUnderwaterLandingMode()
                         ? "Close to target - attempting underwater descent+dismount mode (Ctrl+Space first)..."
                         : "Close to target - using /mount landing toggles until dismounted...");
                 }
@@ -9060,7 +9097,7 @@ public class StateManager : IDisposable
                         _plugin.AddDebugLog($"[Flying] Starting Ctrl+Space descent attempt ({descentElapsed:F0}s into dismount)");
                         StartSafeDescent(
                             "[Flying] descent mode",
-                            includeForward: currentLandingMode == OverworldLandingMode.UnderwaterBounce && !Plugin.Condition[ConditionFlag.Diving]);
+                            includeForward: IsThiefUnderwaterLandingMode() && !Plugin.Condition[ConditionFlag.Diving]);
                     }
                     
                     // Monitor Y position change
@@ -9069,7 +9106,7 @@ public class StateManager : IDisposable
                     
                     if (descentElapsed >= 5.0)
                     {
-                        if (currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+                        if (IsThiefUnderwaterLandingMode())
                         {
                             _plugin.AddDebugLog(
                                 yChange < 5.0f
@@ -9142,6 +9179,9 @@ public class StateManager : IDisposable
             lastCombatEndTime = now;
             openingChestCombatInterrupted = true;
             chestDisappearedTime = DateTime.MinValue;
+            NormalizeLandingModeForSelectedMap("[OpeningChest][FATE] release");
+            _plugin.AddDebugLog(
+                $"[OpeningChest][FATE] Release map context: mapId={SelectedMapItemId}; landing={currentLandingMode}.");
             _plugin.AddDebugLog($"[OpeningChest][FATE] Joined FATE {heldFateId} cleared - resuming chest/portal recovery after settle.");
             StateDetail = "Joined FATE cleared - settling before chest/portal recovery...";
             return true;
@@ -9216,7 +9256,7 @@ public class StateManager : IDisposable
         if (TryHandleUnderwaterBounceTriggerFlow(isDiving, includeNearTarget: false))
             return;
 
-        if (isDiving && currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+        if (isDiving && IsThiefUnderwaterLandingMode())
         {
             if (!wasDiving)
             {
@@ -9874,6 +9914,13 @@ public class StateManager : IDisposable
 
         combatMovementForbidSentThisCombat = false;
         lastCombatEndTime = DateTime.Now;
+
+        if (IsJoinedFateOutdoorInterventionFlowActive())
+        {
+            NormalizeLandingModeForSelectedMap("[CombatEnd]");
+            _plugin.AddDebugLog(
+                $"[CombatEnd] Map context: mapId={SelectedMapItemId}; landing={currentLandingMode}.");
+        }
         
         // ALWAYS reset to chest priority after combat
         currentObjective = DungeonObjective.ClearingChests;
@@ -14797,6 +14844,7 @@ public class StateManager : IDisposable
 
                     // Set selected map to Mysterious Map
                     SelectedMapItemId = MysteriousMapItemId;
+                    NormalizeLandingModeForSelectedMap("[Alexandrite]");
 
                     alexandriteStep = 6;
                     alexandriteStepTime = DateTime.Now;
@@ -14897,7 +14945,7 @@ public class StateManager : IDisposable
         var zoneName = dbEntry?.ZoneName ?? CurrentLocation.ZoneName ?? "Unknown";
         var canUseUnderwaterNavigation = CanUseUnderwaterNavigation();
 
-        if (canUseUnderwaterNavigation && currentLandingMode == OverworldLandingMode.UnderwaterBounce)
+        if (canUseUnderwaterNavigation && IsThiefUnderwaterLandingMode())
         {
             if (dbEntry != null && destinationIndex > 0)
             {
