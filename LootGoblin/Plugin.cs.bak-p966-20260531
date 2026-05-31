@@ -107,10 +107,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public Plugin()
     {
-        var loadedConfiguration = PluginInterface.GetPluginConfig() as Configuration;
-        var isNewConfiguration = loadedConfiguration == null;
-        Configuration = loadedConfiguration ?? new Configuration();
-        if (ApplyConfigurationMigrations(Configuration, isNewConfiguration))
+        Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        if (ApplyConfigurationMigrations(Configuration))
             Configuration.Save();
 
         try
@@ -601,7 +599,7 @@ public sealed class Plugin : IDalamudPlugin
     public void ToggleConfigUi() => ConfigWindow.Toggle();
     public void ToggleMainUi() => MainWindow.Toggle();
 
-    private static bool ApplyConfigurationMigrations(Configuration configuration, bool isNewConfiguration)
+    private static bool ApplyConfigurationMigrations(Configuration configuration)
     {
         var changed = false;
         if (configuration.Version < 1)
@@ -673,13 +671,13 @@ public sealed class Plugin : IDalamudPlugin
 
         configuration.NormalizeConfiguredMapRuns();
 
-        if (isNewConfiguration || configuration.LandingOrDutyCommandTriggers == null)
+        if (configuration.LandingOrDutyCommandTriggers == null)
         {
             configuration.LandingOrDutyCommandTriggers = Configuration.CreateDefaultLandingOrDutyCommandTriggers();
             changed = true;
         }
 
-        if (isNewConfiguration || configuration.FinishCommandTriggers == null)
+        if (configuration.FinishCommandTriggers == null)
         {
             configuration.FinishCommandTriggers = Configuration.CreateDefaultFinishCommandTriggers();
             changed = true;

@@ -264,7 +264,6 @@ public class StateManager : IDisposable
     private static readonly TimeSpan PartyTeleportOfferPendingTtl = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PartyTeleportAcceptedSettleDelay = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan PartyTeleportPostLoadingSettleDelay = TimeSpan.FromSeconds(2);
-    private static readonly TimeSpan StartPreflightDelay = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan CameraResetBeforeInteractDelay = TimeSpan.FromMilliseconds(150);
     private const double DungeonInteractionIntervalSeconds = 1.0;
     private const float MapDigXZRange = 5.0f;
@@ -393,7 +392,6 @@ public class StateManager : IDisposable
     private bool startMapRefreshOpenedSaddlebag;
     private string startMapRefreshScope = "Start";
     private DateTime startMapRefreshStartedAt = DateTime.MinValue;
-    private DateTime startPreflightReadyAt = DateTime.MinValue;
     private bool completedSaddlebagRefreshAttempted;
 
     // Dungeon state tracking (Phase 8)
@@ -588,7 +586,6 @@ public class StateManager : IDisposable
 
     private static readonly Dictionary<BotState, double> StateTimeouts = new()
     {
-        { BotState.StartPreflight,    10  },
         { BotState.OpeningMap,        30  },
         { BotState.DetectingLocation, 30  },
         { BotState.Teleporting,       90  },
@@ -933,7 +930,6 @@ public class StateManager : IDisposable
 
         switch (State)
         {
-            case BotState.StartPreflight: TickStartPreflight(); break;
             case BotState.SelectingMap:     TickSelectingMap();     break;
             case BotState.OpeningMap:       TickOpeningMap();       break;
             case BotState.DetectingLocation: TickDetectingLocation(); break;
@@ -1739,32 +1735,9 @@ public class StateManager : IDisposable
         var startMapFlagCleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
         _plugin.AddDebugLog($"[Start] Preflight cleared map flag before start flow: verified={startMapFlagCleared}.");
 
-        var mounted = Plugin.Condition[ConditionFlag.Mounted] || Plugin.Condition[ConditionFlag.Mounting71];
-        var startMountCommandSent = mounted && CommandHelper.TrySendCommand("/mount");
-        _plugin.AddDebugLog($"[Start] Preflight dismount attempt: mounted={mounted}, sent={startMountCommandSent}.");
+        var startMountCommandSent = CommandHelper.TrySendCommand("/mount");
+        _plugin.AddDebugLog($"[Start] Preflight sent raw /mount dismount attempt: sent={startMountCommandSent}.");
 
-        startPreflightReadyAt = DateTime.Now + StartPreflightDelay;
-        TransitionTo(BotState.StartPreflight, "Start preflight: cleared map flag, attempted dismount, waiting 1s...");
-    }
-
-    private void TickStartPreflight()
-    {
-        if (startPreflightReadyAt == DateTime.MinValue)
-            startPreflightReadyAt = DateTime.Now;
-
-        var remaining = startPreflightReadyAt - DateTime.Now;
-        if (remaining > TimeSpan.Zero)
-        {
-            StateDetail = $"Start preflight: waiting {remaining.TotalSeconds:0.0}s before start flow...";
-            return;
-        }
-
-        startPreflightReadyAt = DateTime.MinValue;
-        ContinueStartAfterPreflight();
-    }
-
-    private void ContinueStartAfterPreflight()
-    {
         ClearWarning();
         ResetRunCommandTriggers();
         ClearSelectedMapRunCountDecrement("[Start]");
@@ -1895,7 +1868,6 @@ public class StateManager : IDisposable
     {
         ClearPendingPartyTeleportOffer(null);
         ClearAcceptedPartyTeleportOfferRestart(null);
-        startPreflightReadyAt = DateTime.MinValue;
         _plugin.NavigationService.StopNavigation(clearFlag: true);
         ResetVnavFlyFlagFallbackState();
         SetCombatAutomationForCombatState(inCombat: false, "bot stop", force: true);
@@ -1922,7 +1894,6 @@ public class StateManager : IDisposable
     {
         ClearPendingPartyTeleportOffer(null);
         ClearAcceptedPartyTeleportOfferRestart(null);
-        startPreflightReadyAt = DateTime.MinValue;
         _plugin.NavigationService.StopNavigation(clearFlag: true);
         ResetVnavFlyFlagFallbackState();
         IsPaused = false;
@@ -13769,9 +13740,6 @@ public class StateManager : IDisposable
 
         if (newState is BotState.Idle or BotState.Error or BotState.InDungeon)
             ClearOutdoorMapFlowHold();
-
-        if (newState != BotState.StartPreflight)
-            startPreflightReadyAt = DateTime.MinValue;
 
         State = newState;
         StateDetail = detail;

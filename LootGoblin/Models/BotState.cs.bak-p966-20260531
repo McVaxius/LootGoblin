@@ -4,7 +4,6 @@ public enum BotState
 {
     Idle,
     Repairing,
-    StartPreflight,
     SelectingMap,
     OpeningMap,
     DetectingLocation,

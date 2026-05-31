@@ -119,8 +119,8 @@ public class Configuration : IPluginConfiguration
     public bool FeedMeSearch { get; set; } = true;
     public bool SummonChocobo { get; set; } = false;
     public string CompanionStance { get; set; } = "Free Stance";
-    public List<string> LandingOrDutyCommandTriggers { get; set; } = null!;
-    public List<string> FinishCommandTriggers { get; set; } = null!;
+    public List<string> LandingOrDutyCommandTriggers { get; set; } = CreateDefaultLandingOrDutyCommandTriggers();
+    public List<string> FinishCommandTriggers { get; set; } = CreateDefaultFinishCommandTriggers();
 
     // Mount Settings
     public string SelectedMount { get; set; } = "Company Chocobo";
