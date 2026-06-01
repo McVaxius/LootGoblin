@@ -288,7 +288,7 @@ public class StateManager : IDisposable
     private const float OpeningChestCofferCloseDismountDistance = 5.0f;
     private const float OpeningChestCofferMountRecoveryDistance = 3.0f;
     private const float OpeningChestCofferMountRecoveryYDelta = 0.5f;
-    private const float OpeningChestCofferWalkPreferredDistance = 12.0f;
+    private const float OpeningChestCofferWalkPreferredDistance = 15.0f;
     private const float OpeningChestCofferGroundApproachYDelta = 6.0f;
     private const float OpeningChestCofferProgressMargin = 0.35f;
     private const float OpeningChestNearbyObjectScanRange = 60.0f;
@@ -2287,6 +2287,7 @@ public class StateManager : IDisposable
             portalConfirmedThisMap = false;
             dungeonConfirmedThisMap = false;
             ResetOpeningChestLifecycleState();
+            ResetOpeningChestCofferMemory();
             CurrentLocation = null;
             ResetOverworldRecoveryState(clearTeleportedTarget: true);
             activeKeyItemMapItemId = keyItem.ItemId;
@@ -3532,6 +3533,12 @@ public class StateManager : IDisposable
             return false;
         }
 
+        if (State == BotState.OpeningChest ||
+            TryDescribeActiveOpeningChestCofferEvidence(includeLiveScan: false, out _))
+        {
+            return false;
+        }
+
         if (!TryGetCurrentMapLandingDistance(out var landingDistance, out var landingTarget, out var landingBasis))
             return false;
 
@@ -3675,6 +3682,12 @@ public class StateManager : IDisposable
         if (!_plugin.IsLifestreamAvailable)
             return "Lifestream unavailable";
 
+        if ((State == BotState.OpeningChest || IsOpeningChestCofferRecoveryTargetKind(targetKind)) &&
+            TryDescribeActiveOpeningChestCofferEvidence(includeLiveScan: true, out var cofferEvidence))
+        {
+            return $"opening chest coffer evidence active: {cofferEvidence}";
+        }
+
         if (IsOverworldRecoveryMapTarget(targetKind) &&
             TryGetMapTargetTeleportBlockReason(currentPos, out var mapTargetBlockReason))
         {
@@ -3701,6 +3714,53 @@ public class StateManager : IDisposable
 
     private static bool IsOverworldRecoveryMapTarget(string targetKind)
         => string.Equals(targetKind, "map target", StringComparison.Ordinal);
+
+    private static bool IsOpeningChestCofferRecoveryTargetKind(string targetKind)
+        => string.Equals(targetKind, "coffer", StringComparison.Ordinal) ||
+           string.Equals(targetKind, "displaced coffer", StringComparison.Ordinal) ||
+           string.Equals(targetKind, "captured coffer", StringComparison.Ordinal) ||
+           string.Equals(targetKind, "missing coffer flag", StringComparison.Ordinal);
+
+    private bool TryDescribeActiveOpeningChestCofferEvidence(bool includeLiveScan, out string evidence)
+    {
+        evidence = string.Empty;
+
+        if (includeLiveScan)
+        {
+            var liveCoffer = FindTargetableOverworldCoffer(OverworldRecoveryObjectSearchRange);
+            if (liveCoffer != null)
+            {
+                var player = Plugin.ObjectTable.LocalPlayer;
+                var distance = player == null
+                    ? float.MaxValue
+                    : Vector3.Distance(player.Position, liveCoffer.Position);
+                evidence =
+                    $"live targetable coffer entity={liveCoffer.EntityId} dist={distance:F1}y " +
+                    $"xyz={FormatVectorCompact(liveCoffer.Position)}";
+                return true;
+            }
+        }
+
+        if (openingChestDiscoveredByChat && !HasOpeningChestCofferCompletionEvidence())
+        {
+            var age = openingChestDiscoveredChatAt == DateTime.MinValue
+                ? "unknown"
+                : $"{(DateTime.Now - openingChestDiscoveredChatAt).TotalSeconds:F1}s";
+            evidence = $"coffer discovery chat age={age}";
+            return true;
+        }
+
+        if (!HasOpeningChestCofferCompletionEvidence() &&
+            TryGetOpeningChestLastKnownCofferPosition(out var knownPosition, out var knownDistance))
+        {
+            evidence =
+                $"captured coffer XYZ entity={openingChestLastKnownCofferEntityId} " +
+                $"dist={knownDistance:F1}y xyz={FormatVectorCompact(knownPosition)}";
+            return true;
+        }
+
+        return false;
+    }
 
     private string GetAetheryteName(uint aetheryteId)
     {
@@ -9623,17 +9683,6 @@ public class StateManager : IDisposable
                     return;
                 }
 
-                var sinceCombatEnd = lastCombatEndTime == DateTime.MinValue
-                    ? double.MaxValue
-                    : (now - lastCombatEndTime).TotalSeconds;
-
-                if (sinceCombatEnd < 2.0)
-                {
-                    chestDisappearedTime = DateTime.MinValue;
-                    StateDetail = $"Combat ended - waiting for chest recovery... ({sinceCombatEnd:F1}/2.0s)";
-                    return;
-                }
-
                 if (TryReturnToOpeningChestLastKnownCoffer(now))
                 {
                     chestDisappearedTime = DateTime.MinValue;
@@ -9829,22 +9878,14 @@ public class StateManager : IDisposable
 
         if (openingChestCombatInterrupted && !inCombat)
         {
-            var sinceCombatEnd = lastCombatEndTime == DateTime.MinValue
-                ? double.MaxValue
-                : (now - lastCombatEndTime).TotalSeconds;
-            if (sinceCombatEnd < 2.0)
-            {
-                StateDetail = $"Combat/FATE ended - waiting to resume chest recovery... ({sinceCombatEnd:F1}/2.0s)";
-                return;
-            }
-
             if (openingChestReturningToFlag && autoMoveActive)
             {
                 _plugin.NavigationService.StopNavigation();
                 autoMoveActive = false;
             }
 
-            _plugin.AddDebugLog($"[OpeningChest] Chest reacquired after combat at {dist:F1}y - resuming approach");
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Targetable coffer reacquired after combat at {dist:F1}y - resuming approach/interact immediately.");
             openingChestCombatInterrupted = false;
             openingChestRecoveryDigIssued = false;
             openingChestReturningToFlag = false;
@@ -10133,7 +10174,10 @@ public class StateManager : IDisposable
             chestDisappearedTime = DateTime.MinValue;
             ResetOpeningChestCofferMountRecovery("because combat started", stopNavigation: true);
             ResetOpeningChestCofferWalkFailure();
-            _plugin.AddDebugLog("[OpeningChest] Combat interrupted chest recovery - will retry after combat");
+            var evidence = TryDescribeActiveOpeningChestCofferEvidence(includeLiveScan: true, out var evidenceText)
+                ? evidenceText
+                : "no active coffer evidence";
+            _plugin.AddDebugLog($"[OpeningChest] Combat paused chest recovery; {evidence}. Will rescan after combat.");
         }
         
         // Clear all failed objects when combat starts
@@ -10166,7 +10210,12 @@ public class StateManager : IDisposable
         dungeonLoadWaitStart = DateTime.MinValue;
 
         if (State == BotState.OpeningChest && openingChestCombatInterrupted)
-            _plugin.AddDebugLog("[OpeningChest] Combat ended - rechecking chest recovery");
+        {
+            var evidence = TryDescribeActiveOpeningChestCofferEvidence(includeLiveScan: true, out var evidenceText)
+                ? evidenceText
+                : "no active coffer evidence; bounded missing-coffer recovery will run before map-target/key-item recovery";
+            _plugin.AddDebugLog($"[OpeningChest] Combat ended - resuming coffer recovery; {evidence}.");
+        }
         
         _plugin.AddDebugLog("[Combat] Combat ended - will clear processed objects in 5s");
     }
@@ -14106,9 +14155,25 @@ public class StateManager : IDisposable
 
     // ─── Transition ───────────────────────────────────────────────────────────
 
+    private static bool ShouldResetOpeningChestLifecycleForTransition(BotState newState)
+        => newState is BotState.Idle
+            or BotState.Error
+            or BotState.Repairing
+            or BotState.SelectingMap
+            or BotState.StartPreflight
+            or BotState.OpeningMap
+            or BotState.InDungeon
+            or BotState.DungeonCombat
+            or BotState.DungeonLooting
+            or BotState.DungeonProgressing
+            or BotState.CyclingAetherytes
+            or BotState.CyclingMapLocations
+            or BotState.AlexandriteFarming;
+
     private void TransitionTo(BotState newState, string detail)
     {
         var prev = State;
+        var resetOpeningChestLifecycle = ShouldResetOpeningChestLifecycleForTransition(newState);
         if (newState == BotState.Error)
             ResetAdsRepairHandoffTracking();
 
@@ -14157,11 +14222,14 @@ public class StateManager : IDisposable
             CaptureWaitingForPartyExpectedMemberCount();
         else if (prev == BotState.WaitingForParty)
             waitingForPartyExpectedMemberCount = 0;
-        openingChestCombatInterrupted = false;
         ResetTreasureHighLowRetryState();
-        openingChestRecoveryDigIssued = false;
-        openingChestReturningToFlag = false;
-        openingChestReturningToLastKnownCoffer = false;
+        if (resetOpeningChestLifecycle)
+        {
+            openingChestCombatInterrupted = false;
+            openingChestRecoveryDigIssued = false;
+            openingChestReturningToFlag = false;
+            openingChestReturningToLastKnownCoffer = false;
+        }
 
         if (newState is BotState.Idle or BotState.Error or BotState.Completed or BotState.InDungeon)
             ResetUnderwaterXyzDigRetryState();
@@ -14173,7 +14241,11 @@ public class StateManager : IDisposable
         {
             ClearOpeningChestJoinedFateHold();
             ResetOpeningChestCofferMountRecovery();
-            ResetOpeningChestCofferMemory();
+            if (resetOpeningChestLifecycle)
+            {
+                ResetOpeningChestLifecycleState();
+                ResetOpeningChestCofferMemory();
+            }
         }
 
         if (prev == BotState.Completed && newState != BotState.Completed)
