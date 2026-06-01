@@ -306,6 +306,7 @@ public class StateManager : IDisposable
     private const int UnderwaterBounceDescentHoldMs = 1000;
     private const int UnderwaterXyzDigRetryMaxAttempts = 3;
     private static readonly TimeSpan UnderwaterBounceDescentInterval = TimeSpan.FromSeconds(1.25);
+    private static readonly TimeSpan UnderwaterBounceLandingSettleWindow = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan UnderwaterXyzDigRetryDelay = TimeSpan.FromSeconds(10.0);
     private static readonly TimeSpan UnderwaterFlagApproachReissueInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan UnderwaterFlagApproachReissueStopDelay = TimeSpan.FromMilliseconds(150);
@@ -5261,6 +5262,16 @@ public class StateManager : IDisposable
 
         if (keepDescent)
         {
+            if (TryHandleNonDivingThiefMapLandingAfterDescent(
+                    now,
+                    currentPos,
+                    finalTarget,
+                    finalXZ,
+                    "[Underwater] thief-map surfaced recovery"))
+            {
+                return true;
+            }
+
             var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
             var digIssued = TryDigThiefMapWhileDivingAtGate("[Underwater] thief-map trigger", now, currentPos, finalTarget, finalXZ);
             LogUnderwaterTriggerLoop(now, currentPos, Math.Min(entryXZ, finalXZ), descentPulseIssued, digIssued);
@@ -5315,6 +5326,16 @@ public class StateManager : IDisposable
             }
 
             SuppressUnderwaterBounceVnav();
+            if (TryHandleNonDivingThiefMapLandingAfterDescent(
+                    now,
+                    currentPos,
+                    destination,
+                    destinationXZ,
+                    "[Underwater] thief-map surfaced recovery"))
+            {
+                return true;
+            }
+
             var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
             var digIssued = TryDigThiefMapWhileDivingAtGate("[Underwater] thief-map trigger", now, currentPos, destination, destinationXZ);
             LogUnderwaterTriggerLoop(now, currentPos, destinationXZ, descentPulseIssued, digIssued);
@@ -5395,6 +5416,184 @@ public class StateManager : IDisposable
         lastUnderwaterBounceDescentStart = now;
         StartSafeDescent("[Underwater] thief-map trigger", includeForward: !Plugin.Condition[ConditionFlag.Diving]);
         return true;
+    }
+
+    private bool IsNonDivingThiefMapAirborneOrMounted()
+    {
+        return IsThiefUnderwaterLandingMode()
+            && !Plugin.Condition[ConditionFlag.Diving]
+            && (Plugin.Condition[ConditionFlag.InFlight]
+                || Plugin.Condition[ConditionFlag.Mounted]
+                || Plugin.Condition[ConditionFlag.Mounting71]);
+    }
+
+    private void ResetNonDivingThiefMapLandingSettleSample(DateTime now, Vector3 currentPos)
+    {
+        descentStartTime = now;
+        descentStartY = currentPos.Y;
+    }
+
+    private bool IsNonDivingThiefMapLandingSettled(
+        DateTime now,
+        Vector3 currentPos,
+        out double sampleElapsed,
+        out float yChange)
+    {
+        if (descentStartTime == DateTime.MinValue)
+        {
+            ResetNonDivingThiefMapLandingSettleSample(now, currentPos);
+            sampleElapsed = 0.0;
+            yChange = 0.0f;
+            return false;
+        }
+
+        sampleElapsed = (now - descentStartTime).TotalSeconds;
+        yChange = Math.Abs(currentPos.Y - descentStartY);
+        if (sampleElapsed < UnderwaterBounceLandingSettleWindow.TotalSeconds)
+            return false;
+
+        if (yChange <= UnderwaterFlagApproachStallMovementThreshold)
+            return true;
+
+        ResetNonDivingThiefMapLandingSettleSample(now, currentPos);
+        return false;
+    }
+
+    private bool TryHandleNonDivingThiefMapLandingAfterDescent(
+        DateTime now,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance,
+        string reason,
+        bool issueDigWhenSafe = true)
+    {
+        if (!IsThiefUnderwaterLandingMode()
+            || Plugin.Condition[ConditionFlag.Diving]
+            || currentPos == Vector3.Zero
+            || target == Vector3.Zero
+            || xzDistance > UnderwaterBounceTriggerXZRange)
+        {
+            return false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.Mounting71])
+        {
+            ResetNonDivingThiefMapLandingSettleSample(now, currentPos);
+            StateDetail = $"Waiting for mount state before thief-map dig... ({xzDistance:F1}y XZ)";
+            return true;
+        }
+
+        if (Plugin.Condition[ConditionFlag.InFlight] || Plugin.Condition[ConditionFlag.Mounted])
+        {
+            ResetNonDivingThiefMapLandingSettleSample(now, currentPos);
+            var descentPulseIssued = EnsureUnderwaterBounceDescent(now, currentPos);
+            LogUnderwaterTriggerLoop(now, currentPos, xzDistance, descentPulseIssued, digIssued: false);
+            StateDetail = $"Descending for non-diving thief-map landing... ({xzDistance:F1}y XZ)";
+            return true;
+        }
+
+        if (!IsNonDivingThiefMapLandingSettled(now, currentPos, out var sampleElapsed, out var yChange))
+        {
+            LogUnderwaterTriggerLoop(now, currentPos, xzDistance, descentPulseIssued: false, digIssued: false);
+            StateDetail = sampleElapsed >= UnderwaterBounceLandingSettleWindow.TotalSeconds
+                ? $"Waiting for thief-map landing to settle... (Y change {yChange:F1}y)"
+                : $"Confirming thief-map landing settle... ({sampleElapsed:F1}/{UnderwaterBounceLandingSettleWindow.TotalSeconds:F1}s)";
+            return true;
+        }
+
+        if (!issueDigWhenSafe)
+            return false;
+
+        return TryIssueNonDivingThiefMapDigAfterLanding(now, currentPos, target, xzDistance, reason);
+    }
+
+    private bool TryIssueNonDivingThiefMapDigAfterLanding(
+        DateTime now,
+        Vector3 currentPos,
+        Vector3 target,
+        double xzDistance,
+        string reason)
+    {
+        if (digIssuedThisMap)
+        {
+            ResetUnderwaterLandingState();
+            var elapsed = digIssuedAt == DateTime.MinValue ? 0 : (now - digIssuedAt).TotalSeconds;
+            StateDetail = $"Waiting for treasure coffer after dig... ({elapsed:F1}s)";
+            return true;
+        }
+
+        ResetUnderwaterLandingState();
+        RecordMapLandingPosition();
+        RunLandingCommandsOnce(reason);
+        CommandHelper.SendCommand("/gaction dig");
+        lastDigTime = now;
+        digIssuedThisMap = true;
+        digIssuedAt = now;
+        _plugin.AddDebugLog(
+            $"{reason}: issued /gaction dig after non-diving thief-map landing; " +
+            $"current={FormatVectorCompact(currentPos)}; target={FormatVectorCompact(target)}; xz={xzDistance:F1}y.");
+
+        System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ => {
+            try
+            {
+                TransitionTo(BotState.OpeningChest, "Looking for treasure coffer to interact...");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (thief-map landing dig handoff): {ex.Message}");
+            }
+        }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
+
+        return true;
+    }
+
+    private bool TryGuardNonDivingThiefMapRecoveryDig(
+        DateTime now,
+        string reason,
+        bool hasTarget,
+        Vector3 target,
+        double xzDistance)
+    {
+        if (!IsThiefUnderwaterLandingMode() || Plugin.Condition[ConditionFlag.Diving])
+            return false;
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null || !hasTarget || target == Vector3.Zero)
+        {
+            if (!IsNonDivingThiefMapAirborneOrMounted())
+                return false;
+
+            var currentPos = player?.Position ?? Vector3.Zero;
+            if (currentPos != Vector3.Zero)
+            {
+                ResetNonDivingThiefMapLandingSettleSample(now, currentPos);
+                EnsureUnderwaterBounceDescent(now, currentPos);
+            }
+
+            StateDetail = "Waiting for safe non-diving thief-map landing before retry dig...";
+            return true;
+        }
+
+        var currentPosition = player.Position;
+        xzDistance = CalculateXZDistance(currentPosition, target);
+        if (xzDistance > UnderwaterBounceTriggerXZRange)
+        {
+            LogThiefWaterInfoRateLimited(
+                ref lastThiefWaterRecoveryLogTime,
+                ThiefWaterRecoveryLogInterval,
+                $"{reason}: suppressed non-diving thief-map recovery dig at {xzDistance:F1}y XZ; " +
+                "returning to landing recovery.");
+            TransitionTo(BotState.Flying, "Thief-map recovery: returning to landing before dig...");
+            return true;
+        }
+
+        return TryHandleNonDivingThiefMapLandingAfterDescent(
+            now,
+            currentPosition,
+            target,
+            xzDistance,
+            reason,
+            issueDigWhenSafe: false);
     }
 
     private bool TryHandleUnderwaterXyzDigRetryGate(
@@ -5771,6 +5970,26 @@ public class StateManager : IDisposable
 
         if (TryHoldForUnderwaterMapContentPartyWait(10.0))
             return true;
+
+        var nonDivingTarget = underwaterTargetPosition;
+        if (nonDivingTarget == Vector3.Zero)
+        {
+            var targets = ResolveOverworldNavigationTargets();
+            nonDivingTarget = targets.LandingTarget;
+        }
+
+        var nonDivingTargetXZ = nonDivingTarget == Vector3.Zero
+            ? double.MaxValue
+            : CalculateXZDistance(currentPos, nonDivingTarget);
+        if (TryHandleNonDivingThiefMapLandingAfterDescent(
+                now,
+                currentPos,
+                nonDivingTarget,
+                nonDivingTargetXZ,
+                "[Underwater] thief-map trigger"))
+        {
+            return true;
+        }
 
         EnsureUnderwaterBounceDescent(now, currentPos);
         StateDetail = isDiving
@@ -7085,6 +7304,16 @@ public class StateManager : IDisposable
             {
                 _plugin.NavigationService.StopNavigation();
                 autoMoveActive = false;
+            }
+
+            if (TryGuardNonDivingThiefMapRecoveryDig(
+                    now,
+                    "[OpeningChest] missing coffer recovery",
+                    hasFlagRecoveryTarget,
+                    flagRecoveryTarget,
+                    xzDistToFlag))
+            {
+                return true;
             }
 
             var timeSinceDig = digIssuedAt == DateTime.MinValue
@@ -9483,6 +9712,16 @@ public class StateManager : IDisposable
 
                 if (!openingChestRecoveryDigIssued && nearFlagForRecovery)
                 {
+                    if (TryGuardNonDivingThiefMapRecoveryDig(
+                            now,
+                            "[OpeningChest] combat recovery",
+                            hasFlagRecoveryTarget,
+                            flagRecoveryTarget,
+                            distToFlag))
+                    {
+                        return;
+                    }
+
                     var sinceDig = (now - lastDigTime).TotalSeconds;
                     if (sinceDig < 3.0)
                     {
