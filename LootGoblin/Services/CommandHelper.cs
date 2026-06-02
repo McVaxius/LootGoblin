@@ -15,6 +15,11 @@ public static class CommandHelper
         TrySendCommand(command);
     }
 
+    public static unsafe void SendChatCommand(string command)
+    {
+        TrySendChatCommand(command);
+    }
+
     public static async Task SendCommandOnFrameworkThreadAsync(string command)
     {
         await Plugin.Framework.RunOnFrameworkThread(() => SendCommand(command)).ConfigureAwait(false);
@@ -33,23 +38,47 @@ public static class CommandHelper
             if (Plugin.CommandManager.ProcessCommand(command))
                 return true;
 
-            var uiModule = UIModule.Instance();
-            if (uiModule == null)
-            {
-                Plugin.Log.Error("UIModule is null, cannot send command");
-                return false;
-            }
-
-            var bytes = Encoding.UTF8.GetBytes(command);
-            var utf8String = FFXIVClientStructs.FFXIV.Client.System.String.Utf8String.FromSequence(bytes);
-            uiModule->ProcessChatBoxEntry(utf8String, nint.Zero);
-            return true;
+            return TryProcessChatBoxEntry(command);
         }
         catch (Exception ex)
         {
             Plugin.Log.Error($"Command failed [{command}]: {ex.Message}");
             return false;
         }
+    }
+
+    public static unsafe bool TrySendChatCommand(string command)
+    {
+        try
+        {
+            if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)
+            {
+                Plugin.Log.Warning($"Skipped command while not logged in: {command}");
+                return false;
+            }
+
+            return TryProcessChatBoxEntry(command);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"Command failed [{command}]: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static unsafe bool TryProcessChatBoxEntry(string command)
+    {
+        var uiModule = UIModule.Instance();
+        if (uiModule == null)
+        {
+            Plugin.Log.Error("UIModule is null, cannot send command");
+            return false;
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(command);
+        var utf8String = FFXIVClientStructs.FFXIV.Client.System.String.Utf8String.FromSequence(bytes);
+        uiModule->ProcessChatBoxEntry(utf8String, nint.Zero);
+        return true;
     }
 
     public static string FormatVector(Vector3 value)
