@@ -264,7 +264,7 @@ public class VNavIPC : IDisposable
 
         var coords = CommandHelper.FormatVector(target);
         var cmd = $"/vnav flyto {coords}";
-        CommandHelper.SendChatCommand("/vnav flyflag");
+        //CommandHelper.SendChatCommand("/vnav flyflag");
         CommandHelper.SendChatCommand(cmd);
         IsNavigating = true;
         _plugin.AddDebugLog($"Flying to {coords}");
