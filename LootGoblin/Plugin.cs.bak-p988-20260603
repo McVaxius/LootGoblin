@@ -508,7 +508,7 @@ public sealed class Plugin : IDalamudPlugin
 
         StateManager.NotifyChatMessage(text);
 
-        var isPathFailure = IsVnavPathFailure(text);
+        var isPathFailure = text.Contains("Failed to find path", StringComparison.OrdinalIgnoreCase);
         var isNavmeshMissing = text.Contains("navmesh", StringComparison.OrdinalIgnoreCase) &&
                                text.Contains("missing", StringComparison.OrdinalIgnoreCase);
         if (!isPathFailure && !isNavmeshMissing)
@@ -521,15 +521,6 @@ public sealed class Plugin : IDalamudPlugin
             return;
 
         StateManager.NotifyVnavPathFailure(text);
-    }
-
-    private static bool IsVnavPathFailure(string text)
-    {
-        return text.Contains("Failed to find path", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("failed to resolve path", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("failed to resolve nav", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("could not find path", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("unable to find path", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool IsPluginLoaded(string internalName, string? nameFragment = null)

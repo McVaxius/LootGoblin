@@ -240,9 +240,6 @@ public class StateManager : IDisposable
     private bool teleportSawBetweenAreas;
     private DateTime teleportLastLoadingAt = DateTime.MinValue;
     private DateTime teleportLoadingClearedAt = DateTime.MinValue;
-    private bool portaPraetoriaTakeoffNudgePending;
-    private bool portaPraetoriaTakeoffNudgeActive;
-    private DateTime portaPraetoriaTakeoffNudgeStartedAt = DateTime.MinValue;
     private bool outdoorMapFlowHoldActive;
     private BotState outdoorMapFlowHoldState = BotState.Idle;
     private string outdoorMapFlowHoldReason = string.Empty;
@@ -303,8 +300,6 @@ public class StateManager : IDisposable
     private const float UnderwaterFlagApproachStallMovementThreshold = 0.5f;
     private const float UnderwaterFlagApproachTargetYRefreshThreshold = 5.0f;
     private const uint LochsTerritoryId = 621;
-    private const uint PortaPraetoriaAetheryteId = 102;
-    private const string PortaPraetoriaTakeoffNudgeTargetName = "Aetheryte";
     private const float LochsDivingFlagApproachDepthOffset = 50.0f;
     private const float PortalRunawayDistanceIncrease = 2.0f;
     private const int UnderwaterBounceAutomoveHoldMs = 250;
@@ -322,7 +317,6 @@ public class StateManager : IDisposable
     private static readonly TimeSpan UnderwaterTriggerLoopLogInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan ThiefMapDigSuppressionLogInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan ThiefWaterRecoveryLogInterval = TimeSpan.FromSeconds(5.0);
-    private static readonly TimeSpan PortaPraetoriaTakeoffNudgeDuration = TimeSpan.FromSeconds(2.0);
     private static readonly HashSet<int> LochsThiefDiveSpecialDestinationIndices = new() { 534, 536, 537, 538 };
     private static readonly TimeSpan PortalMountCommandInterval = TimeSpan.FromSeconds(3.0);
     private static readonly TimeSpan PortalDismountCommandInterval = TimeSpan.FromSeconds(2.0);
@@ -1102,8 +1096,6 @@ public class StateManager : IDisposable
             autoMoveActive = false;
         }
 
-        ResetPortaPraetoriaTakeoffNudge($"{source}[OutdoorHold] {reason}", stopAutomove: true);
-
         if (descentInProgress)
         {
             CommandHelper.SendCommand("/automove off");
@@ -1632,7 +1624,6 @@ public class StateManager : IDisposable
 
     private void StopMovementForAcceptedPartyTeleportOffer()
     {
-        ResetPortaPraetoriaTakeoffNudge("[PartyTeleport] movement stop", stopAutomove: true);
         CommandHelper.SendCommand("/automove off");
         autoMoveActive = false;
         descentMode = false;
@@ -1691,7 +1682,6 @@ public class StateManager : IDisposable
             teleportLoadingClearedAt = DateTime.MinValue;
         }
 
-        var portaPraetoriaNudgeHadMovement = portaPraetoriaTakeoffNudgeActive;
         ResetPortalApproachTrackingForAreaChange();
         ResetAllCameraResetBeforeInteractTracking();
         stateStartTime = DateTime.Now; // Don't timeout while loading
@@ -1700,7 +1690,6 @@ public class StateManager : IDisposable
             return;
 
         var hadMovement = autoMoveActive
-            || portaPraetoriaNudgeHadMovement
             || descentInProgress
             || descentMode
             || underwaterTargetPosition != Vector3.Zero
@@ -1718,7 +1707,6 @@ public class StateManager : IDisposable
             _plugin.NavigationService.StopNavigation();
 
         CommandHelper.SendCommand("/automove off");
-        ResetPortaPraetoriaTakeoffNudge("[BetweenAreas] area load", stopAutomove: false);
         autoMoveActive = false;
         descentInProgress = false;
         descentMode = false;
@@ -3344,18 +3332,13 @@ public class StateManager : IDisposable
         if (hasCurrentTerritoryFlag)
         {
             _plugin.AddDebugLog("[Flying] vnav flyto failed - current AgentMap flag is present in-zone, falling back to /vnav flyflag.");
-            if (_plugin.NavigationService.State != NavigationState.Idle)
-                _plugin.NavigationService.StopNavigation();
             _plugin.NavigationService.FlyToFlag();
             StateDetail = "Flying to current map flag after vnav flyto failure...";
         }
         else if (activeTargets.NavigationTarget != Vector3.Zero)
         {
             _plugin.AddDebugLog(
-                $"[Flying] Suppressed /vnav flyflag fallback because no current in-zone AgentMap flag exists; " +
-                $"reissuing explicit XYZ target {FormatVectorCompact(activeTargets.NavigationTarget)}.");
-            if (_plugin.NavigationService.State != NavigationState.Idle)
-                _plugin.NavigationService.StopNavigation();
+                $"[Flying] vnav flyto failed but no current in-zone AgentMap flag exists - reissuing explicit XYZ target {FormatVectorCompact(activeTargets.NavigationTarget)}.");
             _plugin.NavigationService.FlyToPosition(activeTargets.NavigationTarget, force: true);
             StateDetail = "Reissuing explicit XYZ after vnav flyto failure...";
         }
@@ -4291,128 +4274,6 @@ public class StateManager : IDisposable
     {
         return _plugin.NavigationService.IsMounted()
             || Plugin.Condition[ConditionFlag.InFlight];
-    }
-
-    private bool IsPortaPraetoriaTakeoffNudgeLocation()
-    {
-        return Plugin.ClientState.TerritoryType == LochsTerritoryId
-            && CurrentLocation?.TerritoryId == LochsTerritoryId
-            && CurrentLocation.NearestAetheryteId == PortaPraetoriaAetheryteId;
-    }
-
-    private void QueuePortaPraetoriaTakeoffNudgeIfNeeded(uint currentTerritory, uint expectedTerritory)
-    {
-        if (currentTerritory != LochsTerritoryId ||
-            expectedTerritory != LochsTerritoryId ||
-            CurrentLocation?.NearestAetheryteId != PortaPraetoriaAetheryteId ||
-            _plugin.NavigationService.LastTeleportAetheryteId != PortaPraetoriaAetheryteId)
-        {
-            return;
-        }
-
-        portaPraetoriaTakeoffNudgePending = true;
-        portaPraetoriaTakeoffNudgeActive = false;
-        portaPraetoriaTakeoffNudgeStartedAt = DateTime.MinValue;
-        _plugin.AddDebugLog("[PortaPraetoria] Teleport arrival confirmed; queued takeoff nudge after mount/party wait.");
-    }
-
-    private bool TryHandlePortaPraetoriaTakeoffNudge(
-        Vector3 currentPos,
-        Vector3 landingTarget,
-        string basis,
-        string destinationText,
-        string zoneName)
-    {
-        if (!portaPraetoriaTakeoffNudgePending && !portaPraetoriaTakeoffNudgeActive)
-            return false;
-
-        if (stateActionIssued && !portaPraetoriaTakeoffNudgeActive)
-        {
-            ResetPortaPraetoriaTakeoffNudge("[PortaPraetoria] flight nav already issued", stopAutomove: true);
-            return false;
-        }
-
-        if (!IsPortaPraetoriaTakeoffNudgeLocation())
-        {
-            ResetPortaPraetoriaTakeoffNudge("[PortaPraetoria] no longer at Porta Praetoria route", stopAutomove: true);
-            return false;
-        }
-
-        if (currentPos == Vector3.Zero || landingTarget == Vector3.Zero)
-        {
-            StateDetail = "Porta Praetoria takeoff nudge waiting for map target...";
-            return true;
-        }
-
-        var distanceToTarget = CalculateXZDistance(currentPos, landingTarget);
-        if (distanceToTarget <= GetCurrentMapLandingHoldRange())
-        {
-            ResetPortaPraetoriaTakeoffNudge("[PortaPraetoria] target already within landing range", stopAutomove: true);
-            return false;
-        }
-
-        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
-                      Plugin.Condition[ConditionFlag.BetweenAreas51];
-        var player = Plugin.ObjectTable.LocalPlayer;
-        var ready = !loading &&
-                    player != null &&
-                    !player.IsCasting &&
-                    !Plugin.Condition[ConditionFlag.Casting] &&
-                    !Plugin.Condition[ConditionFlag.Mounting71] &&
-                    _plugin.NavigationService.IsMounted();
-        if (!ready)
-        {
-            StateDetail = "Porta Praetoria takeoff nudge waiting for mounted player readiness...";
-            return true;
-        }
-
-        var now = DateTime.Now;
-        if (!portaPraetoriaTakeoffNudgeActive)
-        {
-            portaPraetoriaTakeoffNudgeActive = true;
-            portaPraetoriaTakeoffNudgeStartedAt = now;
-            CommandHelper.SendCommand($"/target \"{PortaPraetoriaTakeoffNudgeTargetName}\"");
-            CommandHelper.SendCommand("/lockon");
-            CommandHelper.SendCommand("/automove on");
-            _plugin.AddDebugLog(
-                $"[PortaPraetoria] Starting takeoff nudge: /target \"{PortaPraetoriaTakeoffNudgeTargetName}\", /lockon, /automove on; " +
-                $"target={destinationText} - {zoneName}; basis={basis}; distance={distanceToTarget:F1}y.");
-        }
-
-        var elapsed = now - portaPraetoriaTakeoffNudgeStartedAt;
-        if (elapsed < PortaPraetoriaTakeoffNudgeDuration)
-        {
-            var remaining = PortaPraetoriaTakeoffNudgeDuration - elapsed;
-            StateDetail = $"Porta Praetoria takeoff nudge toward {PortaPraetoriaTakeoffNudgeTargetName} ({remaining.TotalSeconds:F1}s)...";
-            return true;
-        }
-
-        CommandHelper.SendCommand("/automove off");
-        _plugin.AddDebugLog(
-            $"[PortaPraetoria] Takeoff nudge complete: /automove off after {elapsed.TotalSeconds:F1}s; normal vnav flight may start next tick.");
-        ClearPortaPraetoriaTakeoffNudge();
-        StateDetail = "Porta Praetoria takeoff nudge complete; preparing vnav flight...";
-        return true;
-    }
-
-    private void ClearPortaPraetoriaTakeoffNudge()
-    {
-        portaPraetoriaTakeoffNudgePending = false;
-        portaPraetoriaTakeoffNudgeActive = false;
-        portaPraetoriaTakeoffNudgeStartedAt = DateTime.MinValue;
-    }
-
-    private void ResetPortaPraetoriaTakeoffNudge(string reason, bool stopAutomove)
-    {
-        var hadNudge = portaPraetoriaTakeoffNudgePending || portaPraetoriaTakeoffNudgeActive;
-        if (!hadNudge)
-            return;
-
-        if (portaPraetoriaTakeoffNudgeActive && stopAutomove)
-            CommandHelper.SendCommand("/automove off");
-
-        ClearPortaPraetoriaTakeoffNudge();
-        _plugin.AddDebugLog($"{reason}; reset Porta Praetoria takeoff nudge.");
     }
 
     private void ResetTeleportLifecycleTracking()
@@ -8853,7 +8714,6 @@ public class StateManager : IDisposable
 
         if (!stateActionIssued)
         {
-            ResetPortaPraetoriaTakeoffNudge("[Teleporting] starting teleport", stopAutomove: true);
             if (CurrentLocation == null || CurrentLocation.NearestAetheryteId == 0)
             {
                 HandleError("No aetheryte ID for teleport.");
@@ -8993,7 +8853,6 @@ public class StateManager : IDisposable
             }
         }
 
-        QueuePortaPraetoriaTakeoffNudgeIfNeeded(currentTerritory, expectedTerritory);
         TransitionTo(BotState.Mounting, "Arrived! Mounting up...");
     }
 
@@ -9270,16 +9129,6 @@ public class StateManager : IDisposable
         var nav = _plugin.NavigationService;
         var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         var activeNavTargets = ResolveOverworldNavigationTargets();
-
-        if (TryHandlePortaPraetoriaTakeoffNudge(
-                currentPos,
-                activeNavTargets.LandingTarget,
-                activeNavTargets.Basis,
-                activeNavTargets.DestinationText,
-                activeNavTargets.ZoneName))
-        {
-            return;
-        }
 
         if (TryRecoverThiefWaterTravelPosture(
                 isDiving,
@@ -10312,7 +10161,6 @@ public class StateManager : IDisposable
     {
         SetCombatAutomationForCombatState(inCombat: true, "combat start");
         SendCombatMovementForbidOn(); // Keep this in mind for later. we may want to disable this have to see how it behaves in certain situations haha.
-        ResetPortaPraetoriaTakeoffNudge("[Combat] combat start", stopAutomove: true);
         ResetOpeningChestFlagFallback("combat start", logIfActive: true);
         ResetPortalGroundApproachTracking(resetFailure: true);
         lastCombatEndTime = DateTime.MinValue; // Reset combat end time
@@ -14328,20 +14176,6 @@ public class StateManager : IDisposable
         var resetOpeningChestLifecycle = ShouldResetOpeningChestLifecycleForTransition(newState);
         if (newState == BotState.Error)
             ResetAdsRepairHandoffTracking();
-
-        if (newState == BotState.Teleporting && prev != BotState.Teleporting)
-            ResetPortaPraetoriaTakeoffNudge("[TransitionTo] new teleport", stopAutomove: true);
-
-        if (newState is BotState.Idle
-            or BotState.Error
-            or BotState.Completed
-            or BotState.InDungeon
-            or BotState.DungeonCombat
-            or BotState.DungeonLooting
-            or BotState.DungeonProgressing)
-        {
-            ResetPortaPraetoriaTakeoffNudge($"[TransitionTo] state entered {newState}", stopAutomove: true);
-        }
 
         if (newState == BotState.Teleporting || prev == BotState.Teleporting)
             ResetTeleportLifecycleTracking();
