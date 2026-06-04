@@ -288,6 +288,16 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
+        var teleportDelay = Math.Clamp(configuration.PartyTeleportDelaySeconds, 0, 300);
+        ImGui.SetNextItemWidth(80f);
+        if (ImGui.InputInt("Time to wait before teleporting (s)##PartyTeleportDelaySeconds", ref teleportDelay))
+        {
+            configuration.PartyTeleportDelaySeconds = Math.Clamp(teleportDelay, 0, 300);
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Extra delay before sending the map teleport command after the map target is resolved.");
+
         if (ImGui.Button("OPEN ADS LOOT OPTIONS"))
             OpenAdsLootOptions();
 

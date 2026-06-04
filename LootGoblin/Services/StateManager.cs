@@ -236,6 +236,7 @@ public class StateManager : IDisposable
     private int lastLoggedVbmForbiddenZonesCount;
     private bool betweenAreasMovementStopped; // Stop LootGoblin-owned movement once per loading screen
     private DateTime teleportCommandIssuedAt = DateTime.MinValue;
+    private DateTime teleportDelayStartedAt = DateTime.MinValue;
     private Vector3 teleportOriginPosition = Vector3.Zero;
     private bool teleportSawBetweenAreas;
     private DateTime teleportLastLoadingAt = DateTime.MinValue;
@@ -834,6 +835,13 @@ public class StateManager : IDisposable
         if (State == BotState.DetectingLocation && _plugin.InventoryService.HasTreasureMapKeyItem())
         {
             // Active key-item recovery has its own bounded timer in TickDetectingLocation.
+            stateStartTime = DateTime.Now;
+            return;
+        }
+
+        if (State == BotState.Teleporting && !stateActionIssued && teleportDelayStartedAt != DateTime.MinValue)
+        {
+            // Pre-command delay should not consume the existing teleport timeout window.
             stateStartTime = DateTime.Now;
             return;
         }
@@ -4418,6 +4426,7 @@ public class StateManager : IDisposable
     private void ResetTeleportLifecycleTracking()
     {
         teleportCommandIssuedAt = DateTime.MinValue;
+        teleportDelayStartedAt = DateTime.MinValue;
         teleportOriginPosition = Vector3.Zero;
         teleportSawBetweenAreas = false;
         teleportLastLoadingAt = DateTime.MinValue;
@@ -8859,11 +8868,17 @@ public class StateManager : IDisposable
                 HandleError("No aetheryte ID for teleport.");
                 return;
             }
+
+            var delaySeconds = Math.Clamp(_plugin.Configuration.PartyTeleportDelaySeconds, 0, 300);
+            if (delaySeconds > 0 && !HasTeleportDelayElapsed(delaySeconds))
+                return;
+
             teleportCommandIssuedAt = now;
             teleportOriginPosition = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
             teleportSawBetweenAreas = false;
             teleportLastLoadingAt = DateTime.MinValue;
             teleportLoadingClearedAt = DateTime.MinValue;
+            teleportDelayStartedAt = DateTime.MinValue;
             nav.TeleportToAetheryte(CurrentLocation.NearestAetheryteId);
             if (nav.State == NavigationState.Error && TryDeferTeleportCombatError(nav.StateDetail))
                 return;
@@ -8995,6 +9010,20 @@ public class StateManager : IDisposable
 
         QueuePortaPraetoriaTakeoffNudgeIfNeeded(currentTerritory, expectedTerritory);
         TransitionTo(BotState.Mounting, "Arrived! Mounting up...");
+    }
+
+    private bool HasTeleportDelayElapsed(int delaySeconds)
+    {
+        var now = DateTime.Now;
+        if (teleportDelayStartedAt == DateTime.MinValue)
+            teleportDelayStartedAt = now;
+
+        var elapsed = now - teleportDelayStartedAt;
+        if (elapsed.TotalSeconds >= delaySeconds)
+            return true;
+
+        StateDetail = $"Waiting before teleporting... ({elapsed.TotalSeconds:F0}s / {delaySeconds}s)";
+        return false;
     }
 
     private void TickMounting()

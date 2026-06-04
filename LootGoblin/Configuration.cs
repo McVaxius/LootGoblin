@@ -65,6 +65,8 @@ public class Configuration : IPluginConfiguration
     public static List<string> CreateDefaultLandingOrDutyCommandTriggers() => new(LandingOrDutyCommandTriggerDefaultValues);
     public static List<string> CreateDefaultFinishCommandTriggers() => new(FinishCommandTriggerDefaultValues);
 
+    private int partyTeleportDelaySeconds = 0;
+
     public int Version { get; set; } = 0;
 
     public bool IsConfigWindowMovable { get; set; } = true;
@@ -83,6 +85,11 @@ public class Configuration : IPluginConfiguration
     public bool WaitForPartyForThiefMapsUnderwater { get; set; } = true;
     public bool RequireAllMounted { get; set; } = true;
     public int PartyWaitTimeout { get; set; } = 60;
+    public int PartyTeleportDelaySeconds
+    {
+        get => partyTeleportDelaySeconds;
+        set => partyTeleportDelaySeconds = Math.Clamp(value, 0, 300);
+    }
     public bool PartyWaitBeforeDismount { get; set; } = false;
     public bool PartyWaitBeforeDismountUseCountThreshold { get; set; } = false;
     public int PartyWaitBeforeDismountRequiredOthers { get; set; } = 7;
@@ -139,6 +146,7 @@ public class Configuration : IPluginConfiguration
 
     public void Save()
     {
+        PartyTeleportDelaySeconds = Math.Clamp(PartyTeleportDelaySeconds, 0, 300);
         Plugin.PluginInterface.SavePluginConfig(this);
     }
 
