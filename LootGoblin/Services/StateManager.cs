@@ -4079,6 +4079,8 @@ public class StateManager : IDisposable
             StateDetail = $"Landing by /mount toggle... ({dismountElapsed:F0}s)";
             return true;
         }
+        if (Plugin.Condition[ConditionFlag.Mounting71] || Plugin.Condition[ConditionFlag.InFlight])
+            return true;
 
         if (dismountAttemptStart == DateTime.MinValue)
         {
