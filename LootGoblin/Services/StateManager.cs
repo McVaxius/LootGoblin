@@ -1005,7 +1005,7 @@ public class StateManager : IDisposable
     private bool TryGetOutdoorMapFlowHoldReason(out string reason)
     {
         var joinedFate = _plugin.FateSyncService.TryGetJoinedFateId(out var fateId);
-        if (Plugin.Condition[ConditionFlag.InCombat])
+        if (Plugin.Condition[ConditionFlag.InCombat] && !IsMountedOrActualInFlight())
         {
             reason = joinedFate
                 ? $"in combat during joined FATE {fateId}"
