@@ -4055,41 +4055,40 @@ public class StateManager : IDisposable
             return false;
 
         var now = DateTime.Now;
-        if (TryHoldForOverworldMapContentPartyWait(10.0))
-            return true;
-
-        if (_plugin.NavigationService.IsMounted())
+        if (dismountAttemptStart == DateTime.MinValue)
         {
-            var waitForPartyDismount = _plugin.Configuration.PartyWaitBeforeDismount;
+            dismountAttemptStart = now;
+            stateActionIssued = true;
+            _plugin.NavigationService.StopNavigation();
             _plugin.AddDebugLog(
-                $"[Dismount] PartyWaitBeforeDismount={waitForPartyDismount}, LandingMode={currentLandingMode}, BypassForDive=False");
+                $"{reason}: landing phase ready via {landingBasis}; landingXZ={xzDist:F1}y; " +
+                $"current={FormatVectorCompact(currentPos)}; landingTarget={FormatVectorCompact(landingTarget)}");
+        }
 
-            if (dismountAttemptStart == DateTime.MinValue)
-            {
-                dismountAttemptStart = now;
-                stateActionIssued = true;
-                _plugin.NavigationService.StopNavigation();
-                _plugin.AddDebugLog(
-                    $"{reason}: landing phase ready via {landingBasis}; landingXZ={xzDist:F1}y; " +
-                    $"current={FormatVectorCompact(currentPos)}; landingTarget={FormatVectorCompact(landingTarget)}");
-            }
+        if (TryHoldForOverworldMapContentPartyWait(10.0))
+        {
+            if (!descentInProgress)
+                StartSafeDescent($"{reason} party wait");
+            return true;
+        }
 
+        if (descentInProgress)
+        {
+            GameHelpers.KeyRelease(VirtualKey.CONTROL);
+            GameHelpers.KeyRelease(VirtualKey.SPACE);
+            descentInProgress = false;
+        }
+
+        if (Plugin.Condition[ConditionFlag.Mounted] || Plugin.Condition[ConditionFlag.InFlight])
+        {
             var dismountElapsed = (now - dismountAttemptStart).TotalSeconds;
             _mountService.TryLandingToggle();
             StateDetail = $"Landing by /mount toggle... ({dismountElapsed:F0}s)";
             return true;
         }
-        if (Plugin.Condition[ConditionFlag.Mounting71] || Plugin.Condition[ConditionFlag.InFlight])
-            return true;
 
-        if (dismountAttemptStart == DateTime.MinValue)
-        {
-            dismountAttemptStart = now;
-            stateActionIssued = true;
-            _plugin.AddDebugLog(
-                $"{reason}: already unmounted at map location via {landingBasis}; landingXZ={xzDist:F1}y; " +
-                $"current={FormatVectorCompact(currentPos)}; landingTarget={FormatVectorCompact(landingTarget)}");
-        }
+        if (Plugin.Condition[ConditionFlag.Mounting71])
+            return true;
 
         if (digIssuedThisMap)
         {

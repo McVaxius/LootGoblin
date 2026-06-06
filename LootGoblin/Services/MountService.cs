@@ -91,7 +91,7 @@ public class MountService
         if (Environment.TickCount64 < _landingToggleCooldownMs)
             return;
 
-        if (!IsMounted())
+        if (!IsMounted() && !IsFlying())
             return;
 
         _landingToggleCooldownMs = Environment.TickCount64 + 1000;
