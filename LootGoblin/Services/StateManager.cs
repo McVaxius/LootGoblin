@@ -178,6 +178,7 @@ public class StateManager : IDisposable
     private DateTime lastOpeningChestTargetCommandTime = DateTime.MinValue; // Throttle /target fallback attempts
     private DateTime openingChestMissingCofferRecoveryStartedAt = DateTime.MinValue; // Bounds no-object recovery after dig
     private DateTime lastOpeningChestRecoveryDigTime = DateTime.MinValue; // Throttle recovery /gaction dig retries
+    private string openingChestFlagRecoveryTargetLogKey = string.Empty; // One-shot recovery target source log per resolved target
     private int openingChestRecoveryDigRetryCount; // Bounded retry count for missing coffer after dig
     private int openingChestInteractionAttemptCount; // Cycles coffer interaction methods
     private uint openingChestInteractionEntityId; // Coffer currently being interacted with
@@ -6844,6 +6845,7 @@ public class StateManager : IDisposable
         ResetOpeningChestCofferApproachTracking();
         ResetOpeningChestCofferWalkFailure();
         ResetOpeningChestFlagFallback("opening chest lifecycle reset");
+        openingChestFlagRecoveryTargetLogKey = string.Empty;
         ResetOpeningChestMissingCofferRecoveryState();
         ResetOpeningChestInteractionTracking();
     }
@@ -15835,7 +15837,28 @@ public class StateManager : IDisposable
         if (player == null)
             return false;
 
-        flagPosition = new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z);
+        var resolvedTargets = ResolveOverworldNavigationTargets();
+        string targetSource;
+        if (resolvedTargets.LandingTarget != Vector3.Zero)
+        {
+            flagPosition = resolvedTargets.LandingTarget;
+            targetSource = $"resolved landing XYZ ({resolvedTargets.Basis})";
+        }
+        else
+        {
+            flagPosition = new Vector3(CurrentLocation.X, player.Position.Y, CurrentLocation.Z);
+            targetSource = "safe flag XZ fallback at player Y";
+        }
+
+        var targetLogKey =
+            $"{Plugin.ClientState.TerritoryType}:{targetSource}:{flagPosition.X:F1}:{flagPosition.Z:F1}";
+        if (!string.Equals(openingChestFlagRecoveryTargetLogKey, targetLogKey, StringComparison.Ordinal))
+        {
+            openingChestFlagRecoveryTargetLogKey = targetLogKey;
+            _plugin.AddDebugLog(
+                $"[OpeningChest] Flag recovery target uses {targetSource}: {FormatVectorCompact(flagPosition)}.");
+        }
+
         distToFlag = Vector3.Distance(player.Position, flagPosition);
         return true;
     }
