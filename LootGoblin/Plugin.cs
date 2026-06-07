@@ -61,6 +61,9 @@ public sealed class Plugin : IDalamudPlugin
     public RetainerMapRetrievalService RetainerMapRetrievalService { get; init; }
     public FateSyncService FateSyncService { get; init; }
     public FoodService FoodService { get; init; }
+    public JobSwitchService JobSwitchService { get; init; }
+    public MapAllowanceService MapAllowanceService { get; init; }
+    public GatherBuddyRebornService GatherBuddyRebornService { get; init; }
 
     // IPC
     public MapFlagService MapFlagService { get; init; }
@@ -165,6 +168,9 @@ public sealed class Plugin : IDalamudPlugin
         RetainerMapRetrievalService = new RetainerMapRetrievalService(this, Log);
         FateSyncService = new FateSyncService(this);
         FoodService = new FoodService(this);
+        JobSwitchService = new JobSwitchService(this, Log);
+        MapAllowanceService = new MapAllowanceService(this, Log);
+        GatherBuddyRebornService = new GatherBuddyRebornService(this, PluginInterface, Log);
 
         // Auto-update community data on login
         ClientState.Login += OnLogin;
@@ -234,6 +240,9 @@ public sealed class Plugin : IDalamudPlugin
         AdsStatusService.Dispose();
         AdsReflectionIpcService.Dispose();
         RetainerMapRetrievalService.Dispose();
+        GatherBuddyRebornService.Dispose();
+        MapAllowanceService.Dispose();
+        JobSwitchService.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
         CommandManager.RemoveHandler(CommandAlias);
@@ -399,6 +408,7 @@ public sealed class Plugin : IDalamudPlugin
         MapFlagService.CheckAvailability(logStatus);
         TreasureMapLocationService.CheckAvailability(logStatus);
         RotationPluginIPC.CheckAvailability(logStatus);
+        GatherBuddyRebornService.CheckAvailability(logStatus);
     }
 
     private IReadOnlyList<uint> GetCachedRetainerRunnableMapIds()
@@ -680,7 +690,17 @@ public sealed class Plugin : IDalamudPlugin
             changed = true;
         }
 
+        if (configuration.Version < 7)
+        {
+            configuration.SelectedCombatJobId = 0;
+            configuration.SelectedGatherJobId = 0;
+            configuration.GatherEnabledMapTypes ??= new List<uint>();
+            configuration.Version = 7;
+            changed = true;
+        }
+
         configuration.NormalizeConfiguredMapRuns();
+        configuration.NormalizeConfiguredJobAndGatherMaps();
 
         if (isNewConfiguration || configuration.LandingOrDutyCommandTriggers == null)
         {

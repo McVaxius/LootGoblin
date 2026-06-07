@@ -43,19 +43,17 @@ internal enum SaddlebagRetrievalStep
     Confirming,
 }
 
+internal enum MapGatherStep
+{
+    Idle,
+    SwitchingToGatherJob,
+    StartingGatherBuddy,
+    WaitingForMap,
+    SwitchingBack,
+}
+
 public class StateManager : IDisposable
 {
-    private readonly struct OverworldLandingPartyWaitResult
-    {
-        public bool CanProceed { get; init; }
-        public bool SnapshotValid { get; init; }
-        public int NearbyOthers { get; init; }
-        public int RequiredOthers { get; init; }
-        public int TotalOthers { get; init; }
-        public int SameZoneFarCount { get; init; }
-        public int OutOfZoneCount { get; init; }
-    }
-
     private readonly record struct ActiveMapTargetKey(uint EventItemId, uint MapItemId);
     private readonly record struct CompletedKeyItemStaleState(
         bool HasCompletionEvidence,
@@ -118,6 +116,17 @@ public class StateManager : IDisposable
     private DateTime lastMapScanTime = DateTime.MinValue;
     private int mapScanCounter = 0; // Counter for reducing log spam
     private bool stateActionIssued;
+    private bool startCombatJobSwitchIssued;
+    private DateTime startCombatJobSwitchStartedAt = DateTime.MinValue;
+    private DateTime startCombatJobLastDismountAttemptAt = DateTime.MinValue;
+    private MapGatherStep mapGatherStep = MapGatherStep.Idle;
+    private uint mapGatherTargetItemId;
+    private string mapGatherTargetName = string.Empty;
+    private int mapGatherInitialInventoryCount;
+    private JobSnapshot mapGatherReturnJob;
+    private DateTime mapGatherStepStartedAt = DateTime.MinValue;
+    private DateTime mapGatherNextStatusAt = DateTime.MinValue;
+    private readonly HashSet<uint> failedGatherMapIdsThisRun = new();
     private Vector3 lastStuckCheckPos; // Position at last stuck check
     private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
     private string overworldRecoveryTargetKey = string.Empty;
@@ -502,6 +511,10 @@ public class StateManager : IDisposable
     private bool? combatAutomationEnabledState;
     private OverworldLandingMode currentLandingMode = OverworldLandingMode.MountToggle;
     private string lastLandingPartyWaitSignature = string.Empty;
+    private string partyProximityGateKey = string.Empty;
+    private string partyProximityGateSignature = string.Empty;
+    private DateTime partyProximityGateStartedAt = DateTime.MinValue;
+    private DateTime lastPartyProximityHeartbeatAt = DateTime.MinValue;
     private DateTime lastPartyMountWaitLogTime = DateTime.MinValue;
     private int waitingForPartyExpectedMemberCount;
     private bool landingCommandsRanThisMap;
@@ -609,6 +622,7 @@ public class StateManager : IDisposable
         { BotState.CyclingAetherytes,   60  },
         { BotState.CyclingMapLocations, 300 },
         { BotState.AlexandriteFarming,  300 },
+        { BotState.GatheringMap,        1200 },
     };
 
     public StateManager(Plugin plugin, IFramework framework, IPluginLog log)
@@ -864,6 +878,12 @@ public class StateManager : IDisposable
         if (elapsed > timeout)
         {
             _plugin.AddDebugLog($"[TIMEOUT] State {State} timed out after {elapsed:F0}s (limit: {timeout}s)");
+            if (State == BotState.GatheringMap)
+            {
+                FailMapGathering($"Map gathering timed out after {timeout}s.");
+                return;
+            }
+
             HandleError($"Timeout in state {State} after {timeout}s.");
         }
     }
@@ -965,6 +985,7 @@ public class StateManager : IDisposable
             case BotState.CyclingAetherytes: TickCyclingAetherytes(); break;
             case BotState.CyclingMapLocations: TickCyclingMapLocations(); break;
             case BotState.AlexandriteFarming: TickAlexandriteFarming(); break;
+            case BotState.GatheringMap:      TickGatheringMap();      break;
             case BotState.Completed:        TickCompleted();        break;
         }
     }
@@ -1768,6 +1789,7 @@ public class StateManager : IDisposable
         var startMountCommandSent = mounted && CommandHelper.TrySendCommand("/mount");
         _plugin.AddDebugLog($"[Start] Preflight dismount attempt: mounted={mounted}, sent={startMountCommandSent}.");
 
+        ResetConfiguredCombatJobSwitch();
         startPreflightReadyAt = DateTime.Now + StartPreflightDelay;
         TransitionTo(BotState.StartPreflight, "Start preflight: cleared map flag, attempted dismount, waiting 1s...");
     }
@@ -1792,8 +1814,10 @@ public class StateManager : IDisposable
     {
         ClearWarning();
         ResetRunCommandTriggers();
+        failedGatherMapIdsThisRun.Clear();
         ClearSelectedMapRunCountDecrement("[Start]");
         ResetSaddlebagRetrieval();
+        ResetMapGathering(cancelGatherBuddy: true);
         ResetStartMapRefresh();
         ResetOpeningChestCofferApproachTracking();
         ResetOpeningChestCofferWalkFailure();
@@ -1904,6 +1928,9 @@ public class StateManager : IDisposable
 
     private void ContinueStartAfterRepair()
     {
+        if (!EnsureConfiguredCombatJob())
+            return;
+
         if (TryRecoverActiveKeyItemMap("[Start]", transitionToDetectingOnActive: true))
             return;
 
@@ -1914,6 +1941,78 @@ public class StateManager : IDisposable
 
         BeginStartMapRefresh();
         TransitionTo(BotState.SelectingMap, "Starting map run - refreshing saddlebag maps...");
+    }
+
+    private bool EnsureConfiguredCombatJob()
+    {
+        var targetJobId = _plugin.Configuration.SelectedCombatJobId;
+        if (targetJobId == 0)
+        {
+            ResetConfiguredCombatJobSwitch();
+            return true;
+        }
+
+        var currentJobId = _plugin.JobSwitchService.GetCurrentClassJobId();
+        if (currentJobId == targetJobId)
+        {
+            ResetConfiguredCombatJobSwitch();
+            return true;
+        }
+
+        if (Plugin.Condition[ConditionFlag.Mounted] || Plugin.Condition[ConditionFlag.Mounting71])
+        {
+            if (DateTime.Now - startCombatJobLastDismountAttemptAt > TimeSpan.FromSeconds(1))
+            {
+                startCombatJobLastDismountAttemptAt = DateTime.Now;
+                CommandHelper.TrySendCommand("/mount");
+            }
+
+            stateStartTime = DateTime.Now;
+            StateDetail = $"Dismounting before combat job switch to {LootGoblin.Models.ClassJobOptions.GetName(targetJobId)}...";
+            return false;
+        }
+
+        if (!CanRunMapGatherAction(out var readyReason))
+        {
+            stateStartTime = DateTime.Now;
+            StateDetail = $"Waiting to switch to combat job: {readyReason}";
+            return false;
+        }
+
+        if (!startCombatJobSwitchIssued)
+        {
+            if (!_plugin.JobSwitchService.TrySwitchToJob(targetJobId, out var detail))
+            {
+                SetWarning(detail);
+                TransitionTo(BotState.Error, $"Could not switch to configured combat job: {detail}");
+                return false;
+            }
+
+            startCombatJobSwitchIssued = true;
+            startCombatJobSwitchStartedAt = DateTime.Now;
+            stateStartTime = DateTime.Now;
+            StateDetail = detail;
+            return false;
+        }
+
+        if (DateTime.Now - startCombatJobSwitchStartedAt > TimeSpan.FromSeconds(10))
+        {
+            var detail = $"Timed out switching to configured combat job {LootGoblin.Models.ClassJobOptions.GetName(targetJobId)}.";
+            SetWarning(detail);
+            TransitionTo(BotState.Error, detail);
+            return false;
+        }
+
+        stateStartTime = DateTime.Now;
+        StateDetail = $"Waiting for combat job switch to {LootGoblin.Models.ClassJobOptions.GetName(targetJobId)}...";
+        return false;
+    }
+
+    private void ResetConfiguredCombatJobSwitch()
+    {
+        startCombatJobSwitchIssued = false;
+        startCombatJobSwitchStartedAt = DateTime.MinValue;
+        startCombatJobLastDismountAttemptAt = DateTime.MinValue;
     }
 
     public void Stop()
@@ -1932,6 +2031,8 @@ public class StateManager : IDisposable
         ResetAdsHandoffTracking(resetStatus: true);
         ResetAdsRepairHandoffTracking();
         _plugin.RetainerMapRetrievalService.Reset();
+        ResetConfiguredCombatJobSwitch();
+        ResetMapGathering(cancelGatherBuddy: true);
         ClearSelectedMapRunCountDecrement("[Stop]");
         ResetSaddlebagRetrieval();
         ResetStartMapRefresh();
@@ -1958,6 +2059,9 @@ public class StateManager : IDisposable
         ResetAdsHandoffTracking(resetStatus: true);
         ResetAdsRepairHandoffTracking();
         _plugin.RetainerMapRetrievalService.Reset();
+        ResetConfiguredCombatJobSwitch();
+        ResetMapGathering(cancelGatherBuddy: true);
+        failedGatherMapIdsThisRun.Clear();
         ClearSelectedMapRunCountDecrement("[ResetAll]");
         ResetSaddlebagRetrieval();
         ResetStartMapRefresh();
@@ -2954,11 +3058,14 @@ public class StateManager : IDisposable
             $"{counts.Values.Sum()} item(s) across {counts.Count} map type(s).");
     }
 
-    private bool TryRetrieveRetainerMap(IReadOnlyCollection<uint> enabledMapIds, string emptyInventoryError)
+    private bool TryRetrieveRetainerMap(IReadOnlyCollection<uint> enabledMapIds, string emptyInventoryError, bool allowGatherFallback = false)
     {
         if (!_plugin.Configuration.EnableRetainerMapRetrieval)
         {
             _plugin.AddDebugLog($"[RetainerMap] Retrieval disabled. {emptyInventoryError}");
+            if (allowGatherFallback && TryStartMapGatherFallback(enabledMapIds, emptyInventoryError))
+                return true;
+
             HandleError(emptyInventoryError);
             return true;
         }
@@ -2986,11 +3093,288 @@ public class StateManager : IDisposable
 
             case RetainerMapRetrievalResult.NotAvailable:
                 _plugin.AddDebugLog($"[RetainerMap] No enabled retainer map available. {emptyInventoryError}");
+                if (allowGatherFallback && TryStartMapGatherFallback(enabledMapIds, emptyInventoryError))
+                    return true;
+
                 HandleError(emptyInventoryError);
                 return true;
         }
 
         return false;
+    }
+
+    private bool TryStartMapGatherFallback(IReadOnlyCollection<uint> enabledMapIds, string fallbackError)
+    {
+        if (_plugin.Configuration.SelectedGatherJobId == 0)
+        {
+            _plugin.AddDebugLog("[Gather] Gather job not configured; skipping map gathering fallback.");
+            return false;
+        }
+
+        if (mapGatherStep != MapGatherStep.Idle)
+            return true;
+
+        var candidates = enabledMapIds
+            .Where(itemId =>
+                !failedGatherMapIdsThisRun.Contains(itemId) &&
+                _plugin.Configuration.IsMapGatherEnabled(itemId) &&
+                TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo) &&
+                mapInfo.IsGatherable)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            _plugin.AddDebugLog("[Gather] No enabled gatherable map fallback candidate.");
+            return false;
+        }
+
+        var targetItemId = candidates[0];
+        var targetName = TreasureMapData.KnownMaps.TryGetValue(targetItemId, out var info)
+            ? info.Name
+            : $"ID {targetItemId}";
+
+        if (!CanRunMapGatherAction(out var readyReason))
+        {
+            StateDetail = $"Waiting to gather {targetName}: {readyReason}";
+            _plugin.AddDebugLog($"[Gather] Fallback deferred: {readyReason}");
+            return true;
+        }
+
+        if (!_plugin.MapAllowanceService.IsAllowanceReady(out var allowanceDetail))
+        {
+            SetWarning($"Skipping map gathering for {targetName}: {allowanceDetail}");
+            _plugin.AddDebugLog($"[Gather] {targetName} skipped: {allowanceDetail}");
+            return false;
+        }
+
+        _plugin.GatherBuddyRebornService.CheckAvailability(logStatus: true);
+        if (!_plugin.GatherBuddyRebornService.IsAvailable)
+        {
+            SetWarning($"Cannot gather {targetName}: {_plugin.GatherBuddyRebornService.StatusText}");
+            _plugin.AddDebugLog($"[Gather] GatherBuddy unavailable. {fallbackError}");
+            return false;
+        }
+
+        if (!_plugin.JobSwitchService.TryCaptureCurrentJob(out mapGatherReturnJob, out var snapshotDetail))
+        {
+            SetWarning($"Cannot gather {targetName}: {snapshotDetail}.");
+            return false;
+        }
+
+        mapGatherTargetItemId = targetItemId;
+        mapGatherTargetName = targetName;
+        mapGatherInitialInventoryCount = _plugin.InventoryService.GetMapCount(targetItemId);
+        mapGatherStepStartedAt = DateTime.Now;
+        mapGatherNextStatusAt = DateTime.MinValue;
+        SetCombatAutomationForCombatState(inCombat: false, "map gathering", force: true);
+        _plugin.NavigationService.StopNavigation(clearFlag: true);
+        _plugin.AddDebugLog(
+            $"[Gather] Starting fallback for {targetName}; initial inventory={mapGatherInitialInventoryCount}; return job={snapshotDetail}.");
+        EnterMapGatherStep(MapGatherStep.SwitchingToGatherJob, $"Switching to gather job for {targetName}...");
+        TransitionTo(BotState.GatheringMap, $"Gathering missing {targetName}...");
+        return true;
+    }
+
+    private void TickGatheringMap()
+    {
+        if (mapGatherTargetItemId == 0)
+        {
+            FailMapGathering("No map gather target is active.");
+            return;
+        }
+
+        var currentCount = _plugin.InventoryService.GetMapCount(mapGatherTargetItemId);
+        if (mapGatherStep != MapGatherStep.SwitchingBack && currentCount > mapGatherInitialInventoryCount)
+        {
+            _plugin.AddDebugLog(
+                $"[Gather] Inventory count confirmed for {mapGatherTargetName}: {mapGatherInitialInventoryCount}->{currentCount}.");
+            EnterMapGatherStep(MapGatherStep.SwitchingBack, $"Gathered {mapGatherTargetName}; switching back...");
+        }
+
+        if (DateTime.Now - mapGatherStepStartedAt > TimeSpan.FromSeconds(90) &&
+            mapGatherStep is MapGatherStep.SwitchingToGatherJob or MapGatherStep.StartingGatherBuddy or MapGatherStep.SwitchingBack)
+        {
+            FailMapGathering($"{mapGatherStep} timed out while gathering {mapGatherTargetName}.");
+            return;
+        }
+
+        switch (mapGatherStep)
+        {
+            case MapGatherStep.SwitchingToGatherJob:
+                TickMapGatherSwitchToGatherJob();
+                break;
+
+            case MapGatherStep.StartingGatherBuddy:
+                TickMapGatherStartGatherBuddy();
+                break;
+
+            case MapGatherStep.WaitingForMap:
+                TickMapGatherWaitingForMap();
+                break;
+
+            case MapGatherStep.SwitchingBack:
+                TickMapGatherSwitchBack();
+                break;
+        }
+    }
+
+    private void TickMapGatherSwitchToGatherJob()
+    {
+        var gatherJobId = _plugin.Configuration.SelectedGatherJobId;
+        if (gatherJobId == 0)
+        {
+            FailMapGathering("Gather job was cleared while gathering.");
+            return;
+        }
+
+        if (!CanRunMapGatherAction(out var readyReason))
+        {
+            StateDetail = $"Waiting to switch to gather job: {readyReason}";
+            return;
+        }
+
+        var currentJob = _plugin.JobSwitchService.GetCurrentClassJobId();
+        if (currentJob == gatherJobId)
+        {
+            EnterMapGatherStep(MapGatherStep.StartingGatherBuddy, $"Starting GatherBuddy Reborn for {mapGatherTargetName}...");
+            return;
+        }
+
+        if (!_plugin.JobSwitchService.TrySwitchToJob(gatherJobId, out var detail))
+        {
+            FailMapGathering($"Could not switch to gather job: {detail}");
+            return;
+        }
+
+        StateDetail = detail;
+    }
+
+    private void TickMapGatherStartGatherBuddy()
+    {
+        if (!_plugin.GatherBuddyRebornService.StartOneShot(mapGatherTargetItemId, mapGatherTargetName, out var detail))
+        {
+            FailMapGathering(detail);
+            return;
+        }
+
+        EnterMapGatherStep(MapGatherStep.WaitingForMap, $"Waiting for GatherBuddy Reborn to gather {mapGatherTargetName}...");
+    }
+
+    private void TickMapGatherWaitingForMap()
+    {
+        if (DateTime.Now >= mapGatherNextStatusAt)
+        {
+            mapGatherNextStatusAt = DateTime.Now.AddSeconds(2);
+            if (_plugin.GatherBuddyRebornService.TryGetAutoGatherStatus(out var status) &&
+                !string.IsNullOrWhiteSpace(status))
+            {
+                StateDetail = $"Gathering {mapGatherTargetName}: {status}";
+            }
+            else
+            {
+                StateDetail = $"Gathering {mapGatherTargetName}...";
+            }
+
+            _plugin.AddDebugLog($"[Gather] {StateDetail}");
+        }
+
+        if (!_plugin.GatherBuddyRebornService.IsAutoGatherEnabled() &&
+            DateTime.Now - mapGatherStepStartedAt > TimeSpan.FromSeconds(10))
+        {
+            FailMapGathering($"GatherBuddy Reborn auto-gather stopped before {mapGatherTargetName} was obtained.");
+        }
+    }
+
+    private void TickMapGatherSwitchBack()
+    {
+        _plugin.GatherBuddyRebornService.Cancel();
+
+        if (!CanRunMapGatherAction(out var readyReason))
+        {
+            StateDetail = $"Waiting to switch back after gathering: {readyReason}";
+            return;
+        }
+
+        if (!_plugin.JobSwitchService.TrySwitchToSnapshot(mapGatherReturnJob, out var detail))
+        {
+            SetWarning($"Gathered {mapGatherTargetName}, but could not switch back to combat job: {detail}");
+            _plugin.AddDebugLog($"[Gather] Switch-back failed: {detail}");
+        }
+        else
+        {
+            _plugin.AddDebugLog($"[Gather] {detail}");
+        }
+
+        var targetName = mapGatherTargetName;
+        failedGatherMapIdsThisRun.Remove(mapGatherTargetItemId);
+        ResetMapGathering(cancelGatherBuddy: false);
+        lastMapScanTime = DateTime.MinValue;
+        RetryCount = 0;
+        CurrentLocation = null;
+        ResetPerMapCommandTriggers();
+        TransitionTo(BotState.SelectingMap, $"Gathered {targetName}; rechecking maps...");
+    }
+
+    private void EnterMapGatherStep(MapGatherStep nextStep, string detail)
+    {
+        mapGatherStep = nextStep;
+        mapGatherStepStartedAt = DateTime.Now;
+        StateDetail = detail;
+        _plugin.AddDebugLog($"[Gather] {detail}");
+    }
+
+    private void FailMapGathering(string detail)
+    {
+        var targetName = string.IsNullOrWhiteSpace(mapGatherTargetName)
+            ? $"ID {mapGatherTargetItemId}"
+            : mapGatherTargetName;
+
+        if (mapGatherTargetItemId != 0)
+            failedGatherMapIdsThisRun.Add(mapGatherTargetItemId);
+
+        _plugin.AddDebugLog($"[Gather] ERROR: {detail}");
+        _plugin.GatherBuddyRebornService.Cancel();
+
+        if (mapGatherReturnJob.ClassJobId != 0)
+        {
+            if (_plugin.JobSwitchService.TrySwitchToSnapshot(mapGatherReturnJob, out var switchDetail))
+                _plugin.AddDebugLog($"[Gather] Best-effort switch-back: {switchDetail}");
+            else
+                _plugin.AddDebugLog($"[Gather] Best-effort switch-back failed: {switchDetail}");
+        }
+
+        ResetMapGathering(cancelGatherBuddy: false);
+        SetWarning($"Could not gather {targetName}: {detail}");
+        HandleError($"Could not gather {targetName}: {detail}");
+    }
+
+    private void ResetMapGathering(bool cancelGatherBuddy)
+    {
+        if (cancelGatherBuddy)
+            _plugin.GatherBuddyRebornService.Cancel();
+
+        mapGatherStep = MapGatherStep.Idle;
+        mapGatherTargetItemId = 0;
+        mapGatherTargetName = string.Empty;
+        mapGatherInitialInventoryCount = 0;
+        mapGatherReturnJob = default;
+        mapGatherStepStartedAt = DateTime.MinValue;
+        mapGatherNextStatusAt = DateTime.MinValue;
+    }
+
+    private bool CanRunMapGatherAction(out string reason)
+    {
+        if (!CanRunSaddlebagAction(out reason))
+            return false;
+
+        if (Plugin.Condition[ConditionFlag.BoundByDuty] || Plugin.Condition[ConditionFlag.BoundByDuty56])
+        {
+            reason = "in duty";
+            return false;
+        }
+
+        reason = "ready";
+        return true;
     }
 
     private static string FormatMapIds(IReadOnlyCollection<uint> mapIds)
@@ -4133,7 +4517,7 @@ public class StateManager : IDisposable
             return false;
         }
 
-        var partyWait = EvaluateOverworldLandingPartyWait(maxDistance);
+        var partyWait = EvaluatePartyProximityGate(maxDistance, "OverworldMapContent");
         if (partyWait.CanProceed)
             return false;
 
@@ -4180,7 +4564,7 @@ public class StateManager : IDisposable
             return false;
         }
 
-        var partyWait = EvaluateOverworldLandingPartyWait(maxDistance);
+        var partyWait = EvaluatePartyProximityGate(maxDistance, "UnderwaterMapContent");
         if (partyWait.CanProceed)
             return false;
 
@@ -4440,14 +4824,14 @@ public class StateManager : IDisposable
         if (partyListCount <= 0)
             return Math.Max(1, _plugin.PartyService.LastValidMemberCount);
 
-        var localPlayerName = Plugin.ObjectTable.LocalPlayer?.Name.TextValue;
-        if (string.IsNullOrWhiteSpace(localPlayerName))
+        var localPlayerEntityId = Plugin.ObjectTable.LocalPlayer?.EntityId ?? 0;
+        if (localPlayerEntityId == 0)
             return Math.Max(partyListCount, _plugin.PartyService.LastValidMemberCount);
 
         for (var i = 0; i < Plugin.PartyList.Length; i++)
         {
             var member = Plugin.PartyList[i];
-            if (member != null && member.Name.TextValue == localPlayerName)
+            if (member != null && member.EntityId == localPlayerEntityId)
                 return Math.Max(partyListCount, _plugin.PartyService.LastValidMemberCount);
         }
 
@@ -4463,10 +4847,12 @@ public class StateManager : IDisposable
             1,
             Math.Max(Math.Max(snapshotCount, priorLastValidMemberCount), EstimateExpectedPartyMemberCount()));
 
-        var mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
-        _plugin.AddDebugLog(
+        var mounted = _plugin.PartyService.PartyMembers.Count(IsLoadedSameTerritoryMounted);
+        var message =
             $"[PartyWait][Mount] Entered wait; expected={waitingForPartyExpectedMemberCount}, " +
-            $"snapshotValid={snapshotValid}, mounted={mounted}/{snapshotCount}.");
+            $"snapshotValid={snapshotValid}, mounted={mounted}/{snapshotCount}.";
+        _log.Info(message);
+        _plugin.AddDebugLog(message);
     }
 
     private bool ShouldHoldSameTerritoryTakeoffForParty(out int mounted, out int total)
@@ -4488,7 +4874,7 @@ public class StateManager : IDisposable
 
         var priorLastValidMemberCount = _plugin.PartyService.LastValidMemberCount;
         var snapshotValid = _plugin.PartyService.UpdatePartyStatus();
-        mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
+        mounted = _plugin.PartyService.PartyMembers.Count(IsLoadedSameTerritoryMounted);
         total = _plugin.PartyService.PartyMembers.Count;
         var expectedTotal = Math.Max(total, Math.Max(priorLastValidMemberCount, EstimateExpectedPartyMemberCount()));
 
@@ -4538,15 +4924,15 @@ public class StateManager : IDisposable
         LogThiefWaterInfo(message);
     }
 
-    private string BuildThiefWaterRemountZoneWaitDetail(IReadOnlyCollection<string> outOfZoneNames)
+    private string BuildThiefWaterRemountZoneWaitDetail(IReadOnlyCollection<string> unavailableNames)
     {
         var total = _plugin.PartyService.PartyMembers.Count;
-        var loaded = Math.Max(0, total - outOfZoneNames.Count);
-        var missingText = outOfZoneNames.Count == 0
+        var loaded = Math.Max(0, total - unavailableNames.Count);
+        var missingText = unavailableNames.Count == 0
             ? "none"
-            : string.Join(", ", outOfZoneNames);
+            : string.Join(", ", unavailableNames);
 
-        return $"Thief-map remount: waiting for party zone load ({loaded}/{total} in zone; missing: {missingText})...";
+        return $"Thief-map remount: waiting for party zone load ({loaded}/{total} loaded in same zone; missing: {missingText})...";
     }
 
     private void ResumeThiefWaterTravelAfterRemount(string detail)
@@ -8339,7 +8725,7 @@ public class StateManager : IDisposable
 
             var enabledForRetainers = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
             _plugin.AddDebugLog($"[SelectingMap] No inventory/saddlebag maps. Checking retainer maps via XADB for {FormatMapIds(enabledForRetainers)}.");
-            if (TryRetrieveRetainerMap(enabledForRetainers, "No maps found in inventory, saddlebags, or retainers."))
+            if (TryRetrieveRetainerMap(enabledForRetainers, "No maps found in inventory, saddlebags, or retainers.", allowGatherFallback: true))
                 return;
 
             return;
@@ -8369,7 +8755,8 @@ public class StateManager : IDisposable
 
             _plugin.AddDebugLog("[SelectingMap] No enabled saddlebag maps. Checking enabled retainer maps via XADB.");
             if (TryRetrieveRetainerMap(enabled,
-                    "No enabled maps in inventory, saddlebags, or retainers. Check map selection in UI."))
+                    "No enabled maps in inventory, saddlebags, or retainers. Check map selection in UI.",
+                    allowGatherFallback: true))
                 return;
 
             return;
@@ -9044,8 +9431,8 @@ public class StateManager : IDisposable
             {
                 thiefWaterRemountRecoveryActive = false;
                 var partySnapshotValid = _plugin.PartyService.UpdatePartyStatus();
-                var outOfZoneNames = _plugin.PartyService.PartyMembers
-                    .Where(member => !member.IsInSameZone)
+                var unavailableNames = _plugin.PartyService.PartyMembers
+                    .Where(member => !PartyGateSemantics.IsLoadedSameTerritory(member.IsLoaded, member.TerritoryStatus))
                     .Select(member => string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name)
                     .OrderBy(name => name, StringComparer.Ordinal)
                     .ToList();
@@ -9065,16 +9452,16 @@ public class StateManager : IDisposable
                 }
 
                 thiefWaterRemountRecoveryZoneWaitActive = true;
-                var missingText = string.Join(", ", outOfZoneNames);
-                var mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
+                var missingText = string.Join(", ", unavailableNames);
+                var mounted = _plugin.PartyService.PartyMembers.Count(IsLoadedSameTerritoryMounted);
                 var total = _plugin.PartyService.PartyMembers.Count;
-                LogThiefWaterInfo(outOfZoneNames.Count > 0
-                    ? $"[Underwater] Remount recovery succeeded; waiting for party before thief-map travel: {mounted}/{total} mounted; out of zone: {missingText}."
+                LogThiefWaterInfo(unavailableNames.Count > 0
+                    ? $"[Underwater] Remount recovery succeeded; waiting for party before thief-map travel: {mounted}/{total} mounted; not loaded in same zone: {missingText}."
                     : $"[Underwater] Remount recovery succeeded; waiting for party to mount before thief-map travel: {mounted}/{total} mounted.");
                 TransitionTo(
                     BotState.WaitingForParty,
-                    outOfZoneNames.Count > 0
-                        ? BuildThiefWaterRemountZoneWaitDetail(outOfZoneNames)
+                    unavailableNames.Count > 0
+                        ? BuildThiefWaterRemountZoneWaitDetail(unavailableNames)
                         : $"Thief-map remount: waiting for party to mount ({mounted}/{total} mounted)...");
                 return;
             }
@@ -9214,7 +9601,7 @@ public class StateManager : IDisposable
         }
 
         var elapsed = (DateTime.Now - stateStartTime).TotalSeconds;
-        var mounted = _plugin.PartyService.PartyMembers.Count(member => member.IsMounted);
+        var mounted = _plugin.PartyService.PartyMembers.Count(IsLoadedSameTerritoryMounted);
         var total = _plugin.PartyService.PartyMembers.Count;
         if (waitingForPartyExpectedMemberCount <= 0 && total > 0)
             waitingForPartyExpectedMemberCount = total;
@@ -9224,18 +9611,18 @@ public class StateManager : IDisposable
         var expectedTotal = waitingForPartyExpectedMemberCount > 0
             ? waitingForPartyExpectedMemberCount
             : EstimateExpectedPartyMemberCount();
-        var outOfZoneNames = _plugin.PartyService.PartyMembers
-            .Where(member => !member.IsInSameZone)
+        var unavailableNames = _plugin.PartyService.PartyMembers
+            .Where(member => !PartyGateSemantics.IsLoadedSameTerritory(member.IsLoaded, member.TerritoryStatus))
             .Select(member => string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
-        var outOfZoneDetail = outOfZoneNames.Count == 0
+        var unavailableDetail = unavailableNames.Count == 0
             ? string.Empty
-            : $"; out of zone: {string.Join(", ", outOfZoneNames)}";
+            : $"; not loaded in same zone: {string.Join(", ", unavailableNames)}";
 
         if (snapshotValid &&
             total >= expectedTotal &&
-            outOfZoneNames.Count == 0 &&
+            unavailableNames.Count == 0 &&
             _plugin.PartyService.AllMembersMounted)
         {
             overworldRecoveryRequiresPartyMountWait = false;
@@ -9259,11 +9646,11 @@ public class StateManager : IDisposable
             StateDetail =
                 $"Waiting for full party snapshot ({total}/{expectedTotal} seen, {mounted}/{total} mounted, {elapsed:F0}s elapsed)...";
         }
-        else if (outOfZoneNames.Count > 0)
+        else if (unavailableNames.Count > 0)
         {
             StateDetail = thiefWaterRemountRecoveryZoneWaitActive
-                ? $"Thief-map remount: waiting for party zone load ({mounted}/{total} mounted, {elapsed:F0}s elapsed{outOfZoneDetail})..."
-                : $"Waiting for party zone load ({mounted}/{total} mounted, {elapsed:F0}s elapsed{outOfZoneDetail})...";
+                ? $"Thief-map remount: waiting for party zone load ({mounted}/{total} mounted, {elapsed:F0}s elapsed{unavailableDetail})..."
+                : $"Waiting for party zone load ({mounted}/{total} mounted, {elapsed:F0}s elapsed{unavailableDetail})...";
         }
         else
         {
@@ -9276,12 +9663,22 @@ public class StateManager : IDisposable
         if (now - lastPartyMountWaitLogTime >= TimeSpan.FromSeconds(10))
         {
             lastPartyMountWaitLogTime = now;
-            var outOfZoneLog = outOfZoneNames.Count == 0
+            var unavailableLog = unavailableNames.Count == 0
                 ? string.Empty
-                : $"; outOfZone={string.Join(", ", outOfZoneNames)}";
+                : $"; unavailable={string.Join(", ", unavailableNames)}";
             var validityLog = snapshotValid ? string.Empty : "; snapshot=invalid";
             var expectedLog = expectedTotal > 0 ? $"; expected={expectedTotal}" : string.Empty;
-            _plugin.AddDebugLog($"[PartyWait][Mount] Waiting {elapsed:F0}s; mounted={mounted}/{total}{expectedLog}{outOfZoneLog}{validityLog}.");
+            var blockerDetails = _plugin.PartyService.PartyMembers
+                .Where(member => !IsLoadedSameTerritoryMounted(member))
+                .Select(FormatPartyMemberClassification)
+                .ToList();
+            var blockersLog = blockerDetails.Count == 0
+                ? string.Empty
+                : $"; blockers={string.Join("; ", blockerDetails)}";
+            var message =
+                $"[PartyWait][Mount] Waiting {elapsed:F0}s; mounted={mounted}/{total}{expectedLog}{unavailableLog}{validityLog}{blockersLog}.";
+            _log.Info(message);
+            _plugin.AddDebugLog(message);
         }
     }
 
@@ -9516,7 +9913,9 @@ public class StateManager : IDisposable
                     $"LandingMode={currentLandingMode}, UnderwaterPartyWait={waitForUnderwaterParty}");
                 if (waitForPartyDismount)
                 {
-                    var partyWait = EvaluateOverworldLandingPartyWait(10.0);
+                    var partyWait = EvaluatePartyProximityGate(
+                        10.0,
+                        IsThiefUnderwaterLandingMode() ? "UnderwaterLanding" : "OverworldLanding");
                     if (!partyWait.CanProceed)
                     {
                         if (IsThiefUnderwaterLandingMode())
@@ -11933,6 +12332,10 @@ public class StateManager : IDisposable
             {
                 _plugin.AddDebugLog("[Completed] Retainer map retrieval disabled.");
             }
+
+            var enabledForGather = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+            if (TryStartMapGatherFallback(enabledForGather, "No runnable maps in inventory, saddlebags, or retainers."))
+                return;
         }
 
         if (TryRunCompletedMapRefreshBeforeDecisions())
@@ -12035,13 +12438,13 @@ public class StateManager : IDisposable
             return true;
         }
 
-        var outOfZoneNames = party.PartyMembers
-            .Where(member => !member.IsInSameZone)
+        var unavailableNames = party.PartyMembers
+            .Where(member => !PartyGateSemantics.IsLoadedSameTerritory(member.IsLoaded, member.TerritoryStatus))
             .Select(member => member.Name)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
 
-        if (outOfZoneNames.Count == 0)
+        if (unavailableNames.Count == 0)
         {
             LogLandingPartyWaitOnce(
                 $"CompletedNextMap:clear:{party.PartyMembers.Count}",
@@ -12049,14 +12452,14 @@ public class StateManager : IDisposable
             return true;
         }
 
-        var loadedCount = party.PartyMembers.Count - outOfZoneNames.Count;
-        var missingText = string.Join(", ", outOfZoneNames);
+        var loadedCount = party.PartyMembers.Count - unavailableNames.Count;
+        var missingText = string.Join(", ", unavailableNames);
         StateDetail =
             $"Waiting for party to load after dungeon ({loadedCount}/{party.PartyMembers.Count} in zone; missing: {missingText})...";
 
         LogLandingPartyWaitOnce(
-            $"CompletedNextMap:block:{string.Join("|", outOfZoneNames)}",
-            $"[PartyWait][CompletedNextMap] Blocking next map; out-of-zone members: {missingText}");
+            $"CompletedNextMap:block:{string.Join("|", unavailableNames)}",
+            $"[PartyWait][CompletedNextMap] Blocking next map; members not loaded in same zone: {missingText}");
 
         return false;
     }
@@ -14350,7 +14753,8 @@ public class StateManager : IDisposable
             or BotState.DungeonProgressing
             or BotState.CyclingAetherytes
             or BotState.CyclingMapLocations
-            or BotState.AlexandriteFarming;
+            or BotState.AlexandriteFarming
+            or BotState.GatheringMap;
 
     private void TransitionTo(BotState newState, string detail)
     {
@@ -14361,6 +14765,9 @@ public class StateManager : IDisposable
 
         if (newState == BotState.Teleporting && prev != BotState.Teleporting)
             ResetPortaPraetoriaTakeoffNudge("[TransitionTo] new teleport", stopAutomove: true);
+
+        if (prev == BotState.GatheringMap && newState != BotState.GatheringMap && mapGatherStep != MapGatherStep.Idle)
+            ResetMapGathering(cancelGatherBuddy: true);
 
         if (newState is BotState.Idle
             or BotState.Error
@@ -14412,6 +14819,7 @@ public class StateManager : IDisposable
         }
         descentInProgress = false;
         lastLandingPartyWaitSignature = string.Empty;
+        ResetPartyProximityGateTracking();
         if (prev == BotState.WaitingForParty || newState == BotState.WaitingForParty)
             lastPartyMountWaitLogTime = DateTime.MinValue;
         if (newState == BotState.WaitingForParty)
@@ -14848,9 +15256,8 @@ public class StateManager : IDisposable
             if (nav.IsMounted())
             {
                 // Check party wait before dismounting
-                if (_plugin.Configuration.PartyWaitBeforeDismount && !ArePartyMembersClose(10.0))
+                if (TryHoldForCycleMapPartyWait(10.0, "CycleMapLocsFlying", "[Flying]"))
                 {
-                    StateDetail = "[Flying] Waiting for party before dismounting...";
                     return;
                 }
                 // On ground but still mounted - dismount
@@ -14966,9 +15373,8 @@ public class StateManager : IDisposable
                 if (nav.IsMounted())
                 {
                     // Check party wait before dismounting
-                    if (_plugin.Configuration.PartyWaitBeforeDismount && !ArePartyMembersClose(10.0))
+                    if (TryHoldForCycleMapPartyWait(10.0, "CycleMapLocsGround", "[Ground]"))
                     {
-                        StateDetail = "[Ground] Waiting for party before dismounting...";
                         return;
                     }
                     _mountService.Dismount();
@@ -15533,241 +15939,185 @@ public class StateManager : IDisposable
         return $"<{value.X:F1}, {value.Y:F1}, {value.Z:F1}>";
     }
 
-    private bool ArePartyMembersClose(double maxDistance)
+    private static bool IsLoadedSameTerritoryMounted(PartyMember member)
+        => PartyGateSemantics.IsLoadedSameTerritoryMounted(
+            member.IsLoaded,
+            member.TerritoryStatus,
+            member.IsMounted);
+
+    private static string FormatPartyMemberClassification(PartyMember member)
     {
-        return EvaluateLandingPartyWait(maxDistance, "CycleMapLocs").CanProceed;
+        var territory = member.TerritoryStatus switch
+        {
+            PartyTerritoryStatus.Same => "same-territory",
+            PartyTerritoryStatus.Different => "out-of-territory",
+            _ => "territory-unknown",
+        };
+        var loaded = member.IsLoaded ? "loaded" : "unloaded";
+        var position = member.PositionSource switch
+        {
+            PartyPositionSource.DirectActor => "position=actor",
+            PartyPositionSource.PartyList => "position=party-list",
+            _ => "position=unresolved",
+        };
+        var mount = member.IsMounted ? "mounted" : "not-mounted";
+        var name = string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name;
+        return $"{name}[{territory}, {loaded}, {position}, {mount}]";
     }
 
-    private OverworldLandingPartyWaitResult EvaluateOverworldLandingPartyWait(double maxDistance)
+    private bool TryHoldForCycleMapPartyWait(double maxDistance, string context, string detailPrefix)
     {
+        if (!_plugin.Configuration.PartyWaitBeforeDismount)
+            return false;
+
+        var result = EvaluatePartyProximityGate(maxDistance, context);
+        if (result.CanProceed)
+            return false;
+
+        StateDetail = $"{detailPrefix} {BuildOverworldLandingPartyWaitDetail(result, maxDistance)}";
+        return true;
+    }
+
+    private PartyProximityResult EvaluatePartyProximityGate(double maxDistance, string context)
+    {
+        var gateKey = BuildPartyProximityGateKey(context);
+        var now = DateTime.Now;
+        if (partyProximityGateKey != gateKey)
+        {
+            partyProximityGateKey = gateKey;
+            partyProximityGateStartedAt = now;
+            partyProximityGateSignature = string.Empty;
+            lastPartyProximityHeartbeatAt = DateTime.MinValue;
+        }
+
+        var elapsed = now - partyProximityGateStartedAt;
+        var timedOut = elapsed >= TimeSpan.FromSeconds(Math.Max(1, _plugin.Configuration.PartyWaitTimeout));
         var party = _plugin.PartyService;
         var snapshotValid = party.UpdatePartyStatus();
-        if (!snapshotValid)
-        {
-            var expectedOthers = Math.Max(0, EstimateExpectedPartyMemberCount() - 1);
-            LogLandingPartyWaitOnce(
-                "OverworldLanding:snapshot-invalid",
-                "[PartyWait][OverworldLanding] Party snapshot unavailable - holding map content");
-            return new OverworldLandingPartyWaitResult
-            {
-                CanProceed = false,
-                SnapshotValid = false,
-                NearbyOthers = 0,
-                RequiredOthers = expectedOthers,
-                TotalOthers = expectedOthers,
-            };
-        }
+        var result = PartyProximityEvaluator.Evaluate(
+            snapshotValid,
+            party.PartyMembers.Select(member => member.ToProximityMember()).ToList(),
+            maxDistance,
+            _plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold,
+            _plugin.Configuration.PartyWaitBeforeDismountRequiredOthers,
+            timedOut);
 
-        if (party.PartyMembers.Count <= 1)
-        {
-            LogLandingPartyWaitOnce("OverworldLanding:solo", "[PartyWait][OverworldLanding] Solo or no party members - map content allowed");
-            return new OverworldLandingPartyWaitResult
-            {
-                CanProceed = true,
-                SnapshotValid = true,
-                NearbyOthers = 0,
-                RequiredOthers = 0,
-                TotalOthers = 0,
-            };
-        }
-
-        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-        if (playerPos == Vector3.Zero)
-        {
-            LogLandingPartyWaitOnce("OverworldLanding:no-local-player", "[PartyWait][OverworldLanding] Local player unavailable - holding map content");
-            return new OverworldLandingPartyWaitResult
-            {
-                CanProceed = false,
-                SnapshotValid = true,
-                NearbyOthers = 0,
-                RequiredOthers = 0,
-                TotalOthers = party.PartyMembers.Count - 1,
-            };
-        }
-
-        var localPlayerName = Plugin.ObjectTable.LocalPlayer?.Name.TextValue;
-        var sameZoneFarDescriptions = new List<string>();
-        var outOfZoneNames = new List<string>();
-        var nearbyOthers = 0;
-        var totalOthers = 0;
-
-        foreach (var member in party.PartyMembers)
-        {
-            if (member.Name == localPlayerName)
-                continue;
-
-            totalOthers++;
-
-            if (!member.IsInSameZone)
-            {
-                outOfZoneNames.Add(member.Name);
-                continue;
-            }
-
-            var dx = playerPos.X - member.Position.X;
-            var dz = playerPos.Z - member.Position.Z;
-            var xzDist = Math.Sqrt(dx * dx + dz * dz);
-            if (xzDist <= maxDistance)
-            {
-                nearbyOthers++;
-                continue;
-            }
-
-            sameZoneFarDescriptions.Add($"{member.Name} is {xzDist:F1}y away (XZ)");
-        }
-
-        var useThreshold = _plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold;
-        var configuredThreshold = Math.Clamp(_plugin.Configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);
-        var requiredOthers = useThreshold ? Math.Min(configuredThreshold, totalOthers) : totalOthers;
-        var canProceed = nearbyOthers >= requiredOthers;
-
-        var farSignature = string.Join("|", sameZoneFarDescriptions.OrderBy(text => text, StringComparer.Ordinal));
-        var outOfZoneSignature = string.Join("|", outOfZoneNames.OrderBy(name => name, StringComparer.Ordinal));
-        var modeSignature = useThreshold ? $"threshold:{requiredOthers}" : "full-party";
-
-        if (!canProceed)
-        {
-            var message =
-                $"[PartyWait][OverworldLanding] Blocking map content; nearby {nearbyOthers}/{totalOthers} within {maxDistance:F1}y, " +
-                $"required {requiredOthers}";
-            if (sameZoneFarDescriptions.Count > 0)
-                message += $"; same-zone far: {string.Join(", ", sameZoneFarDescriptions)}";
-            if (outOfZoneNames.Count > 0)
-                message += $"; out-of-zone: {string.Join(", ", outOfZoneNames)}";
-
-            LogLandingPartyWaitOnce(
-                $"OverworldLanding:block:{modeSignature}:near:{nearbyOthers}:far:{farSignature}:ooz:{outOfZoneSignature}",
-                message);
-        }
-        else
-        {
-            var message =
-                $"[PartyWait][OverworldLanding] Map content allowed; nearby {nearbyOthers}/{totalOthers} within {maxDistance:F1}y, " +
-                $"required {requiredOthers}";
-            if (sameZoneFarDescriptions.Count > 0)
-                message += $"; threshold satisfied with same-zone far members still trailing: {string.Join(", ", sameZoneFarDescriptions)}";
-            if (outOfZoneNames.Count > 0)
-                message += $"; threshold satisfied with out-of-zone members not yet present: {string.Join(", ", outOfZoneNames)}";
-
-            LogLandingPartyWaitOnce(
-                $"OverworldLanding:clear:{modeSignature}:near:{nearbyOthers}:far:{sameZoneFarDescriptions.Count}:ooz:{outOfZoneNames.Count}",
-                message);
-        }
-
-        return new OverworldLandingPartyWaitResult
-        {
-            CanProceed = canProceed,
-            SnapshotValid = true,
-            NearbyOthers = nearbyOthers,
-            RequiredOthers = requiredOthers,
-            TotalOthers = totalOthers,
-            SameZoneFarCount = sameZoneFarDescriptions.Count,
-            OutOfZoneCount = outOfZoneNames.Count,
-        };
+        LogPartyProximityGate(context, result, maxDistance, elapsed, now);
+        return result;
     }
 
-    private string BuildOverworldLandingPartyWaitDetail(OverworldLandingPartyWaitResult result, double maxDistance)
+    private string BuildOverworldLandingPartyWaitDetail(PartyProximityResult result, double maxDistance)
     {
-        if (!result.SnapshotValid)
+        if (!result.SnapshotValid || !result.LocalSnapshotValid)
         {
-            return result.TotalOthers > 0
-                ? $"Waiting for party snapshot before map content (expecting {result.TotalOthers} other players)..."
-                : "Waiting for party snapshot before map content...";
+            var expectedOthers = Math.Max(0, EstimateExpectedPartyMemberCount() - 1);
+            return expectedOthers > 0
+                ? $"Waiting for valid party snapshot before map content (expecting {expectedOthers} other players)..."
+                : "Waiting for valid party snapshot before map content...";
         }
+
+        if (result.TimedOut && result.ResolvedSameTerritoryCount == 0)
+            return "Party wait timeout reached; waiting for at least one resolved same-territory party member...";
 
         var summary =
             $"Waiting for party ({result.NearbyOthers}/{result.TotalOthers} nearby within {maxDistance:F0}y, " +
             $"need {result.RequiredOthers} before map content";
 
-        if (result.SameZoneFarCount > 0)
-            summary += $", {result.SameZoneFarCount} far";
+        if (result.SameTerritoryFarCount > 0)
+            summary += $", {result.SameTerritoryFarCount} same-territory far";
 
-        if (result.OutOfZoneCount > 0)
-            summary += $", {result.OutOfZoneCount} out-of-zone";
+        if (result.UnresolvedCount > 0)
+            summary += $", {result.UnresolvedCount} unresolved";
+
+        if (result.OutOfTerritoryCount > 0)
+            summary += $", {result.OutOfTerritoryCount} out-of-territory";
+
+        if (result.TimedOut)
+            summary += ", guarded recovery active";
 
         return summary + ")...";
     }
 
-    private (bool CanProceed, int NearbyCount, int TotalSameZone, int IgnoredOutOfZone) EvaluateLandingPartyWait(double maxDistance, string context)
+    private string BuildPartyProximityGateKey(string context)
     {
-        var party = _plugin.PartyService;
-        var snapshotValid = party.UpdatePartyStatus();
-        if (!snapshotValid)
+        var target = CurrentLocation == null
+            ? "none"
+            : $"{CurrentLocation.TerritoryId}:{CurrentLocation.X:F1}:{CurrentLocation.Y:F1}:{CurrentLocation.Z:F1}";
+        return $"{context}|state={State}|map={SelectedMapItemId}|territory={Plugin.ClientState.TerritoryType}|target={target}|mode={currentLandingMode}";
+    }
+
+    private void LogPartyProximityGate(
+        string context,
+        PartyProximityResult result,
+        double maxDistance,
+        TimeSpan elapsed,
+        DateTime now)
+    {
+        var memberDetails = result.Members
+            .Where(evaluation => !evaluation.Member.IsLocalPlayer)
+            .Select(FormatPartyProximityMember)
+            .ToList();
+        var memberSignature = string.Join(
+            "|",
+            result.Members
+                .Where(evaluation => !evaluation.Member.IsLocalPlayer)
+                .Select(evaluation =>
+                    $"{evaluation.Member.ContentId}:{evaluation.Member.EntityId}:{evaluation.Status}:{evaluation.XzDistance:F1}:{evaluation.Member.IsLoaded}:{evaluation.Member.PositionSource}"));
+        var signature =
+            $"{context}:{result.CanProceed}:{result.SnapshotValid}:{result.TimedOut}:{result.GuardedRecoveryUsed}:" +
+            $"{result.NearbyOthers}:{result.RequiredOthers}:{result.TotalOthers}:{memberSignature}";
+        var heartbeatDue = !result.CanProceed &&
+                           now - lastPartyProximityHeartbeatAt >= TimeSpan.FromSeconds(10);
+        if (partyProximityGateSignature == signature && !heartbeatDue)
+            return;
+
+        partyProximityGateSignature = signature;
+        lastPartyProximityHeartbeatAt = now;
+        var mode = _plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold
+            ? "threshold"
+            : "full-party";
+        var outcome = result.CanProceed
+            ? result.GuardedRecoveryUsed ? "ALLOW guarded-recovery" : "ALLOW"
+            : "HOLD";
+        var detail = memberDetails.Count == 0 ? "none" : string.Join("; ", memberDetails);
+        var message =
+            $"[PartyWait][{context}] {outcome}; elapsed={elapsed.TotalSeconds:F0}s; timeout={_plugin.Configuration.PartyWaitTimeout}s; " +
+            $"mode={mode}; nearby={result.NearbyOthers}/{result.TotalOthers}; required={result.RequiredOthers}; " +
+            $"resolvedSameTerritory={result.ResolvedSameTerritoryCount}; range={maxDistance:F1}y XZ; members={detail}";
+
+        _log.Info(message);
+        _plugin.AddDebugLog(message);
+    }
+
+    private static string FormatPartyProximityMember(PartyProximityMemberEvaluation evaluation)
+    {
+        var member = evaluation.Member;
+        var territory = member.TerritoryStatus switch
         {
-            var expectedOthers = Math.Max(0, EstimateExpectedPartyMemberCount() - 1);
-            LogLandingPartyWaitOnce($"{context}:snapshot-invalid", $"[PartyWait][{context}] Party snapshot unavailable - holding dismount");
-            return (false, 0, 0, expectedOthers);
-        }
-
-        if (party.PartyMembers.Count <= 1)
+            PartyTerritoryStatus.Same => "same-territory",
+            PartyTerritoryStatus.Different => "out-of-territory",
+            _ => "territory-unknown",
+        };
+        var loaded = member.IsLoaded ? "loaded" : "unloaded";
+        var position = member.PositionSource switch
         {
-            LogLandingPartyWaitOnce($"{context}:solo", $"[PartyWait][{context}] Solo or no party members - dismounting allowed");
-            return (true, 0, 0, 0);
-        }
+            PartyPositionSource.DirectActor => "position=actor",
+            PartyPositionSource.PartyList => "position=party-list",
+            _ => "position=unresolved",
+        };
+        var distance = evaluation.XzDistance.HasValue
+            ? $", xz={evaluation.XzDistance.Value:F1}y"
+            : string.Empty;
+        var name = string.IsNullOrWhiteSpace(member.Name) ? "Unknown" : member.Name;
+        return $"{name}[{territory}, {loaded}, {position}, status={evaluation.Status}{distance}]";
+    }
 
-        var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-        if (playerPos == Vector3.Zero)
-        {
-            LogLandingPartyWaitOnce($"{context}:no-local-player", $"[PartyWait][{context}] Local player unavailable - holding dismount");
-            return (false, 0, 0, 0);
-        }
-
-        var blockingNames = new List<string>();
-        var blockingDescriptions = new List<string>();
-        var ignoredOutOfZoneNames = new List<string>();
-        var nearbyCount = 0;
-        var totalSameZone = 0;
-        foreach (var member in party.PartyMembers)
-        {
-            if (member.Name == Plugin.ObjectTable.LocalPlayer?.Name.TextValue) continue;
-
-            if (!member.IsInSameZone)
-            {
-                ignoredOutOfZoneNames.Add(member.Name);
-                continue;
-            }
-
-            totalSameZone++;
-            var dx = playerPos.X - member.Position.X;
-            var dz = playerPos.Z - member.Position.Z;
-            var xzDist = Math.Sqrt(dx * dx + dz * dz);
-            if (xzDist <= maxDistance)
-            {
-                nearbyCount++;
-                continue;
-            }
-
-            blockingNames.Add(member.Name);
-            blockingDescriptions.Add($"{member.Name} is {xzDist:F1}y away (XZ)");
-        }
-
-        var blockerSignature = string.Join("|", blockingNames.OrderBy(name => name, StringComparer.Ordinal));
-        var ignoredSignature = string.Join("|", ignoredOutOfZoneNames.OrderBy(name => name, StringComparer.Ordinal));
-
-        if (blockingNames.Count > 0)
-        {
-            var message = $"[PartyWait][{context}] Blocking dismount; same-zone blockers: {string.Join(", ", blockingDescriptions)}";
-            if (ignoredOutOfZoneNames.Count > 0)
-                message += $"; ignoring out-of-zone members: {string.Join(", ", ignoredOutOfZoneNames)}";
-
-            LogLandingPartyWaitOnce($"{context}:block:{blockerSignature}:ignored:{ignoredSignature}", message);
-            return (false, nearbyCount, totalSameZone, ignoredOutOfZoneNames.Count);
-        }
-
-        if (ignoredOutOfZoneNames.Count > 0)
-        {
-            LogLandingPartyWaitOnce(
-                $"{context}:proceed-ignored:{ignoredSignature}",
-                $"[PartyWait][{context}] Dismount allowed; ignoring out-of-zone members: {string.Join(", ", ignoredOutOfZoneNames)}");
-        }
-        else
-        {
-            LogLandingPartyWaitOnce(
-                $"{context}:clear:{nearbyCount}:{totalSameZone}",
-                $"[PartyWait][{context}] All same-zone party members within {maxDistance:F1}y - dismounting allowed");
-        }
-
-        return (true, nearbyCount, totalSameZone, ignoredOutOfZoneNames.Count);
+    private void ResetPartyProximityGateTracking()
+    {
+        partyProximityGateKey = string.Empty;
+        partyProximityGateSignature = string.Empty;
+        partyProximityGateStartedAt = DateTime.MinValue;
+        lastPartyProximityHeartbeatAt = DateTime.MinValue;
     }
 
     private void LogLandingPartyWaitOnce(string signature, string message)
@@ -15776,6 +16126,7 @@ public class StateManager : IDisposable
             return;
 
         lastLandingPartyWaitSignature = signature;
+        _log.Info(message);
         _plugin.AddDebugLog(message);
     }
 

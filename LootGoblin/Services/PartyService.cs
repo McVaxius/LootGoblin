@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Party;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
@@ -12,13 +13,36 @@ namespace LootGoblin.Services;
 public class PartyMember
 {
     public string Name { get; set; } = "";
+    public ulong ContentId { get; set; }
+    public uint WorldId { get; set; }
+    public uint EntityId { get; set; }
+    public uint TerritoryId { get; set; }
+    public bool IsLocalPlayer { get; set; }
     public bool IsMounted { get; set; }
     public ushort MountId { get; set; }
     public bool IsFlying { get; set; }
     public bool IsPillionRider { get; set; }
     public Vector3 Position { get; set; }
-    public bool IsInSameZone { get; set; }
+    public PartyTerritoryStatus TerritoryStatus { get; set; }
+    public bool IsInSameTerritory => TerritoryStatus == PartyTerritoryStatus.Same;
+    public bool IsInSameZone => IsInSameTerritory;
+    public bool IsLoaded { get; set; }
+    public bool HasPosition { get; set; }
+    public PartyPositionSource PositionSource { get; set; }
     public bool IsReady { get; set; }
+
+    public PartyProximityMember ToProximityMember()
+        => new(
+            Name,
+            ContentId,
+            WorldId,
+            EntityId,
+            IsLocalPlayer,
+            TerritoryStatus,
+            IsLoaded,
+            HasPosition,
+            Position,
+            PositionSource);
 }
 
 public enum PartyCoordinationState
@@ -87,47 +111,40 @@ public class PartyService : IDisposable
             return false;
         }
 
-        // Add local player
-        PartyMembers.Add(CreatePartyMember(localPlayer, localPlayer));
-
-        // Add party members from party list (includes ALL members regardless of zone)
+        var localTerritoryId = _clientState.TerritoryType;
+        var sawLocalPlayer = false;
         for (int i = 0; i < _partyList.Length; i++)
         {
             var member = _partyList[i];
             if (member == null) continue;
-            if (member.Name.TextValue == localPlayer.Name.TextValue) continue; // Skip self (already added)
 
-            // Try to find in object table (only visible if in same zone)
-            bool found = false;
-            foreach (var obj in _objectTable)
-            {
-                if (obj != null && obj.Name.TextValue == member.Name.TextValue && obj.Address != localPlayer.Address)
-                {
-                    PartyMembers.Add(CreatePartyMember(obj, localPlayer));
-                    found = true;
-                    break;
-                }
-            }
-            
-            // Not in object table = not in zone yet. Add as unmounted so we wait for them.
-            if (!found)
-            {
-                PartyMembers.Add(new PartyMember
-                {
-                    Name = member.Name.TextValue,
-                    IsMounted = false,
-                    IsInSameZone = false,
-                    IsReady = false,
-                });
-            }
+            var snapshot = CreatePartyMember(member, localPlayer, localTerritoryId);
+            sawLocalPlayer |= snapshot.IsLocalPlayer;
+            PartyMembers.Add(snapshot);
         }
 
-        // Check if all members are ready
-        AllMembersMounted = PartyMembers.Count > 0 && PartyMembers.All(m => m.IsMounted);
-        AllMembersReady = PartyMembers.Count > 0 && PartyMembers.All(m => m.IsReady);
+        if (!sawLocalPlayer)
+            PartyMembers.Insert(0, CreateLocalPlayerMember(localPlayer, localTerritoryId));
+
+        AllMembersMounted = PartyMembers.Count > 0 &&
+                            PartyMembers.All(member =>
+                                PartyGateSemantics.IsLoadedSameTerritoryMounted(
+                                    member.IsLoaded,
+                                    member.TerritoryStatus,
+                                    member.IsMounted));
+        AllMembersReady = PartyMembers.Count > 0 &&
+                          PartyMembers.All(member =>
+                              PartyGateSemantics.IsLoadedSameTerritory(
+                                  member.IsLoaded,
+                                  member.TerritoryStatus) &&
+                              member.IsReady);
         LastValidMemberCount = PartyMembers.Count;
 
-        var currentMounted = PartyMembers.Count(m => m.IsMounted);
+        var currentMounted = PartyMembers.Count(member =>
+            PartyGateSemantics.IsLoadedSameTerritoryMounted(
+                member.IsLoaded,
+                member.TerritoryStatus,
+                member.IsMounted));
         if (PartyMembers.Count != lastLoggedMemberCount || currentMounted != lastLoggedMountedCount)
         {
             lastLoggedMemberCount = PartyMembers.Count;
@@ -180,48 +197,101 @@ public class PartyService : IDisposable
     {
         if (PartyMembers.Count <= 1) return true;
 
-        var allInSameZone = PartyMembers.All(m => m.IsInSameZone);
+        var allInSameZone = PartyMembers.All(member =>
+            PartyGateSemantics.IsLoadedSameTerritory(member.IsLoaded, member.TerritoryStatus));
 
         if (!allInSameZone)
         {
-            var notInZone = PartyMembers.Where(m => !m.IsInSameZone).Select(m => m.Name);
-            _plugin.AddDebugLog($"Members not in same zone: {string.Join(", ", notInZone)}");
+            var notInZone = PartyMembers
+                .Where(member => !PartyGateSemantics.IsLoadedSameTerritory(member.IsLoaded, member.TerritoryStatus))
+                .Select(member => member.Name);
+            _plugin.AddDebugLog($"Members not loaded in same zone: {string.Join(", ", notInZone)}");
         }
 
         return allInSameZone;
     }
 
-    private unsafe PartyMember CreatePartyMember(IGameObject obj, IGameObject localPlayer)
+    private PartyMember CreatePartyMember(IPartyMember partyMember, IGameObject localPlayer, uint localTerritoryId)
+    {
+        var gameObject = partyMember.GameObject;
+        var territoryId = partyMember.Territory.RowId;
+        var territoryStatus = territoryId == 0
+            ? PartyTerritoryStatus.Unknown
+            : territoryId == localTerritoryId
+                ? PartyTerritoryStatus.Same
+                : PartyTerritoryStatus.Different;
+
+        var member = new PartyMember
+        {
+            Name = partyMember.Name.TextValue,
+            ContentId = partyMember.ContentId,
+            WorldId = partyMember.World.RowId,
+            EntityId = partyMember.EntityId,
+            TerritoryId = territoryId,
+            TerritoryStatus = territoryStatus,
+            IsLocalPlayer =
+                partyMember.EntityId == localPlayer.EntityId ||
+                gameObject?.EntityId == localPlayer.EntityId,
+            IsLoaded = gameObject != null,
+            HasPosition = gameObject != null ||
+                          territoryStatus == PartyTerritoryStatus.Same && IsFinite(partyMember.Position),
+            Position = gameObject?.Position ?? partyMember.Position,
+            PositionSource = gameObject != null
+                ? PartyPositionSource.DirectActor
+                : territoryStatus == PartyTerritoryStatus.Same && IsFinite(partyMember.Position)
+                    ? PartyPositionSource.PartyList
+                    : PartyPositionSource.None,
+        };
+
+        if (gameObject != null)
+            PopulateLoadedActorState(member, gameObject, localPlayer);
+
+        return member;
+    }
+
+    private PartyMember CreateLocalPlayerMember(IGameObject localPlayer, uint localTerritoryId)
     {
         var member = new PartyMember
         {
-            Name = obj.Name.TextValue,
-            Position = obj.Position,
-            IsInSameZone = true, // Visible in object table = same zone
+            Name = localPlayer.Name.TextValue,
+            EntityId = localPlayer.EntityId,
+            TerritoryId = localTerritoryId,
+            TerritoryStatus = PartyTerritoryStatus.Same,
+            IsLocalPlayer = true,
+            IsLoaded = true,
+            HasPosition = true,
+            Position = localPlayer.Position,
+            PositionSource = PartyPositionSource.DirectActor,
         };
 
+        PopulateLoadedActorState(member, localPlayer, localPlayer);
+        return member;
+    }
+
+    private static unsafe void PopulateLoadedActorState(PartyMember member, IGameObject gameObject, IGameObject localPlayer)
+    {
         try
         {
-            var chara = (Character*)obj.Address;
+            var chara = (Character*)gameObject.Address;
             member.IsMounted = chara->IsMounted();
             member.MountId = chara->Mount.MountId;
 
             if (member.IsMounted)
             {
-                member.IsFlying = obj.Position.Y > localPlayer.Position.Y + 2.0f;
-                member.IsPillionRider = false; // TODO: Implement proper pillion detection
+                member.IsFlying = gameObject.Position.Y > localPlayer.Position.Y + 2.0f;
+                member.IsPillionRider = false;
             }
 
-            // If mounted, consider ready (all mounts can fly in zones where flying is unlocked)
             member.IsReady = member.IsMounted;
         }
         catch
         {
-            // Mount data inaccessible
+            // Loaded actor exists, but mount data can be temporarily inaccessible.
         }
-
-        return member;
     }
+
+    private static bool IsFinite(Vector3 position)
+        => float.IsFinite(position.X) && float.IsFinite(position.Y) && float.IsFinite(position.Z);
 
     private void SetState(PartyCoordinationState state, string detail)
     {

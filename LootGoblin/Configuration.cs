@@ -2,6 +2,7 @@ using Dalamud.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using LootGoblin.Models;
 
 namespace LootGoblin;
 
@@ -105,11 +106,14 @@ public class Configuration : IPluginConfiguration
     public RepairMode RepairMode { get; set; } = RepairMode.NpcNoInn;
     public bool ReturnWhenDoneEnabled { get; set; } = false;
     public ReturnWhenDoneDestination ReturnWhenDoneDestination { get; set; } = ReturnWhenDoneDestination.FC;
+    public uint SelectedCombatJobId { get; set; } = 0;
+    public uint SelectedGatherJobId { get; set; } = 0;
 
     // Phase 6: Map Selection + Chest Interaction
     public bool UseMapTypeFilter { get; set; } = true;
     public List<uint> EnabledMapTypes { get; set; } = new();
     public Dictionary<uint, int> MapRunCounts { get; set; } = new();
+    public List<uint> GatherEnabledMapTypes { get; set; } = new();
     public bool ShowAllKnownMapTypes { get; set; } = false;
     public float ChestInteractionRange { get; set; } = 5f;
     public bool AutoLootChest { get; set; } = true;
@@ -147,6 +151,7 @@ public class Configuration : IPluginConfiguration
     public void Save()
     {
         PartyTeleportDelaySeconds = Math.Clamp(PartyTeleportDelaySeconds, 0, 300);
+        NormalizeConfiguredJobAndGatherMaps();
         Plugin.PluginInterface.SavePluginConfig(this);
     }
 
@@ -212,6 +217,29 @@ public class Configuration : IPluginConfiguration
         EnabledMapTypes = NormalizeMapIds(EnabledMapTypes);
     }
 
+    public bool IsMapGatherEnabled(uint itemId)
+        => itemId != 0 && GatherEnabledMapTypes?.Any(enabledId => enabledId == itemId) == true;
+
+    public void SetMapGatherEnabled(uint itemId, bool enabled)
+    {
+        if (itemId == 0)
+            return;
+
+        GatherEnabledMapTypes ??= new List<uint>();
+
+        if (enabled)
+        {
+            if (!GatherEnabledMapTypes.Any(enabledId => enabledId == itemId))
+                GatherEnabledMapTypes.Add(itemId);
+        }
+        else
+        {
+            GatherEnabledMapTypes.RemoveAll(enabledId => enabledId == itemId);
+        }
+
+        NormalizeConfiguredJobAndGatherMaps();
+    }
+
     public bool TryDecrementMapRunCount(uint itemId, out int remaining)
     {
         remaining = GetMapRunCount(itemId);
@@ -250,6 +278,21 @@ public class Configuration : IPluginConfiguration
         MapRunCounts = normalizedCounts;
         EnabledMapTypes = NormalizeMapIds(MapRunCounts.Keys);
         UseMapTypeFilter = true;
+    }
+
+    public void NormalizeConfiguredJobAndGatherMaps()
+    {
+        if (!ClassJobOptions.IsCombatJob(SelectedCombatJobId))
+            SelectedCombatJobId = 0;
+
+        if (!ClassJobOptions.IsGatherJob(SelectedGatherJobId))
+            SelectedGatherJobId = 0;
+
+        GatherEnabledMapTypes = NormalizeMapIds(GatherEnabledMapTypes)
+            .Where(itemId =>
+                TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo) &&
+                mapInfo.IsGatherable)
+            .ToList();
     }
 
     private static int NormalizeMapRunCount(int count)

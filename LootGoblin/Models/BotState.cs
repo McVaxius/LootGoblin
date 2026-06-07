@@ -21,6 +21,7 @@ public enum BotState
     CyclingAetherytes,
     CyclingMapLocations,
     AlexandriteFarming,
+    GatheringMap,
     Completed,
     Error,
 }

@@ -337,6 +337,7 @@ public class MainWindow : Window, IDisposable
                     ImGui.TextColored(ColorGrey, "  Checked maps run. Use max for unlimited runs or a number for finite runs.");
                     ImGui.Spacing();
 
+                    var mapAllowanceText = plugin.MapAllowanceService.GetStatus().CompactText;
                     foreach (var kvp in sortedMaps)
                     {
                         var itemId = kvp.Key;
@@ -364,6 +365,8 @@ public class MainWindow : Window, IDisposable
                         ImGui.SameLine();
                         DrawMapRunCountEditor(itemId, isEnabled);
                         ImGui.SameLine();
+                        DrawMapGatherCheckbox(itemId, mapAllowanceText);
+                        ImGui.SameLine();
                         ImGui.Text($"{itemName} x{quantity}");
                         ImGui.SameLine();
                         var combinedSaddlebag = kvp.Value.Saddlebag + kvp.Value.PremiumSaddlebag;
@@ -380,6 +383,8 @@ public class MainWindow : Window, IDisposable
                             ImGui.SameLine();
                             ImGui.TextColored(ColorGrey, $"  (Lvl {mapLevel})");
                         }
+                        ImGui.SameLine();
+                        ImGui.TextColored(ColorGrey, $"  [{mapAllowanceText}]");
                     }
                 }
 
@@ -416,6 +421,36 @@ public class MainWindow : Window, IDisposable
             {
                 ImGui.TextColored(ColorGrey, "  Log in to scan inventory.");
             }
+        }
+    }
+
+    private void DrawMapGatherCheckbox(uint itemId, string mapAllowanceText)
+    {
+        var hasGatherJob = plugin.Configuration.SelectedGatherJobId != 0;
+        var isGatherable = TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo) && mapInfo.IsGatherable;
+        var disabled = !hasGatherJob || !isGatherable;
+        var gatherEnabled = plugin.Configuration.IsMapGatherEnabled(itemId);
+
+        if (disabled)
+            ImGui.BeginDisabled();
+
+        if (ImGui.Checkbox($"##gather_{itemId}", ref gatherEnabled))
+        {
+            plugin.Configuration.SetMapGatherEnabled(itemId, gatherEnabled);
+            plugin.Configuration.Save();
+        }
+
+        if (disabled)
+            ImGui.EndDisabled();
+
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            if (!hasGatherJob)
+                ImGui.SetTooltip("Configure Settings -> Run -> Gather Job to gather missing maps.");
+            else if (!isGatherable)
+                ImGui.SetTooltip("This map cannot be gathered.");
+            else
+                ImGui.SetTooltip($"Gather one missing map when allowance is {mapAllowanceText}.");
         }
     }
 
@@ -580,6 +615,12 @@ public class MainWindow : Window, IDisposable
     private Dictionary<uint, MapSourceCount> GetDisplayedMapSources()
     {
         var sources = cachedMapSources.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        foreach (var mapId in plugin.Configuration.GatherEnabledMapTypes ?? new List<uint>())
+        {
+            if (!sources.ContainsKey(mapId))
+                sources[mapId] = new MapSourceCount();
+        }
+
         if (!plugin.Configuration.ShowAllKnownMapTypes)
             return sources;
 
@@ -1125,30 +1166,42 @@ public class MainWindow : Window, IDisposable
                     var krangled = plugin.Configuration.KrangleNames ? KrangleService.KrangleName(member.Name) : member.Name;
                     ImGui.Text($"    {krangled}");
                     ImGui.SameLine();
-                    
-                    // Calculate distance from local player
-                    var distance = Vector3.Distance(localPos, member.Position);
-                    var distText = member.IsInSameZone ? $"{distance:F0}y" : "N/A";
-                    
-                    if (member.IsMounted)
+
+                    var dx = localPos.X - member.Position.X;
+                    var dz = localPos.Z - member.Position.Z;
+                    var xzDistance = Math.Sqrt(dx * dx + dz * dz);
+                    var distText = member.IsInSameTerritory && member.HasPosition
+                        ? $"{xzDistance:F0}y XZ"
+                        : "N/A";
+                    var territoryText = member.TerritoryStatus switch
                     {
-                        ImGui.TextColored(ColorGreen, $"[Mounted] {distText}");
-                        if (member.IsFlying)
-                        {
-                            ImGui.SameLine();
-                            ImGui.TextColored(ColorCyan, "[Flying]");
-                        }
-                    }
-                    else
+                        PartyTerritoryStatus.Same => "same territory",
+                        PartyTerritoryStatus.Different => "different territory",
+                        _ => "territory unresolved",
+                    };
+                    var loadText = member.IsLoaded ? "loaded" : "unloaded";
+                    var positionText = member.PositionSource switch
                     {
-                        ImGui.TextColored(ColorGrey, $"[On Foot] {distText}");
+                        PartyPositionSource.DirectActor => "actor position",
+                        PartyPositionSource.PartyList => "party-list position",
+                        _ => "position unresolved",
+                    };
+                    var mountText = member.IsMounted ? "Mounted" : "Not Mounted";
+                    var statusColor = member.IsLoaded && member.IsInSameTerritory ? ColorGreen : ColorGrey;
+                    ImGui.TextColored(
+                        statusColor,
+                        $"[{mountText}] [{territoryText}, {loadText}, {positionText}] {distText}");
+
+                    if (member.IsFlying)
+                    {
+                        ImGui.SameLine();
+                        ImGui.TextColored(ColorCyan, "[Flying]");
                     }
-                    
-                    // Show XYZ coordinates
+
                     ImGui.SameLine();
-                    var xyz = member.IsInSameZone 
+                    var xyz = member.HasPosition
                         ? $"({member.Position.X:F0}, {member.Position.Y:F0}, {member.Position.Z:F0})"
-                        : "(Different Zone)";
+                        : "(No Position)";
                     ImGui.TextColored(ColorGrey, xyz);
                 }
             }
@@ -1212,6 +1265,14 @@ private void DrawDependencySection()
             ImGui.TextColored(ColorGrey, "needed for assisted retainer/saddlebag retrieval");
 
             ImGui.Spacing();
+            ImGui.Text("Optional (Map Gathering):");
+            ImGui.Spacing();
+
+            DrawPluginStatus("  GatherBuddy Reborn", plugin.GatherBuddyRebornService.IsAvailable, false);
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, plugin.GatherBuddyRebornService.StatusText);
+
+            ImGui.Spacing();
             ImGui.Text("Optional (Treasure Map Statistics):");
             ImGui.Spacing();
 
@@ -1239,6 +1300,7 @@ private void DrawDependencySection()
                 plugin.VNavIPC.CheckAvailability();
                 plugin.MapFlagService.CheckAvailability();
                 plugin.RotationPluginIPC.CheckAvailability();
+                plugin.GatherBuddyRebornService.CheckAvailability(logStatus: true);
                 plugin.AddDebugLog("Dependency check refreshed.");
             }
         }

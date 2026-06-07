@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
+using LootGoblin.Models;
 using LootGoblin.Services;
 using Lumina.Excel.Sheets;
 
@@ -155,6 +156,26 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawRunTab()
     {
+        DrawJobCombo(
+            "Combat job",
+            configuration.SelectedCombatJobId,
+            ClassJobOptions.CombatJobs,
+            "Current job",
+            value => configuration.SelectedCombatJobId = value,
+            "Blank uses the player's current job at start.");
+
+        DrawJobCombo(
+            "Gather job",
+            configuration.SelectedGatherJobId,
+            ClassJobOptions.GatherJobs,
+            "Disabled",
+            value => configuration.SelectedGatherJobId = value,
+            "Blank disables map gathering.");
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
         var returnWhenDone = configuration.ReturnWhenDoneEnabled;
         if (ImGui.Checkbox("Return when done", ref returnWhenDone))
         {
@@ -210,6 +231,40 @@ public class ConfigWindow : Window, IDisposable
             };
             configuration.Save();
         }
+    }
+
+    private void DrawJobCombo(
+        string label,
+        uint selectedJobId,
+        IReadOnlyList<ClassJobOption> options,
+        string blankLabel,
+        Action<uint> setter,
+        string tooltip)
+    {
+        var currentIndex = 0;
+        for (var i = 0; i < options.Count; i++)
+        {
+            if (options[i].Id == selectedJobId)
+            {
+                currentIndex = i + 1;
+                break;
+            }
+        }
+
+        var comboLabels = new string[options.Count + 1];
+        comboLabels[0] = blankLabel;
+        for (var i = 0; i < options.Count; i++)
+            comboLabels[i + 1] = options[i].Name;
+
+        ImGui.SetNextItemWidth(220);
+        if (ImGui.Combo(label, ref currentIndex, comboLabels, comboLabels.Length))
+        {
+            setter(currentIndex == 0 ? 0 : options[currentIndex - 1].Id);
+            configuration.Save();
+        }
+
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(tooltip);
     }
 
     private void DrawMapsTab()
@@ -286,6 +341,13 @@ public class ConfigWindow : Window, IDisposable
         {
             configuration.PartyWaitTimeout = partyTimeout;
             configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(
+                "Applies to map-flag proximity waits. Before timeout, the configured full-party or count threshold is required. " +
+                "After timeout, LootGoblin can continue only when at least one same-territory party member has a resolved position " +
+                "and every resolved same-territory member is within 10 yalms. Far same-territory members keep blocking.");
         }
 
         var teleportDelay = Math.Clamp(configuration.PartyTeleportDelaySeconds, 0, 300);
