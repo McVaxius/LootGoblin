@@ -10244,9 +10244,6 @@ public class StateManager : IDisposable
             out var distToLastKnownCoffer);
         var nearKnownCofferForRecovery = hasKnownCofferRecoveryTarget &&
                                          distToLastKnownCoffer <= OpeningChestCofferReturnRange;
-        var nearFlagForRecovery = hasFlagRecoveryTarget && distToFlag <= 30f;
-        var shouldReturnToFlag = hasFlagRecoveryTarget && distToFlag > 30f && !nearKnownCofferForRecovery;
-
         if (chest == null)
         {
             ResetOpeningChestCofferMountRecovery("because chest disappeared", stopNavigation: !inCombat);
@@ -10254,11 +10251,21 @@ public class StateManager : IDisposable
 
             if (openingChestCombatInterrupted)
             {
+                var localPlayer = Plugin.ObjectTable.LocalPlayer;
+                var xzDistToFlag = hasFlagRecoveryTarget && localPlayer != null
+                    ? (float)CalculateXZDistance(localPlayer.Position, flagRecoveryTarget)
+                    : distToFlag;
+                var useThiefMapRecovery = IsThiefUnderwaterLandingMode();
+                var nearFlagForRecovery = hasFlagRecoveryTarget && distToFlag <= 30f;
+                var shouldReturnToFlag = hasFlagRecoveryTarget &&
+                                         (useThiefMapRecovery ? distToFlag > 30f : xzDistToFlag > 2f) &&
+                                         !nearKnownCofferForRecovery;
+
                 if (inCombat)
                 {
                     chestDisappearedTime = DateTime.MinValue;
                     StateDetail = hasFlagRecoveryTarget
-                        ? $"In combat - waiting to recover chest ({distToFlag:F1}y from flag)..."
+                        ? $"In combat - waiting to recover chest ({xzDistToFlag:F1}y XZ from flag)..."
                         : "In combat - waiting to recover chest...";
                     return;
                 }
@@ -10273,7 +10280,7 @@ public class StateManager : IDisposable
                 {
                     if (!openingChestReturningToFlag)
                     {
-                        _plugin.AddDebugLog($"[OpeningChest] Combat recovery: no chest visible and {distToFlag:F1}y from flag - returning mounted/flying to flag");
+                        _plugin.AddDebugLog($"[OpeningChest] Combat recovery: no chest visible and {xzDistToFlag:F1}y XZ from flag - returning mounted/flying to flag");
                         openingChestReturningToFlag = true;
                     }
 
@@ -10282,7 +10289,7 @@ public class StateManager : IDisposable
                     {
                         if (Plugin.Condition[ConditionFlag.Mounting71])
                         {
-                            StateDetail = $"Mounting to return to flag after combat ({distToFlag:F1}y)...";
+                            StateDetail = $"Mounting to return to flag after combat ({xzDistToFlag:F1}y XZ)...";
                             return;
                         }
 
@@ -10292,7 +10299,7 @@ public class StateManager : IDisposable
                             nav.MountUp();
                         }
 
-                        StateDetail = $"Mounting to return to flag after combat ({distToFlag:F1}y)...";
+                        StateDetail = $"Mounting to return to flag after combat ({xzDistToFlag:F1}y XZ)...";
                         return;
                     }
 
@@ -10323,13 +10330,13 @@ public class StateManager : IDisposable
                     }
 
                     chestDisappearedTime = DateTime.MinValue;
-                    StateDetail = $"Returning to flag after combat ({distToFlag:F1}y)...";
+                    StateDetail = $"Returning to flag after combat ({xzDistToFlag:F1}y XZ)...";
                     return;
                 }
 
                 if (openingChestReturningToFlag)
                 {
-                    _plugin.AddDebugLog($"[OpeningChest] Combat recovery: back near flag ({distToFlag:F1}y) - rechecking chest and dig");
+                    _plugin.AddDebugLog($"[OpeningChest] Combat recovery: back near flag ({xzDistToFlag:F1}y XZ) - rechecking chest and dig");
                     if (autoMoveActive)
                     {
                         _plugin.NavigationService.StopNavigation();
@@ -10339,6 +10346,18 @@ public class StateManager : IDisposable
                     chestDisappearedTime = DateTime.MinValue;
                 }
 
+                if (hasFlagRecoveryTarget &&
+                    xzDistToFlag <= 2f &&
+                    !useThiefMapRecovery)
+                {
+                    openingChestCombatInterrupted = false;
+                    openingChestRecoveryDigIssued = false;
+                    digIssuedThisMap = false;
+                    digIssuedAt = DateTime.MinValue;
+                    TransitionTo(BotState.Flying, "Combat recovery: landing at map target...");
+                    return;
+                }
+
                 if (!openingChestRecoveryDigIssued && nearFlagForRecovery)
                 {
                     if (TryGuardNonDivingThiefMapRecoveryDig(
@@ -10346,7 +10365,7 @@ public class StateManager : IDisposable
                             "[OpeningChest] combat recovery",
                             hasFlagRecoveryTarget,
                             flagRecoveryTarget,
-                            distToFlag))
+                            xzDistToFlag))
                     {
                         return;
                     }
@@ -10358,12 +10377,12 @@ public class StateManager : IDisposable
                         return;
                     }
 
-                    _plugin.AddDebugLog($"[OpeningChest] Combat recovery: no chest visible near flag ({distToFlag:F1}y) - retrying dig");
+                    _plugin.AddDebugLog($"[OpeningChest] Combat recovery: no chest visible near flag ({xzDistToFlag:F1}y XZ) - retrying dig");
                     CommandHelper.SendCommand("/gaction dig");
                     lastDigTime = now;
                     openingChestRecoveryDigIssued = true;
                     chestDisappearedTime = now;
-                    StateDetail = $"Retrying dig after combat ({distToFlag:F1}y from flag)...";
+                    StateDetail = $"Retrying dig after combat ({xzDistToFlag:F1}y XZ from flag)...";
                     return;
                 }
 
@@ -10373,7 +10392,7 @@ public class StateManager : IDisposable
                     _plugin.AddDebugLog(openingChestRecoveryDigIssued
                         ? "[OpeningChest] Waiting for chest after combat recovery dig"
                         : hasFlagRecoveryTarget
-                            ? $"[OpeningChest] Combat recovery: no chest visible after combat ({distToFlag:F1}y from flag) - waiting briefly before portal check"
+                            ? $"[OpeningChest] Combat recovery: no chest visible after combat ({xzDistToFlag:F1}y XZ from flag) - waiting briefly before portal check"
                             : "[OpeningChest] Combat recovery: no chest visible after combat - waiting briefly before portal check");
                 }
 
