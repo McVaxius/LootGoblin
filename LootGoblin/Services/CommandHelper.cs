@@ -31,7 +31,7 @@ public static class CommandHelper
         {
             if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)
             {
-                Plugin.Log.Warning($"Skipped command while not logged in: {command}");
+                Plugin.LogWarning($"Skipped command while not logged in: {command}");
                 return false;
             }
 
@@ -42,7 +42,7 @@ public static class CommandHelper
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"Command failed [{command}]: {ex.Message}");
+            Plugin.LogError($"Command failed [{command}]: {ex.Message}");
             return false;
         }
     }
@@ -53,7 +53,7 @@ public static class CommandHelper
         {
             if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)
             {
-                Plugin.Log.Warning($"Skipped command while not logged in: {command}");
+                Plugin.LogWarning($"Skipped command while not logged in: {command}");
                 return false;
             }
 
@@ -61,7 +61,7 @@ public static class CommandHelper
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"Command failed [{command}]: {ex.Message}");
+            Plugin.LogError($"Command failed [{command}]: {ex.Message}");
             return false;
         }
     }
@@ -71,7 +71,7 @@ public static class CommandHelper
         var uiModule = UIModule.Instance();
         if (uiModule == null)
         {
-            Plugin.Log.Error("UIModule is null, cannot send command");
+            Plugin.LogError("UIModule is null, cannot send command");
             return false;
         }
 

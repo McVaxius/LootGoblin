@@ -188,7 +188,7 @@ public class MountService
             var uiModule = UIModule.Instance();
             if (uiModule == null)
             {
-                Plugin.Log.Error("UIModule is null, cannot send command");
+                Plugin.LogError("UIModule is null, cannot send command");
                 return;
             }
 
@@ -199,7 +199,7 @@ public class MountService
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"Mount command failed [{command}]: {ex.Message}");
+            Plugin.LogError($"Mount command failed [{command}]: {ex.Message}");
         }
     }
 }

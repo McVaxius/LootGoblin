@@ -799,7 +799,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
         catch (Exception ex)
         {
             LastError = $"XA Database readiness IPC failed: {ex.Message}";
-            _log.Warning(LastError);
+            Plugin.LogWarning(LastError);
             return false;
         }
     }
@@ -832,7 +832,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
             {
                 LastError = "XA Database SearchCurrentCharacterItemsJson IPC returned empty response.";
                 StatusText = LastError;
-                _log.Warning(LastError);
+                Plugin.LogWarning(LastError);
                 return new ScopedRetainerItemSearchResult(false, Array.Empty<ScopedRetainerItemRow>(), Array.Empty<string>());
             }
 
@@ -866,7 +866,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
         {
             LastError = $"XA Database SearchCurrentCharacterItemsJson IPC failed: {ex.Message}";
             StatusText = LastError;
-            _log.Warning(LastError);
+            Plugin.LogWarning(LastError);
             return new ScopedRetainerItemSearchResult(false, Array.Empty<ScopedRetainerItemRow>(), Array.Empty<string>());
         }
     }
@@ -886,7 +886,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
         catch (Exception ex)
         {
             LastError = $"XA Database Refresh IPC failed: {ex.Message}";
-            _log.Warning(LastError);
+            Plugin.LogWarning(LastError);
             return false;
         }
     }
@@ -930,7 +930,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
         {
             LastError = $"XA Database SearchCurrentCharacterItemsJson returned invalid JSON: {ex.Message}";
             StatusText = LastError;
-            _log.Warning(LastError);
+            Plugin.LogWarning(LastError);
             return new ScopedRetainerItemSearchResult(false, rows, warnings);
         }
 

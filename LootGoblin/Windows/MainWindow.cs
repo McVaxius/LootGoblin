@@ -732,7 +732,7 @@ public class MainWindow : Window, IDisposable
 
                     if (ImGui.Button("Stop Cycling"))
                     {
-                        sm.Stop();
+                        sm.Stop("main-window:stop-cycling");
                     }
 
                     // Manual control buttons during XYZ cycling
@@ -935,8 +935,7 @@ public class MainWindow : Window, IDisposable
                 ImGui.BeginDisabled();
             if (ImGui.Button("Start", new Vector2(buttonWidth, 0)))
             {
-                plugin.Configuration.Enabled = true;
-                plugin.Configuration.Save();
+                plugin.SetBotEnabled(true, "main-window:start");
                 sm.Start();
             }
             if (!canStart)
@@ -950,7 +949,7 @@ public class MainWindow : Window, IDisposable
                 if (!canResume)
                     ImGui.BeginDisabled();
                 if (ImGui.Button("Resume", new Vector2(buttonWidth, 0)))
-                    sm.Resume();
+                    sm.Resume("main-window:resume");
                 if (!canResume)
                     ImGui.EndDisabled();
             }
@@ -960,7 +959,7 @@ public class MainWindow : Window, IDisposable
                 if (!canPause)
                     ImGui.BeginDisabled();
                 if (ImGui.Button("Pause", new Vector2(buttonWidth, 0)))
-                    sm.Pause();
+                    sm.Pause("main-window:pause");
                 if (!canPause)
                     ImGui.EndDisabled();
             }
@@ -973,12 +972,9 @@ public class MainWindow : Window, IDisposable
             if (ImGui.Button("Stop", new Vector2(buttonWidth, 0)))
             {
                 if (!sm.IsPaused)
-                {
-                    plugin.Configuration.Enabled = false;
-                    plugin.Configuration.Save();
-                }
+                    plugin.SetBotEnabled(false, "main-window:stop");
 
-                sm.Stop();
+                sm.Stop("main-window:stop");
             }
             if (!canStop)
                 ImGui.EndDisabled();
@@ -1439,7 +1435,7 @@ private void DrawDependencySection()
 
                 if (addon == null || entryCount == 0)
                 {
-                    Plugin.Log.Error("[READ INDICES] SelectIconString addon not ready after 2 seconds");
+                    Plugin.LogError("[READ INDICES] SelectIconString addon not ready after 2 seconds");
                     return;
                 }
 
@@ -1508,7 +1504,7 @@ private void DrawDependencySection()
                     }
                     catch (Exception ex)
                     {
-                        Plugin.Log.Error($"[READ INDICES] Error reading entry {i}: {ex.Message}");
+                        Plugin.LogError($"[READ INDICES] Error reading entry {i}: {ex.Message}");
                     }
                 }
                 
@@ -1521,7 +1517,7 @@ private void DrawDependencySection()
             }
             catch (Exception ex)
             {
-                Plugin.Log.Error($"[READ INDICES] ReadSelectIconStringEntries failed: {ex.Message}\n{ex.StackTrace}");
+                Plugin.LogError($"[READ INDICES] ReadSelectIconStringEntries failed: {ex.Message}\n{ex.StackTrace}");
             }
         });
     }

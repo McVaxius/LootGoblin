@@ -74,6 +74,7 @@ public class Configuration : IPluginConfiguration
     public bool Enabled { get; set; } = false;
     public bool ShowMainWindow { get; set; } = true;
     public bool DebugMode { get; set; } = false;
+    public bool EnableDedicatedDiagnosticLog { get; set; } = false;
     public bool KrangleNames { get; set; } = false;
 
     // Phase 3: Navigation

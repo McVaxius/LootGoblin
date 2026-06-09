@@ -75,7 +75,7 @@ public class ConfigWindow : Window, IDisposable
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[ConfigWindow] Failed to load food items: {ex.Message}");
+            Plugin.LogError($"[ConfigWindow] Failed to load food items: {ex.Message}");
         }
     }
 
@@ -402,7 +402,7 @@ public class ConfigWindow : Window, IDisposable
             if (Plugin.PluginInterface.GetIpcSubscriber<bool>("ADS.ToggleLootUi").InvokeFunc())
                 return;
 
-            Plugin.Log.Warning("[LootGoblin][ADS] ADS.ToggleLootUi returned false; not falling back to /ads loot.");
+            Plugin.LogWarning("[LootGoblin][ADS] ADS.ToggleLootUi returned false; not falling back to /ads loot.");
         }
         catch (Exception ex)
         {
@@ -491,6 +491,25 @@ public class ConfigWindow : Window, IDisposable
         DrawConfigCheckbox("Map Diagnostics", configuration.ShowDebugMapCompletion, value => configuration.ShowDebugMapCompletion = value,
             "Shows Location Data diagnostics in the main window and enables map/aetheryte collection tools.");
         DrawConfigCheckbox("Ground-only map diagnostics", configuration.CycleGroundOnly, value => configuration.CycleGroundOnly = value);
+
+        ImGui.Spacing();
+        var dedicatedDiagnosticLog = configuration.EnableDedicatedDiagnosticLog;
+        if (ImGui.Checkbox("Write dedicated LootGoblin diagnostic log", ref dedicatedDiagnosticLog))
+            plugin.SetDedicatedDiagnosticLogEnabled(dedicatedDiagnosticLog);
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Writes high-signal events and state snapshots. Rotates at 20 MB and retains the newest 10 files.");
+
+        ImGui.TextDisabled(plugin.DedicatedDiagnosticLog.DirectoryPath);
+        if (ImGui.Button("Open Log Folder"))
+            plugin.OpenDiagnosticLogFolder();
+
+        ImGui.SameLine();
+        if (!configuration.EnableDedicatedDiagnosticLog)
+            ImGui.BeginDisabled();
+        if (ImGui.Button("Write Snapshot Now"))
+            plugin.WriteDiagnosticSnapshotNow();
+        if (!configuration.EnableDedicatedDiagnosticLog)
+            ImGui.EndDisabled();
 
         ImGui.Spacing();
         if (ImGui.Button("Disable Pandora's Box"))

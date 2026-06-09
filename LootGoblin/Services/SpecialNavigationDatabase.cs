@@ -144,7 +144,7 @@ public class SpecialNavigationDatabase : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"[SpecialNavDB] Failed to load special navigation entries: {ex.Message}");
+            Plugin.LogError($"[SpecialNavDB] Failed to load special navigation entries: {ex.Message}");
             var bundledEntries = LoadBundledDefaultEntries();
             _bundledEntries.Clear();
             _bundledEntries.AddRange(bundledEntries);
@@ -171,7 +171,7 @@ public class SpecialNavigationDatabase : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"[SpecialNavDB] Failed to load bundled defaults: {ex.Message}");
+            Plugin.LogError($"[SpecialNavDB] Failed to load bundled defaults: {ex.Message}");
             return new List<SpecialNavigationEntry>();
         }
     }

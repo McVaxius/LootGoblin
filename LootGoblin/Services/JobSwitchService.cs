@@ -137,7 +137,7 @@ public sealed class JobSwitchService : IDisposable
         catch (Exception ex)
         {
             detail = $"Could not inspect gearsets: {ex.Message}";
-            log.Warning($"[JobSwitch] {detail}");
+            Plugin.LogWarning($"[JobSwitch] {detail}");
             return false;
         }
     }
@@ -176,7 +176,7 @@ public sealed class JobSwitchService : IDisposable
         catch (Exception ex)
         {
             detail = $"Job switch failed: {ex.Message}";
-            log.Warning($"[JobSwitch] {detail}");
+            Plugin.LogWarning($"[JobSwitch] {detail}");
             return false;
         }
     }

@@ -89,7 +89,7 @@ public static class GameHelpers
         {
             if (now >= _mapLookupTimeoutAt)
             {
-                Plugin.Log.Warning($"[MAP_LOOKUP] Timed out finding menu entry for map {_pendingItemId}");
+                Plugin.LogWarning($"[MAP_LOOKUP] Timed out finding menu entry for map {_pendingItemId}");
                 ResetPendingMapLookup();
             }
             else if (now >= _mapLookupNextAttemptAt)
@@ -116,7 +116,7 @@ public static class GameHelpers
         {
             if (now >= _callbackTimeoutAt)
             {
-                Plugin.Log.Warning($"[CALLBACK] Timed out waiting to fire SelectIconString selection for index {_pendingMenuIndex}");
+                Plugin.LogWarning($"[CALLBACK] Timed out waiting to fire SelectIconString selection for index {_pendingMenuIndex}");
                 ResetPendingMapSelection();
             }
             else if (now >= _callbackReadyAt && IsAddonVisible("SelectIconString"))
@@ -158,7 +158,7 @@ public static class GameHelpers
         {
             if (_pendingSequenceWaitingForSecond)
             {
-                Plugin.Log.Warning(
+                Plugin.LogWarning(
                     $"[CALLBACKSEQ] Sequence already pending for '{_pendingSequenceAddonName}' - " +
                     $"cannot queue '{addonName}'");
                 return false;
@@ -166,7 +166,7 @@ public static class GameHelpers
 
             if (!IsAddonVisible(addonName))
             {
-                Plugin.Log.Warning($"[CALLBACKSEQ] Addon '{addonName}' not visible - cannot queue sequence");
+                Plugin.LogWarning($"[CALLBACKSEQ] Addon '{addonName}' not visible - cannot queue sequence");
                 return false;
             }
 
@@ -188,7 +188,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[CALLBACKSEQ] Failed to queue '{addonName}': {ex.Message}");
+            Plugin.LogError($"[CALLBACKSEQ] Failed to queue '{addonName}': {ex.Message}");
             ResetPendingAddonCallbackSequence();
             return false;
         }
@@ -216,14 +216,14 @@ public static class GameHelpers
             var im = InventoryManager.Instance();
             if (im == null)
             {
-                Plugin.Log.Warning($"UseItem({itemId}): InventoryManager is null");
+                Plugin.LogWarning($"UseItem({itemId}): InventoryManager is null");
                 return false;
             }
 
             var count = inventoryService.GetMapCount(itemId);
             if (count <= 0)
             {
-                Plugin.Log.Warning($"UseItem({itemId}): Item not found in inventory");
+                Plugin.LogWarning($"UseItem({itemId}): Item not found in inventory");
                 return false;
             }
 
@@ -237,7 +237,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"UseItem({itemId}) failed: {ex.Message}");
+            Plugin.LogError($"UseItem({itemId}) failed: {ex.Message}");
             return false;
         }
     }
@@ -291,7 +291,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[FIND] FindMapIndexInMenu failed: {ex.Message}\n{ex.StackTrace}");
+            Plugin.LogError($"[FIND] FindMapIndexInMenu failed: {ex.Message}\n{ex.StackTrace}");
             return -1;
         }
     }
@@ -325,7 +325,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[CALLBACK] TriggerMapDecipherCallback failed: {ex.Message}");
+            Plugin.LogError($"[CALLBACK] TriggerMapDecipherCallback failed: {ex.Message}");
         }
     }
 
@@ -340,7 +340,7 @@ public static class GameHelpers
         nint addonPtr = Plugin.GameGui.GetAddonByName("SelectIconString", 1);
         if (addonPtr == 0)
         {
-            Plugin.Log.Error("[CALLBACK] Could not find SelectIconString addon");
+            Plugin.LogError("[CALLBACK] Could not find SelectIconString addon");
             return;
         }
 
@@ -349,7 +349,7 @@ public static class GameHelpers
         var addon = (AddonSelectIconString*)addonPtr;
         if (!addon->AtkUnitBase.IsVisible)
         {
-            Plugin.Log.Error("[CALLBACK] SelectIconString addon is not visible");
+            Plugin.LogError("[CALLBACK] SelectIconString addon is not visible");
             return;
         }
 
@@ -383,17 +383,17 @@ public static class GameHelpers
                 }
                 catch (Exception ex)
                 {
-                    Plugin.Log.Error($"[GameHelpers] ContinueWith exception in TriggerConfirmDialog: {ex.Message}");
+                    Plugin.LogError($"[GameHelpers] ContinueWith exception in TriggerConfirmDialog: {ex.Message}");
                 }
             }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[CALLBACK] Raw callback failed: {ex.Message}");
-            Plugin.Log.Error($"[CALLBACK] Stack trace: {ex.StackTrace}");
+            Plugin.LogError($"[CALLBACK] Raw callback failed: {ex.Message}");
+            Plugin.LogError($"[CALLBACK] Stack trace: {ex.StackTrace}");
             if (ex.InnerException != null)
             {
-                Plugin.Log.Error($"[CALLBACK] Inner exception: {ex.InnerException.Message}");
+                Plugin.LogError($"[CALLBACK] Inner exception: {ex.InnerException.Message}");
             }
         }
     }
@@ -466,7 +466,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[CALLBACK] Error checking bot enabled state: {ex.Message}");
+            Plugin.LogError($"[CALLBACK] Error checking bot enabled state: {ex.Message}");
         }
 
         nint addonPtr = Plugin.GameGui.GetAddonByName("SelectYesno", 1);
@@ -484,7 +484,7 @@ public static class GameHelpers
                     return;
                 }
 
-                Plugin.Log.Warning("[CALLBACK] Pending decipher confirmation click failed; will retry until timeout");
+                Plugin.LogWarning("[CALLBACK] Pending decipher confirmation click failed; will retry until timeout");
                 return;
             }
         }
@@ -492,7 +492,7 @@ public static class GameHelpers
         var elapsed = (now - _confirmDialogStartTime).TotalSeconds;
         if (elapsed >= ConfirmDialogWatchTimeoutSeconds)
         {
-            Plugin.Log.Warning("[CALLBACK] Timed out waiting for decipher confirmation dialog; leaving further handling to state ticks");
+            Plugin.LogWarning("[CALLBACK] Timed out waiting for decipher confirmation dialog; leaving further handling to state ticks");
             ResetPendingConfirmDialogWatch();
             return;
         }
@@ -536,12 +536,12 @@ public static class GameHelpers
                 return true;
             }
 
-            Plugin.Log.Warning("[YES/NO] SelectYesno direct callback failed");
+            Plugin.LogWarning("[YES/NO] SelectYesno direct callback failed");
             return false;
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[YES/NO] ClickYesIfVisible failed: {ex.Message}");
+            Plugin.LogError($"[YES/NO] ClickYesIfVisible failed: {ex.Message}");
             return false;
         }
     }
@@ -570,14 +570,14 @@ public static class GameHelpers
             var ts = TargetSystem.Instance();
             if (ts == null)
             {
-                Plugin.Log.Error("[INTERACT] TargetSystem.Instance() returned null");
+                Plugin.LogError("[INTERACT] TargetSystem.Instance() returned null");
                 return false;
             }
 
             var gameObjPtr = (GameObject*)obj.Address;
             if (gameObjPtr == null)
             {
-                Plugin.Log.Error($"[INTERACT] Failed to cast GameObject* from address {obj.Address:X}");
+                Plugin.LogError($"[INTERACT] Failed to cast GameObject* from address {obj.Address:X}");
                 return false;
             }
 
@@ -588,7 +588,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[INTERACT] InteractWithObject failed: {ex.Message}\n{ex.StackTrace}");
+            Plugin.LogError($"[INTERACT] InteractWithObject failed: {ex.Message}\n{ex.StackTrace}");
             return false;
         }
     }
@@ -600,7 +600,7 @@ public static class GameHelpers
             var cameraManager = CameraManager.Instance();
             if (cameraManager == null || cameraManager->Camera == null)
             {
-                Plugin.Log.Warning("[INTERACT] CameraManager unavailable for pre-interact reset");
+                Plugin.LogWarning("[INTERACT] CameraManager unavailable for pre-interact reset");
                 return false;
             }
 
@@ -609,7 +609,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Warning($"[INTERACT] Failed to request camera reset before interact: {ex.Message}");
+            Plugin.LogWarning($"[INTERACT] Failed to request camera reset before interact: {ex.Message}");
             return false;
         }
     }
@@ -694,7 +694,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"GetInventoryItemCount({itemId}) failed: {ex.Message}");
+            Plugin.LogError($"GetInventoryItemCount({itemId}) failed: {ex.Message}");
             return 0;
         }
     }
@@ -712,7 +712,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"GetInventoryItemCount({itemId}, HQ={highQuality}) failed: {ex.Message}");
+            Plugin.LogError($"GetInventoryItemCount({itemId}, HQ={highQuality}) failed: {ex.Message}");
             return 0;
         }
     }
@@ -742,7 +742,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"GetStatusTimeRemaining({statusId}) failed: {ex.Message}");
+            Plugin.LogError($"GetStatusTimeRemaining({statusId}) failed: {ex.Message}");
         }
 
         return 0f;
@@ -763,7 +763,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"GetBuddyTimeRemaining() failed: {ex.Message}");
+            Plugin.LogError($"GetBuddyTimeRemaining() failed: {ex.Message}");
             return 0f;
         }
     }
@@ -854,7 +854,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"UseGysahlGreens failed: {ex.Message}");
+            Plugin.LogError($"UseGysahlGreens failed: {ex.Message}");
             return false;
         }
     }
@@ -873,7 +873,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[KEY] KeyHold({key}) failed: {ex.Message}");
+            Plugin.LogError($"[KEY] KeyHold({key}) failed: {ex.Message}");
         }
     }
 
@@ -889,7 +889,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[KEY] KeyRelease({key}) failed: {ex.Message}");
+            Plugin.LogError($"[KEY] KeyRelease({key}) failed: {ex.Message}");
         }
     }
 
@@ -905,7 +905,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[KEY] KeyPress({key}) failed: {ex.Message}");
+            Plugin.LogError($"[KEY] KeyPress({key}) failed: {ex.Message}");
         }
     }
 
@@ -969,14 +969,14 @@ public static class GameHelpers
                           Plugin.Condition[ConditionFlag.BetweenAreas51];
             if (loading)
             {
-                Plugin.Log.Warning("[MapFlag] Clear requested during loading - vnav cleared, AgentMap clear skipped");
+                Plugin.LogWarning("[MapFlag] Clear requested during loading - vnav cleared, AgentMap clear skipped");
                 return false;
             }
 
             var agentMap = AgentMap.Instance();
             if (agentMap == null)
             {
-                Plugin.Log.Warning("[MapFlag] AgentMap is null during clear");
+                Plugin.LogWarning("[MapFlag] AgentMap is null during clear");
                 return tryReadFlag != null && tryReadFlag() == null;
             }
 
@@ -999,7 +999,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[MapFlag] ClearMapFlag failed: {ex.Message}");
+            Plugin.LogError($"[MapFlag] ClearMapFlag failed: {ex.Message}");
             return false;
         }
     }
@@ -1021,13 +1021,13 @@ public static class GameHelpers
             var agentMap = AgentMap.Instance();
             if (agentMap == null)
             {
-                Plugin.Log.Warning("[MapFlag] AgentMap is null");
+                Plugin.LogWarning("[MapFlag] AgentMap is null");
                 return;
             }
 
             if (!TryGetTerritoryMapId(territoryId, out var mapId))
             {
-                Plugin.Log.Warning($"[MapFlag] Territory {territoryId} not found");
+                Plugin.LogWarning($"[MapFlag] Territory {territoryId} not found");
                 return;
             }
 
@@ -1035,7 +1035,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[MapFlag] SetMapFlag failed: {ex.Message}");
+            Plugin.LogError($"[MapFlag] SetMapFlag failed: {ex.Message}");
         }
     }
 
@@ -1052,7 +1052,7 @@ public static class GameHelpers
             var agentMap = AgentMap.Instance();
             if (agentMap == null)
             {
-                Plugin.Log.Warning("[MapFlag] AgentMap is null");
+                Plugin.LogWarning("[MapFlag] AgentMap is null");
                 return;
             }
 
@@ -1062,7 +1062,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[MapFlag] SetMapFlag failed: {ex.Message}");
+            Plugin.LogError($"[MapFlag] SetMapFlag failed: {ex.Message}");
         }
     }
 
@@ -1086,7 +1086,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"GetCurrentPoetics failed: {ex.Message}");
+            Plugin.LogError($"GetCurrentPoetics failed: {ex.Message}");
             return 0;
         }
     }
@@ -1158,7 +1158,7 @@ public static class GameHelpers
 
         if (!IsAddonVisible(_pendingSequenceAddonName))
         {
-            Plugin.Log.Warning(
+            Plugin.LogWarning(
                 $"[CALLBACKSEQ] Addon '{_pendingSequenceAddonName}' disappeared before second step");
             ResetPendingAddonCallbackSequence();
             return;
@@ -1175,7 +1175,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[CALLBACKSEQ] Failed second step for '{_pendingSequenceAddonName}': {ex.Message}");
+            Plugin.LogError($"[CALLBACKSEQ] Failed second step for '{_pendingSequenceAddonName}': {ex.Message}");
         }
         finally
         {
@@ -1238,7 +1238,7 @@ public static class GameHelpers
             if (addon == null || (requireVisible && !addon->IsVisible))
             {
                 var reason = addon == null ? "not found" : "not visible";
-                Plugin.Log.Warning($"[FireAddonCallback] Addon '{addonName}' {reason}");
+                Plugin.LogWarning($"[FireAddonCallback] Addon '{addonName}' {reason}");
                 return false;
             }
 
@@ -1257,7 +1257,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"[FireAddonCallback] Failed for '{addonName}': {ex.Message}");
+            Plugin.LogError($"[FireAddonCallback] Failed for '{addonName}': {ex.Message}");
             return false;
         }
     }
@@ -1313,7 +1313,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Warning($"[CloseAddonCallback] Failed for '{addonName}': {ex.Message}");
+            Plugin.LogWarning($"[CloseAddonCallback] Failed for '{addonName}': {ex.Message}");
             return false;
         }
     }
@@ -1346,7 +1346,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"LookupFoodItem(\"{foodName}\") failed: {ex.Message}");
+            Plugin.LogError($"LookupFoodItem(\"{foodName}\") failed: {ex.Message}");
         }
 
         return (0, "");
@@ -1404,7 +1404,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"LookupItemName({itemId}) failed: {ex.Message}");
+            Plugin.LogError($"LookupItemName({itemId}) failed: {ex.Message}");
         }
 
         return "";
@@ -1489,7 +1489,7 @@ public static class GameHelpers
             var count = GetInventoryItemCount(itemId, highQuality);
             if (count <= 0)
             {
-                Plugin.Log.Warning($"UseItem({itemId}, HQ={highQuality}): Not in inventory");
+                Plugin.LogWarning($"UseItem({itemId}, HQ={highQuality}): Not in inventory");
                 return false;
             }
 
@@ -1510,7 +1510,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"UseItem({itemId}, HQ={highQuality}) failed: {ex.Message}");
+            Plugin.LogError($"UseItem({itemId}, HQ={highQuality}) failed: {ex.Message}");
             return false;
         }
     }
@@ -1541,7 +1541,7 @@ public static class GameHelpers
             var status = am->GetActionStatus(ActionType.EventItem, eventItemId);
             if (status != 0)
             {
-                Plugin.Log.Warning($"UseEventItem({eventItemId}): action status {status} for {displayName}");
+                Plugin.LogWarning($"UseEventItem({eventItemId}): action status {status} for {displayName}");
                 return false;
             }
 
@@ -1551,7 +1551,7 @@ public static class GameHelpers
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"UseEventItem({eventItemId}) failed: {ex.Message}");
+            Plugin.LogError($"UseEventItem({eventItemId}) failed: {ex.Message}");
             return false;
         }
     }

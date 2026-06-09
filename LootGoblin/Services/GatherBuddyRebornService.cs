@@ -111,7 +111,7 @@ public sealed class GatherBuddyRebornService : IDisposable
         {
             detail = $"GatherBuddy Reborn start failed: {ex.Message}";
             StatusText = detail;
-            log.Warning($"[GatherBuddy] {detail}");
+            Plugin.LogWarning($"[GatherBuddy] {detail}");
             Cancel();
             return false;
         }

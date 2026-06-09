@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Text;
 using Dalamud.Game.ClientState.Conditions;
@@ -87,6 +88,15 @@ public class StateManager : IDisposable
     public MapLocation? CurrentLocation { get; private set; }
     public bool BossModOutdoorSuppressionActive => bossModOutdoorSuppressionActive;
     public string BossModOutdoorSuppressionReason => bossModOutdoorSuppressionReason;
+
+    private readonly DiagnosticSnapshotPolicy diagnosticSnapshotPolicy = new();
+    private string lastDiagnosticTerritorySignature = string.Empty;
+    private string lastDiagnosticRepairSignature = string.Empty;
+    private string lastDiagnosticPartyBlockerSignature = string.Empty;
+    private string lastDiagnosticAdsOwnershipSignature = string.Empty;
+    private string lastTransitionSource = "initial";
+    private bool preTerminalSnapshotWritten;
+    private string lastPreTerminalSnapshotSource = string.Empty;
 
     private enum OpeningChestFlagFallbackKind
     {
@@ -780,6 +790,7 @@ public class StateManager : IDisposable
         if (!Plugin.ClientState.IsLoggedIn)
         {
             // Lost connection is the only legitimate reason to stop the bot
+            WritePreTerminalSnapshot("lost-connection");
             _plugin.NavigationService.StopNavigation();
             TransitionTo(BotState.Error, "Lost connection - not logged in.");
             return;
@@ -793,6 +804,15 @@ public class StateManager : IDisposable
         }
         finally
         {
+            try
+            {
+                UpdateDiagnosticSnapshots();
+            }
+            catch (Exception ex)
+            {
+                Plugin.LogError($"[Diagnostics] Snapshot scheduling failed: {ex.Message}");
+            }
+
             CompleteSection();
             updateStopwatch.Stop();
             ReportFrameworkHitch(updateStopwatch.Elapsed.TotalMilliseconds, slowestSection, slowestMs);
@@ -814,7 +834,7 @@ public class StateManager : IDisposable
             return;
 
         nextFrameworkHitchLogUtc = now.AddSeconds(5);
-        _log.Warning(
+        Plugin.LogWarning(
             "[LootGoblin][HITCH] state framework update slow elapsedMs={ElapsedMs:0.0}; slowSection={SlowSection}; slowSectionMs={SlowSectionMs:0.0}; transition={Transition}; state={State}; navState={NavState}; detail='{Detail}'.",
             elapsedMs,
             slowestSection,
@@ -2016,8 +2036,9 @@ public class StateManager : IDisposable
         startCombatJobLastDismountAttemptAt = DateTime.MinValue;
     }
 
-    public void Stop()
+    public void Stop([CallerMemberName] string source = "unattributed")
     {
+        WritePreTerminalSnapshot($"stop:{source}");
         ClearPendingPartyTeleportOffer(null);
         ClearAcceptedPartyTeleportOfferRestart(null);
         startPreflightReadyAt = DateTime.MinValue;
@@ -2042,11 +2063,12 @@ public class StateManager : IDisposable
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
         ClearOutdoorMapFlowHold();
         ClearWarning();
-        TransitionTo(BotState.Idle, "Stopped by user.");
+        TransitionTo(BotState.Idle, $"Stopped by user ({source}).");
     }
 
-    public void ResetAll()
+    public void ResetAll([CallerMemberName] string source = "unattributed")
     {
+        WritePreTerminalSnapshot($"reset-all:{source}");
         ClearPendingPartyTeleportOffer(null);
         ClearAcceptedPartyTeleportOfferRestart(null);
         startPreflightReadyAt = DateTime.MinValue;
@@ -2074,25 +2096,301 @@ public class StateManager : IDisposable
         KrangleService.ClearCache();
         ClearOutdoorMapFlowHold();
         ClearWarning();
-        TransitionTo(BotState.Idle, "Full reset by user.");
+        TransitionTo(BotState.Idle, $"Full reset by user ({source}).");
         _plugin.AddDebugLog("All plugin states reset.");
     }
 
-    public void Pause()
+    public void Pause([CallerMemberName] string source = "unattributed")
     {
         if (State == BotState.Idle || State == BotState.Error) return;
+        WritePreTerminalSnapshot($"pause:{source}");
         IsPaused = true;
         _plugin.NavigationService.StopNavigation();
-        _plugin.AddDebugLog("Bot paused.");
+        _plugin.AddDebugLog($"Bot paused; source={source}.");
     }
 
-    public void Resume()
+    public void Resume([CallerMemberName] string source = "unattributed")
     {
         if (!IsPaused) return;
         IsPaused = false;
+        ResetDiagnosticTerminalTracking();
         stateActionIssued = false;
-        _plugin.AddDebugLog("Bot resumed.");
+        _plugin.AddDebugLog($"Bot resumed; source={source}.");
+        WriteDiagnosticSnapshot($"resume:{source}");
     }
+
+    public void WritePreTerminalSnapshot(string source)
+    {
+        if (!_plugin.DedicatedDiagnosticLog.IsEnabled)
+            return;
+
+        var transitionAfterCleanup =
+            source.StartsWith("transition:", StringComparison.Ordinal) &&
+            (lastPreTerminalSnapshotSource.StartsWith("stop:", StringComparison.Ordinal) ||
+             lastPreTerminalSnapshotSource.StartsWith("reset-all:", StringComparison.Ordinal) ||
+             lastPreTerminalSnapshotSource.StartsWith("enabled-disable:", StringComparison.Ordinal) ||
+             lastPreTerminalSnapshotSource.StartsWith("transition:", StringComparison.Ordinal));
+        var stopAfterDisable =
+            source.StartsWith("stop:", StringComparison.Ordinal) &&
+            lastPreTerminalSnapshotSource.StartsWith("enabled-disable:", StringComparison.Ordinal);
+        if (preTerminalSnapshotWritten &&
+            (string.Equals(source, lastPreTerminalSnapshotSource, StringComparison.Ordinal) ||
+             transitionAfterCleanup ||
+             stopAfterDisable))
+        {
+            return;
+        }
+
+        preTerminalSnapshotWritten = true;
+        lastPreTerminalSnapshotSource = source;
+        diagnosticSnapshotPolicy.Reset();
+        WriteDiagnosticSnapshot($"pre-terminal:{source}");
+        _plugin.DedicatedDiagnosticLog.Flush();
+    }
+
+    public void ResetDiagnosticTerminalTracking()
+    {
+        preTerminalSnapshotWritten = false;
+        lastPreTerminalSnapshotSource = string.Empty;
+        diagnosticSnapshotPolicy.Reset();
+    }
+
+    public void WriteDiagnosticSnapshot(string source)
+    {
+        if (!_plugin.DedicatedDiagnosticLog.IsEnabled)
+            return;
+
+        try
+        {
+            var snapshot = BuildDiagnosticSnapshot(source);
+            _plugin.DedicatedDiagnosticLog.WriteCritical("SNAPSHOT", snapshot.Format());
+            UpdateDiagnosticSignatureBaselines();
+        }
+        catch (Exception ex)
+        {
+            Plugin.LogError($"[Diagnostics] Snapshot write failed for '{source}': {ex.Message}");
+        }
+    }
+
+    private void UpdateDiagnosticSnapshots()
+    {
+        if (!_plugin.DedicatedDiagnosticLog.IsEnabled)
+            return;
+
+        var activelyRunning =
+            _plugin.Configuration.Enabled &&
+            !IsPaused &&
+            State is not BotState.Idle and not BotState.Error;
+        if (diagnosticSnapshotPolicy.ShouldWritePeriodic(DateTime.UtcNow, activelyRunning))
+            WriteDiagnosticSnapshot("periodic-60s");
+
+        CaptureDiagnosticChange(
+            ref lastDiagnosticTerritorySignature,
+            BuildDiagnosticTerritorySignature(),
+            "territory-change");
+        CaptureDiagnosticChange(
+            ref lastDiagnosticRepairSignature,
+            BuildDiagnosticRepairSignature(),
+            "repair-phase-change");
+        CaptureDiagnosticChange(
+            ref lastDiagnosticPartyBlockerSignature,
+            BuildDiagnosticPartyBlockerSignature(),
+            "party-blocker-change");
+        CaptureDiagnosticChange(
+            ref lastDiagnosticAdsOwnershipSignature,
+            BuildDiagnosticAdsOwnershipSignature(),
+            "ads-ownership-change");
+    }
+
+    private void CaptureDiagnosticChange(ref string previous, string current, string source)
+    {
+        if (string.IsNullOrEmpty(previous))
+        {
+            previous = current;
+            return;
+        }
+
+        if (string.Equals(previous, current, StringComparison.Ordinal))
+            return;
+
+        previous = current;
+        WriteDiagnosticSnapshot(source);
+    }
+
+    private DiagnosticSnapshot BuildDiagnosticSnapshot(string source)
+    {
+        var now = DateTime.Now;
+        var nowUtc = DateTime.UtcNow;
+        var loading = IsAreaTransitionActive();
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var playerPosition = player?.Position ?? Vector3.Zero;
+        var condition = Plugin.Condition;
+        var ads = _plugin.AdsStatusService.Current;
+        var adsAvailable = _plugin.IsAdsAvailable;
+        var nav = _plugin.NavigationService;
+        var vnav = _plugin.VNavIPC;
+        var party = _plugin.PartyService.PartyMembers;
+        var target = Plugin.TargetManager.Target;
+
+        var lowestDurability = "unavailable";
+        if (Plugin.ClientState.IsLoggedIn && !loading &&
+            _plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition))
+        {
+            lowestDurability = lowestCondition.ToString();
+        }
+
+        var loadedPartyCount = party.Count(member => member.IsLoaded);
+        var sameTerritoryPartyCount = party.Count(member => member.IsInSameTerritory);
+        var loadedSameTerritoryPartyCount = party.Count(member => member.IsLoaded && member.IsInSameTerritory);
+        var blockingPartyMembers = party
+            .Where(member =>
+                !member.IsLocalPlayer &&
+                (!member.IsLoaded || !member.IsInSameTerritory || !member.IsMounted))
+            .Select(member =>
+                $"{member.Name}[loaded={member.IsLoaded},territory={member.TerritoryStatus},mounted={member.IsMounted}]")
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToList();
+
+        var mapName = SelectedMapItemId != 0 &&
+                      TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var mapInfo)
+            ? mapInfo.Name
+            : SelectedMapItemId == 0
+                ? "none"
+                : $"ID {SelectedMapItemId}";
+        var currentLocation = CurrentLocation == null
+            ? "none"
+            : $"{CurrentLocation.ZoneName}[territory={CurrentLocation.TerritoryId},xyz={FormatVectorCompact(new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z))},resolved={CurrentLocation.IsResolved}]";
+        var activeTarget = target == null
+            ? "none"
+            : $"{target.Name}[kind={target.ObjectKind},entity={target.EntityId},xyz={FormatVectorCompact(target.Position)},targetable={target.IsTargetable}]";
+
+        var fields = new List<KeyValuePair<string, string>>();
+        void Add(string key, object? value)
+            => fields.Add(new KeyValuePair<string, string>(key, value?.ToString() ?? "null"));
+
+        Add("control.enabled", _plugin.Configuration.Enabled);
+        Add("control.paused", IsPaused);
+        Add("control.transitionSource", lastTransitionSource);
+        Add("state.name", State);
+        Add("state.detail", StateDetail);
+        Add("state.ageSeconds", Math.Max(0, (now - stateStartTime).TotalSeconds).ToString("F1"));
+        Add("state.retryCount", RetryCount);
+        Add("world.territory", Plugin.ClientState.TerritoryType);
+        Add("world.playerPosition", player == null ? "unavailable" : FormatVectorCompact(playerPosition));
+        Add("world.loggedIn", Plugin.ClientState.IsLoggedIn);
+        Add("world.loading", loading);
+        Add("world.combat", condition[ConditionFlag.InCombat]);
+        Add("world.mounted", condition[ConditionFlag.Mounted] || condition[ConditionFlag.Mounting71]);
+        Add("world.duty", condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56]);
+        Add("world.sanctuary", player != null && !loading ? GameHelpers.IsInSanctuary() : "unavailable");
+        Add("ads.available", adsAvailable);
+        Add("ads.readable", ads.StatusReadable);
+        Add("ads.ownership", ads.OwnershipMode);
+        Add("ads.executionPhase", ads.ExecutionPhase);
+        Add("ads.executionStatus", ads.ExecutionStatus);
+        Add("ads.utilityRunning", ads.UtilityRunning);
+        Add("ads.utilityTask", ads.UtilityTask);
+        Add("ads.utilityMode", ads.UtilityMode);
+        Add("ads.utilityStatus", ads.UtilityStatus);
+        Add("ads.utilityLastSuccess", ads.UtilityLastSuccess);
+        Add("ads.utilityLastFailure", ads.UtilityLastFailure);
+        Add("ads.dutyHandoffActive", adsDutyHandoffActive);
+        Add("ads.ownershipObserved", adsOwnershipObserved);
+        Add("repair.phase", BuildDiagnosticRepairPhase());
+        Add("repair.handoffActive", adsRepairHandoffActive);
+        Add("repair.utilityObserved", adsRepairUtilityObserved);
+        Add("repair.retryPending", adsRepairRetryPending);
+        Add("repair.retryAttempts", adsRepairRetryAttemptCount);
+        Add("repair.recoveryActive", adsRepairRecoveryActive);
+        Add("repair.recoveryTeleportIssued", adsRepairRecoveryTeleportIssued);
+        Add("repair.recoveryTeleportRetries", adsRepairRecoveryTeleportRetryCount);
+        Add("repair.mode", string.IsNullOrWhiteSpace(adsRepairRequestedMode) ? ResolveAdsRepairMode() : adsRepairRequestedMode);
+        Add("repair.source", adsRepairSource);
+        Add("repair.elapsedSeconds", GetDiagnosticRepairElapsed(now));
+        Add("repair.lowestDurabilityPercent", lowestDurability);
+        Add("repair.thresholdPercent", Math.Clamp(_plugin.Configuration.RepairThresholdPercent, 0, 100));
+        Add("navigation.state", nav.State);
+        Add("navigation.detail", nav.StateDetail);
+        Add("navigation.target", FormatVectorCompact(nav.TargetPosition));
+        Add("vnav.available", vnav.IsAvailable);
+        Add("vnav.ready", FormatDiagnosticNullableBool(vnav.TryIsNavReady()));
+        Add("vnav.running", FormatDiagnosticNullableBool(vnav.TryIsRunning()));
+        Add("vnav.pathRunning", FormatDiagnosticNullableBool(vnav.TryIsPathRunning()));
+        Add("vnav.pathfinding", FormatDiagnosticNullableBool(vnav.TryIsPathfindInProgress()));
+        Add("party.state", _plugin.PartyService.State);
+        Add("party.detail", _plugin.PartyService.StateDetail);
+        Add("party.total", party.Count);
+        Add("party.loaded", loadedPartyCount);
+        Add("party.sameTerritory", sameTerritoryPartyCount);
+        Add("party.loadedSameTerritory", loadedSameTerritoryPartyCount);
+        Add("party.expected", waitingForPartyExpectedMemberCount);
+        Add("party.blockers", blockingPartyMembers.Count == 0 ? "none" : string.Join(", ", blockingPartyMembers));
+        Add("party.proximityGate", partyProximityGateSignature);
+        Add("map.selected", mapName);
+        Add("map.selectedId", SelectedMapItemId);
+        Add("map.activeTarget", activeTarget);
+        Add("map.currentLocation", currentLocation);
+        Add("warning", WarningMessage);
+
+        return new DiagnosticSnapshot(nowUtc, source, fields);
+    }
+
+    private void UpdateDiagnosticSignatureBaselines()
+    {
+        lastDiagnosticTerritorySignature = BuildDiagnosticTerritorySignature();
+        lastDiagnosticRepairSignature = BuildDiagnosticRepairSignature();
+        lastDiagnosticPartyBlockerSignature = BuildDiagnosticPartyBlockerSignature();
+        lastDiagnosticAdsOwnershipSignature = BuildDiagnosticAdsOwnershipSignature();
+    }
+
+    private string BuildDiagnosticTerritorySignature()
+        => $"{Plugin.ClientState.TerritoryType}|loading={IsAreaTransitionActive()}";
+
+    private string BuildDiagnosticRepairSignature()
+        => $"{BuildDiagnosticRepairPhase()}|handoff={adsRepairHandoffActive}|retry={adsRepairRetryPending}:{adsRepairRetryAttemptCount}|recovery={adsRepairRecoveryActive}:{adsRepairRecoveryTeleportIssued}:{adsRepairRecoveryTeleportRetryCount}|mode={adsRepairRequestedMode}";
+
+    private string BuildDiagnosticPartyBlockerSignature()
+    {
+        var blockers = _plugin.PartyService.PartyMembers
+            .Where(member =>
+                !member.IsLocalPlayer &&
+                (!member.IsLoaded || !member.IsInSameTerritory || !member.IsMounted))
+            .Select(member => $"{member.Name}:{member.IsLoaded}:{member.TerritoryStatus}:{member.IsMounted}")
+            .OrderBy(value => value, StringComparer.Ordinal);
+        return $"{_plugin.PartyService.PartyMembers.Count}|{partyProximityGateSignature}|{string.Join(",", blockers)}";
+    }
+
+    private string BuildDiagnosticAdsOwnershipSignature()
+    {
+        var ads = _plugin.AdsStatusService.Current;
+        return $"{_plugin.IsAdsAvailable}|{ads.StatusReadable}|{ads.OwnershipMode}|{ads.ExecutionPhase}|{ads.UtilityRunning}|{ads.UtilityTask}|{ads.UtilityMode}";
+    }
+
+    private string BuildDiagnosticRepairPhase()
+    {
+        if (adsRepairRecoveryActive)
+            return "recovery";
+        if (adsRepairRetryPending)
+            return "retry-wait";
+        if (adsRepairHandoffActive)
+            return adsRepairUtilityObserved ? "utility-running-or-observed" : "handoff-starting";
+        return "idle";
+    }
+
+    private string GetDiagnosticRepairElapsed(DateTime now)
+    {
+        var started = adsRepairRecoveryActive
+            ? adsRepairRecoveryStarted
+            : adsRepairHandoffActive
+                ? adsRepairHandoffStarted
+                : DateTime.MinValue;
+        return started == DateTime.MinValue
+            ? "0.0"
+            : Math.Max(0, (now - started).TotalSeconds).ToString("F1");
+    }
+
+    private static string FormatDiagnosticNullableBool(bool? value)
+        => value.HasValue ? value.Value.ToString() : "unavailable";
 
     private void MarkSelectedMapRunCountPending(string source)
     {
@@ -3459,7 +3757,7 @@ public class StateManager : IDisposable
             }
             catch (Exception ex)
             {
-                _log.Error($"[StateManager] {source} descent failed: {ex}");
+                Plugin.LogError($"[StateManager] {source} descent failed: {ex}");
                 _plugin.AddDebugLog($"{source}: descent failed ({ex.GetType().Name}: {ex.Message}).");
             }
             finally
@@ -4497,7 +4795,7 @@ public class StateManager : IDisposable
             }
             catch (Exception ex)
             {
-                Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (dig handoff): {ex.Message}");
+                Plugin.LogError($"[StateManager] ContinueWith exception in TransitionTo (dig handoff): {ex.Message}");
             }
         }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
 
@@ -6136,7 +6434,7 @@ public class StateManager : IDisposable
             }
             catch (Exception ex)
             {
-                Plugin.Log.Error($"[StateManager] ContinueWith exception in TransitionTo (thief-map landing dig handoff): {ex.Message}");
+                Plugin.LogError($"[StateManager] ContinueWith exception in TransitionTo (thief-map landing dig handoff): {ex.Message}");
             }
         }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion);
 
@@ -13198,7 +13496,6 @@ public class StateManager : IDisposable
 
     private void FailAdsRepairRecovery(string message)
     {
-        ResetAdsRepairHandoffTracking();
         TransitionTo(BotState.Error, message);
     }
 
@@ -13231,7 +13528,6 @@ public class StateManager : IDisposable
 
         if (!_plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition))
         {
-            ResetAdsRepairHandoffTracking();
             TransitionTo(BotState.Error, "Could not read equipped gear durability before ADS repair retry.");
             return true;
         }
@@ -13243,7 +13539,6 @@ public class StateManager : IDisposable
         {
             var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
             var diagnostic = BuildAdsRepairFailureDiagnostic(adsStatus, lowestCondition, threshold);
-            ResetAdsRepairHandoffTracking();
             TransitionTo(
                 BotState.Error,
                 $"ADS unloaded before repair retry. {diagnostic}");
@@ -13310,7 +13605,6 @@ public class StateManager : IDisposable
         {
             if (!_plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition))
             {
-                ResetAdsRepairHandoffTracking();
                 TransitionTo(BotState.Error, "ADS repair finished, but equipped gear durability could not be read.");
                 return true;
             }
@@ -13337,7 +13631,6 @@ public class StateManager : IDisposable
 
         if (!_plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition))
         {
-            ResetAdsRepairHandoffTracking();
             TransitionTo(BotState.Error, $"{failureMessage} Could not read equipped gear durability.");
             return true;
         }
@@ -13361,7 +13654,6 @@ public class StateManager : IDisposable
 
         if (!_plugin.IsAdsAvailable)
         {
-            ResetAdsRepairHandoffTracking();
             TransitionTo(
                 BotState.Error,
                 $"{failureMessage} {diagnostic} ADS is not loaded.");
@@ -13370,7 +13662,6 @@ public class StateManager : IDisposable
 
         if (adsRepairRetryAttemptCount >= AdsRepairMaxRetryAttempts)
         {
-            ResetAdsRepairHandoffTracking();
             TransitionTo(
                 BotState.Error,
                 $"{failureMessage} {diagnostic}");
@@ -14682,6 +14973,7 @@ public class StateManager : IDisposable
 
         RetryCount++;
         _plugin.AddDebugLog($"[Error #{RetryCount}] {message}");
+        WriteDiagnosticSnapshot($"error-observed:{message}");
         ResetAllCameraResetBeforeInteractTracking();
 
         // BoundByDuty is also used by overworld treasure-map combat. Only known treasure
@@ -14754,6 +15046,7 @@ public class StateManager : IDisposable
     {
         RetryCount++;
         _plugin.AddDebugLog($"[RetainerMap] Fatal error #{RetryCount}: {message}");
+        WritePreTerminalSnapshot("retainer-retrieval-error");
         _plugin.NavigationService.StopNavigation();
         _plugin.RetainerMapRetrievalService.Reset();
         TransitionTo(BotState.Error, message);
@@ -14777,9 +15070,15 @@ public class StateManager : IDisposable
             or BotState.AlexandriteFarming
             or BotState.GatheringMap;
 
-    private void TransitionTo(BotState newState, string detail)
+    private void TransitionTo(BotState newState, string detail, [CallerMemberName] string transitionSource = "")
     {
         var prev = State;
+        var terminalTransition = newState is BotState.Idle or BotState.Error;
+        if (terminalTransition)
+            WritePreTerminalSnapshot($"transition:{transitionSource}:{prev}->{newState}");
+        else
+            ResetDiagnosticTerminalTracking();
+
         var resetOpeningChestLifecycle = ShouldResetOpeningChestLifecycleForTransition(newState);
         if (newState == BotState.Error)
             ResetAdsRepairHandoffTracking();
@@ -14828,6 +15127,7 @@ public class StateManager : IDisposable
 
         State = newState;
         StateDetail = detail;
+        lastTransitionSource = transitionSource;
         stateStartTime = DateTime.Now;
         stateActionIssued = false;
         dismountAttemptStart = DateTime.MinValue;
@@ -14919,6 +15219,9 @@ public class StateManager : IDisposable
 
         if (_plugin.Configuration.EnableStateLogging)
             _plugin.AddDebugLog($"[State] {prev} → {newState} | {detail}");
+
+        if (!terminalTransition)
+            WriteDiagnosticSnapshot($"state-transition:{transitionSource}:{prev}->{newState}");
     }
 
     // ─── Cycling Modes ────────────────────────────────────────────────────────
@@ -15773,8 +16076,7 @@ public class StateManager : IDisposable
                 if (stepElapsed > 3.0)
                 {
                     // Hand off to normal bot flow - enable bot and start
-                    _plugin.Configuration.Enabled = true;
-                    _plugin.Configuration.Save();
+                    _plugin.SetBotEnabled(true, "alexandrite:map-handoff");
 
                     // Set selected map to Mysterious Map
                     SelectedMapItemId = MysteriousMapItemId;

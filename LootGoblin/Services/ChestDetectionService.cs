@@ -73,7 +73,7 @@ public class ChestDetectionService : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"ChestDetectionService.FindNearestCoffer failed: {ex.Message}");
+            Plugin.LogError($"ChestDetectionService.FindNearestCoffer failed: {ex.Message}");
         }
 
         NearestCoffer = nearest;

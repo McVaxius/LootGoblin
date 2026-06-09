@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Conditions;
@@ -19,6 +20,8 @@ namespace LootGoblin;
 
 public sealed class Plugin : IDalamudPlugin
 {
+    private static Plugin? instance;
+
     [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
@@ -39,6 +42,7 @@ public sealed class Plugin : IDalamudPlugin
     private const string CommandAlias = "/lg";
 
     public Configuration Configuration { get; init; }
+    internal DedicatedDiagnosticLog DedicatedDiagnosticLog { get; init; }
 
     public readonly WindowSystem WindowSystem = new("LootGoblin");
     private ConfigWindow ConfigWindow { get; init; }
@@ -97,6 +101,7 @@ public sealed class Plugin : IDalamudPlugin
     private string lastSlowUpdateSource = "none";
     private IReadOnlyList<uint> cachedRetainerRunnableMapIds = Array.Empty<uint>();
     private string cachedRetainerRunnableMapIdsSignature = string.Empty;
+    private bool observedEnabledState;
 
     private sealed record PluginAvailabilityCacheEntry(bool IsLoaded, DateTime ExpiresAtUtc);
 
@@ -110,11 +115,21 @@ public sealed class Plugin : IDalamudPlugin
 
     public Plugin()
     {
+        instance = this;
         var loadedConfiguration = PluginInterface.GetPluginConfig() as Configuration;
         var isNewConfiguration = loadedConfiguration == null;
         Configuration = loadedConfiguration ?? new Configuration();
         if (ApplyConfigurationMigrations(Configuration, isNewConfiguration))
             Configuration.Save();
+        observedEnabledState = Configuration.Enabled;
+
+        var diagnosticDirectory = Path.Combine(PluginInterface.GetPluginConfigDirectory(), "Diagnostics");
+        DedicatedDiagnosticLog = new DedicatedDiagnosticLog(diagnosticDirectory);
+        if (Configuration.EnableDedicatedDiagnosticLog && !TryEnableDedicatedDiagnosticLog("plugin load"))
+        {
+            Configuration.EnableDedicatedDiagnosticLog = false;
+            Configuration.Save();
+        }
 
         try
         {
@@ -124,7 +139,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         catch (Exception ex)
         {
-            Log.Error($"Failed to initialize ECommons: {ex}");
+            LogError($"Failed to initialize ECommons: {ex}");
         }
 
         // Initialize services
@@ -179,6 +194,11 @@ public sealed class Plugin : IDalamudPlugin
 
         // Initialize state machine
         StateManager = new StateManager(this, Framework, Log);
+        if (DedicatedDiagnosticLog.IsEnabled)
+        {
+            StateManager.WriteDiagnosticSnapshot("dedicated-log-initial");
+            DedicatedDiagnosticLog.Flush();
+        }
         SubscribeChatObservers();
 
         ConfigWindow = new ConfigWindow(this);
@@ -213,6 +233,9 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        StateManager?.WriteDiagnosticSnapshot("plugin-unload");
+        DedicatedDiagnosticLog.Flush();
+
         PluginInterface.UiBuilder.Draw -= WindowSystem.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
@@ -257,13 +280,15 @@ public sealed class Plugin : IDalamudPlugin
             }
             catch (Exception ex)
             {
-                Log.Error($"Failed to dispose ECommons: {ex}");
+                LogError($"Failed to dispose ECommons: {ex}");
             }
         }
 
         ClientState.Login -= OnLogin;
 
         Log.Information("===Loot Goblin unloaded!===");
+        DedicatedDiagnosticLog.Disable("plugin unload");
+        instance = null;
     }
 
     private void OnLogin()
@@ -293,7 +318,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         catch (Exception ex)
         {
-            Log.Error($"[MapLocDB] Auto-update failed during {reason}: {ex}");
+            LogError($"[MapLocDB] Auto-update failed during {reason}: {ex}");
             AddDebugLog($"[MapLocDB] Auto-update failed during {reason}: {ex.GetType().Name}: {ex.Message}");
         }
     }
@@ -322,6 +347,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        ObserveEnabledState();
+
         var updateStopwatch = Stopwatch.StartNew();
         var slowestSection = "none";
         var slowestMs = 0d;
@@ -390,7 +417,7 @@ public sealed class Plugin : IDalamudPlugin
             return;
 
         nextFrameworkHitchLogUtc = now.AddSeconds(5);
-        Log.Warning(
+        LogWarning(
             "[LootGoblin][HITCH] plugin framework update slow elapsedMs={ElapsedMs:0.0}; slowSection={SlowSection}; slowSectionMs={SlowSectionMs:0.0}; transition={Transition}; state={State}; navState={NavState}; enabled={Enabled}.",
             elapsedMs,
             slowestSection,
@@ -445,18 +472,14 @@ public sealed class Plugin : IDalamudPlugin
 
             case "on":
             case "enable":
-                Configuration.Enabled = true;
-                Configuration.Save();
+                SetBotEnabled(true, "command:on");
                 PrintChat("Loot Goblin enabled.");
-                AddDebugLog("Bot enabled via command.");
                 break;
 
             case "off":
             case "disable":
-                Configuration.Enabled = false;
-                Configuration.Save();
+                SetBotEnabled(false, "command:off");
                 PrintChat("Loot Goblin disabled.");
-                AddDebugLog("Bot disabled via command.");
                 break;
 
             case "status":
@@ -615,6 +638,139 @@ public sealed class Plugin : IDalamudPlugin
 
         if (Configuration.DebugMode)
             Log.Debug(message);
+
+        DedicatedDiagnosticLog.Write("EVENT", message);
+    }
+
+    public void SetBotEnabled(bool enabled, string source, bool save = true)
+    {
+        var previous = Configuration.Enabled;
+        if (previous == enabled)
+        {
+            AddDebugLog($"[Control] Enabled already {enabled}; source={source}.");
+            return;
+        }
+
+        if (!enabled)
+            StateManager?.WritePreTerminalSnapshot($"enabled-disable:{source}");
+
+        Configuration.Enabled = enabled;
+        observedEnabledState = enabled;
+        if (save)
+            Configuration.Save();
+
+        AddDebugLog($"[Control] Enabled {previous} -> {enabled}; source={source}.");
+        if (enabled)
+        {
+            StateManager?.ResetDiagnosticTerminalTracking();
+            StateManager?.WriteDiagnosticSnapshot($"enabled-enable:{source}");
+        }
+        else
+            DedicatedDiagnosticLog.Flush();
+    }
+
+    public void SetDedicatedDiagnosticLogEnabled(bool enabled)
+    {
+        if (Configuration.EnableDedicatedDiagnosticLog == enabled && DedicatedDiagnosticLog.IsEnabled == enabled)
+            return;
+
+        if (enabled)
+        {
+            if (!TryEnableDedicatedDiagnosticLog("Advanced settings"))
+            {
+                Configuration.EnableDedicatedDiagnosticLog = false;
+                Configuration.Save();
+                return;
+            }
+
+            Configuration.EnableDedicatedDiagnosticLog = true;
+            Configuration.Save();
+            AddDebugLog("[Diagnostics] Dedicated diagnostic log enabled from Advanced settings.");
+            StateManager?.ResetDiagnosticTerminalTracking();
+            StateManager?.WriteDiagnosticSnapshot("dedicated-log-enabled");
+            DedicatedDiagnosticLog.Flush();
+            return;
+        }
+
+        StateManager?.WritePreTerminalSnapshot("dedicated-log-disabled");
+        AddDebugLog("[Diagnostics] Dedicated diagnostic log disabled from Advanced settings.");
+        DedicatedDiagnosticLog.Flush();
+        Configuration.EnableDedicatedDiagnosticLog = false;
+        Configuration.Save();
+        DedicatedDiagnosticLog.Disable("disabled from Advanced settings");
+    }
+
+    public void WriteDiagnosticSnapshotNow()
+    {
+        StateManager.WriteDiagnosticSnapshot("manual");
+        DedicatedDiagnosticLog.Flush();
+    }
+
+    public void OpenDiagnosticLogFolder()
+    {
+        try
+        {
+            Directory.CreateDirectory(DedicatedDiagnosticLog.DirectoryPath);
+            Process.Start("explorer.exe", DedicatedDiagnosticLog.DirectoryPath);
+        }
+        catch (Exception ex)
+        {
+            LogError($"[Diagnostics] Could not open diagnostic log folder: {ex.Message}");
+        }
+    }
+
+    public static void LogWarning(string messageTemplate, params object[] values)
+    {
+        Log.Warning(messageTemplate, values);
+        instance?.DedicatedDiagnosticLog?.WriteCritical("WARN", RenderDiagnosticMessage(messageTemplate, values));
+    }
+
+    public static void LogError(string messageTemplate, params object[] values)
+    {
+        Log.Error(messageTemplate, values);
+        instance?.DedicatedDiagnosticLog?.WriteCritical("ERROR", RenderDiagnosticMessage(messageTemplate, values));
+    }
+
+    private bool TryEnableDedicatedDiagnosticLog(string source)
+    {
+        try
+        {
+            DedicatedDiagnosticLog.Enable();
+            return DedicatedDiagnosticLog.IsEnabled;
+        }
+        catch (Exception ex)
+        {
+            LogError($"[Diagnostics] Could not enable dedicated diagnostic log from {source}: {ex.Message}");
+            return false;
+        }
+    }
+
+    private void ObserveEnabledState()
+    {
+        if (Configuration.Enabled == observedEnabledState)
+            return;
+
+        var previous = observedEnabledState;
+        observedEnabledState = Configuration.Enabled;
+        if (!Configuration.Enabled)
+            StateManager.WritePreTerminalSnapshot("enabled-disable:unattributed");
+
+        AddDebugLog($"[Control][WARN] Unattributed Enabled change {previous} -> {Configuration.Enabled}.");
+        if (Configuration.Enabled)
+        {
+            StateManager.ResetDiagnosticTerminalTracking();
+            StateManager.WriteDiagnosticSnapshot("enabled-enable:unattributed");
+        }
+        else
+            DedicatedDiagnosticLog.Flush();
+    }
+
+    private static string RenderDiagnosticMessage(string messageTemplate, IReadOnlyList<object> values)
+    {
+        if (values.Count == 0)
+            return messageTemplate;
+
+        return $"{messageTemplate} | values=[{string.Join(", ", values.Select(value => value?.ToString() ?? "null"))}]";
     }
 
     public void ToggleConfigUi() => ConfigWindow.Toggle();
@@ -763,7 +919,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         catch (Exception ex)
         {
-            Log.Error($"Failed to load mount names: {ex.Message}");
+            LogError($"Failed to load mount names: {ex.Message}");
             MountNames = new[] { "Mount Roulette", "Company Chocobo" };
         }
     }

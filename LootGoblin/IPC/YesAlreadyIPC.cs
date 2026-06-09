@@ -45,7 +45,7 @@ public class YesAlreadyIPC : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Warning($"[YesAlready] Failed to pause: {ex.Message}");
+            Plugin.LogWarning($"[YesAlready] Failed to pause: {ex.Message}");
         }
     }
 
@@ -65,7 +65,7 @@ public class YesAlreadyIPC : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Warning($"[YesAlready] Failed to unpause: {ex.Message}");
+            Plugin.LogWarning($"[YesAlready] Failed to unpause: {ex.Message}");
         }
     }
 
@@ -83,7 +83,7 @@ public class YesAlreadyIPC : IDisposable
             }
             catch (Exception ex)
             {
-                _log.Warning($"[YesAlready] Failed to unpause on dispose: {ex.Message}");
+                Plugin.LogWarning($"[YesAlready] Failed to unpause on dispose: {ex.Message}");
             }
         }
     }

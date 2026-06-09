@@ -192,7 +192,7 @@ public sealed class FoodService
             }
         }
 
-        Plugin.Log.Warning($"Could not resolve food item: {foodName}");
+        Plugin.LogWarning($"Could not resolve food item: {foodName}");
     }
 
     private bool BackfillLegacyFoodConfig(Configuration config)

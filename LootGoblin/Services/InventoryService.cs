@@ -236,7 +236,7 @@ public class InventoryService : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to scan inventory for maps: {ex.Message}");
+            Plugin.LogError($"Failed to scan inventory for maps: {ex.Message}");
             _plugin.AddDebugLog($"Inventory scan error: {ex.Message}");
         }
 
@@ -285,7 +285,7 @@ public class InventoryService : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to scan key items for treasure map: {ex.Message}");
+            Plugin.LogError($"Failed to scan key items for treasure map: {ex.Message}");
             _plugin.AddDebugLog($"Key item scan error: {ex.Message}");
         }
 
@@ -302,7 +302,7 @@ public class InventoryService : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to get map count for {itemId}: {ex.Message}");
+            Plugin.LogError($"Failed to get map count for {itemId}: {ex.Message}");
             return 0;
         }
     }
@@ -317,7 +317,7 @@ public class InventoryService : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to get saddlebag map count for {itemId}: {ex.Message}");
+            Plugin.LogError($"Failed to get saddlebag map count for {itemId}: {ex.Message}");
             return 0;
         }
     }
@@ -334,7 +334,7 @@ public class InventoryService : IDisposable
         catch (Exception ex)
         {
             detail = ex.Message;
-            _log.Error($"Failed to move map {itemId} from saddlebags: {ex.Message}");
+            Plugin.LogError($"Failed to move map {itemId} from saddlebags: {ex.Message}");
             return false;
         }
     }
@@ -372,7 +372,7 @@ public class InventoryService : IDisposable
         catch (Exception ex)
         {
             detail = ex.Message;
-            _log.Error($"Failed to plan map {itemId} saddlebag move: {ex.Message}");
+            Plugin.LogError($"Failed to plan map {itemId} saddlebag move: {ex.Message}");
             return false;
         }
     }
@@ -437,7 +437,7 @@ public class InventoryService : IDisposable
         catch (Exception ex)
         {
             detail = ex.Message;
-            _log.Error($"Failed to execute map {plan.ItemId} saddlebag move: {ex.Message}");
+            Plugin.LogError($"Failed to execute map {plan.ItemId} saddlebag move: {ex.Message}");
             return false;
         }
     }
@@ -454,7 +454,7 @@ public class InventoryService : IDisposable
         catch (Exception ex)
         {
             detail = ex.Message;
-            _log.Error($"Failed to move map {itemId} from retainer: {ex.Message}");
+            Plugin.LogError($"Failed to move map {itemId} from retainer: {ex.Message}");
             return false;
         }
     }
@@ -514,7 +514,7 @@ public class InventoryService : IDisposable
         catch (Exception ex)
         {
             detail = ex.Message;
-            _log.Error($"Failed to plan map {itemId} retainer move: {ex.Message}");
+            Plugin.LogError($"Failed to plan map {itemId} retainer move: {ex.Message}");
             return false;
         }
     }
@@ -579,7 +579,7 @@ public class InventoryService : IDisposable
         catch (Exception ex)
         {
             detail = ex.Message;
-            _log.Error($"Failed to execute map {plan.ItemId} retainer move: {ex.Message}");
+            Plugin.LogError($"Failed to execute map {plan.ItemId} retainer move: {ex.Message}");
             return false;
         }
     }

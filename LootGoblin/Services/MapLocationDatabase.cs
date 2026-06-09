@@ -295,7 +295,7 @@ public class MapLocationDatabase
         }
         catch (Exception ex)
         {
-            _log.Error($"TreasureSpot population failed: {ex.Message}");
+            Plugin.LogError($"TreasureSpot population failed: {ex.Message}");
             _plugin.AddDebugLog($"[MapLocDB] TreasureSpot failed: {ex.GetType().Name}: {ex.Message}");
         }
     }
@@ -426,7 +426,7 @@ public class MapLocationDatabase
             }
             catch (Exception ex)
             {
-                _log.Error($"Legacy migration failed: {ex.Message}");
+                Plugin.LogError($"Legacy migration failed: {ex.Message}");
             }
         }
     }
@@ -456,7 +456,7 @@ public class MapLocationDatabase
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to load {label} MapLocDB: {ex.Message}");
+            Plugin.LogError($"Failed to load {label} MapLocDB: {ex.Message}");
         }
         return new();
     }
@@ -484,7 +484,7 @@ public class MapLocationDatabase
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to save MapLocDB: {ex.Message}");
+            Plugin.LogError($"Failed to save MapLocDB: {ex.Message}");
             return false;
         }
     }

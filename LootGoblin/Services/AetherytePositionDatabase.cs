@@ -175,7 +175,7 @@ public class AetherytePositionDatabase
         }
         catch (Exception ex)
         {
-            _log.Error($"GetMissingAetherytes failed: {ex.Message}");
+            Plugin.LogError($"GetMissingAetherytes failed: {ex.Message}");
         }
 
         return missing;
@@ -259,7 +259,7 @@ public class AetherytePositionDatabase
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to load AetherytePositions: {ex.Message}");
+            Plugin.LogError($"Failed to load AetherytePositions: {ex.Message}");
         }
         
         _plugin.AddDebugLog($"[AetheryteDB] Initialization complete: {_positions.Count} total positions loaded");
@@ -290,7 +290,7 @@ public class AetherytePositionDatabase
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to save AetherytePositions: {ex.Message}");
+            Plugin.LogError($"Failed to save AetherytePositions: {ex.Message}");
         }
     }
     
@@ -319,7 +319,7 @@ public class AetherytePositionDatabase
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to reset aetheryte positions to community defaults: {ex.Message}");
+            Plugin.LogError($"Failed to reset aetheryte positions to community defaults: {ex.Message}");
         }
     }
     
@@ -337,7 +337,7 @@ public class AetherytePositionDatabase
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to load community data: {ex.Message}");
+            Plugin.LogError($"Failed to load community data: {ex.Message}");
         }
     }
 }

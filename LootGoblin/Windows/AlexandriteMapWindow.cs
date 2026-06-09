@@ -81,7 +81,7 @@ public class AlexandriteMapWindow : Window, IDisposable
         {
             if (ImGui.Button("Stop##alexstop", new Vector2(120, 0)))
             {
-                sm.Stop();
+                sm.Stop("alexandrite-window:stop");
             }
         }
         else

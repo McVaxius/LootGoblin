@@ -82,7 +82,7 @@ public class MapFlagReader : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"MapFlagReader.TryReadFlag failed: {ex.Message}");
+            Plugin.LogError($"MapFlagReader.TryReadFlag failed: {ex.Message}");
             return null;
         }
     }

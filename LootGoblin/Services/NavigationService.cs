@@ -707,7 +707,7 @@ public class NavigationService : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"Error finding nearest aetheryte: {ex.Message}");
+            Plugin.LogError($"Error finding nearest aetheryte: {ex.Message}");
             _plugin.AddDebugLog($"[Aetheryte] FATAL EXCEPTION: {ex.GetType().Name}: {ex.Message}");
             bestAetheryteDistance = double.MaxValue;
             usedXyzComparison = false;

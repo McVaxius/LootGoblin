@@ -52,7 +52,7 @@ public class FrenRiderIPC : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"Error checking FrenRider: {ex.Message}");
+            Plugin.LogError($"Error checking FrenRider: {ex.Message}");
             IsAvailable = false;
         }
     }

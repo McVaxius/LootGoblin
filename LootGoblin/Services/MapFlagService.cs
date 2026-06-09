@@ -51,7 +51,7 @@ public sealed class MapFlagService : IDisposable
         }
         catch (Exception ex)
         {
-            log.Error($"Error checking local map flag reader: {ex.Message}");
+            Plugin.LogError($"Error checking local map flag reader: {ex.Message}");
             IsAvailable = false;
         }
     }

@@ -131,7 +131,7 @@ public class RotationPluginIPC : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"Error checking rotation plugins: {ex.Message}");
+            Plugin.LogError($"Error checking rotation plugins: {ex.Message}");
         }
     }
 

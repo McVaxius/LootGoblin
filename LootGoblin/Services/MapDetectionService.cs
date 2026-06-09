@@ -41,7 +41,7 @@ public class MapDetectionService : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"Error checking map state: {ex.Message}");
+            Plugin.LogError($"Error checking map state: {ex.Message}");
         }
     }
 

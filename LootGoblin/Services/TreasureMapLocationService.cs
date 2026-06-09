@@ -123,7 +123,7 @@ public sealed class TreasureMapLocationService : IDisposable
         }
         catch (Exception ex)
         {
-            log.Error($"[TreasureMapCapture] Failed to build rank lookup: {ex}");
+            Plugin.LogError($"[TreasureMapCapture] Failed to build rank lookup: {ex}");
         }
     }
 
@@ -146,7 +146,7 @@ public sealed class TreasureMapLocationService : IDisposable
         catch (Exception ex)
         {
             actorControlSelfHook = null;
-            log.Error($"[TreasureMapCapture] Failed to install ActorControlSelf hook: {ex}");
+            Plugin.LogError($"[TreasureMapCapture] Failed to install ActorControlSelf hook: {ex}");
             plugin.AddDebugLog($"[TreasureMapCapture] ActorControlSelf hook unavailable: {ex.GetType().Name}: {ex.Message}");
         }
     }
@@ -163,7 +163,7 @@ public sealed class TreasureMapLocationService : IDisposable
         catch (Exception ex)
         {
             showTreasureMapHook = null;
-            log.Error($"[TreasureMapCapture] Failed to install treasure map show hook: {ex}");
+            Plugin.LogError($"[TreasureMapCapture] Failed to install treasure map show hook: {ex}");
             plugin.AddDebugLog($"[TreasureMapCapture] Hook unavailable: {ex.GetType().Name}: {ex.Message}");
         }
     }
@@ -178,7 +178,7 @@ public sealed class TreasureMapLocationService : IDisposable
         }
         catch (Exception ex)
         {
-            log.Error($"[TreasureMapCapture] ActorControlSelf detour failed: {ex}");
+            Plugin.LogError($"[TreasureMapCapture] ActorControlSelf detour failed: {ex}");
         }
 
         return actorControlSelfHook?.Original(a1, a2, dataPtr) ?? '\0';
@@ -192,7 +192,7 @@ public sealed class TreasureMapLocationService : IDisposable
         }
         catch (Exception ex)
         {
-            log.Error($"[TreasureMapCapture] Show-map detour failed: {ex}");
+            Plugin.LogError($"[TreasureMapCapture] Show-map detour failed: {ex}");
         }
 
         return showTreasureMapHook?.Original(manager, rowId, subRowId, unknown) ?? nint.Zero;
