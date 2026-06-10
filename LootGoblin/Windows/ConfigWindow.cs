@@ -330,11 +330,12 @@ public class ConfigWindow : Window, IDisposable
             Plugin.Log.Info($"[Config] Wait for Party saved as: {configuration.WaitForParty}");
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("When enabled, the bot waits for party members to mount before taking off.");
+            ImGui.SetTooltip("When enabled, the bot waits for party members before takeoff, remount recovery, and map travel handoffs.");
 
         DrawConfigCheckbox("Wait for Party for thief maps / underwater", configuration.WaitForPartyForThiefMapsUnderwater, value => configuration.WaitForPartyForThiefMapsUnderwater = value,
             "Overrides the general Wait for Party setting for thief-map underwater travel, remount recovery, and descent/dig waits.");
-        DrawConfigCheckbox("Require All Mounted", configuration.RequireAllMounted, value => configuration.RequireAllMounted = value);
+        DrawConfigCheckbox("Require All Mounted", configuration.RequireAllMounted, value => configuration.RequireAllMounted = value,
+            "When count threshold is off, takeoff and remount waits require every other party member mounted. Turn off to continue when any other same-zone party member is mounted.");
 
         var partyTimeout = configuration.PartyWaitTimeout;
         if (ImGui.SliderInt("Party Wait Timeout (s)", ref partyTimeout, 30, 300))
@@ -345,9 +346,8 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip(
-                "Applies to map-flag proximity waits. Before timeout, the configured full-party or count threshold is required. " +
-                "After timeout, LootGoblin can continue only when at least one same-territory party member has a resolved position " +
-                "and every resolved same-territory member is within 10 yalms. Far same-territory members keep blocking.");
+                "Applies to all party waits. In count-threshold mode, timeout does not lower the configured player count. " +
+                "In full-party proximity waits, timeout can allow guarded recovery when unresolved or out-of-territory members are the only blockers.");
         }
 
         var teleportDelay = Math.Clamp(configuration.PartyTeleportDelaySeconds, 0, 300);
@@ -369,10 +369,10 @@ public class ConfigWindow : Window, IDisposable
 
         DrawConfigCheckbox("Wait for party before dismounting", configuration.PartyWaitBeforeDismount, value => configuration.PartyWaitBeforeDismount = value,
             "Wait at the destination until party members are within 10 yalms before dismounting.");
-        if (configuration.PartyWaitBeforeDismount || configuration.WaitForPartyForThiefMapsUnderwater)
+        if (configuration.WaitForParty || configuration.PartyWaitBeforeDismount || configuration.WaitForPartyForThiefMapsUnderwater)
         {
             DrawConfigCheckbox("Specify number of party to wait for", configuration.PartyWaitBeforeDismountUseCountThreshold, value => configuration.PartyWaitBeforeDismountUseCountThreshold = value,
-                "Use a count of other party members instead of waiting for the entire party roster. Applies to landing waits and thief-map underwater trigger waits.");
+                "Use a count of other party members instead of waiting for the entire party roster. Applies to takeoff, remount, landing, underwater, and next-map waits.");
             if (configuration.PartyWaitBeforeDismountUseCountThreshold)
             {
                 var requiredOthers = Math.Clamp(configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);
@@ -382,6 +382,8 @@ public class ConfigWindow : Window, IDisposable
                     configuration.PartyWaitBeforeDismountRequiredOthers = Math.Clamp(requiredOthers, 1, 7);
                     configuration.Save();
                 }
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Number of other party members required for every party wait. Local player is not counted.");
             }
         }
 

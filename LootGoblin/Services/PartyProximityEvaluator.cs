@@ -75,6 +75,33 @@ public static class PartyGateSemantics
         PartyTerritoryStatus territoryStatus,
         bool isMounted)
         => IsLoadedSameTerritory(isLoaded, territoryStatus) && isMounted;
+
+    public static int ResolveRequiredOthers(
+        int totalOthers,
+        bool useCountThreshold,
+        int configuredRequiredOthers)
+    {
+        if (totalOthers <= 0)
+            return 0;
+
+        return useCountThreshold
+            ? Math.Min(Math.Clamp(configuredRequiredOthers, 1, 7), totalOthers)
+            : totalOthers;
+    }
+
+    public static bool HasRequiredOthers(
+        int readyOthers,
+        int totalOthers,
+        bool useCountThreshold,
+        int configuredRequiredOthers)
+    {
+        var requiredOthers = ResolveRequiredOthers(
+            totalOthers,
+            useCountThreshold,
+            configuredRequiredOthers);
+
+        return requiredOthers == 0 || readyOthers >= requiredOthers;
+    }
 }
 
 public static class PartyProximityEvaluator
@@ -202,13 +229,14 @@ public static class PartyProximityEvaluator
             };
         }
 
-        var requiredOthers = useCountThreshold
-            ? Math.Min(Math.Clamp(configuredRequiredOthers, 1, 7), totalOthers)
-            : totalOthers;
+        var requiredOthers = PartyGateSemantics.ResolveRequiredOthers(
+            totalOthers,
+            useCountThreshold,
+            configuredRequiredOthers);
 
         var canProceed = nearbyOthers >= requiredOthers;
         var guardedRecoveryUsed = false;
-        if (timedOut)
+        if (timedOut && !useCountThreshold)
         {
             canProceed = resolvedSameTerritory > 0 && sameTerritoryFar == 0;
             guardedRecoveryUsed = canProceed && (unresolved > 0 || outOfTerritory > 0);
@@ -222,7 +250,7 @@ public static class PartyProximityEvaluator
             GuardedRecoveryUsed = guardedRecoveryUsed,
             LocalSnapshotValid = true,
             NearbyOthers = nearbyOthers,
-            RequiredOthers = timedOut ? resolvedSameTerritory : requiredOthers,
+            RequiredOthers = requiredOthers,
             TotalOthers = totalOthers,
             ResolvedSameTerritoryCount = resolvedSameTerritory,
             SameTerritoryFarCount = sameTerritoryFar,

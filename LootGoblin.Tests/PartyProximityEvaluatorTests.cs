@@ -122,6 +122,91 @@ public class PartyProximityEvaluatorTests
     }
 
     [Fact]
+    public void ThresholdTwoAllowsTwoNearbyDespiteFarOrUnresolvedOthers()
+    {
+        var members = new[]
+        {
+            Local(),
+            Other("Nearby 1", 2, 5, 0),
+            Other("Nearby 2", 3, 7, 0),
+            Other("Far 1", 4, 25, 0),
+            Other("Far 2", 5, 35, 0),
+            Other("Unresolved 1", 6, 0, 0, territory: PartyTerritoryStatus.Unknown, hasPosition: false),
+            Other("Unresolved 2", 7, 0, 0, territory: PartyTerritoryStatus.Unknown, hasPosition: false),
+            Other("Elsewhere", 8, 0, 0, territory: PartyTerritoryStatus.Different, hasPosition: false),
+        };
+
+        var result = Evaluate(members, useThreshold: true, requiredOthers: 2);
+
+        Assert.True(result.CanProceed);
+        Assert.Equal(2, result.NearbyOthers);
+        Assert.Equal(2, result.RequiredOthers);
+        Assert.Equal(7, result.TotalOthers);
+    }
+
+    [Fact]
+    public void ThresholdTwoHoldsWithOnlyOneNearbyOther()
+    {
+        var members = new[]
+        {
+            Local(),
+            Other("Nearby", 2, 5, 0),
+            Other("Far", 3, 25, 0),
+            Other("Unresolved", 4, 0, 0, territory: PartyTerritoryStatus.Unknown, hasPosition: false),
+        };
+
+        var result = Evaluate(members, useThreshold: true, requiredOthers: 2);
+
+        Assert.False(result.CanProceed);
+        Assert.Equal(1, result.NearbyOthers);
+        Assert.Equal(2, result.RequiredOthers);
+    }
+
+    [Fact]
+    public void TimeoutInThresholdModeStillRequiresConfiguredNearbyOthers()
+    {
+        var enoughNearby = new[]
+        {
+            Local(),
+            Other("Nearby 1", 2, 5, 0),
+            Other("Nearby 2", 3, 7, 0),
+            Other("Far", 4, 25, 0),
+        };
+        var notEnoughNearby = new[]
+        {
+            Local(),
+            Other("Nearby", 2, 5, 0),
+            Other("Far", 3, 25, 0),
+        };
+
+        var allowed = Evaluate(enoughNearby, timedOut: true, useThreshold: true, requiredOthers: 2);
+        var held = Evaluate(notEnoughNearby, timedOut: true, useThreshold: true, requiredOthers: 2);
+
+        Assert.True(allowed.CanProceed);
+        Assert.False(allowed.GuardedRecoveryUsed);
+        Assert.Equal(2, allowed.RequiredOthers);
+        Assert.False(held.CanProceed);
+        Assert.Equal(2, held.RequiredOthers);
+    }
+
+    [Fact]
+    public void FullPartyModeStillRequiresAllNearbyOthersBeforeTimeout()
+    {
+        var result = Evaluate(
+            new[]
+            {
+                Local(),
+                Other("Nearby 1", 2, 5, 0),
+                Other("Nearby 2", 3, 7, 0),
+                Other("Far", 4, 25, 0),
+            });
+
+        Assert.False(result.CanProceed);
+        Assert.Equal(2, result.NearbyOthers);
+        Assert.Equal(3, result.RequiredOthers);
+    }
+
+    [Fact]
     public void MountAndPostDungeonGatesRequireLoadedSameTerritoryMembers()
     {
         Assert.True(PartyGateSemantics.IsLoadedSameTerritory(true, PartyTerritoryStatus.Same));
@@ -131,6 +216,11 @@ public class PartyProximityEvaluatorTests
         Assert.True(PartyGateSemantics.IsLoadedSameTerritoryMounted(true, PartyTerritoryStatus.Same, true));
         Assert.False(PartyGateSemantics.IsLoadedSameTerritoryMounted(false, PartyTerritoryStatus.Same, true));
         Assert.False(PartyGateSemantics.IsLoadedSameTerritoryMounted(true, PartyTerritoryStatus.Same, false));
+
+        Assert.True(PartyGateSemantics.HasRequiredOthers(2, 7, useCountThreshold: true, configuredRequiredOthers: 2));
+        Assert.False(PartyGateSemantics.HasRequiredOthers(1, 7, useCountThreshold: true, configuredRequiredOthers: 2));
+        Assert.True(PartyGateSemantics.HasRequiredOthers(7, 7, useCountThreshold: false, configuredRequiredOthers: 2));
+        Assert.False(PartyGateSemantics.HasRequiredOthers(2, 7, useCountThreshold: false, configuredRequiredOthers: 2));
     }
 
     private static PartyProximityResult Evaluate(
