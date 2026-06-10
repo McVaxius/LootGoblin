@@ -12645,7 +12645,7 @@ public class StateManager : IDisposable
                 if (portal == null && TryRecoverOverworldCofferFromCompleted("[Portal]"))
                     return;
 
-                if (TryHandleConfirmedDutyEntry("[Portal]", portal != null || portalApproachPosition.HasValue))
+                if (TryHandleConfirmedDutyEntry("[Portal]", portalAvailable: portal != null))
                     return;
 
                 if (portal != null)
@@ -12747,12 +12747,18 @@ public class StateManager : IDisposable
 
             var mapDutyStillActive = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                                      Plugin.Condition[ConditionFlag.BoundByDuty56];
-            var portalStillAvailable = portalApproachPosition.HasValue || timedOutPortal != null;
+            var portalTimeoutAction = PortalTimeoutPolicy.Evaluate(
+                new PortalTimeoutState(
+                    mapDutyStillActive,
+                    timedOutPortal != null,
+                    portalApproachPosition.HasValue));
 
-            if (TryHandleConfirmedDutyEntry("[Portal]", portalAvailable: portalStillAvailable))
+            if (TryHandleConfirmedDutyEntry(
+                    "[Portal]",
+                    portalAvailable: portalTimeoutAction == PortalTimeoutAction.ContinuePortalInteraction))
                 return;
 
-            if (portalStillAvailable || mapDutyStillActive)
+            if (portalTimeoutAction != PortalTimeoutAction.CompleteMap)
             {
                 var currentTerritory = Plugin.ClientState.TerritoryType;
                 if (mapDutyStillActive && !IsTreasureDungeonTerritory(currentTerritory))
@@ -12761,23 +12767,24 @@ public class StateManager : IDisposable
                 if (now - lastPortalTimeoutHoldLogTime >= TimeSpan.FromSeconds(5.0))
                 {
                     lastPortalTimeoutHoldLogTime = now;
-                    var holdReason = portalApproachPosition.HasValue
-                        ? $"captured portal XYZ {FormatVectorCompact(portalApproachPosition.Value)}"
-                        : timedOutPortal != null
-                            ? "live targetable portal"
-                            : "map-duty state";
+                    var holdReason = portalTimeoutAction == PortalTimeoutAction.ContinuePortalInteraction
+                        ? "live targetable portal"
+                        : "map-duty state";
                     _plugin.AddDebugLog(
                         $"[Portal] Portal window timeout reached, but {holdReason} is still active - continuing instead of marking map complete.");
                 }
 
-                portalRetryStart = now;
-                StateDetail = portalStillAvailable
+                if (portalTimeoutAction == PortalTimeoutAction.ContinuePortalInteraction)
+                    portalRetryStart = now;
+
+                StateDetail = portalTimeoutAction == PortalTimeoutAction.ContinuePortalInteraction
                     ? "Portal still active - continuing portal interaction..."
-                    : $"Map duty active in territory {currentTerritory} - recovering coffer/portal...";
+                    : $"Map duty active in territory {currentTerritory} - waiting for duty to clear...";
                 return;
             }
 
             // Time elapsed, no usable portal entry - map is complete (no dungeon)
+            EndPortalRetryWindow();
             if (TryGuardMapCompletionWithActiveKeyItem("[PortalTimeout]"))
                 return;
 
@@ -12787,7 +12794,6 @@ public class StateManager : IDisposable
                 _plugin.NavigationService.StopNavigation();
                 autoMoveActive = false;
             }
-            EndPortalRetryWindow();
             adsDutyEntryConfirmedAt = DateTime.MinValue;
         }
 

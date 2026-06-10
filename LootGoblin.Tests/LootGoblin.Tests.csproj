@@ -24,5 +24,6 @@
     <Compile Include="..\LootGoblin\Services\DedicatedDiagnosticLog.cs" Link="Services\DedicatedDiagnosticLog.cs" />
     <Compile Include="..\LootGoblin\Services\DiagnosticSnapshotPolicy.cs" Link="Services\DiagnosticSnapshotPolicy.cs" />
     <Compile Include="..\LootGoblin\Services\PartyProximityEvaluator.cs" Link="Services\PartyProximityEvaluator.cs" />
+    <Compile Include="..\LootGoblin\Services\PortalTimeoutPolicy.cs" Link="Services\PortalTimeoutPolicy.cs" />
   </ItemGroup>
 </Project>
