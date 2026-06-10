@@ -111,12 +111,44 @@ public class StateManager : IDisposable
         MoveTo
     }
 
+    private sealed record SelectYesnoDiagnosticSnapshot(
+        DateTime CapturedAt,
+        bool? PromptVisible,
+        string Prompt,
+        uint Territory,
+        bool Loading,
+        bool Duty,
+        bool Combat,
+        string Sanctuary,
+        int PartyTotal,
+        int PartyLoaded,
+        int PartySameTerritory,
+        int PartyLoadedSameTerritory,
+        BotState BotState,
+        string Detail,
+        string MapSelected,
+        uint MapSelectedId,
+        string CurrentLocation,
+        string ActiveTarget,
+        string RepairPhase,
+        string RepairMode,
+        string RepairSource,
+        string LowestDurabilityPercent,
+        int RepairThresholdPercent);
+
+    private sealed record PendingSelectYesnoAfterDiagnostic(
+        string Prompt,
+        string Source,
+        SelectYesnoDiagnosticSnapshot Before,
+        DateTime DueAt);
+
     private DateTime stateStartTime = DateTime.Now;
     private DateTime lastTickTime = DateTime.MinValue;
     private DateTime nextFrameworkHitchLogUtc = DateTime.MinValue;
     private double lastSlowUpdateMs;
     private string lastSlowUpdateSource = "none";
     private DateTime lastSelectYesnoWatchdogTime = DateTime.MinValue;
+    private readonly Queue<PendingSelectYesnoAfterDiagnostic> pendingSelectYesnoAfterDiagnostics = new();
     private DateTime pendingPartyTeleportOfferObservedAt = DateTime.MinValue;
     private string pendingPartyTeleportOfferText = string.Empty;
     private bool acceptedPartyTeleportOfferRestartPending;
@@ -285,6 +317,7 @@ public class StateManager : IDisposable
     private bool selectedMapRunCountDecremented;
     private const double TickIntervalSeconds = 0.5;
     private static readonly TimeSpan SelectYesnoWatchdogInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan SelectYesnoAfterDiagnosticDelay = TimeSpan.FromMilliseconds(750);
     private static readonly TimeSpan PartyTeleportOfferPendingTtl = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PartyTeleportAcceptedSettleDelay = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan PartyTeleportPostLoadingSettleDelay = TimeSpan.FromSeconds(2);
@@ -913,6 +946,7 @@ public class StateManager : IDisposable
     {
         // Guard: never access game memory during zone transitions (loading screens)
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51];
+        UpdatePendingSelectYesnoAfterDiagnostics(loading);
         if (loading)
         {
             HandleBetweenAreasTick();
@@ -1528,14 +1562,30 @@ public class StateManager : IDisposable
 
         lastSelectYesnoWatchdogTime = now;
 
-        if (ClickYesIfVisibleWithTeleportOfferCheck())
+        if (ClickYesIfVisibleWithDiagnostics("SelectYesnoWatchdog"))
             _plugin.AddDebugLog("[SelectYesnoWatchdog] Clicked Yes on visible SelectYesno dialog.");
     }
 
-    private bool ClickYesIfVisibleWithTeleportOfferCheck()
+    internal bool ClickYesIfVisibleWithDiagnostics(string source)
     {
-        if (!GameHelpers.ClickYesIfVisible())
+        SelectYesnoDiagnosticSnapshot? beforeSnapshot = null;
+        if (!GameHelpers.ClickYesIfVisible(
+                source,
+                out var prompt,
+                observedPrompt =>
+                {
+                    beforeSnapshot = CaptureSelectYesnoDiagnosticSnapshot(
+                        NormalizeSelectYesnoPrompt(observedPrompt),
+                        promptVisible: true,
+                        allowAddonRead: false);
+                    LogSelectYesnoObserved(observedPrompt, source, beforeSnapshot);
+                }))
             return false;
+
+        prompt = NormalizeSelectYesnoPrompt(prompt);
+        beforeSnapshot ??= CaptureSelectYesnoDiagnosticSnapshot(prompt, promptVisible: true, allowAddonRead: false);
+        LogSelectYesnoAccepted(prompt, source, beforeSnapshot);
+        QueueSelectYesnoAfterDiagnostic(prompt, source, beforeSnapshot);
 
         var now = DateTime.Now;
         if (IsPendingPartyTeleportOfferActive(now))
@@ -1543,6 +1593,202 @@ public class StateManager : IDisposable
 
         return true;
     }
+
+    private void UpdatePendingSelectYesnoAfterDiagnostics(bool loading)
+    {
+        if (pendingSelectYesnoAfterDiagnostics.Count == 0)
+            return;
+
+        var now = DateTime.Now;
+        while (pendingSelectYesnoAfterDiagnostics.TryPeek(out var pending) && pending.DueAt <= now)
+        {
+            pendingSelectYesnoAfterDiagnostics.Dequeue();
+            var after = CaptureSelectYesnoDiagnosticSnapshot(pending.Prompt, promptVisible: null, allowAddonRead: !loading);
+            LogSelectYesnoAfter(pending.Prompt, pending.Source, pending.Before, after);
+        }
+    }
+
+    private SelectYesnoDiagnosticSnapshot CaptureSelectYesnoDiagnosticSnapshot(
+        string prompt,
+        bool? promptVisible,
+        bool allowAddonRead)
+    {
+        var loading = IsAreaTransitionActive();
+        var normalizedPrompt = NormalizeSelectYesnoPrompt(prompt);
+        if (allowAddonRead && !loading)
+        {
+            if (GameHelpers.TryReadSelectYesnoPrompt(out var visiblePrompt))
+            {
+                promptVisible = true;
+                normalizedPrompt = NormalizeSelectYesnoPrompt(visiblePrompt);
+            }
+            else
+            {
+                promptVisible = GameHelpers.IsAddonVisible("SelectYesno");
+            }
+        }
+
+        TryRefreshSelectYesnoPartySnapshot(loading);
+        var party = _plugin.PartyService.PartyMembers;
+        var loadedPartyCount = party.Count(member => member.IsLoaded);
+        var sameTerritoryPartyCount = party.Count(member => member.IsInSameTerritory);
+        var loadedSameTerritoryPartyCount = party.Count(member => member.IsLoaded && member.IsInSameTerritory);
+        var playerAvailable = !loading && Plugin.ClientState.IsLoggedIn && Plugin.ObjectTable.LocalPlayer != null;
+        var sanctuary = playerAvailable ? FormatSelectYesnoBool(GameHelpers.IsInSanctuary()) : "unavailable";
+        var lowestDurability = "unavailable";
+        if (!loading &&
+            Plugin.ClientState.IsLoggedIn &&
+            _plugin.InventoryService.TryGetLowestEquippedGearConditionPercent(out var lowestCondition))
+        {
+            lowestDurability = lowestCondition.ToString();
+        }
+
+        return new SelectYesnoDiagnosticSnapshot(
+            DateTime.Now,
+            promptVisible,
+            normalizedPrompt,
+            Plugin.ClientState.TerritoryType,
+            loading,
+            Plugin.Condition[ConditionFlag.BoundByDuty] || Plugin.Condition[ConditionFlag.BoundByDuty56],
+            Plugin.Condition[ConditionFlag.InCombat],
+            sanctuary,
+            party.Count,
+            loadedPartyCount,
+            sameTerritoryPartyCount,
+            loadedSameTerritoryPartyCount,
+            State,
+            StateDetail,
+            BuildSelectYesnoMapName(),
+            SelectedMapItemId,
+            BuildSelectYesnoCurrentLocation(),
+            BuildSelectYesnoActiveTarget(loading),
+            BuildDiagnosticRepairPhase(),
+            BuildSelectYesnoRepairMode(),
+            BuildSelectYesnoRepairSource(),
+            lowestDurability,
+            Math.Clamp(_plugin.Configuration.RepairThresholdPercent, 0, 100));
+    }
+
+    private void TryRefreshSelectYesnoPartySnapshot(bool loading)
+    {
+        if (loading || !Plugin.ClientState.IsLoggedIn)
+            return;
+
+        try
+        {
+            _plugin.PartyService.UpdatePartyStatus();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Debug($"[SelectYesno] Party snapshot refresh failed: {ex.Message}");
+        }
+    }
+
+    private void LogSelectYesnoObserved(string prompt, string source, SelectYesnoDiagnosticSnapshot snapshot)
+    {
+        _plugin.AddDebugLog(
+            $"[SelectYesno] observed prompt='{EscapeSelectYesnoDiagnostic(NormalizeSelectYesnoPrompt(prompt))}' source={source} {BuildSelectYesnoDiagnosticContext(snapshot)}");
+    }
+
+    private void LogSelectYesnoAccepted(string prompt, string source, SelectYesnoDiagnosticSnapshot snapshot)
+    {
+        _plugin.AddDebugLog(
+            $"[SelectYesno] accepted prompt='{EscapeSelectYesnoDiagnostic(NormalizeSelectYesnoPrompt(prompt))}' source={source} result=callback-sent {BuildSelectYesnoDiagnosticContext(snapshot)} recent='{EscapeSelectYesnoDiagnostic(LootGoblinActionTrace.FormatRecent())}'");
+    }
+
+    private void QueueSelectYesnoAfterDiagnostic(string prompt, string source, SelectYesnoDiagnosticSnapshot beforeSnapshot)
+    {
+        pendingSelectYesnoAfterDiagnostics.Enqueue(new PendingSelectYesnoAfterDiagnostic(
+            NormalizeSelectYesnoPrompt(prompt),
+            source,
+            beforeSnapshot,
+            DateTime.Now + SelectYesnoAfterDiagnosticDelay));
+
+        while (pendingSelectYesnoAfterDiagnostics.Count > 8)
+            pendingSelectYesnoAfterDiagnostics.Dequeue();
+    }
+
+    private void LogSelectYesnoAfter(
+        string prompt,
+        string source,
+        SelectYesnoDiagnosticSnapshot before,
+        SelectYesnoDiagnosticSnapshot after)
+    {
+        _plugin.AddDebugLog(
+            $"[SelectYesno] after prompt='{EscapeSelectYesnoDiagnostic(NormalizeSelectYesnoPrompt(prompt))}' source={source} " +
+            $"party.total={before.PartyTotal}->{after.PartyTotal} party.loaded={before.PartyLoaded}->{after.PartyLoaded} " +
+            $"party.sameTerritory={before.PartySameTerritory}->{after.PartySameTerritory} territory={before.Territory}->{after.Territory} " +
+            $"duty={FormatSelectYesnoBool(before.Duty)}->{FormatSelectYesnoBool(after.Duty)} loading={FormatSelectYesnoBool(before.Loading)}->{FormatSelectYesnoBool(after.Loading)} " +
+            $"visible={FormatSelectYesnoNullableBool(before.PromptVisible)}->{FormatSelectYesnoNullableBool(after.PromptVisible)} afterPrompt='{EscapeSelectYesnoDiagnostic(after.Prompt)}'");
+    }
+
+    private string BuildSelectYesnoDiagnosticContext(SelectYesnoDiagnosticSnapshot snapshot)
+        => $"state={snapshot.BotState} detail='{EscapeSelectYesnoDiagnostic(snapshot.Detail)}' " +
+           $"party.total={snapshot.PartyTotal} party.loaded={snapshot.PartyLoaded} party.sameTerritory={snapshot.PartySameTerritory} party.loadedSameTerritory={snapshot.PartyLoadedSameTerritory} " +
+           $"territory={snapshot.Territory} duty={FormatSelectYesnoBool(snapshot.Duty)} combat={FormatSelectYesnoBool(snapshot.Combat)} loading={FormatSelectYesnoBool(snapshot.Loading)} sanctuary={snapshot.Sanctuary} " +
+           $"map='{EscapeSelectYesnoDiagnostic(snapshot.MapSelected)}' selectedMapId={snapshot.MapSelectedId} target='{EscapeSelectYesnoDiagnostic(snapshot.ActiveTarget)}' location='{EscapeSelectYesnoDiagnostic(snapshot.CurrentLocation)}' " +
+           $"repair.phase={snapshot.RepairPhase} repair.mode='{EscapeSelectYesnoDiagnostic(snapshot.RepairMode)}' repair.source='{EscapeSelectYesnoDiagnostic(snapshot.RepairSource)}' " +
+           $"repair.lowestDurabilityPercent={snapshot.LowestDurabilityPercent} repair.thresholdPercent={snapshot.RepairThresholdPercent}";
+
+    private string BuildSelectYesnoMapName()
+        => SelectedMapItemId != 0 &&
+           TreasureMapData.KnownMaps.TryGetValue(SelectedMapItemId, out var mapInfo)
+            ? mapInfo.Name
+            : SelectedMapItemId == 0
+                ? "none"
+                : $"ID {SelectedMapItemId}";
+
+    private string BuildSelectYesnoCurrentLocation()
+        => CurrentLocation == null
+            ? "none"
+            : $"{CurrentLocation.ZoneName}[territory={CurrentLocation.TerritoryId},xyz={FormatVectorCompact(new Vector3(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z))},resolved={CurrentLocation.IsResolved}]";
+
+    private static string BuildSelectYesnoActiveTarget(bool loading)
+    {
+        if (loading)
+            return "unavailable-loading";
+
+        var target = Plugin.TargetManager.Target;
+        return target == null
+            ? "none"
+            : $"{target.Name}[kind={target.ObjectKind},entity={target.EntityId},xyz={FormatVectorCompact(target.Position)},targetable={target.IsTargetable}]";
+    }
+
+    private string BuildSelectYesnoRepairMode()
+    {
+        if (!string.IsNullOrWhiteSpace(adsRepairRecoveryMode))
+            return adsRepairRecoveryMode;
+        if (!string.IsNullOrWhiteSpace(adsRepairRequestedMode))
+            return adsRepairRequestedMode;
+        return ResolveAdsRepairMode();
+    }
+
+    private string BuildSelectYesnoRepairSource()
+    {
+        if (!string.IsNullOrWhiteSpace(adsRepairRecoverySource))
+            return adsRepairRecoverySource;
+        return adsRepairSource;
+    }
+
+    private static string NormalizeSelectYesnoPrompt(string prompt)
+        => string.IsNullOrWhiteSpace(prompt) ? "<unreadable>" : prompt.Trim();
+
+    private static string EscapeSelectYesnoDiagnostic(string value)
+    {
+        var escaped = (value ?? string.Empty)
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("'", "\\'", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
+
+        return escaped.Length <= 360 ? escaped : escaped[..360] + "...";
+    }
+
+    private static string FormatSelectYesnoBool(bool value)
+        => value ? "true" : "false";
+
+    private static string FormatSelectYesnoNullableBool(bool? value)
+        => value.HasValue ? FormatSelectYesnoBool(value.Value) : "unknown";
 
     private void ObservePartyTeleportOffer(string text)
     {
@@ -9130,7 +9376,7 @@ public class StateManager : IDisposable
 
         // Safety net: click Yes on any decipher confirmation dialog that might be stuck
         // Fire more frequently to handle confirmation dialogs better
-        if (ClickYesIfVisibleWithTeleportOfferCheck())
+        if (ClickYesIfVisibleWithDiagnostics("OpeningMap.decipher-confirm"))
         {
             _plugin.AddDebugLog("[OpeningMap] Clicked Yes on decipher confirmation dialog");
         }
@@ -10505,7 +10751,7 @@ public class StateManager : IDisposable
             return;
 
         // Click Yes on any dialog (Open the treasure coffer? etc)
-        ClickYesIfVisibleWithTeleportOfferCheck();
+        ClickYesIfVisibleWithDiagnostics("OpeningChest.generic-dialog");
         if (TrySkipCardGame())
             return;
 
@@ -11130,7 +11376,7 @@ public class StateManager : IDisposable
 
     private void TickInDungeon()
     {
-        ClickYesIfVisibleWithTeleportOfferCheck();
+        ClickYesIfVisibleWithDiagnostics("InDungeon.generic-dialog");
 
         // Grace period: don't check for portal immediately after entering InDungeon state
         // This prevents rapid toggling between InDungeon and Completed states
@@ -11527,7 +11773,7 @@ public class StateManager : IDisposable
 
     private void TickDungeonCombat()
     {
-        ClickYesIfVisibleWithTeleportOfferCheck();
+        ClickYesIfVisibleWithDiagnostics("DungeonCombat.generic-dialog");
 
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                        Plugin.Condition[ConditionFlag.BetweenAreas51];
@@ -11896,7 +12142,7 @@ public class StateManager : IDisposable
 
     private void TickDungeonLooting()
     {
-        ClickYesIfVisibleWithTeleportOfferCheck();
+        ClickYesIfVisibleWithDiagnostics("DungeonLooting.generic-dialog");
 
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                        Plugin.Condition[ConditionFlag.BetweenAreas51];
@@ -12117,7 +12363,7 @@ public class StateManager : IDisposable
 
     private void TickDungeonProgressing()
     {
-        ClickYesIfVisibleWithTeleportOfferCheck();
+        ClickYesIfVisibleWithDiagnostics("DungeonProgressing.generic-dialog");
 
         bool loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                        Plugin.Condition[ConditionFlag.BetweenAreas51];
@@ -12380,7 +12626,7 @@ public class StateManager : IDisposable
             if (sinceStart <= portalWindowTimeout)
             {
                 // Click Yes on any visible dialog (portal confirmation from previous tick)
-                if (ClickYesIfVisibleWithTeleportOfferCheck())
+                if (ClickYesIfVisibleWithDiagnostics("Portal.confirm"))
                 {
                     MarkPortalInteractionProgress(now, "SelectYesno");
                     _plugin.AddDebugLog("[Portal] Clicked Yes on portal dialog - waiting for loading screen...");
@@ -15128,6 +15374,7 @@ public class StateManager : IDisposable
         State = newState;
         StateDetail = detail;
         lastTransitionSource = transitionSource;
+        LootGoblinActionTrace.Record("state-transition", $"{prev}->{newState} source={transitionSource} detail={detail}");
         stateStartTime = DateTime.Now;
         stateActionIssued = false;
         dismountAttemptStart = DateTime.MinValue;
@@ -16020,9 +16267,9 @@ public class StateManager : IDisposable
                     // Only fire if dialog is actually visible
                     if (GameHelpers.IsAddonVisible("SelectYesno"))
                     {
-                        GameHelpers.FireAddonCallback("SelectYesno", true, 0);
+                        var accepted = ClickYesIfVisibleWithDiagnostics("Alexandrite.purchase-confirm");
                         var mapCount = GameHelpers.GetInventoryItemCount(MysteriousMapItemId);
-                        _plugin.AddDebugLog($"[Alexandrite] Fired SelectYesno callback, map count: {mapCount}");
+                        _plugin.AddDebugLog($"[Alexandrite] SelectYesno accept attempted={accepted}, map count: {mapCount}");
                         
                         if (mapCount == 1)
                         {

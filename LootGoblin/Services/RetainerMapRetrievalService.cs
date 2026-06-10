@@ -492,7 +492,7 @@ public sealed class RetainerMapRetrievalService : IDisposable
 
         if (GameHelpers.IsAddonVisible("SelectYesno"))
         {
-            GameHelpers.ClickYesIfVisible();
+            _plugin.StateManager.ClickYesIfVisibleWithDiagnostics("RetainerMapRetrieval.confirm");
             nextActionAt = DateTime.Now.AddSeconds(1);
             return;
         }

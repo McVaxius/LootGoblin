@@ -171,6 +171,7 @@ public class NavigationService : IDisposable
         var name = aetheryte?.PlaceName.ValueNullable?.Name.ToString() ?? $"Aetheryte {aetheryteId}";
 
         _plugin.AddDebugLog($"Teleporting to {name} (ID: {aetheryteId})...");
+        LootGoblinActionTrace.Record("teleport-request", $"{name} id={aetheryteId} targetTerritory={aetheryte?.Territory.RowId ?? 0}");
         CommandHelper.SendCommand($"/li {name}");
         LastTeleportAetheryteId = aetheryteId;
         LastTeleportDestinationName = name;

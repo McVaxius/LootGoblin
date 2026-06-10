@@ -35,6 +35,8 @@ public static class CommandHelper
                 return false;
             }
 
+            LootGoblinActionTrace.Record("chat-command", command);
+
             if (Plugin.CommandManager.ProcessCommand(command))
                 return true;
 
@@ -56,6 +58,8 @@ public static class CommandHelper
                 Plugin.LogWarning($"Skipped command while not logged in: {command}");
                 return false;
             }
+
+            LootGoblinActionTrace.Record("chat-command", command);
 
             return TryProcessChatBoxEntry(command);
         }

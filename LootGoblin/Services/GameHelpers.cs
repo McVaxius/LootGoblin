@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
+using Dalamud.Memory;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Game.ClientState.Objects;
@@ -228,6 +229,7 @@ public static class GameHelpers
             }
 
             // Use /gaction decipher to open the map selection menu
+            LootGoblinActionTrace.Record("map-action", $"open-decipher-menu item={itemId} count={count}");
             CommandHelper.SendCommand("/gaction decipher");
             var allMaps = inventoryService.ScanForMaps();
             Plugin.Log.Information($"UseItem({itemId}): Opened decipher menu for {count} map(s) across {allMaps.Count} map type(s)");
@@ -477,7 +479,9 @@ public static class GameHelpers
             {
                 Plugin.Log.Information("[CALLBACK] Pending SelectYesno became visible, clicking Yes...");
 
-                if (TryFireAddonCallback("SelectYesno", true, 0))
+                var accepted = Plugin.Instance?.StateManager?.ClickYesIfVisibleWithDiagnostics("GameHelpers.decipher-confirm-watch")
+                    ?? ClickYesIfVisible("GameHelpers.decipher-confirm-watch", out _);
+                if (accepted)
                 {
                     Plugin.Log.Information("[CALLBACK] Successfully clicked Yes on decipher confirmation");
                     ResetPendingConfirmDialogWatch();
@@ -518,7 +522,14 @@ public static class GameHelpers
     /// Returns true if a dialog was found and clicked.
     /// </summary>
     public static unsafe bool ClickYesIfVisible()
+        => ClickYesIfVisible("GameHelpers.ClickYesIfVisible", out _);
+
+    public static unsafe bool ClickYesIfVisible(string source)
+        => ClickYesIfVisible(source, out _);
+
+    public static unsafe bool ClickYesIfVisible(string source, out string prompt, Action<string>? beforeCallback = null)
     {
+        prompt = string.Empty;
         try
         {
             nint addonPtr = Plugin.GameGui.GetAddonByName("SelectYesno", 1);
@@ -529,10 +540,26 @@ public static class GameHelpers
             if (!addon->AtkUnitBase.IsVisible)
                 return false;
 
+            prompt = TryReadSelectYesnoPrompt(out var readPrompt) ? readPrompt : "<unreadable>";
+            if (beforeCallback != null)
+            {
+                beforeCallback(prompt);
+            }
+            else
+            {
+                Plugin.AddDebugLogStatic(
+                    $"[SelectYesno] observed prompt='{EscapeSelectYesnoDiagnostic(prompt)}' source={source} state=unavailable party.total=unavailable territory={Plugin.ClientState.TerritoryType}");
+            }
+
             if (TryFireAddonCallback("SelectYesno", true, 0))
             {
                 ResetPendingConfirmDialogWatch();
-                Plugin.Log.Information("[YES/NO] Clicked Yes on SelectYesno dialog");
+                Plugin.Log.Information($"[YES/NO] Clicked Yes on SelectYesno dialog from {source}: {prompt}");
+                if (beforeCallback == null)
+                {
+                    Plugin.AddDebugLogStatic(
+                        $"[SelectYesno] accepted prompt='{EscapeSelectYesnoDiagnostic(prompt)}' source={source} result=callback-sent recent='{EscapeSelectYesnoDiagnostic(LootGoblinActionTrace.FormatRecent())}'");
+                }
                 return true;
             }
 
@@ -545,6 +572,41 @@ public static class GameHelpers
             return false;
         }
     }
+
+    public static unsafe bool TryReadSelectYesnoPrompt(out string prompt)
+    {
+        prompt = string.Empty;
+        try
+        {
+            nint addonPtr = Plugin.GameGui.GetAddonByName("SelectYesno", 1);
+            if (addonPtr == 0)
+                return false;
+
+            var addon = (AddonSelectYesno*)addonPtr;
+            if (!addon->AtkUnitBase.IsVisible)
+                return false;
+
+            var promptNode = addon->PromptText;
+            if (promptNode == null || !promptNode->NodeText.StringPtr.HasValue)
+                return false;
+
+            var promptSeString = MemoryHelper.ReadSeStringNullTerminated(new IntPtr(promptNode->NodeText.StringPtr));
+            prompt = promptSeString.TextValue?.Trim() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(prompt);
+        }
+        catch
+        {
+            prompt = string.Empty;
+            return false;
+        }
+    }
+
+    private static string EscapeSelectYesnoDiagnostic(string value)
+        => (value ?? string.Empty)
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("'", "\\'", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
 
     /// <summary>
     /// Interact with a targeted game object via TargetSystem.
@@ -564,6 +626,9 @@ public static class GameHelpers
         try
         {
             Plugin.Log.Information($"[INTERACT] Starting interaction with {obj.Name.TextValue} (Address: {obj.Address:X}, useCameraRaycast={useCameraRaycast})");
+            LootGoblinActionTrace.Record(
+                "interact-attempt",
+                $"{obj.Name.TextValue} kind={obj.ObjectKind} entity={obj.EntityId} xyz={obj.Position} useCameraRaycast={useCameraRaycast}");
             
             Plugin.TargetManager.Target = obj;
 
@@ -1251,6 +1316,9 @@ public static class GameHelpers
                 addon->FireCallback((uint)atkValues.Length, ptr, updateState);
             }
 
+            LootGoblinActionTrace.Record(
+                "addon-callback",
+                $"{addonName} updateState={FormatCallbackArg(updateState)} args=[{FormatCallbackArgs(args)}]");
             Plugin.Log.Information(
                 $"[FireAddonCallback] Fired callback on '{addonName}' updateState={FormatCallbackArg(updateState)} args=[{FormatCallbackArgs(args)}]");
             return true;
@@ -1505,6 +1573,7 @@ public static class GameHelpers
             }
 
             var result = am->UseAction(ActionType.Item, actionItemId, extraParam: 65535);
+            LootGoblinActionTrace.Record("item-use", $"item={itemId} hq={highQuality} actionItem={actionItemId} result={result}");
             Plugin.Log.Information($"UseItem({itemId}, HQ={highQuality}): ActionManager result = {result}");
             return result;
         }
@@ -1546,6 +1615,7 @@ public static class GameHelpers
             }
 
             var result = am->UseAction(ActionType.EventItem, eventItemId, 0xE0000000, 65535, 0, 0, null);
+            LootGoblinActionTrace.Record("event-item-use", $"{displayName} eventItem={eventItemId} result={result}");
             Plugin.Log.Information($"UseEventItem({eventItemId}): {displayName}, ActionManager result = {result}");
             return result;
         }

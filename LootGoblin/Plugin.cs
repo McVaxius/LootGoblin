@@ -21,6 +21,7 @@ namespace LootGoblin;
 public sealed class Plugin : IDalamudPlugin
 {
     private static Plugin? instance;
+    internal static Plugin? Instance => instance;
 
     [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
@@ -640,6 +641,18 @@ public sealed class Plugin : IDalamudPlugin
             Log.Debug(message);
 
         DedicatedDiagnosticLog.Write("EVENT", message);
+    }
+
+    internal static void AddDebugLogStatic(string message)
+    {
+        try
+        {
+            instance?.AddDebugLog(message);
+        }
+        catch
+        {
+            // Diagnostics must never affect plugin behavior.
+        }
     }
 
     public void SetBotEnabled(bool enabled, string source, bool save = true)
