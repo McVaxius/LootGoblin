@@ -400,7 +400,7 @@ public class StateManager : IDisposable
     private static readonly TimeSpan OpeningChestObjectScanLogInterval = TimeSpan.FromSeconds(5.0);
     private static readonly TimeSpan OpeningChestTargetFallbackInterval = TimeSpan.FromSeconds(2.0);
     private static readonly TimeSpan OpeningChestRecoveryDigInterval = TimeSpan.FromSeconds(6.0);
-    private static readonly TimeSpan OpeningChestMissingCofferRecoveryTimeout = TimeSpan.FromSeconds(45.0);
+    private static readonly TimeSpan OpeningChestMissingCofferRecoveryTimeout = TimeSpan.FromSeconds(600.0); //ahh you ASDFASDFASDF i changed from this 45 to 600. this is a hard fail state that we don't want
     private static readonly TimeSpan OpeningChestInitialCofferWaitAfterDig = TimeSpan.FromSeconds(6.0);
     private static readonly TimeSpan KeyItemMapRecoveryTimeout = TimeSpan.FromSeconds(30.0);
     private static readonly TimeSpan KeyItemMapOpenRetryInterval = TimeSpan.FromSeconds(3.0);
