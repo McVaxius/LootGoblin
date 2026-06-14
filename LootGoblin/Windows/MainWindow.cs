@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game;
@@ -15,6 +16,7 @@ using Dalamud.Interface.Internal;
 using Dalamud.Plugin.Services;
 using ECommons;
 using ECommons.Automation;
+using ECommons.ImGuiMethods;
 using ECommons.UIHelpers;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -335,9 +337,10 @@ public class MainWindow : Window, IDisposable
                         .ToList();
 
                     ImGui.TextColored(ColorGrey, "  Checked maps run. Use max for unlimited runs or a number for finite runs.");
+                    ImGui.TextColored(ColorGrey, "  Seedling: gather missing map | Red X: allowance cooldown");
                     ImGui.Spacing();
 
-                    var mapAllowanceText = plugin.MapAllowanceService.GetStatus().CompactText;
+                    var mapAllowanceStatus = plugin.MapAllowanceService.GetStatus();
                     foreach (var kvp in sortedMaps)
                     {
                         var itemId = kvp.Key;
@@ -365,7 +368,7 @@ public class MainWindow : Window, IDisposable
                         ImGui.SameLine();
                         DrawMapRunCountEditor(itemId, isEnabled);
                         ImGui.SameLine();
-                        DrawMapGatherCheckbox(itemId, mapAllowanceText);
+                        DrawMapGatherCheckbox(itemId, mapAllowanceStatus);
                         ImGui.SameLine();
                         ImGui.Text($"{itemName} x{quantity}");
                         ImGui.SameLine();
@@ -384,7 +387,7 @@ public class MainWindow : Window, IDisposable
                             ImGui.TextColored(ColorGrey, $"  (Lvl {mapLevel})");
                         }
                         ImGui.SameLine();
-                        ImGui.TextColored(ColorGrey, $"  [{mapAllowanceText}]");
+                        ImGui.TextColored(ColorGrey, $"  [{mapAllowanceStatus.CompactText}]");
                     }
                 }
 
@@ -424,24 +427,41 @@ public class MainWindow : Window, IDisposable
         }
     }
 
-    private void DrawMapGatherCheckbox(uint itemId, string mapAllowanceText)
+    private void DrawMapGatherCheckbox(uint itemId, MapAllowanceStatus mapAllowanceStatus)
     {
         var hasGatherJob = plugin.Configuration.SelectedGatherJobId != 0;
         var isGatherable = TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo) && mapInfo.IsGatherable;
         var disabled = !hasGatherJob || !isGatherable;
+        var isCooldownActive = mapAllowanceStatus.IsAvailable && !mapAllowanceStatus.IsReady;
         var gatherEnabled = plugin.Configuration.IsMapGatherEnabled(itemId);
 
-        if (disabled)
-            ImGui.BeginDisabled();
-
-        if (ImGui.Checkbox($"##gather_{itemId}", ref gatherEnabled))
+        if (ImGuiEx.Checkbox(
+                FontAwesomeIcon.Seedling,
+                ColorGreen,
+                ColorGrey,
+                null,
+                null,
+                $"##gather_{itemId}",
+                ref gatherEnabled,
+                !disabled))
         {
             plugin.Configuration.SetMapGatherEnabled(itemId, gatherEnabled);
             plugin.Configuration.Save();
         }
 
-        if (disabled)
-            ImGui.EndDisabled();
+        if (isCooldownActive)
+        {
+            var itemMin = ImGui.GetItemRectMin();
+            var itemMax = ImGui.GetItemRectMax();
+            var drawList = ImGui.GetWindowDrawList();
+            var overlayColor = ImGui.GetColorU32(ColorRed);
+            drawList.AddLine(itemMin, itemMax, overlayColor, 2f);
+            drawList.AddLine(
+                new Vector2(itemMin.X, itemMax.Y),
+                new Vector2(itemMax.X, itemMin.Y),
+                overlayColor,
+                2f);
+        }
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
@@ -449,8 +469,12 @@ public class MainWindow : Window, IDisposable
                 ImGui.SetTooltip("Configure Settings -> Run -> Gather Job to gather missing maps.");
             else if (!isGatherable)
                 ImGui.SetTooltip("This map cannot be gathered.");
+            else if (!mapAllowanceStatus.IsAvailable)
+                ImGui.SetTooltip("Map allowance status is unavailable.");
+            else if (mapAllowanceStatus.IsReady)
+                ImGui.SetTooltip("Click the seedling to enable or disable one missing-map gather while allowance is ready.");
             else
-                ImGui.SetTooltip($"Gather one missing map when allowance is {mapAllowanceText}.");
+                ImGui.SetTooltip($"Allowance cooldown: {mapAllowanceStatus.CompactText} remaining. Selection is saved for the next allowance.");
         }
     }
 
