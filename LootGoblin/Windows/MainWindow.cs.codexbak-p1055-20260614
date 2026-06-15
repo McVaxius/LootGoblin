@@ -33,7 +33,6 @@ public class MainWindow : Window, IDisposable
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorCyan = new(0.3f, 1f, 1f, 1f);
-    private static readonly Vector4 ColorBlue = new(0.3f, 0.6f, 1f, 1f);
 	private static readonly Vector4 ColorOrange = new(1f, 0.6f, 0f, 1f);
 
     private readonly Plugin plugin;
@@ -338,8 +337,7 @@ public class MainWindow : Window, IDisposable
                         .ToList();
 
                     ImGui.TextColored(ColorGrey, "  Checked maps run. Use max for unlimited runs or a number for finite runs.");
-                    ImGui.TextColored(ColorGrey, "  Seedling: toggle missing-map gathering | Blue X: unavailable through gathering");
-                    ImGui.TextColored(ColorGrey, "  Red X overlay: allowance cooldown");
+                    ImGui.TextColored(ColorGrey, "  Seedling: gather missing map | Red X: allowance cooldown");
                     ImGui.Spacing();
 
                     var mapAllowanceStatus = plugin.MapAllowanceService.GetStatus();
@@ -432,40 +430,26 @@ public class MainWindow : Window, IDisposable
     private void DrawMapGatherCheckbox(uint itemId, MapAllowanceStatus mapAllowanceStatus)
     {
         var hasGatherJob = plugin.Configuration.SelectedGatherJobId != 0;
-        var isKnownMap = TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo);
-        var isGatherable = isKnownMap && mapInfo!.IsGatherable;
+        var isGatherable = TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo) && mapInfo.IsGatherable;
+        var disabled = !hasGatherJob || !isGatherable;
+        var isCooldownActive = mapAllowanceStatus.IsAvailable && !mapAllowanceStatus.IsReady;
         var gatherEnabled = plugin.Configuration.IsMapGatherEnabled(itemId);
-        var state = MapGatherIconPolicy.Evaluate(new MapGatherIconInput(
-            isKnownMap,
-            isGatherable,
-            hasGatherJob,
-            gatherEnabled,
-            mapAllowanceStatus.IsAvailable,
-            mapAllowanceStatus.IsReady,
-            mapAllowanceStatus.CompactText));
-        gatherEnabled = state.GatherEnabled;
-
-        var icon = state.Icon == MapGatherIconKind.Unavailable
-            ? FontAwesomeIcon.Times
-            : FontAwesomeIcon.Seedling;
-        var enabledColor = state.Icon == MapGatherIconKind.Unavailable ? ColorBlue : ColorGreen;
-        var disabledColor = state.Icon == MapGatherIconKind.Unavailable ? ColorBlue : ColorGrey;
 
         if (ImGuiEx.Checkbox(
-                icon,
-                enabledColor,
-                disabledColor,
+                FontAwesomeIcon.Seedling,
+                ColorGreen,
+                ColorGrey,
                 null,
                 null,
                 $"##gather_{itemId}",
                 ref gatherEnabled,
-                state.IsInteractive))
+                !disabled))
         {
             plugin.Configuration.SetMapGatherEnabled(itemId, gatherEnabled);
             plugin.Configuration.Save();
         }
 
-        if (state.ShowCooldownOverlay)
+        if (isCooldownActive)
         {
             var itemMin = ImGui.GetItemRectMin();
             var itemMax = ImGui.GetItemRectMax();
@@ -480,7 +464,18 @@ public class MainWindow : Window, IDisposable
         }
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip(state.Tooltip);
+        {
+            if (!hasGatherJob)
+                ImGui.SetTooltip("Configure Settings -> Run -> Gather Job to gather missing maps.");
+            else if (!isGatherable)
+                ImGui.SetTooltip("This map cannot be gathered.");
+            else if (!mapAllowanceStatus.IsAvailable)
+                ImGui.SetTooltip("Map allowance status is unavailable.");
+            else if (mapAllowanceStatus.IsReady)
+                ImGui.SetTooltip("Click the seedling to enable or disable one missing-map gather while allowance is ready.");
+            else
+                ImGui.SetTooltip($"Allowance cooldown: {mapAllowanceStatus.CompactText} remaining. Selection is saved for the next allowance.");
+        }
     }
 
     private void DrawMapRunCountEditor(uint itemId, bool isEnabled)
