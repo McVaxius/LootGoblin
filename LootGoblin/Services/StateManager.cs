@@ -50,6 +50,7 @@ internal enum MapGatherStep
     SwitchingToGatherJob,
     StartingGatherBuddy,
     WaitingForMap,
+    ClosingGatherWindow,
     SwitchingBack,
 }
 
@@ -177,6 +178,9 @@ public class StateManager : IDisposable
     private int mapGatherInitialInventoryCount;
     private JobSnapshot mapGatherReturnJob;
     private bool mapGatherJobSwitchIssued;
+    private bool mapGatherCancelIssued;
+    private DateTime mapGatherLastCloseAttemptAt = DateTime.MinValue;
+    private int mapGatherCloseAttemptCount;
     private DateTime mapGatherStepStartedAt = DateTime.MinValue;
     private DateTime mapGatherNextStatusAt = DateTime.MinValue;
     private readonly HashSet<uint> failedGatherMapIdsThisRun = new();
@@ -3744,15 +3748,17 @@ public class StateManager : IDisposable
         }
 
         var currentCount = _plugin.InventoryService.GetMapCount(mapGatherTargetItemId);
-        if (mapGatherStep != MapGatherStep.SwitchingBack && currentCount > mapGatherInitialInventoryCount)
+        if (mapGatherStep is not MapGatherStep.ClosingGatherWindow and not MapGatherStep.SwitchingBack &&
+            currentCount > mapGatherInitialInventoryCount)
         {
             _plugin.AddDebugLog(
-                $"[Gather] Inventory count confirmed for {mapGatherTargetName}: {mapGatherInitialInventoryCount}->{currentCount}.");
-            EnterMapGatherStep(MapGatherStep.SwitchingBack, $"Gathered {mapGatherTargetName}; switching back...");
+                $"[Gather] Inventory count confirmed for {mapGatherTargetName}: {mapGatherInitialInventoryCount}->{currentCount}; closing gathering window before switch-back.");
+            _plugin.MapAllowanceService.MarkAllowanceConsumedByGather();
+            EnterMapGatherStep(MapGatherStep.ClosingGatherWindow, $"Closing gathering window for {mapGatherTargetName}...");
         }
 
         if (DateTime.Now - mapGatherStepStartedAt > TimeSpan.FromSeconds(90) &&
-            mapGatherStep is MapGatherStep.SwitchingToGatherJob or MapGatherStep.StartingGatherBuddy or MapGatherStep.SwitchingBack)
+            mapGatherStep is MapGatherStep.SwitchingToGatherJob or MapGatherStep.StartingGatherBuddy or MapGatherStep.ClosingGatherWindow or MapGatherStep.SwitchingBack)
         {
             FailMapGathering(BuildMapGatherTimeoutDetail());
             return;
@@ -3770,6 +3776,10 @@ public class StateManager : IDisposable
 
             case MapGatherStep.WaitingForMap:
                 TickMapGatherWaitingForMap();
+                break;
+
+            case MapGatherStep.ClosingGatherWindow:
+                TickMapGatherClosingGatherWindow();
                 break;
 
             case MapGatherStep.SwitchingBack:
@@ -3895,10 +3905,65 @@ public class StateManager : IDisposable
         }
     }
 
+    private void TickMapGatherClosingGatherWindow()
+    {
+        if (!mapGatherCancelIssued)
+        {
+            mapGatherCancelIssued = true;
+            _plugin.GatherBuddyRebornService.Cancel();
+            _plugin.AddDebugLog($"[Gather] GatherBuddy cancel issued after inventory confirmation for {mapGatherTargetName}.");
+        }
+
+        var gatheringVisible = GameHelpers.IsAddonVisible("Gathering");
+        var masterpieceVisible = GameHelpers.IsAddonVisible("GatheringMasterpiece");
+        var gatheringCondition = Plugin.Condition[ConditionFlag.Gathering];
+        var executingGatheringAction = Plugin.Condition[ConditionFlag.ExecutingGatheringAction];
+
+        if (!gatheringVisible && !masterpieceVisible && !gatheringCondition && !executingGatheringAction)
+        {
+            _plugin.AddDebugLog($"[Gather] Gathering window close complete for {mapGatherTargetName}; switching back.");
+            EnterMapGatherStep(MapGatherStep.SwitchingBack, $"Gathering window closed for {mapGatherTargetName}; switching back...");
+            return;
+        }
+
+        StateDetail = $"Closing gathering window for {mapGatherTargetName}...";
+
+        if (DateTime.Now < mapGatherLastCloseAttemptAt.AddMilliseconds(750))
+            return;
+
+        mapGatherLastCloseAttemptAt = DateTime.Now;
+        mapGatherCloseAttemptCount++;
+
+        var attemptedCallback = false;
+        var callbackSucceeded = false;
+        if (gatheringVisible)
+        {
+            attemptedCallback = true;
+            var closed = GameHelpers.TryCloseAddonByCallback("Gathering");
+            callbackSucceeded |= closed;
+            _plugin.AddDebugLog($"[Gather] Close attempt {mapGatherCloseAttemptCount}: Gathering callback result={closed}.");
+        }
+
+        if (masterpieceVisible)
+        {
+            attemptedCallback = true;
+            var closed = GameHelpers.TryCloseAddonByCallback("GatheringMasterpiece");
+            callbackSucceeded |= closed;
+            _plugin.AddDebugLog($"[Gather] Close attempt {mapGatherCloseAttemptCount}: GatheringMasterpiece callback result={closed}.");
+        }
+
+        if ((!attemptedCallback || !callbackSucceeded || mapGatherCloseAttemptCount >= 3) &&
+            (gatheringVisible || masterpieceVisible || gatheringCondition || executingGatheringAction))
+        {
+            GameHelpers.CloseCurrentAddon();
+            _plugin.AddDebugLog($"[Gather] Close attempt {mapGatherCloseAttemptCount}: Escape fallback issued.");
+        }
+
+        _plugin.AddDebugLog($"[Gather] Waiting for gathering close; {DescribeMapGatherCloseGate()}; attempts={mapGatherCloseAttemptCount}.");
+    }
+
     private void TickMapGatherSwitchBack()
     {
-        _plugin.GatherBuddyRebornService.Cancel();
-
         if (!CanRunMapGatherAction(out var readyReason))
         {
             StateDetail = $"Waiting to switch back after gathering: {readyReason}";
@@ -3932,6 +3997,12 @@ public class StateManager : IDisposable
         mapGatherNextStatusAt = DateTime.MinValue;
         if (nextStep == MapGatherStep.SwitchingToGatherJob)
             mapGatherJobSwitchIssued = false;
+        if (nextStep == MapGatherStep.ClosingGatherWindow)
+        {
+            mapGatherCancelIssued = false;
+            mapGatherLastCloseAttemptAt = DateTime.MinValue;
+            mapGatherCloseAttemptCount = 0;
+        }
         StateDetail = detail;
         _plugin.AddDebugLog($"[Gather] {detail}");
     }
@@ -3968,6 +4039,9 @@ public class StateManager : IDisposable
         mapGatherInitialInventoryCount = 0;
         mapGatherReturnJob = default;
         mapGatherJobSwitchIssued = false;
+        mapGatherCancelIssued = false;
+        mapGatherLastCloseAttemptAt = DateTime.MinValue;
+        mapGatherCloseAttemptCount = 0;
         mapGatherStepStartedAt = DateTime.MinValue;
         mapGatherNextStatusAt = DateTime.MinValue;
     }
@@ -3987,7 +4061,26 @@ public class StateManager : IDisposable
         var currentJobId = _plugin.JobSwitchService.GetCurrentClassJobId();
         var expectedJobId = _plugin.Configuration.SelectedGatherJobId;
         var gatherBuddyStatus = GetGatherBuddyStatusText();
-        return $"{mapGatherStep} timed out while gathering {mapGatherTargetName}; targetMap={mapGatherTargetName} ({mapGatherTargetItemId}); currentJob={FormatClassJob(currentJobId)}; expectedJob={FormatClassJob(expectedJobId)}; GatherBuddy={gatherBuddyStatus}.";
+        var detail =
+            $"{mapGatherStep} timed out while gathering {mapGatherTargetName}; targetMap={mapGatherTargetName} ({mapGatherTargetItemId}); currentJob={FormatClassJob(currentJobId)}; expectedJob={FormatClassJob(expectedJobId)}; GatherBuddy={gatherBuddyStatus}";
+        if (mapGatherStep == MapGatherStep.ClosingGatherWindow)
+            detail += $"; closeGate={DescribeMapGatherCloseGate()}; closeAttempts={mapGatherCloseAttemptCount}; cancelIssued={mapGatherCancelIssued}";
+        return $"{detail}.";
+    }
+
+    private static string DescribeMapGatherCloseGate()
+    {
+        var visibleAddons = new List<string>();
+        if (GameHelpers.IsAddonVisible("Gathering"))
+            visibleAddons.Add("Gathering");
+        if (GameHelpers.IsAddonVisible("GatheringMasterpiece"))
+            visibleAddons.Add("GatheringMasterpiece");
+
+        var addons = visibleAddons.Count == 0
+            ? "none"
+            : string.Join(",", visibleAddons);
+
+        return $"addons={addons}; conditions=Gathering:{Plugin.Condition[ConditionFlag.Gathering]}, ExecutingGatheringAction:{Plugin.Condition[ConditionFlag.ExecutingGatheringAction]}";
     }
 
     private string GetGatherBuddyStatusText()

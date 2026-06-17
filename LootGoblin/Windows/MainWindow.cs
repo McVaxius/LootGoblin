@@ -313,6 +313,11 @@ public class MainWindow : Window, IDisposable
                 }
 
                 var displayedMapSources = GetDisplayedMapSources();
+                var mapAllowanceStatus = plugin.MapAllowanceService.GetStatus();
+                var hasGatherJob = plugin.Configuration.SelectedGatherJobId != 0;
+
+                DrawMapAllowanceHeader(mapAllowanceStatus, hasGatherJob, plugin.Configuration.DebugMode);
+                ImGui.Spacing();
 
                 if (displayedMapSources.Count == 0)
                 {
@@ -338,11 +343,8 @@ public class MainWindow : Window, IDisposable
                         .ToList();
 
                     ImGui.TextColored(ColorGrey, "  Checked maps run. Use max for unlimited runs or a number for finite runs.");
-                    ImGui.TextColored(ColorGrey, "  Seedling: toggle missing-map gathering | Blue X: unavailable through gathering");
-                    ImGui.TextColored(ColorGrey, "  Red X overlay: allowance cooldown");
                     ImGui.Spacing();
 
-                    var mapAllowanceStatus = plugin.MapAllowanceService.GetStatus();
                     foreach (var kvp in sortedMaps)
                     {
                         var itemId = kvp.Key;
@@ -388,8 +390,6 @@ public class MainWindow : Window, IDisposable
                             ImGui.SameLine();
                             ImGui.TextColored(ColorGrey, $"  (Lvl {mapLevel})");
                         }
-                        ImGui.SameLine();
-                        ImGui.TextColored(ColorGrey, $"  [{mapAllowanceStatus.CompactText}]");
                     }
                 }
 
@@ -426,6 +426,30 @@ public class MainWindow : Window, IDisposable
             {
                 ImGui.TextColored(ColorGrey, "  Log in to scan inventory.");
             }
+        }
+    }
+
+    private static void DrawMapAllowanceHeader(MapAllowanceStatus status, bool hasGatherJob, bool showUnavailableReason)
+    {
+        var header = MapAllowanceHeaderPolicy.Evaluate(status, hasGatherJob, showUnavailableReason);
+        switch (header.Kind)
+        {
+            case MapAllowanceHeaderKind.Cooldown:
+                ImGui.TextColored(ColorYellow, $"  {header.PrimaryText}");
+                if (header.ShowLegend)
+                {
+                    ImGui.TextColored(ColorGrey, $"  {MapAllowanceHeaderPolicy.LegendLineOne}");
+                    ImGui.TextColored(ColorGrey, $"  {MapAllowanceHeaderPolicy.LegendLineTwo}");
+                }
+                break;
+
+            case MapAllowanceHeaderKind.Ready:
+                ImGui.TextColored(ColorGreen, $"  {header.PrimaryText}");
+                break;
+
+            case MapAllowanceHeaderKind.Unavailable:
+                ImGui.TextColored(ColorGrey, $"  {header.PrimaryText}");
+                break;
         }
     }
 
@@ -480,7 +504,23 @@ public class MainWindow : Window, IDisposable
         }
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            DrawMapGatherTooltip(state);
+    }
+
+    private static void DrawMapGatherTooltip(MapGatherIconState state)
+    {
+        if (state.Icon != MapGatherIconKind.Seedling)
+        {
             ImGui.SetTooltip(state.Tooltip);
+            return;
+        }
+
+        ImGui.BeginTooltip();
+        ImGui.TextUnformatted(state.Tooltip);
+        ImGui.TextColored(ColorGrey, "Seedling: toggle missing-map gathering");
+        ImGui.TextColored(ColorGrey, "Blue X: unavailable through gathering");
+        ImGui.TextColored(ColorGrey, "Red X overlay: allowance cooldown");
+        ImGui.EndTooltip();
     }
 
     private void DrawMapRunCountEditor(uint itemId, bool isEnabled)
