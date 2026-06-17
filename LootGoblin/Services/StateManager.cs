@@ -176,6 +176,7 @@ public class StateManager : IDisposable
     private string mapGatherTargetName = string.Empty;
     private int mapGatherInitialInventoryCount;
     private JobSnapshot mapGatherReturnJob;
+    private bool mapGatherJobSwitchIssued;
     private DateTime mapGatherStepStartedAt = DateTime.MinValue;
     private DateTime mapGatherNextStatusAt = DateTime.MinValue;
     private readonly HashSet<uint> failedGatherMapIdsThisRun = new();
@@ -3703,10 +3704,14 @@ public class StateManager : IDisposable
         }
 
         _plugin.GatherBuddyRebornService.CheckAvailability(logStatus: true);
+        var gatherJobId = _plugin.Configuration.SelectedGatherJobId;
+        var currentJobId = _plugin.JobSwitchService.GetCurrentClassJobId();
+        _plugin.AddDebugLog(
+            $"[Gather] Fallback targetMap={targetName} ({targetItemId}); currentJob={FormatClassJob(currentJobId)}; expectedJob={FormatClassJob(gatherJobId)}; GatherBuddy={_plugin.GatherBuddyRebornService.StatusText}");
         if (!_plugin.GatherBuddyRebornService.IsAvailable)
         {
             SetWarning($"Cannot gather {targetName}: {_plugin.GatherBuddyRebornService.StatusText}");
-            _plugin.AddDebugLog($"[Gather] GatherBuddy unavailable. {fallbackError}");
+            _plugin.AddDebugLog($"[Gather] GatherBuddy unavailable for targetMap={targetName} ({targetItemId}); status={_plugin.GatherBuddyRebornService.StatusText}; fallback={fallbackError}");
             return false;
         }
 
@@ -3749,7 +3754,7 @@ public class StateManager : IDisposable
         if (DateTime.Now - mapGatherStepStartedAt > TimeSpan.FromSeconds(90) &&
             mapGatherStep is MapGatherStep.SwitchingToGatherJob or MapGatherStep.StartingGatherBuddy or MapGatherStep.SwitchingBack)
         {
-            FailMapGathering($"{mapGatherStep} timed out while gathering {mapGatherTargetName}.");
+            FailMapGathering(BuildMapGatherTimeoutDetail());
             return;
         }
 
@@ -3782,16 +3787,24 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (!CanRunMapGatherAction(out var readyReason))
-        {
-            StateDetail = $"Waiting to switch to gather job: {readyReason}";
-            return;
-        }
-
         var currentJob = _plugin.JobSwitchService.GetCurrentClassJobId();
+        LogMapGatherJobWaitStatus(currentJob, gatherJobId);
+
         if (currentJob == gatherJobId)
         {
             EnterMapGatherStep(MapGatherStep.StartingGatherBuddy, $"Starting GatherBuddy Reborn for {mapGatherTargetName}...");
+            return;
+        }
+
+        if (mapGatherJobSwitchIssued)
+        {
+            StateDetail = $"Waiting for gather job switch to {ClassJobOptions.GetName(gatherJobId)}; current job {FormatClassJob(currentJob)}...";
+            return;
+        }
+
+        if (!CanRunMapGatherAction(out var readyReason))
+        {
+            StateDetail = $"Waiting to switch to gather job: {readyReason}";
             return;
         }
 
@@ -3801,13 +3814,49 @@ public class StateManager : IDisposable
             return;
         }
 
+        mapGatherJobSwitchIssued = true;
+        _plugin.AddDebugLog(
+            $"[Gather] Gather job switch issued for targetMap={mapGatherTargetName} ({mapGatherTargetItemId}); currentJob={FormatClassJob(currentJob)}; expectedJob={FormatClassJob(gatherJobId)}; detail={detail}");
         StateDetail = detail;
     }
 
     private void TickMapGatherStartGatherBuddy()
     {
-        if (!_plugin.GatherBuddyRebornService.StartOneShot(mapGatherTargetItemId, mapGatherTargetName, out var detail))
+        if (DateTime.Now - mapGatherStepStartedAt < TimeSpan.FromMilliseconds(750))
         {
+            StateDetail = $"Waiting for gather job to settle before starting GatherBuddy Reborn for {mapGatherTargetName}...";
+            return;
+        }
+
+        if (!CanRunMapGatherAction(out var readyReason))
+        {
+            StateDetail = $"Waiting to start GatherBuddy Reborn: {readyReason}";
+            return;
+        }
+
+        var expectedJobId = _plugin.Configuration.SelectedGatherJobId;
+        if (expectedJobId == 0)
+        {
+            FailMapGathering("Gather job was cleared while gathering.");
+            return;
+        }
+
+        var currentJob = _plugin.JobSwitchService.GetCurrentClassJobId();
+        if (currentJob != expectedJobId)
+        {
+            FailMapGathering(
+                $"Current job changed before GatherBuddy start; currentJob={FormatClassJob(currentJob)}; expectedJob={FormatClassJob(expectedJobId)}.");
+            return;
+        }
+
+        var gatherBuddyStatus = GetGatherBuddyStatusText();
+        _plugin.AddDebugLog(
+            $"[Gather] Starting GatherBuddy for targetMap={mapGatherTargetName} ({mapGatherTargetItemId}); currentJob={FormatClassJob(currentJob)}; expectedJob={FormatClassJob(expectedJobId)}; GatherBuddy={gatherBuddyStatus}");
+
+        if (!_plugin.GatherBuddyRebornService.StartOneShot(mapGatherTargetItemId, mapGatherTargetName, expectedJobId, out var detail))
+        {
+            _plugin.AddDebugLog(
+                $"[Gather] GatherBuddy start failed for targetMap={mapGatherTargetName} ({mapGatherTargetItemId}); detail={detail}");
             FailMapGathering(detail);
             return;
         }
@@ -3817,6 +3866,12 @@ public class StateManager : IDisposable
 
     private void TickMapGatherWaitingForMap()
     {
+        if (!_plugin.GatherBuddyRebornService.ValidateOneShotTarget(out var targetDetail))
+        {
+            FailMapGathering(targetDetail);
+            return;
+        }
+
         if (DateTime.Now >= mapGatherNextStatusAt)
         {
             mapGatherNextStatusAt = DateTime.Now.AddSeconds(2);
@@ -3874,6 +3929,9 @@ public class StateManager : IDisposable
     {
         mapGatherStep = nextStep;
         mapGatherStepStartedAt = DateTime.Now;
+        mapGatherNextStatusAt = DateTime.MinValue;
+        if (nextStep == MapGatherStep.SwitchingToGatherJob)
+            mapGatherJobSwitchIssued = false;
         StateDetail = detail;
         _plugin.AddDebugLog($"[Gather] {detail}");
     }
@@ -3891,12 +3949,8 @@ public class StateManager : IDisposable
         _plugin.GatherBuddyRebornService.Cancel();
 
         if (mapGatherReturnJob.ClassJobId != 0)
-        {
-            if (_plugin.JobSwitchService.TrySwitchToSnapshot(mapGatherReturnJob, out var switchDetail))
-                _plugin.AddDebugLog($"[Gather] Best-effort switch-back: {switchDetail}");
-            else
-                _plugin.AddDebugLog($"[Gather] Best-effort switch-back failed: {switchDetail}");
-        }
+            _plugin.AddDebugLog(
+                $"[Gather] Leaving current job after gather failure; currentJob={FormatClassJob(_plugin.JobSwitchService.GetCurrentClassJobId())}; returnJob={FormatClassJob(mapGatherReturnJob.ClassJobId)}.");
 
         ResetMapGathering(cancelGatherBuddy: false);
         SetWarning($"Could not gather {targetName}: {detail}");
@@ -3913,9 +3967,38 @@ public class StateManager : IDisposable
         mapGatherTargetName = string.Empty;
         mapGatherInitialInventoryCount = 0;
         mapGatherReturnJob = default;
+        mapGatherJobSwitchIssued = false;
         mapGatherStepStartedAt = DateTime.MinValue;
         mapGatherNextStatusAt = DateTime.MinValue;
     }
+
+    private void LogMapGatherJobWaitStatus(uint currentJobId, uint expectedJobId)
+    {
+        if (DateTime.Now < mapGatherNextStatusAt)
+            return;
+
+        mapGatherNextStatusAt = DateTime.Now.AddSeconds(2);
+        _plugin.AddDebugLog(
+            $"[Gather] Waiting for gather job; targetMap={mapGatherTargetName} ({mapGatherTargetItemId}); currentJob={FormatClassJob(currentJobId)}; expectedJob={FormatClassJob(expectedJobId)}; switchIssued={mapGatherJobSwitchIssued}.");
+    }
+
+    private string BuildMapGatherTimeoutDetail()
+    {
+        var currentJobId = _plugin.JobSwitchService.GetCurrentClassJobId();
+        var expectedJobId = _plugin.Configuration.SelectedGatherJobId;
+        var gatherBuddyStatus = GetGatherBuddyStatusText();
+        return $"{mapGatherStep} timed out while gathering {mapGatherTargetName}; targetMap={mapGatherTargetName} ({mapGatherTargetItemId}); currentJob={FormatClassJob(currentJobId)}; expectedJob={FormatClassJob(expectedJobId)}; GatherBuddy={gatherBuddyStatus}.";
+    }
+
+    private string GetGatherBuddyStatusText()
+        => _plugin.GatherBuddyRebornService.TryGetAutoGatherStatus(out var status) && !string.IsNullOrWhiteSpace(status)
+            ? status
+            : _plugin.GatherBuddyRebornService.StatusText;
+
+    private static string FormatClassJob(uint jobId)
+        => jobId == 0
+            ? "unavailable (0)"
+            : $"{ClassJobOptions.GetName(jobId)} ({jobId})";
 
     private bool CanRunMapGatherAction(out string reason)
     {
