@@ -44,9 +44,6 @@ public sealed class Plugin : IDalamudPlugin
     private const string CommandAlias = "/lg";
 
     public Configuration Configuration { get; init; }
-    internal MapGatherCharacterConfig ActiveMapGatherConfig { get; private set; } = new();
-    internal ulong ActiveMapGatherContentId { get; private set; }
-    internal string ActiveMapGatherCharacterKey { get; private set; } = string.Empty;
     internal DedicatedDiagnosticLog DedicatedDiagnosticLog { get; init; }
 
     public readonly WindowSystem WindowSystem = new("LootGoblin");
@@ -191,7 +188,6 @@ public sealed class Plugin : IDalamudPlugin
         JobSwitchService = new JobSwitchService(this, Log);
         MapAllowanceService = new MapAllowanceService(this, Log);
         GatherBuddyRebornService = new GatherBuddyRebornService(this, PluginInterface, Log);
-        RefreshActiveMapGatherCharacterBinding();
 
         // Auto-update community data on login
         ClientState.Login += OnLogin;
@@ -239,7 +235,6 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
-        SaveActiveMapGatherConfig("plugin unload");
         StateManager?.WriteDiagnosticSnapshot("plugin-unload");
         DedicatedDiagnosticLog.Flush();
 
@@ -299,118 +294,7 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OnLogin()
-    {
-        RefreshActiveMapGatherCharacterBinding();
-        QueueCommunityLocationRefresh("login");
-    }
-
-    internal uint SelectedGatherJobId => ActiveMapGatherConfig.SelectedGatherJobId;
-
-    internal IReadOnlyList<uint> ActiveGatherEnabledMapTypes
-        => ActiveMapGatherConfig.GatherEnabledMapTypes is { } mapTypes
-            ? mapTypes
-            : Array.Empty<uint>();
-
-    internal bool IsMapGatherEnabled(uint itemId)
-        => ActiveMapGatherConfig.IsMapGatherEnabled(itemId);
-
-    internal void SetSelectedGatherJobId(uint jobId)
-    {
-        if (!ClassJobOptions.IsGatherJob(jobId))
-            jobId = 0;
-
-        if (ActiveMapGatherConfig.SelectedGatherJobId == jobId)
-            return;
-
-        ActiveMapGatherConfig.SelectedGatherJobId = jobId;
-        ActiveMapGatherConfig.Normalize();
-        SaveActiveMapGatherConfig("gather job changed");
-    }
-
-    internal void SetMapGatherEnabled(uint itemId, bool enabled)
-    {
-        ActiveMapGatherConfig.SetMapGatherEnabled(itemId, enabled);
-        SaveActiveMapGatherConfig("gather map selection changed");
-    }
-
-    internal void SetActiveMapAllowanceStatus(MapAllowanceStatus status)
-    {
-        if (ActiveMapGatherContentId == 0)
-            return;
-
-        ActiveMapGatherConfig.SetMapAllowanceSnapshot(status);
-        SaveActiveMapGatherConfig("map allowance snapshot");
-    }
-
-    private void RefreshActiveMapGatherCharacterBinding()
-    {
-        if (!TryResolveCurrentMapGatherCharacter(out var contentId, out var characterKey))
-        {
-            if (!ClientState.IsLoggedIn && ActiveMapGatherContentId != 0)
-                ClearActiveMapGatherCharacterBinding("logout");
-
-            return;
-        }
-
-        if (ActiveMapGatherContentId == contentId &&
-            string.Equals(ActiveMapGatherCharacterKey, characterKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        SaveActiveMapGatherConfig("character switch");
-
-        Configuration.MapGatherCharacterConfigs ??= new MapGatherCharacterConfigStore();
-        ActiveMapGatherConfig = Configuration.MapGatherCharacterConfigs.BindCharacter(
-            characterKey,
-            Configuration.SelectedGatherJobId,
-            Configuration.GatherEnabledMapTypes,
-            out var migratedLegacySettings);
-        ActiveMapGatherContentId = contentId;
-        ActiveMapGatherCharacterKey = characterKey;
-        MapAllowanceService?.OnActiveCharacterChanged(contentId);
-        Configuration.Save();
-
-        AddDebugLog(migratedLegacySettings
-            ? $"[GatherProfile] Bound character {characterKey}; migrated legacy gather settings."
-            : $"[GatherProfile] Bound character {characterKey}.");
-    }
-
-    private static bool TryResolveCurrentMapGatherCharacter(out ulong contentId, out string characterKey)
-    {
-        contentId = 0;
-        characterKey = string.Empty;
-
-        if (!ClientState.IsLoggedIn || !PlayerState.IsLoaded)
-            return false;
-
-        contentId = PlayerState.ContentId;
-        if (contentId == 0)
-            return false;
-
-        characterKey = contentId.ToString("X");
-        return true;
-    }
-
-    private void ClearActiveMapGatherCharacterBinding(string reason)
-    {
-        SaveActiveMapGatherConfig(reason);
-        ActiveMapGatherContentId = 0;
-        ActiveMapGatherCharacterKey = string.Empty;
-        ActiveMapGatherConfig = new MapGatherCharacterConfig();
-        MapAllowanceService?.ClearActiveCharacterState();
-        AddDebugLog($"[GatherProfile] Cleared active character binding ({reason}).");
-    }
-
-    private void SaveActiveMapGatherConfig(string reason)
-    {
-        if (ActiveMapGatherContentId == 0)
-            return;
-
-        ActiveMapGatherConfig.Normalize();
-        Configuration.Save();
-        Log.Debug($"[GatherProfile] Saved character {ActiveMapGatherCharacterKey} ({reason}).");
-    }
+        => QueueCommunityLocationRefresh("login");
 
     private void QueueCommunityLocationRefresh(string reason)
     {
@@ -465,7 +349,6 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        RefreshActiveMapGatherCharacterBinding();
         ObserveEnabledState();
 
         var updateStopwatch = Stopwatch.StartNew();
@@ -986,17 +869,8 @@ public sealed class Plugin : IDalamudPlugin
             changed = true;
         }
 
-        if (configuration.Version < 8)
-        {
-            configuration.MapGatherCharacterConfigs ??= new MapGatherCharacterConfigStore();
-            configuration.Version = 8;
-            changed = true;
-        }
-
         configuration.NormalizeConfiguredMapRuns();
         configuration.NormalizeConfiguredJobAndGatherMaps();
-        configuration.MapGatherCharacterConfigs ??= new MapGatherCharacterConfigStore();
-        configuration.MapGatherCharacterConfigs.Normalize();
 
         if (isNewConfiguration || configuration.LandingOrDutyCommandTriggers == null)
         {

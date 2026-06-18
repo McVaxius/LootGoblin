@@ -109,7 +109,6 @@ public class Configuration : IPluginConfiguration
     public ReturnWhenDoneDestination ReturnWhenDoneDestination { get; set; } = ReturnWhenDoneDestination.FC;
     public uint SelectedCombatJobId { get; set; } = 0;
     public uint SelectedGatherJobId { get; set; } = 0;
-    public MapGatherCharacterConfigStore MapGatherCharacterConfigs { get; set; } = new();
 
     // Phase 6: Map Selection + Chest Interaction
     public bool UseMapTypeFilter { get; set; } = true;
@@ -154,8 +153,6 @@ public class Configuration : IPluginConfiguration
     {
         PartyTeleportDelaySeconds = Math.Clamp(PartyTeleportDelaySeconds, 0, 300);
         NormalizeConfiguredJobAndGatherMaps();
-        MapGatherCharacterConfigs ??= new MapGatherCharacterConfigStore();
-        MapGatherCharacterConfigs.Normalize();
         Plugin.PluginInterface.SavePluginConfig(this);
     }
 

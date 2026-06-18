@@ -166,12 +166,11 @@ public class ConfigWindow : Window, IDisposable
 
         DrawJobCombo(
             "Gather job",
-            plugin.SelectedGatherJobId,
+            configuration.SelectedGatherJobId,
             ClassJobOptions.GatherJobs,
             "Disabled",
-            value => plugin.SetSelectedGatherJobId(value),
-            "Blank disables map gathering.",
-            saveAfterSet: false);
+            value => configuration.SelectedGatherJobId = value,
+            "Blank disables map gathering.");
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -240,8 +239,7 @@ public class ConfigWindow : Window, IDisposable
         IReadOnlyList<ClassJobOption> options,
         string blankLabel,
         Action<uint> setter,
-        string tooltip,
-        bool saveAfterSet = true)
+        string tooltip)
     {
         var currentIndex = 0;
         for (var i = 0; i < options.Count; i++)
@@ -262,8 +260,7 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.Combo(label, ref currentIndex, comboLabels, comboLabels.Length))
         {
             setter(currentIndex == 0 ? 0 : options[currentIndex - 1].Id);
-            if (saveAfterSet)
-                configuration.Save();
+            configuration.Save();
         }
 
         if (ImGui.IsItemHovered())

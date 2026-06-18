@@ -89,9 +89,6 @@ public class StateManager : IDisposable
     private readonly IFramework _framework;
     private readonly IPluginLog _log;
     private readonly Dictionary<ActiveMapTargetKey, MapLocation> activeMapTargetCache = new();
-    private static readonly TimeSpan AreaMapAutoCloseRetryInterval = TimeSpan.FromMilliseconds(500);
-    private static readonly TimeSpan AreaMapAutoCloseTimeout = TimeSpan.FromSeconds(5);
-    private const int AreaMapAutoCloseMaxAttempts = 8;
 
     public BotState State { get; private set; } = BotState.Idle;
     public string StateDetail { get; private set; } = "";
@@ -187,10 +184,6 @@ public class StateManager : IDisposable
     private DateTime mapGatherStepStartedAt = DateTime.MinValue;
     private DateTime mapGatherNextStatusAt = DateTime.MinValue;
     private readonly HashSet<uint> failedGatherMapIdsThisRun = new();
-    private bool areaMapAutoCloseQueued;
-    private DateTime areaMapAutoCloseQueuedAt = DateTime.MinValue;
-    private DateTime areaMapAutoCloseLastAttemptAt = DateTime.MinValue;
-    private int areaMapAutoCloseAttemptCount;
     private Vector3 lastStuckCheckPos; // Position at last stuck check
     private DateTime lastStuckCheckTime = DateTime.MinValue; // Time of last stuck check
     private string overworldRecoveryTargetKey = string.Empty;
@@ -832,7 +825,6 @@ public class StateManager : IDisposable
         var allowCycling = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations or BotState.AlexandriteFarming;
         if (!_plugin.Configuration.Enabled && !allowCycling)
         {
-            ResetAreaMapAutoClose();
             LogUnderwaterFlagApproachDisabledAbandoned(DateTime.Now);
             return;
         }
@@ -856,7 +848,6 @@ public class StateManager : IDisposable
             _plugin.AdsStatusService.Refresh();
 
         CheckStateTimeout();
-        TickAreaMapAutoClose();
         Tick();
         }
         finally
@@ -3033,7 +3024,6 @@ public class StateManager : IDisposable
         if (_plugin.TreasureMapLocationService.TryGetLatestLocation(expectedMapItemId, keyItem.ItemId, out var capturedLocation))
         {
             CacheActiveMapTarget(keyItem, capturedLocation, "TreasureSpot");
-            QueueAreaMapAutoCloseAfterTreasureCapture("[ActiveKeyItem] TreasureMapLocationService");
             location = CloneMapLocation(capturedLocation);
             recoverySource = "TreasureSpot";
             return true;
@@ -3675,7 +3665,7 @@ public class StateManager : IDisposable
 
     private bool TryStartMapGatherFallback(IReadOnlyCollection<uint> enabledMapIds, string fallbackError)
     {
-        if (_plugin.SelectedGatherJobId == 0)
+        if (_plugin.Configuration.SelectedGatherJobId == 0)
         {
             _plugin.AddDebugLog("[Gather] Gather job not configured; skipping map gathering fallback.");
             return false;
@@ -3687,7 +3677,7 @@ public class StateManager : IDisposable
         var candidates = enabledMapIds
             .Where(itemId =>
                 !failedGatherMapIdsThisRun.Contains(itemId) &&
-                _plugin.IsMapGatherEnabled(itemId) &&
+                _plugin.Configuration.IsMapGatherEnabled(itemId) &&
                 TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo) &&
                 mapInfo.IsGatherable)
             .ToList();
@@ -3718,7 +3708,7 @@ public class StateManager : IDisposable
         }
 
         _plugin.GatherBuddyRebornService.CheckAvailability(logStatus: true);
-        var gatherJobId = _plugin.SelectedGatherJobId;
+        var gatherJobId = _plugin.Configuration.SelectedGatherJobId;
         var currentJobId = _plugin.JobSwitchService.GetCurrentClassJobId();
         _plugin.AddDebugLog(
             $"[Gather] Fallback targetMap={targetName} ({targetItemId}); currentJob={FormatClassJob(currentJobId)}; expectedJob={FormatClassJob(gatherJobId)}; GatherBuddy={_plugin.GatherBuddyRebornService.StatusText}");
@@ -3800,7 +3790,7 @@ public class StateManager : IDisposable
 
     private void TickMapGatherSwitchToGatherJob()
     {
-        var gatherJobId = _plugin.SelectedGatherJobId;
+        var gatherJobId = _plugin.Configuration.SelectedGatherJobId;
         if (gatherJobId == 0)
         {
             FailMapGathering("Gather job was cleared while gathering.");
@@ -3854,7 +3844,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        var expectedJobId = _plugin.SelectedGatherJobId;
+        var expectedJobId = _plugin.Configuration.SelectedGatherJobId;
         if (expectedJobId == 0)
         {
             FailMapGathering("Gather job was cleared while gathering.");
@@ -4069,7 +4059,7 @@ public class StateManager : IDisposable
     private string BuildMapGatherTimeoutDetail()
     {
         var currentJobId = _plugin.JobSwitchService.GetCurrentClassJobId();
-        var expectedJobId = _plugin.SelectedGatherJobId;
+        var expectedJobId = _plugin.Configuration.SelectedGatherJobId;
         var gatherBuddyStatus = GetGatherBuddyStatusText();
         var detail =
             $"{mapGatherStep} timed out while gathering {mapGatherTargetName}; targetMap={mapGatherTargetName} ({mapGatherTargetItemId}); currentJob={FormatClassJob(currentJobId)}; expectedJob={FormatClassJob(expectedJobId)}; GatherBuddy={gatherBuddyStatus}";
@@ -9688,72 +9678,6 @@ public class StateManager : IDisposable
         return CalculateXZDistance(agentPos, capturedPos) <= CapturedLocationMatchXZRange;
     }
 
-    private void QueueAreaMapAutoCloseAfterTreasureCapture(string source)
-    {
-        if (!_plugin.Configuration.Enabled ||
-            State is not (BotState.OpeningMap or BotState.DetectingLocation))
-        {
-            return;
-        }
-
-        if (!areaMapAutoCloseQueued)
-        {
-            areaMapAutoCloseQueued = true;
-            areaMapAutoCloseQueuedAt = DateTime.Now;
-            areaMapAutoCloseLastAttemptAt = DateTime.MinValue;
-            areaMapAutoCloseAttemptCount = 0;
-            _plugin.AddDebugLog($"[AreaMapClose] Queued after treasure map capture ({source}).");
-        }
-
-        TickAreaMapAutoClose();
-    }
-
-    private void TickAreaMapAutoClose()
-    {
-        if (!areaMapAutoCloseQueued)
-            return;
-
-        if (!_plugin.Configuration.Enabled)
-        {
-            ResetAreaMapAutoClose();
-            return;
-        }
-
-        if (IsAreaTransitionActive())
-            return;
-
-        if (!GameHelpers.IsAddonVisible("AreaMap"))
-        {
-            ResetAreaMapAutoClose();
-            return;
-        }
-
-        var now = DateTime.Now;
-        if (now - areaMapAutoCloseQueuedAt > AreaMapAutoCloseTimeout ||
-            areaMapAutoCloseAttemptCount >= AreaMapAutoCloseMaxAttempts)
-        {
-            _plugin.AddDebugLog($"[AreaMapClose] Gave up after {areaMapAutoCloseAttemptCount} attempts.");
-            ResetAreaMapAutoClose();
-            return;
-        }
-
-        if (now - areaMapAutoCloseLastAttemptAt < AreaMapAutoCloseRetryInterval)
-            return;
-
-        areaMapAutoCloseLastAttemptAt = now;
-        areaMapAutoCloseAttemptCount++;
-        var closed = GameHelpers.TryCloseAddonByCallback("AreaMap");
-        _plugin.AddDebugLog($"[AreaMapClose] Attempt {areaMapAutoCloseAttemptCount}: callback result={closed}.");
-    }
-
-    private void ResetAreaMapAutoClose()
-    {
-        areaMapAutoCloseQueued = false;
-        areaMapAutoCloseQueuedAt = DateTime.MinValue;
-        areaMapAutoCloseLastAttemptAt = DateTime.MinValue;
-        areaMapAutoCloseAttemptCount = 0;
-    }
-
     private void PopulateNearestAetheryte(
         MapLocation location,
         out uint aetheryteId,
@@ -10063,10 +9987,7 @@ public class StateManager : IDisposable
         var agentMapLocation = _plugin.MapFlagService.TryGetMapLocation();
         MapLocation? capturedLocation = null;
         if (_plugin.TreasureMapLocationService.TryGetLatestLocation(SelectedMapItemId, activeKeyItemMapItemId, out var latestCapturedLocation))
-        {
             capturedLocation = latestCapturedLocation;
-            QueueAreaMapAutoCloseAfterTreasureCapture("[DetectingLocation] TreasureMapLocationService");
-        }
 
         var location = ResolveDetectedMapLocation(agentMapLocation, capturedLocation);
 

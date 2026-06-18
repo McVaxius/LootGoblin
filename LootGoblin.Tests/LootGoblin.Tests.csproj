@@ -23,6 +23,9 @@
   <ItemGroup>
     <Compile Include="..\LootGoblin\Services\DedicatedDiagnosticLog.cs" Link="Services\DedicatedDiagnosticLog.cs" />
     <Compile Include="..\LootGoblin\Services\DiagnosticSnapshotPolicy.cs" Link="Services\DiagnosticSnapshotPolicy.cs" />
+    <Compile Include="..\LootGoblin\Models\ClassJobOptions.cs" Link="Models\ClassJobOptions.cs" />
+    <Compile Include="..\LootGoblin\Models\TreasureMap.cs" Link="Models\TreasureMap.cs" />
+    <Compile Include="..\LootGoblin\MapGatherCharacterConfig.cs" Link="MapGatherCharacterConfig.cs" />
     <Compile Include="..\LootGoblin\Services\MapAllowanceContentsInfoParser.cs" Link="Services\MapAllowanceContentsInfoParser.cs" />
     <Compile Include="..\LootGoblin\Services\MapAllowanceHeaderPolicy.cs" Link="Services\MapAllowanceHeaderPolicy.cs" />
     <Compile Include="..\LootGoblin\Services\MapAllowanceStatus.cs" Link="Services\MapAllowanceStatus.cs" />

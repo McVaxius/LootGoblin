@@ -36,25 +36,6 @@ public sealed class MapAllowanceService : IDisposable
     {
     }
 
-    public void OnActiveCharacterChanged(ulong contentId)
-    {
-        if (contentId == 0)
-        {
-            ClearActiveCharacterState();
-            return;
-        }
-
-        ActivateContentId(contentId, DateTimeOffset.UtcNow, force: true);
-    }
-
-    public void ClearActiveCharacterState()
-    {
-        activeContentId = 0;
-        pendingStatus = MapAllowanceVerificationCache.UnverifiedStatus;
-        pendingStatusAtUtc = DateTimeOffset.MinValue;
-        ResetAutoOpen();
-    }
-
     public MapAllowanceStatus GetStatus(bool force = false)
     {
         var now = DateTimeOffset.UtcNow;
@@ -107,7 +88,6 @@ public sealed class MapAllowanceService : IDisposable
 
         pendingStatus = verificationCache.MarkConsumed(contentId, now);
         pendingStatusAtUtc = now;
-        plugin.SetActiveMapAllowanceStatus(pendingStatus);
         FinishAutoOpen(closeContentsInfo: true);
         log.Debug($"[MapAllowance] Marked map allowance consumed; next allowance at {pendingStatus.NextAllowanceAtUtc:O}.");
     }
@@ -126,7 +106,7 @@ public sealed class MapAllowanceService : IDisposable
             {
                 if (contentsInfoStatus.IsAvailable)
                 {
-                    var verifiedStatus = StoreVerifiedStatus(contentId, contentsInfoStatus, now);
+                    var verifiedStatus = verificationCache.Store(contentId, contentsInfoStatus, now);
                     FinishAutoOpen(closeContentsInfo: true);
                     return verifiedStatus;
                 }
@@ -161,52 +141,34 @@ public sealed class MapAllowanceService : IDisposable
         contentId = 0;
         if (!Plugin.ClientState.IsLoggedIn)
         {
-            ClearActiveCharacterState();
-            return false;
-        }
-
-        if (!Plugin.PlayerState.IsLoaded)
-        {
+            ClearCharacterState();
             return false;
         }
 
         contentId = Plugin.PlayerState.ContentId;
         if (contentId == 0)
         {
+            ClearCharacterState();
             return false;
         }
 
         if (activeContentId != contentId)
-            ActivateContentId(contentId, DateTimeOffset.UtcNow, force: true);
+        {
+            activeContentId = contentId;
+            verificationCache.Clear();
+            ResetAutoOpen();
+            pendingStatus = MapAllowanceVerificationCache.UnverifiedStatus;
+            pendingStatusAtUtc = DateTimeOffset.MinValue;
+        }
 
         return true;
     }
 
-    private void ActivateContentId(ulong contentId, DateTimeOffset now, bool force)
+    private void ClearCharacterState()
     {
-        if (!force && activeContentId == contentId)
-            return;
-
-        activeContentId = contentId;
+        activeContentId = 0;
+        verificationCache.Clear();
         ResetAutoOpen();
-        pendingStatus = MapAllowanceVerificationCache.UnverifiedStatus;
-        pendingStatusAtUtc = DateTimeOffset.MinValue;
-
-        if (plugin.ActiveMapGatherContentId == contentId &&
-            plugin.ActiveMapGatherConfig.TryGetMapAllowanceSnapshot(now, out var snapshot))
-        {
-            pendingStatus = verificationCache.Store(contentId, snapshot, now);
-            pendingStatusAtUtc = now;
-        }
-    }
-
-    private MapAllowanceStatus StoreVerifiedStatus(ulong contentId, MapAllowanceStatus status, DateTimeOffset now)
-    {
-        var verifiedStatus = verificationCache.Store(contentId, status, now);
-        if (verifiedStatus.IsAvailable)
-            plugin.SetActiveMapAllowanceStatus(verifiedStatus);
-
-        return verifiedStatus;
     }
 
     private unsafe bool TryReadVisibleContentsInfo(

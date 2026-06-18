@@ -314,7 +314,7 @@ public class MainWindow : Window, IDisposable
 
                 var displayedMapSources = GetDisplayedMapSources();
                 var mapAllowanceStatus = plugin.MapAllowanceService.GetStatus();
-                var hasGatherJob = plugin.SelectedGatherJobId != 0;
+                var hasGatherJob = plugin.Configuration.SelectedGatherJobId != 0;
 
                 DrawMapAllowanceHeader(mapAllowanceStatus, hasGatherJob, plugin.Configuration.DebugMode);
                 ImGui.Spacing();
@@ -455,10 +455,10 @@ public class MainWindow : Window, IDisposable
 
     private void DrawMapGatherCheckbox(uint itemId, MapAllowanceStatus mapAllowanceStatus)
     {
-        var hasGatherJob = plugin.SelectedGatherJobId != 0;
+        var hasGatherJob = plugin.Configuration.SelectedGatherJobId != 0;
         var isKnownMap = TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo);
         var isGatherable = isKnownMap && mapInfo!.IsGatherable;
-        var gatherEnabled = plugin.IsMapGatherEnabled(itemId);
+        var gatherEnabled = plugin.Configuration.IsMapGatherEnabled(itemId);
         var state = MapGatherIconPolicy.Evaluate(new MapGatherIconInput(
             isKnownMap,
             isGatherable,
@@ -485,7 +485,8 @@ public class MainWindow : Window, IDisposable
                 ref gatherEnabled,
                 state.IsInteractive))
         {
-            plugin.SetMapGatherEnabled(itemId, gatherEnabled);
+            plugin.Configuration.SetMapGatherEnabled(itemId, gatherEnabled);
+            plugin.Configuration.Save();
         }
 
         if (state.ShowCooldownOverlay)
@@ -683,7 +684,7 @@ public class MainWindow : Window, IDisposable
     private Dictionary<uint, MapSourceCount> GetDisplayedMapSources()
     {
         var sources = cachedMapSources.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        foreach (var mapId in plugin.ActiveGatherEnabledMapTypes)
+        foreach (var mapId in plugin.Configuration.GatherEnabledMapTypes ?? new List<uint>())
         {
             if (!sources.ContainsKey(mapId))
                 sources[mapId] = new MapSourceCount();

@@ -56,12 +56,12 @@ public sealed class MapAllowanceVerificationCacheTests
     }
 
     [Fact]
-    public void ContentIdChangeClearsVerifiedCache()
+    public void DifferentContentIdDoesNotInheritVerifiedCache()
     {
         var cache = new MapAllowanceVerificationCache();
         cache.Store(
             123,
-            new MapAllowanceStatus(true, TimeSpan.Zero, null, string.Empty),
+            new MapAllowanceStatus(false, TimeSpan.FromHours(17), Now.AddHours(17), string.Empty),
             Now);
 
         var found = cache.TryGet(456, Now, out var status);
@@ -69,6 +69,25 @@ public sealed class MapAllowanceVerificationCacheTests
         Assert.False(found);
         Assert.False(status.IsAvailable);
         Assert.False(status.IsReady);
+    }
+
+    [Fact]
+    public void SwitchingBackToContentIdPreservesVerifiedCooldown()
+    {
+        var cache = new MapAllowanceVerificationCache();
+        cache.Store(
+            123,
+            new MapAllowanceStatus(false, TimeSpan.FromHours(17), Now.AddHours(17), string.Empty),
+            Now);
+
+        cache.TryGet(456, Now.AddMinutes(10), out _);
+        var found = cache.TryGet(123, Now.AddMinutes(30), out var status);
+
+        Assert.True(found);
+        Assert.True(status.IsAvailable);
+        Assert.False(status.IsReady);
+        Assert.Equal(TimeSpan.FromHours(16).Add(TimeSpan.FromMinutes(30)), status.Remaining);
+        Assert.Equal(Now.AddHours(17), status.NextAllowanceAtUtc);
     }
 
     [Fact]
