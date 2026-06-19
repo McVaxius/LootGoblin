@@ -18,6 +18,14 @@ internal enum AlexandriteBuyStartAction
     UseLifestream,
 }
 
+internal enum AlexandritePostPurchaseAction
+{
+    HandoffInventoryMap,
+    ClickPurchaseConfirm,
+    Wait,
+    FailTimeout,
+}
+
 internal enum AlexandriteLifestreamArrivalWaitReason
 {
     None,
@@ -92,6 +100,23 @@ internal static class AlexandritePolicy
         return CalculateXzDistance(position, aurianaPosition) < AurianaLifestreamSkipXzDistance - DistanceEpsilon
             ? AlexandriteBuyStartAction.SkipLifestream
             : AlexandriteBuyStartAction.UseLifestream;
+    }
+
+    public static AlexandritePostPurchaseAction EvaluatePostPurchase(
+        int inventoryMapCount,
+        bool selectYesnoVisible,
+        TimeSpan elapsed,
+        TimeSpan timeout)
+    {
+        if (inventoryMapCount > 0)
+            return AlexandritePostPurchaseAction.HandoffInventoryMap;
+
+        if (elapsed >= timeout)
+            return AlexandritePostPurchaseAction.FailTimeout;
+
+        return selectYesnoVisible
+            ? AlexandritePostPurchaseAction.ClickPurchaseConfirm
+            : AlexandritePostPurchaseAction.Wait;
     }
 
     public static AlexandriteLifestreamArrivalDecision EvaluateLifestreamArrival(

@@ -146,6 +146,54 @@ public sealed class AlexandritePolicyTests
     }
 
     [Fact]
+    public void PostPurchaseMapCountWinsWithoutDialogs()
+    {
+        var action = AlexandritePolicy.EvaluatePostPurchase(
+            inventoryMapCount: 1,
+            selectYesnoVisible: false,
+            elapsed: TimeSpan.FromSeconds(31),
+            timeout: TimeSpan.FromSeconds(30));
+
+        Assert.Equal(AlexandritePostPurchaseAction.HandoffInventoryMap, action);
+    }
+
+    [Fact]
+    public void PostPurchaseVisibleYesnoWithNoMapClicksAndWaits()
+    {
+        var action = AlexandritePolicy.EvaluatePostPurchase(
+            inventoryMapCount: 0,
+            selectYesnoVisible: true,
+            elapsed: TimeSpan.FromSeconds(5),
+            timeout: TimeSpan.FromSeconds(30));
+
+        Assert.Equal(AlexandritePostPurchaseAction.ClickPurchaseConfirm, action);
+    }
+
+    [Fact]
+    public void PostPurchaseNoDialogAndNoMapWaitsBeforeTimeout()
+    {
+        var action = AlexandritePolicy.EvaluatePostPurchase(
+            inventoryMapCount: 0,
+            selectYesnoVisible: false,
+            elapsed: TimeSpan.FromSeconds(29),
+            timeout: TimeSpan.FromSeconds(30));
+
+        Assert.Equal(AlexandritePostPurchaseAction.Wait, action);
+    }
+
+    [Fact]
+    public void PostPurchaseNoDialogAndNoMapFailsAfterTimeout()
+    {
+        var action = AlexandritePolicy.EvaluatePostPurchase(
+            inventoryMapCount: 0,
+            selectYesnoVisible: false,
+            elapsed: TimeSpan.FromSeconds(30),
+            timeout: TimeSpan.FromSeconds(30));
+
+        Assert.Equal(AlexandritePostPurchaseAction.FailTimeout, action);
+    }
+
+    [Fact]
     public void LifestreamArrivalWaitsForPlayerReadiness()
     {
         var decision = AlexandritePolicy.EvaluateLifestreamArrival(

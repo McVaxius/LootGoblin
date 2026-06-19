@@ -678,6 +678,9 @@ public class StateManager : IDisposable
     private DateTime alexandriteLastLoadingAt = DateTime.MinValue;
     private DateTime alexandriteLoadingClearedAt = DateTime.MinValue;
     private DateTime alexandriteApproachLastMountAttemptAt = DateTime.MinValue;
+    private bool alexandriteWaitingForPurchasedMap;
+    private DateTime alexandritePurchaseConfirmLastAttemptAt = DateTime.MinValue;
+    private DateTime alexandritePurchaseWaitLastLogAt = DateTime.MinValue;
     public int AlexandriteRunsRemaining => alexandriteRunsRemaining;
     public int AlexandriteRunsCompleted => alexandriteRunsCompleted;
 
@@ -2136,19 +2139,43 @@ public class StateManager : IDisposable
             return false;
         }
 
-        var player = Plugin.ObjectTable.LocalPlayer;
-        if (player == null ||
-            player.IsCasting ||
-            Plugin.Condition[ConditionFlag.Casting] ||
-            !GameHelpers.IsPlayerAvailable())
+        if (TryGetPendingAlexandriteMapOpenBlockers(out var blockers))
         {
             stateStartTime = DateTime.Now;
-            StateDetail = "Alexandrite: waiting for player readiness before opening Mysterious Map...";
+            StateDetail = $"Alexandrite: waiting to open Mysterious Map ({blockers})...";
             return false;
         }
 
         lastMapScanTime = DateTime.MinValue;
         return true;
+    }
+
+    private bool TryGetPendingAlexandriteMapOpenBlockers(out string blockers)
+    {
+        var reasons = new List<string>();
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null)
+            reasons.Add("PlayerNull");
+        else if (player.IsCasting)
+            reasons.Add("PlayerCasting");
+
+        if (Plugin.Condition[ConditionFlag.Casting])
+            reasons.Add("Casting");
+        if (Plugin.Condition[ConditionFlag.BetweenAreas])
+            reasons.Add("BetweenAreas");
+        if (Plugin.Condition[ConditionFlag.BetweenAreas51])
+            reasons.Add("BetweenAreas51");
+        if (Plugin.Condition[ConditionFlag.OccupiedInQuestEvent])
+            reasons.Add("OccupiedInQuestEvent");
+        if (Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent])
+            reasons.Add("OccupiedInCutSceneEvent");
+        if (Plugin.Condition[ConditionFlag.Occupied33])
+            reasons.Add("Occupied33");
+        if (Plugin.Condition[ConditionFlag.Occupied39])
+            reasons.Add("Occupied39");
+
+        blockers = reasons.Count == 0 ? "none" : string.Join(", ", reasons);
+        return reasons.Count > 0;
     }
 
     private void ContinueStartAfterPreflight()
@@ -16640,6 +16667,10 @@ public class StateManager : IDisposable
     private const uint MorDhonaTerritoryId = AlexandritePolicy.MorDhonaTerritoryId;
     private static DateTime lastPoeticsLog = DateTime.MinValue; // Rate limiting for poetics logging
     private const uint MysteriousMapItemId = AlexandritePolicy.MysteriousMapItemId; // Mysterious Map
+    private static readonly TimeSpan AlexandritePurchaseConfirmDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan AlexandritePurchaseConfirmRetryInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan AlexandritePurchaseTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan AlexandritePurchaseWaitLogInterval = TimeSpan.FromSeconds(3);
     private static readonly string[] AlexandritePurchaseCleanupAddons =
     [
         "SelectYesno",
@@ -16678,6 +16709,7 @@ public class StateManager : IDisposable
         pendingAlexandriteMapTargetItemId = 0;
         ResetAlexandriteLifestreamWait();
         ResetAlexandriteApproachState();
+        ResetAlexandritePurchaseState();
         alexandriteStepTime = DateTime.Now;
 
         _plugin.AddDebugLog($"[Alexandrite] Starting {runCount} run(s)");
@@ -16841,6 +16873,9 @@ public class StateManager : IDisposable
                 return;
 
             case 2: // Interact with Auriana NPC
+                if (TryBeginAlexandriteInventoryMapRunIfPresent("[Alexandrite] map detected before Auriana menu"))
+                    return;
+
                 if (!alexandriteActionIssued)
                 {
                     // Target and interact with the nearest NPC named "Auriana"
@@ -16862,7 +16897,7 @@ public class StateManager : IDisposable
                     }
                     else if (stepElapsed > 10.0)
                     {
-                        HandleError("[Alexandrite] Auriana NPC not found");
+                        HandleError($"[Alexandrite] Auriana NPC not found. {BuildAlexandriteTimeoutDiagnostics(now)}");
                     }
                     return;
                 }
@@ -16877,6 +16912,7 @@ public class StateManager : IDisposable
                     // Start handling Yes/No dialog
                     alexandriteStep = 3;
                     alexandriteStepTime = DateTime.Now;
+                    ResetAlexandritePurchaseState();
                     
                     // Force refresh poetics count after purchase (rate limited)
                     var currentPoetics = GameHelpers.GetCurrentPoetics();
@@ -16890,38 +16926,68 @@ public class StateManager : IDisposable
                 }
                 else if (stepElapsed > 15.0)
                 {
-                    HandleError("[Alexandrite] SelectIconString dialog not appearing");
+                    HandleError($"[Alexandrite] SelectIconString dialog not appearing. {BuildAlexandriteTimeoutDiagnostics(now)}");
                 }
                 return;
 
             case 3: // Handle Yes/No dialog after SelectIconString
-                // Wait a moment for dialog to appear, then fire SelectYesno True 0
-                if (stepElapsed < 2.0) return; // Wait 2 seconds for dialog to appear
-                
-                if (stepElapsed % 2.0 < 0.5) // Every 2 seconds after initial wait
+                var purchaseElapsed = now - alexandriteStepTime;
+                var purchasedMapCount = GameHelpers.GetInventoryItemCount(MysteriousMapItemId);
+                if (TryBeginAlexandriteInventoryMapRunIfPresent("[Alexandrite] purchased map", purchasedMapCount))
+                    return;
+
+                var selectYesnoVisible = GameHelpers.IsAddonVisible("SelectYesno");
+                var postPurchaseAction = AlexandritePolicy.EvaluatePostPurchase(
+                    purchasedMapCount,
+                    selectYesnoVisible,
+                    purchaseElapsed,
+                    AlexandritePurchaseTimeout);
+
+                if (postPurchaseAction == AlexandritePostPurchaseAction.FailTimeout)
                 {
-                    // Only fire if dialog is actually visible
-                    if (GameHelpers.IsAddonVisible("SelectYesno"))
+                    FailAlexandrite($"[Alexandrite] Purchase confirmation/map wait timed out. {BuildAlexandriteTimeoutDiagnostics(now, purchasedMapCount)}");
+                    return;
+                }
+
+                if (!alexandriteWaitingForPurchasedMap && purchaseElapsed < AlexandritePurchaseConfirmDelay)
+                {
+                    StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for purchase confirmation...";
+                    return;
+                }
+
+                if (postPurchaseAction == AlexandritePostPurchaseAction.ClickPurchaseConfirm)
+                {
+                    if (now - alexandritePurchaseConfirmLastAttemptAt >= AlexandritePurchaseConfirmRetryInterval)
                     {
                         var accepted = ClickYesIfVisibleWithDiagnostics("Alexandrite.purchase-confirm");
-                        var mapCount = GameHelpers.GetInventoryItemCount(MysteriousMapItemId);
-                        _plugin.AddDebugLog($"[Alexandrite] SelectYesno accept attempted={accepted}, map count: {mapCount}");
-                        
-                        if (mapCount > 0)
+                        alexandritePurchaseConfirmLastAttemptAt = now;
+                        _plugin.AddDebugLog(
+                            $"[Alexandrite] SelectYesno accept attempted={accepted}; waiting for map count. " +
+                            BuildAlexandriteTimeoutDiagnostics(now, purchasedMapCount));
+
+                        if (accepted)
                         {
-                            _plugin.AddDebugLog("[Alexandrite] Mysterious Map purchased successfully");
-                            BeginAlexandriteInventoryMapRun("[Alexandrite] purchased map");
+                            alexandriteWaitingForPurchasedMap = true;
+                            alexandriteActionIssued = true;
+                            alexandritePurchaseWaitLastLogAt = DateTime.MinValue;
                         }
                     }
-                    else
-                    {
-                        _plugin.AddDebugLog("[Alexandrite] SelectYesno dialog not visible yet, waiting...");
-                    }
+
+                    StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Confirming map purchase...";
+                    return;
                 }
-                else if (stepElapsed > 30.0)
+
+                if (now - alexandritePurchaseWaitLastLogAt >= AlexandritePurchaseWaitLogInterval)
                 {
-                    HandleError("[Alexandrite] Yes/No confirmation timed out");
+                    alexandritePurchaseWaitLastLogAt = now;
+                    _plugin.AddDebugLog(
+                        $"[Alexandrite] Waiting for purchased Mysterious Map to appear. " +
+                        BuildAlexandriteTimeoutDiagnostics(now, purchasedMapCount));
                 }
+
+                StateDetail = alexandriteWaitingForPurchasedMap
+                    ? $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for purchased map..."
+                    : $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for purchase confirmation...";
                 return;
 
             case 4: // Shop Exchange - buy Mysterious Map (skipped - we handle Yes/No directly)
@@ -16933,14 +16999,11 @@ public class StateManager : IDisposable
                 return;
 
             case 5: // Hand Mysterious Map to normal flow
-                if (GameHelpers.GetInventoryItemCount(MysteriousMapItemId) > 0)
-                {
-                    BeginAlexandriteInventoryMapRun("[Alexandrite] inventory map");
+                if (TryBeginAlexandriteInventoryMapRunIfPresent("[Alexandrite] inventory map"))
                     return;
-                }
 
                 if (stepElapsed > 10.0)
-                    FailAlexandrite("[Alexandrite] Expected Mysterious Map in inventory for normal map handoff, but it was not found.");
+                    FailAlexandrite($"[Alexandrite] Expected Mysterious Map in inventory for normal map handoff, but it was not found. {BuildAlexandriteTimeoutDiagnostics(now)}");
                 return;
 
         }
@@ -17021,6 +17084,41 @@ public class StateManager : IDisposable
         alexandriteApproachLastMountAttemptAt = DateTime.MinValue;
     }
 
+    private void ResetAlexandritePurchaseState()
+    {
+        alexandriteWaitingForPurchasedMap = false;
+        alexandritePurchaseConfirmLastAttemptAt = DateTime.MinValue;
+        alexandritePurchaseWaitLastLogAt = DateTime.MinValue;
+    }
+
+    private bool TryBeginAlexandriteInventoryMapRunIfPresent(string source, int? observedMapCount = null)
+    {
+        var mapCount = observedMapCount ?? GameHelpers.GetInventoryItemCount(MysteriousMapItemId);
+        if (mapCount <= 0)
+            return false;
+
+        _plugin.AddDebugLog($"{source} found Mysterious Map in inventory. mapCount={mapCount}.");
+        BeginAlexandriteInventoryMapRun(source);
+        return true;
+    }
+
+    private string BuildAlexandriteTimeoutDiagnostics(DateTime now, int? observedMapCount = null)
+    {
+        var visibleAddons = GetVisibleAlexandritePurchaseAddons();
+        var addons = visibleAddons.Count == 0 ? "none" : string.Join(", ", visibleAddons);
+        var mapCount = observedMapCount ?? GameHelpers.GetInventoryItemCount(MysteriousMapItemId);
+        return
+            $"step={alexandriteStep}; elapsed={(now - alexandriteStepTime).TotalSeconds:F1}s; " +
+            $"addons={addons}; mapCount={mapCount}; awaitingPurchasedMap={alexandriteWaitingForPurchasedMap}; " +
+            $"confirmAttempted={alexandriteActionIssued}; blockers={DescribeAlexandriteRelevantBlockers()}.";
+    }
+
+    private string DescribeAlexandriteRelevantBlockers()
+    {
+        _ = TryGetPendingAlexandriteMapOpenBlockers(out var blockers);
+        return blockers;
+    }
+
     private void BeginAlexandriteInventoryMapRun(string source)
     {
         _plugin.SetBotEnabled(true, "alexandrite:map-handoff");
@@ -17035,6 +17133,7 @@ public class StateManager : IDisposable
         alexandriteActionIssued = false;
         ResetAlexandriteLifestreamWait();
         ResetAlexandriteApproachState();
+        ResetAlexandritePurchaseState();
 
         var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                       Plugin.Condition[ConditionFlag.BetweenAreas51];
@@ -17078,6 +17177,7 @@ public class StateManager : IDisposable
             alexandriteActionIssued = false;
             ResetAlexandriteLifestreamWait();
             ResetAlexandriteApproachState();
+            ResetAlexandritePurchaseState();
             TransitionTo(
                 BotState.AlexandriteFarming,
                 $"Alexandrite run {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Starting...");
@@ -17130,6 +17230,7 @@ public class StateManager : IDisposable
         pendingAlexandriteMapTargetItemId = 0;
         ResetAlexandriteLifestreamWait();
         ResetAlexandriteApproachState();
+        ResetAlexandritePurchaseState();
         alexandriteStepTime = DateTime.MinValue;
     }
 
