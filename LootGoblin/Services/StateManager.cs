@@ -2113,8 +2113,42 @@ public class StateManager : IDisposable
             return;
         }
 
+        if (!TryPreparePendingAlexandriteStartPreflight())
+            return;
+
         startPreflightReadyAt = DateTime.MinValue;
         ContinueStartAfterPreflight();
+    }
+
+    private bool TryPreparePendingAlexandriteStartPreflight()
+    {
+        if (!AlexandritePolicy.ShouldBypassStartMapRefresh(pendingAlexandriteMapTargetItemId))
+            return true;
+
+        var visibleAddons = GetVisibleAlexandritePurchaseAddons();
+        if (visibleAddons.Count > 0)
+        {
+            foreach (var addonName in visibleAddons)
+                GameHelpers.TryCloseAddonByCallback(addonName);
+
+            stateStartTime = DateTime.Now;
+            StateDetail = $"Alexandrite: closing purchase UI ({string.Join(", ", visibleAddons)})...";
+            return false;
+        }
+
+        var player = Plugin.ObjectTable.LocalPlayer;
+        if (player == null ||
+            player.IsCasting ||
+            Plugin.Condition[ConditionFlag.Casting] ||
+            !GameHelpers.IsPlayerAvailable())
+        {
+            stateStartTime = DateTime.Now;
+            StateDetail = "Alexandrite: waiting for player readiness before opening Mysterious Map...";
+            return false;
+        }
+
+        lastMapScanTime = DateTime.MinValue;
+        return true;
     }
 
     private void ContinueStartAfterPreflight()
@@ -2244,6 +2278,14 @@ public class StateManager : IDisposable
         if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !_plugin.IsAdsAvailable)
         {
             _plugin.ShowAdsMissingToast();
+        }
+
+        if (AlexandritePolicy.ShouldBypassStartMapRefresh(pendingAlexandriteMapTargetItemId))
+        {
+            ResetStartMapRefresh();
+            lastMapScanTime = DateTime.MinValue;
+            TransitionTo(BotState.SelectingMap, "Alexandrite: selecting purchased Mysterious Map...");
+            return;
         }
 
         BeginStartMapRefresh();

@@ -147,6 +147,9 @@ internal static class AlexandritePolicy
             : AlexandriteApproachAction.Mount;
     }
 
+    public static bool ShouldBypassStartMapRefresh(uint pendingMapTargetItemId)
+        => pendingMapTargetItemId == MysteriousMapItemId;
+
     private static double CalculateXzDistance(Vector3 from, Vector3 to)
     {
         var dx = from.X - to.X;

@@ -203,4 +203,22 @@ public sealed class AlexandritePolicyTests
         Assert.Equal(AlexandriteApproachAction.Dismount, mountedAction);
         Assert.Equal(AlexandriteApproachAction.Interact, unmountedAction);
     }
+
+    [Fact]
+    public void PendingMysteriousMapBypassesStartMapRefresh()
+    {
+        var bypass = AlexandritePolicy.ShouldBypassStartMapRefresh(AlexandritePolicy.MysteriousMapItemId);
+
+        Assert.True(bypass);
+    }
+
+    [Theory]
+    [InlineData(0u)]
+    [InlineData(6688u)]
+    public void NonMysteriousPendingMapUsesNormalStartRefresh(uint pendingMapTargetItemId)
+    {
+        var bypass = AlexandritePolicy.ShouldBypassStartMapRefresh(pendingMapTargetItemId);
+
+        Assert.False(bypass);
+    }
 }
