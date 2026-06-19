@@ -627,6 +627,10 @@ public sealed class Plugin : IDalamudPlugin
                 }
                 break;
 
+            case "gather":
+                StateManager.StartConfiguredMapGatherCommand();
+                break;
+
             default:
                 MainWindow.Toggle();
                 break;

@@ -186,6 +186,7 @@ public class StateManager : IDisposable
     private int mapGatherCloseAttemptCount;
     private DateTime mapGatherStepStartedAt = DateTime.MinValue;
     private DateTime mapGatherNextStatusAt = DateTime.MinValue;
+    private bool mapGatherManualCommandActive;
     private readonly HashSet<uint> failedGatherMapIdsThisRun = new();
     private bool areaMapAutoCloseQueued;
     private DateTime areaMapAutoCloseQueuedAt = DateTime.MinValue;
@@ -670,6 +671,9 @@ public class StateManager : IDisposable
     private int alexandriteStep; // Sub-state machine step
     private DateTime alexandriteStepTime;
     private bool alexandriteActionIssued;
+    private bool alexandriteSessionActive;
+    private bool alexandriteAwaitingMapCompletion;
+    private uint pendingAlexandriteMapTargetItemId;
     public int AlexandriteRunsRemaining => alexandriteRunsRemaining;
     public int AlexandriteRunsCompleted => alexandriteRunsCompleted;
 
@@ -829,8 +833,9 @@ public class StateManager : IDisposable
         }
 
         StartSection("state-tick");
-        var allowCycling = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations or BotState.AlexandriteFarming;
-        if (!_plugin.Configuration.Enabled && !allowCycling)
+        var allowWithoutEnabled = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations or BotState.AlexandriteFarming ||
+                                  (State == BotState.GatheringMap && mapGatherManualCommandActive);
+        if (!_plugin.Configuration.Enabled && !allowWithoutEnabled)
         {
             ResetAreaMapAutoClose();
             LogUnderwaterFlagApproachDisabledAbandoned(DateTime.Now);
@@ -2331,6 +2336,7 @@ public class StateManager : IDisposable
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
+        ResetAlexandriteSessionState("[Stop]");
         ClearOutdoorMapFlowHold();
         ClearWarning();
         TransitionTo(BotState.Idle, $"Stopped by user ({source}).");
@@ -2361,6 +2367,7 @@ public class StateManager : IDisposable
         currentLandingMode = OverworldLandingMode.MountToggle;
         ResetRunCommandTriggers();
         ResetKeyItemMapRecoveryState(clearActiveKey: true);
+        ResetAlexandriteSessionState("[ResetAll]");
         SetCombatAutomationForCombatState(inCombat: false, "full reset", force: true);
         ClearBossModOutdoorSuppressionState("full reset");
         KrangleService.ClearCache();
@@ -3673,6 +3680,76 @@ public class StateManager : IDisposable
         return false;
     }
 
+    public void StartConfiguredMapGatherCommand()
+    {
+        if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)
+        {
+            const string message = "Cannot gather a map from Main Menu. Log in first.";
+            SetWarning(message);
+            _plugin.PrintChat(message);
+            _plugin.AddDebugLog("[Gather] Manual gather ignored because client is not logged in.");
+            return;
+        }
+
+        if (State != BotState.Idle && State != BotState.Error && State != BotState.Completed)
+        {
+            var message = $"Cannot gather a map while LootGoblin is busy ({State}).";
+            SetWarning(message);
+            _plugin.PrintChat(message);
+            _plugin.AddDebugLog($"[Gather] Manual gather ignored because state is {State}.");
+            return;
+        }
+
+        if (mapGatherStep != MapGatherStep.Idle)
+        {
+            _plugin.PrintChat("Map gathering is already running.");
+            _plugin.AddDebugLog("[Gather] Manual gather ignored because a gather step is already active.");
+            return;
+        }
+
+        if (_plugin.SelectedGatherJobId == 0)
+        {
+            const string message = "Gather job not configured.";
+            SetWarning(message);
+            _plugin.PrintChat(message);
+            _plugin.AddDebugLog("[Gather] Manual gather skipped: gather job not configured.");
+            return;
+        }
+
+        var candidates = _plugin.ActiveGatherEnabledMapTypes
+            .Where(itemId =>
+                _plugin.IsMapGatherEnabled(itemId) &&
+                TreasureMapData.KnownMaps.TryGetValue(itemId, out var mapInfo) &&
+                mapInfo.IsGatherable)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            const string message = "No gatherable map configured.";
+            SetWarning(message);
+            _plugin.PrintChat(message);
+            _plugin.AddDebugLog("[Gather] Manual gather skipped: no gatherable configured map.");
+            return;
+        }
+
+        var targetItemId = candidates[0];
+        var targetName = TreasureMapData.KnownMaps.TryGetValue(targetItemId, out var info)
+            ? info.Name
+            : $"ID {targetItemId}";
+        var inventoryCount = _plugin.InventoryService.GetMapCount(targetItemId);
+        if (inventoryCount > 0)
+        {
+            _plugin.PrintChat($"{targetName} already in inventory; not gathering.");
+            _plugin.AddDebugLog($"[Gather] Manual gather skipped: {targetName} already in inventory ({inventoryCount}).");
+            return;
+        }
+
+        if (TryBeginMapGather(targetItemId, targetName, manualCommand: true, failureContext: "manual gather command"))
+            _plugin.PrintChat($"Gathering {targetName}.");
+        else if (!string.IsNullOrWhiteSpace(WarningMessage))
+            _plugin.PrintChat(WarningMessage);
+    }
+
     private bool TryStartMapGatherFallback(IReadOnlyCollection<uint> enabledMapIds, string fallbackError)
     {
         if (_plugin.SelectedGatherJobId == 0)
@@ -3703,9 +3780,21 @@ public class StateManager : IDisposable
             ? info.Name
             : $"ID {targetItemId}";
 
+        return TryBeginMapGather(targetItemId, targetName, manualCommand: false, failureContext: fallbackError);
+    }
+
+    private bool TryBeginMapGather(uint targetItemId, string targetName, bool manualCommand, string failureContext)
+    {
         if (!CanRunMapGatherAction(out var readyReason))
         {
             StateDetail = $"Waiting to gather {targetName}: {readyReason}";
+            if (manualCommand)
+            {
+                SetWarning($"Cannot gather {targetName}: {readyReason}.");
+                _plugin.AddDebugLog($"[Gather] Manual gather not started: {readyReason}");
+                return false;
+            }
+
             _plugin.AddDebugLog($"[Gather] Fallback deferred: {readyReason}");
             return true;
         }
@@ -3721,11 +3810,11 @@ public class StateManager : IDisposable
         var gatherJobId = _plugin.SelectedGatherJobId;
         var currentJobId = _plugin.JobSwitchService.GetCurrentClassJobId();
         _plugin.AddDebugLog(
-            $"[Gather] Fallback targetMap={targetName} ({targetItemId}); currentJob={FormatClassJob(currentJobId)}; expectedJob={FormatClassJob(gatherJobId)}; GatherBuddy={_plugin.GatherBuddyRebornService.StatusText}");
+            $"[Gather] {(manualCommand ? "Manual" : "Fallback")} targetMap={targetName} ({targetItemId}); currentJob={FormatClassJob(currentJobId)}; expectedJob={FormatClassJob(gatherJobId)}; GatherBuddy={_plugin.GatherBuddyRebornService.StatusText}");
         if (!_plugin.GatherBuddyRebornService.IsAvailable)
         {
             SetWarning($"Cannot gather {targetName}: {_plugin.GatherBuddyRebornService.StatusText}");
-            _plugin.AddDebugLog($"[Gather] GatherBuddy unavailable for targetMap={targetName} ({targetItemId}); status={_plugin.GatherBuddyRebornService.StatusText}; fallback={fallbackError}");
+            _plugin.AddDebugLog($"[Gather] GatherBuddy unavailable for targetMap={targetName} ({targetItemId}); status={_plugin.GatherBuddyRebornService.StatusText}; context={failureContext}");
             return false;
         }
 
@@ -3740,12 +3829,13 @@ public class StateManager : IDisposable
         mapGatherInitialInventoryCount = _plugin.InventoryService.GetMapCount(targetItemId);
         mapGatherStepStartedAt = DateTime.Now;
         mapGatherNextStatusAt = DateTime.MinValue;
+        mapGatherManualCommandActive = manualCommand;
         SetCombatAutomationForCombatState(inCombat: false, "map gathering", force: true);
         _plugin.NavigationService.StopNavigation(clearFlag: true);
         _plugin.AddDebugLog(
-            $"[Gather] Starting fallback for {targetName}; initial inventory={mapGatherInitialInventoryCount}; return job={snapshotDetail}.");
+            $"[Gather] Starting {(manualCommand ? "manual gather" : "fallback")} for {targetName}; initial inventory={mapGatherInitialInventoryCount}; return job={snapshotDetail}.");
         EnterMapGatherStep(MapGatherStep.SwitchingToGatherJob, $"Switching to gather job for {targetName}...");
-        TransitionTo(BotState.GatheringMap, $"Gathering missing {targetName}...");
+        TransitionTo(BotState.GatheringMap, manualCommand ? $"Gathering {targetName}..." : $"Gathering missing {targetName}...");
         return true;
     }
 
@@ -3991,12 +4081,20 @@ public class StateManager : IDisposable
         }
 
         var targetName = mapGatherTargetName;
+        var manualCommand = mapGatherManualCommandActive;
         failedGatherMapIdsThisRun.Remove(mapGatherTargetItemId);
         ResetMapGathering(cancelGatherBuddy: false);
         lastMapScanTime = DateTime.MinValue;
         RetryCount = 0;
         CurrentLocation = null;
         ResetPerMapCommandTriggers();
+        if (manualCommand)
+        {
+            _plugin.PrintChat($"Gathered {targetName}.");
+            TransitionTo(BotState.Idle, $"Gathered {targetName}.");
+            return;
+        }
+
         TransitionTo(BotState.SelectingMap, $"Gathered {targetName}; rechecking maps...");
     }
 
@@ -4033,8 +4131,16 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog(
                 $"[Gather] Leaving current job after gather failure; currentJob={FormatClassJob(_plugin.JobSwitchService.GetCurrentClassJobId())}; returnJob={FormatClassJob(mapGatherReturnJob.ClassJobId)}.");
 
+        var manualCommand = mapGatherManualCommandActive;
         ResetMapGathering(cancelGatherBuddy: false);
         SetWarning($"Could not gather {targetName}: {detail}");
+        if (manualCommand)
+        {
+            _plugin.PrintChat(WarningMessage);
+            TransitionTo(BotState.Error, WarningMessage);
+            return;
+        }
+
         HandleError($"Could not gather {targetName}: {detail}");
     }
 
@@ -4054,6 +4160,7 @@ public class StateManager : IDisposable
         mapGatherCloseAttemptCount = 0;
         mapGatherStepStartedAt = DateTime.MinValue;
         mapGatherNextStatusAt = DateTime.MinValue;
+        mapGatherManualCommandActive = false;
     }
 
     private void LogMapGatherJobWaitStatus(uint currentJobId, uint expectedJobId)
@@ -9503,6 +9610,9 @@ public class StateManager : IDisposable
         {
             _plugin.AddDebugLog($"[TICK] Scanning inventory... Found {maps.Count} different map types (scan #{mapScanCounter})");
         }
+
+        if (TrySelectPendingAlexandriteInventoryMap(mapSources))
+            return;
         
         if (maps.Count == 0)
         {
@@ -9593,6 +9703,69 @@ public class StateManager : IDisposable
         }
         
         TransitionTo(BotState.OpeningMap, $"Opening {mapName}...");
+    }
+
+    private bool TrySelectPendingAlexandriteInventoryMap(Dictionary<uint, MapSourceCount> mapSources)
+    {
+        if (pendingAlexandriteMapTargetItemId == 0)
+            return false;
+
+        var targetItemId = pendingAlexandriteMapTargetItemId;
+        if (targetItemId != MysteriousMapItemId)
+        {
+            pendingAlexandriteMapTargetItemId = 0;
+            return false;
+        }
+
+        var mapName = TreasureMapData.KnownMaps.TryGetValue(targetItemId, out var info)
+            ? info.Name
+            : $"ID {targetItemId}";
+        var inventoryCount = mapSources.TryGetValue(targetItemId, out var sourceCount)
+            ? sourceCount.Inventory
+            : 0;
+
+        if (inventoryCount <= 0)
+        {
+            FailAlexandrite($"[Alexandrite] Expected {mapName} in inventory for normal map handoff, but it was not found.");
+            return true;
+        }
+
+        ClearWarning();
+
+        if (_plugin.RetainerMapRetrievalService.TryCloseRetainerUiBeforeMapOpen(out var closeRetainerStatus))
+        {
+            StateDetail = closeRetainerStatus;
+            lastMapScanTime = DateTime.MinValue;
+            return true;
+        }
+
+        SelectedMapItemId = targetItemId;
+        NormalizeLandingModeForSelectedMap("[Alexandrite] map target");
+        _plugin.AddDebugLog($"[Alexandrite] Selected pending normal map target: {mapName} (ID {SelectedMapItemId}).");
+        _plugin.AddDebugLog($"[Landing] SelectedMapItemId={SelectedMapItemId}; LandingMode={currentLandingMode}.");
+
+        initialMapCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
+        mapCountChecked = false;
+        mapOpeningRetried = false;
+        ClearSelectedMapRunCountDecrement("[Alexandrite] map target");
+        ClearCompletedStaleKeyItemSuppression("[Alexandrite] starting fresh map");
+        ResetPerMapCommandTriggers();
+        _plugin.AddDebugLog($"[Alexandrite] Initial pending target map count: {initialMapCount}");
+
+        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                      Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (!loading)
+        {
+            var cleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
+            _plugin.AddDebugLog($"[Alexandrite] Cleared existing map flag before normal opening (verified={cleared}).");
+        }
+        else
+        {
+            _plugin.AddDebugLog("[Alexandrite] Skipping flag clear during zone transition.");
+        }
+
+        TransitionTo(BotState.OpeningMap, $"Opening {mapName}...");
+        return true;
     }
 
     private void TickOpeningMap()
@@ -13154,6 +13327,9 @@ public class StateManager : IDisposable
         
         KrangleService.ClearCache();
 
+        if (TryResumeAlexandriteAfterCompleted())
+            return;
+
         if (_plugin.Configuration.AutoStartNextMap)
         {
             if (TryHoldCompletedNextMapStartup("[CompletedNextMap]"))
@@ -15801,6 +15977,8 @@ public class StateManager : IDisposable
         {
             if (newState == BotState.Error || combatAutomationEnabledState != false)
                 SetCombatAutomationForCombatState(inCombat: false, $"terminal state {newState}", force: true);
+            if (newState == BotState.Error)
+                ResetAlexandriteSessionState("[TransitionTo] error");
             ClearCompletedStaleKeyItemSuppression($"terminal state {newState}");
             _plugin.YesAlreadyIPC.Unpause();
             _plugin.AddDebugLog($"[TransitionTo] YesAlready unpaused: {!_plugin.YesAlreadyIPC.IsPaused}");
@@ -16410,6 +16588,12 @@ public class StateManager : IDisposable
     private const uint RevenantsTollAetheryteId = 24; // Revenant's Toll aetheryte
     private static DateTime lastPoeticsLog = DateTime.MinValue; // Rate limiting for poetics logging
     private const uint MysteriousMapItemId = 7884; // Mysterious Map
+    private static readonly string[] AlexandritePurchaseCleanupAddons =
+    [
+        "SelectYesno",
+        "ShopExchangeCurrency",
+        "SelectIconString",
+    ];
     
     // Underwater navigation tracking
     private bool wasDiving = false;
@@ -16433,10 +16617,13 @@ public class StateManager : IDisposable
             return;
         }
 
+        alexandriteSessionActive = true;
+        alexandriteAwaitingMapCompletion = false;
         alexandriteRunsRemaining = runCount;
         alexandriteRunsCompleted = 0;
         alexandriteStep = 0;
         alexandriteActionIssued = false;
+        pendingAlexandriteMapTargetItemId = 0;
         alexandriteStepTime = DateTime.Now;
 
         _plugin.AddDebugLog($"[Alexandrite] Starting {runCount} run(s)");
@@ -16470,11 +16657,8 @@ public class StateManager : IDisposable
                         // Already in Mor Dhona
                         if (hasMap)
                         {
-                            // Already have a map - skip buying, go to using it
                             _plugin.AddDebugLog("[Alexandrite] Already have Mysterious Map - skipping purchase");
-                            alexandriteStep = 5; // Skip to map use
-                            alexandriteStepTime = DateTime.Now;
-                            alexandriteActionIssued = false;
+                            BeginAlexandriteInventoryMapRun("[Alexandrite] existing map");
                             return;
                         }
                         alexandriteStep = 1; // Skip teleport
@@ -16484,11 +16668,8 @@ public class StateManager : IDisposable
                     }
                     else if (hasMap)
                     {
-                        // Have map but not in Mor Dhona - just use it
                         _plugin.AddDebugLog("[Alexandrite] Already have Mysterious Map - skipping to use");
-                        alexandriteStep = 5;
-                        alexandriteStepTime = DateTime.Now;
-                        alexandriteActionIssued = false;
+                        BeginAlexandriteInventoryMapRun("[Alexandrite] existing map");
                         return;
                     }
 
@@ -16613,12 +16794,10 @@ public class StateManager : IDisposable
                         var mapCount = GameHelpers.GetInventoryItemCount(MysteriousMapItemId);
                         _plugin.AddDebugLog($"[Alexandrite] SelectYesno accept attempted={accepted}, map count: {mapCount}");
                         
-                        if (mapCount == 1)
+                        if (mapCount > 0)
                         {
                             _plugin.AddDebugLog("[Alexandrite] Mysterious Map purchased successfully");
-                            alexandriteStep = 5; // Skip to map use
-                            alexandriteStepTime = DateTime.Now;
-                            alexandriteActionIssued = false;
+                            BeginAlexandriteInventoryMapRun("[Alexandrite] purchased map");
                         }
                     }
                     else
@@ -16640,74 +16819,127 @@ public class StateManager : IDisposable
                 alexandriteActionIssued = false;
                 return;
 
-            case 5: // Use the Mysterious Map (decipher)
-                if (stepElapsed < 2.0) return; // Wait for shop to close
-
-                if (!alexandriteActionIssued)
+            case 5: // Hand Mysterious Map to normal flow
+                if (GameHelpers.GetInventoryItemCount(MysteriousMapItemId) > 0)
                 {
-                    // Use the map item to decipher it using the map-specific method
-                    var used = GameHelpers.UseItem(MysteriousMapItemId, _plugin.InventoryService);
-                    if (used)
-                    {
-                        alexandriteActionIssued = true;
-                        alexandriteStepTime = DateTime.Now;
-                        StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Deciphering map...";
-                        _plugin.AddDebugLog("[Alexandrite] Using Mysterious Map");
-                    }
-                    else if (stepElapsed > 10.0)
-                    {
-                        HandleError("[Alexandrite] Failed to use Mysterious Map");
-                    }
+                    BeginAlexandriteInventoryMapRun("[Alexandrite] inventory map");
                     return;
                 }
 
-                // Wait for decipher dialog then let the normal bot handle the rest
-                if (stepElapsed > 3.0)
-                {
-                    // Hand off to normal bot flow - enable bot and start
-                    _plugin.SetBotEnabled(true, "alexandrite:map-handoff");
-
-                    // Set selected map to Mysterious Map
-                    SelectedMapItemId = MysteriousMapItemId;
-                    NormalizeLandingModeForSelectedMap("[Alexandrite]");
-
-                    alexandriteStep = 6;
-                    alexandriteStepTime = DateTime.Now;
-                    alexandriteActionIssued = false;
-
-                    // Transition to detecting location (the map is already being deciphered)
-                    TransitionTo(BotState.DetectingLocation, "Reading Mysterious Map location...");
-                    _plugin.AddDebugLog("[Alexandrite] Handed off to main bot for map run");
-                }
+                if (stepElapsed > 10.0)
+                    FailAlexandrite("[Alexandrite] Expected Mysterious Map in inventory for normal map handoff, but it was not found.");
                 return;
 
-            case 6: // Wait for map run to complete (bot returns to Idle/Completed/Error)
-                // The normal bot flow handles everything. When it finishes:
-                if (State == BotState.Idle || State == BotState.Completed || State == BotState.Error)
-                {
-                    alexandriteRunsCompleted++;
-                    alexandriteRunsRemaining--;
-                    _plugin.AddDebugLog($"[Alexandrite] Run {alexandriteRunsCompleted} complete. {alexandriteRunsRemaining} remaining.");
-
-                    if (alexandriteRunsRemaining > 0)
-                    {
-                        // Reset for next run
-                        alexandriteStep = 0;
-                        alexandriteStepTime = DateTime.Now;
-                        alexandriteActionIssued = false;
-                        TransitionTo(BotState.AlexandriteFarming, $"Alexandrite run {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Starting...");
-                    }
-                    else
-                    {
-                        _plugin.PrintChat($"Alexandrite farming complete! {alexandriteRunsCompleted} runs done.");
-                        TransitionTo(BotState.Idle, "Alexandrite farming complete!");
-                    }
-                }
-                return;
         }
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    private void BeginAlexandriteInventoryMapRun(string source)
+    {
+        _plugin.SetBotEnabled(true, "alexandrite:map-handoff");
+        pendingAlexandriteMapTargetItemId = MysteriousMapItemId;
+        ClearSelectedMapRunCountDecrement(source);
+        CloseAlexandritePurchaseAddonsOnce(source);
+        _plugin.AddDebugLog($"{source} Handing Mysterious Map to normal map flow. targetItemId={pendingAlexandriteMapTargetItemId}.");
+
+        alexandriteAwaitingMapCompletion = true;
+        alexandriteStep = 0;
+        alexandriteStepTime = DateTime.Now;
+        alexandriteActionIssued = false;
+
+        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                      Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (!loading)
+        {
+            var cleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
+            _plugin.AddDebugLog($"{source} Preflight cleared map flag before normal handoff (verified={cleared}).");
+        }
+
+        var mounted = Plugin.Condition[ConditionFlag.Mounted] || Plugin.Condition[ConditionFlag.Mounting71];
+        var mountCommandSent = mounted && CommandHelper.TrySendCommand("/mount");
+        _plugin.AddDebugLog($"{source} Preflight dismount attempt: mounted={mounted}, sent={mountCommandSent}.");
+
+        ResetConfiguredCombatJobSwitch();
+        startPreflightReadyAt = DateTime.Now + StartPreflightDelay;
+        TransitionTo(BotState.StartPreflight, "Alexandrite: starting normal Mysterious Map flow...");
+    }
+
+    private bool TryResumeAlexandriteAfterCompleted()
+    {
+        if (!alexandriteSessionActive || !alexandriteAwaitingMapCompletion)
+            return false;
+
+        alexandriteAwaitingMapCompletion = false;
+        alexandriteRunsCompleted++;
+        alexandriteRunsRemaining = Math.Max(0, alexandriteRunsRemaining - 1);
+        _plugin.AddDebugLog($"[Alexandrite] Run {alexandriteRunsCompleted} complete. {alexandriteRunsRemaining} remaining.");
+
+        RetryCount = 0;
+        CurrentLocation = null;
+        SelectedMapItemId = 0;
+        pendingAlexandriteMapTargetItemId = 0;
+        currentLandingMode = OverworldLandingMode.MountToggle;
+        ResetKeyItemMapRecoveryState(clearActiveKey: true);
+        ClearSelectedMapRunCountDecrement("[Alexandrite] completed run");
+
+        if (alexandriteRunsRemaining > 0)
+        {
+            alexandriteStep = 0;
+            alexandriteStepTime = DateTime.Now;
+            alexandriteActionIssued = false;
+            TransitionTo(
+                BotState.AlexandriteFarming,
+                $"Alexandrite run {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Starting...");
+            return true;
+        }
+
+        _plugin.PrintChat($"Alexandrite farming complete! {alexandriteRunsCompleted} runs done.");
+        ResetAlexandriteSessionState("[Alexandrite] complete");
+        TransitionTo(BotState.Idle, "Alexandrite farming complete!");
+        return true;
+    }
+
+    private void CloseAlexandritePurchaseAddonsOnce(string source)
+    {
+        var visibleAddons = GetVisibleAlexandritePurchaseAddons();
+        if (visibleAddons.Count == 0)
+            return;
+
+        foreach (var addonName in visibleAddons)
+            GameHelpers.TryCloseAddonByCallback(addonName);
+
+        _plugin.AddDebugLog($"{source} Closed visible Alexandrite purchase UI once.");
+    }
+
+    private List<string> GetVisibleAlexandritePurchaseAddons()
+        => AlexandritePurchaseCleanupAddons
+            .Where(GameHelpers.IsAddonVisible)
+            .ToList();
+
+    private void FailAlexandrite(string message)
+    {
+        _plugin.AddDebugLog(message);
+        Plugin.LogWarning(message);
+        SetWarning(message);
+        _plugin.PrintChat(message);
+        TransitionTo(BotState.Error, message);
+    }
+
+    private void ResetAlexandriteSessionState(string source)
+    {
+        if (alexandriteSessionActive || alexandriteAwaitingMapCompletion || alexandriteRunsRemaining != 0)
+            _plugin.AddDebugLog($"{source} Reset Alexandrite session state.");
+
+        alexandriteSessionActive = false;
+        alexandriteAwaitingMapCompletion = false;
+        alexandriteRunsRemaining = 0;
+        alexandriteRunsCompleted = 0;
+        alexandriteStep = 0;
+        alexandriteActionIssued = false;
+        pendingAlexandriteMapTargetItemId = 0;
+        alexandriteStepTime = DateTime.MinValue;
+    }
 
     public void SetLocation(MapLocation location)
     {
