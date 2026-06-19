@@ -333,9 +333,9 @@ public sealed class Plugin : IDalamudPlugin
         SaveActiveMapGatherConfig("gather map selection changed");
     }
 
-    internal void SetActiveMapAllowanceStatus(MapAllowanceStatus status)
+    internal void SetActiveMapAllowanceStatus(ulong contentId, MapAllowanceStatus status)
     {
-        if (ActiveMapGatherContentId == 0)
+        if (!MapAllowanceSnapshotPolicy.ShouldWrite(ActiveMapGatherContentId, contentId))
             return;
 
         ActiveMapGatherConfig.SetMapAllowanceSnapshot(status);

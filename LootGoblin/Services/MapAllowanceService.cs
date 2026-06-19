@@ -107,7 +107,7 @@ public sealed class MapAllowanceService : IDisposable
 
         pendingStatus = verificationCache.MarkConsumed(contentId, now);
         pendingStatusAtUtc = now;
-        plugin.SetActiveMapAllowanceStatus(pendingStatus);
+        plugin.SetActiveMapAllowanceStatus(contentId, pendingStatus);
         FinishAutoOpen(closeContentsInfo: true);
         log.Debug($"[MapAllowance] Marked map allowance consumed; next allowance at {pendingStatus.NextAllowanceAtUtc:O}.");
     }
@@ -204,7 +204,7 @@ public sealed class MapAllowanceService : IDisposable
     {
         var verifiedStatus = verificationCache.Store(contentId, status, now);
         if (verifiedStatus.IsAvailable)
-            plugin.SetActiveMapAllowanceStatus(verifiedStatus);
+            plugin.SetActiveMapAllowanceStatus(contentId, verifiedStatus);
 
         return verifiedStatus;
     }
