@@ -102,6 +102,13 @@ public class StateManager : IDisposable
     public MapLocation? CurrentLocation { get; private set; }
     public bool BossModOutdoorSuppressionActive => bossModOutdoorSuppressionActive;
     public string BossModOutdoorSuppressionReason => bossModOutdoorSuppressionReason;
+    public bool CanAcceptMapGatherRequest =>
+        Plugin.ClientState.IsLoggedIn &&
+        Plugin.ObjectTable.LocalPlayer != null &&
+        activeMapGatherRequest == null &&
+        oneShotMapRunTargetItemId == 0 &&
+        mapGatherStep == MapGatherStep.Idle &&
+        State is BotState.Idle or BotState.Error or BotState.Completed;
 
     private readonly DiagnosticSnapshotPolicy diagnosticSnapshotPolicy = new();
     private string lastDiagnosticTerritorySignature = string.Empty;
@@ -187,6 +194,11 @@ public class StateManager : IDisposable
     private DateTime mapGatherStepStartedAt = DateTime.MinValue;
     private DateTime mapGatherNextStatusAt = DateTime.MinValue;
     private bool mapGatherManualCommandActive;
+    private MapGatherStatusResponse? activeMapGatherRequest;
+    private readonly Dictionary<string, MapGatherStatusResponse> mapGatherRequestHistory = new(StringComparer.OrdinalIgnoreCase);
+    private uint oneShotMapRunTargetItemId;
+    private string oneShotMapRunTargetName = string.Empty;
+    private string oneShotMapRunRequestId = string.Empty;
     private readonly HashSet<uint> failedGatherMapIdsThisRun = new();
     private bool areaMapAutoCloseQueued;
     private DateTime areaMapAutoCloseQueuedAt = DateTime.MinValue;
@@ -841,7 +853,8 @@ public class StateManager : IDisposable
 
         StartSection("state-tick");
         var allowWithoutEnabled = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations or BotState.AlexandriteFarming ||
-                                  (State == BotState.GatheringMap && mapGatherManualCommandActive);
+                                  (State == BotState.GatheringMap && mapGatherManualCommandActive) ||
+                                  oneShotMapRunTargetItemId != 0;
         if (!_plugin.Configuration.Enabled && !allowWithoutEnabled)
         {
             ResetAreaMapAutoClose();
@@ -2077,19 +2090,19 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("[BetweenAreas] Stopped LootGoblin movement/descent during load; preserving map flags.");
     }
 
-    public void Start()
+    public bool Start()
     {
-        if (State != BotState.Idle && State != BotState.Error)
+        if (State != BotState.Idle && State != BotState.Error && State != BotState.Completed)
         {
             _plugin.AddDebugLog("Bot already running.");
-            return;
+            return false;
         }
 
         if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)
         {
             SetWarning("Cannot start LootGoblin from Main Menu. Log in first.");
             _plugin.AddDebugLog("[Start] Ignored start request because client is not logged in.");
-            return;
+            return false;
         }
 
         var startMapFlagCleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
@@ -2102,6 +2115,7 @@ public class StateManager : IDisposable
         ResetConfiguredCombatJobSwitch();
         startPreflightReadyAt = DateTime.Now + StartPreflightDelay;
         TransitionTo(BotState.StartPreflight, "Start preflight: cleared map flag, attempted dismount, waiting 1s...");
+        return true;
     }
 
     private void TickStartPreflight()
@@ -2315,6 +2329,14 @@ public class StateManager : IDisposable
             return;
         }
 
+        if (oneShotMapRunTargetItemId != 0)
+        {
+            ResetStartMapRefresh();
+            lastMapScanTime = DateTime.MinValue;
+            TransitionTo(BotState.SelectingMap, $"Selecting one-shot {oneShotMapRunTargetName}...");
+            return;
+        }
+
         BeginStartMapRefresh();
         TransitionTo(BotState.SelectingMap, "Starting map run - refreshing saddlebag maps...");
     }
@@ -2409,6 +2431,9 @@ public class StateManager : IDisposable
         ResetAdsRepairHandoffTracking();
         _plugin.RetainerMapRetrievalService.Reset();
         ResetConfiguredCombatJobSwitch();
+        if (activeMapGatherRequest != null)
+            CompleteActiveMapGatherRequest(false, MapGatherRequestStates.Cancelled, "Map gather request stopped.");
+        ClearOneShotMapRun();
         ResetMapGathering(cancelGatherBuddy: true);
         ClearSelectedMapRunCountDecrement("[Stop]");
         ResetSaddlebagRetrieval();
@@ -2439,6 +2464,9 @@ public class StateManager : IDisposable
         ResetAdsRepairHandoffTracking();
         _plugin.RetainerMapRetrievalService.Reset();
         ResetConfiguredCombatJobSwitch();
+        if (activeMapGatherRequest != null)
+            CompleteActiveMapGatherRequest(false, MapGatherRequestStates.Cancelled, "Map gather request reset.");
+        ClearOneShotMapRun();
         ResetMapGathering(cancelGatherBuddy: true);
         failedGatherMapIdsThisRun.Clear();
         ClearSelectedMapRunCountDecrement("[ResetAll]");
@@ -3830,6 +3858,276 @@ public class StateManager : IDisposable
             _plugin.PrintChat(WarningMessage);
     }
 
+    public void StartMapGatherCommand(string args)
+    {
+        var parsed = MapGatherRequestParser.ParseCommand(args);
+        if (!parsed.Success || parsed.Map == null)
+        {
+            var message = parsed.ErrorMessage;
+            SetWarning(message);
+            _plugin.PrintChat(message);
+            _plugin.AddDebugLog($"[Gather] Specific gather command rejected: {message}");
+            return;
+        }
+
+        var request = new MapGatherStartRequest
+        {
+            RequestId = $"command-{Guid.NewGuid():N}",
+            ItemId = parsed.ItemId,
+            MapName = parsed.Map.Name,
+            RunAfterGather = parsed.RunAfterGather,
+        };
+
+        var response = StartMapGatherRequest(request);
+        if (!string.IsNullOrWhiteSpace(response.Message))
+            _plugin.PrintChat(response.Message);
+    }
+
+    public MapGatherStatusResponse StartMapGatherRequest(MapGatherStartRequest request)
+    {
+        request.RequestId = string.IsNullOrWhiteSpace(request.RequestId)
+            ? Guid.NewGuid().ToString("N")
+            : request.RequestId.Trim();
+
+        var resolved = request.ItemId != 0
+            ? MapGatherRequestParser.ResolveMap(request.ItemId.ToString())
+            : MapGatherRequestParser.ResolveMap(request.MapName);
+
+        if (!resolved.Success || resolved.Map == null)
+            return RememberMapGatherResponse(MapGatherStatusResponse.Rejected(
+                request.RequestId,
+                request.ItemId,
+                request.MapName,
+                request.RunAfterGather,
+                resolved.ErrorMessage));
+
+        var map = resolved.Map;
+        request.ItemId = map.ItemId;
+        request.MapName = map.Name;
+
+        if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)
+            return RememberMapGatherResponse(BuildMapGatherResponse(
+                request,
+                accepted: false,
+                terminal: true,
+                success: false,
+                state: MapGatherRequestStates.Rejected,
+                message: "Cannot gather a map from Main Menu. Log in first.",
+                map));
+
+        if (!CanAcceptMapGatherRequest)
+            return RememberMapGatherResponse(BuildMapGatherResponse(
+                request,
+                accepted: false,
+                terminal: true,
+                success: false,
+                state: MapGatherRequestStates.Rejected,
+                message: $"LootGoblin is busy ({State}).",
+                map));
+
+        var inventoryCount = _plugin.InventoryService.GetMapCount(map.ItemId);
+        if (inventoryCount > 0)
+        {
+            if (request.RunAfterGather)
+                return TryStartOneShotMapRun(request, map, $"Running existing {map.Name}.");
+
+            return CompleteMapGatherRequest(BuildMapGatherResponse(
+                request,
+                accepted: true,
+                terminal: true,
+                success: true,
+                state: MapGatherRequestStates.AlreadyPresent,
+                message: $"{map.Name} already in inventory; gather complete.",
+                map));
+        }
+
+        if (_plugin.SelectedGatherJobId == 0)
+            return RememberMapGatherResponse(BuildMapGatherResponse(
+                request,
+                accepted: false,
+                terminal: true,
+                success: false,
+                state: MapGatherRequestStates.Rejected,
+                message: "Gather job not configured.",
+                map));
+
+        if (!TryBeginMapGather(map.ItemId, map.Name, manualCommand: true, failureContext: "specific map gather request"))
+            return RememberMapGatherResponse(BuildMapGatherResponse(
+                request,
+                accepted: false,
+                terminal: true,
+                success: false,
+                state: MapGatherRequestStates.Rejected,
+                message: string.IsNullOrWhiteSpace(WarningMessage) ? $"Could not gather {map.Name}." : WarningMessage,
+                map));
+
+        var response = BuildMapGatherResponse(
+            request,
+            accepted: true,
+            terminal: false,
+            success: false,
+            state: MapGatherRequestStates.Gathering,
+            message: request.RunAfterGather ? $"Gathering {map.Name}, then running one map." : $"Gathering {map.Name}.",
+            map);
+        activeMapGatherRequest = response;
+        return response;
+    }
+
+    public MapGatherStatusResponse GetMapGatherRequestStatus(string requestId)
+    {
+        requestId = (requestId ?? string.Empty).Trim();
+        if (activeMapGatherRequest != null &&
+            string.Equals(activeMapGatherRequest.RequestId, requestId, StringComparison.OrdinalIgnoreCase))
+        {
+            RefreshActiveMapGatherRequestStatus();
+            return activeMapGatherRequest;
+        }
+
+        if (mapGatherRequestHistory.TryGetValue(requestId, out var response))
+            return response;
+
+        return MapGatherStatusResponse.Rejected(
+            requestId,
+            0,
+            string.Empty,
+            false,
+            string.IsNullOrWhiteSpace(requestId) ? "Request ID required." : $"No map gather request '{requestId}' is known.");
+    }
+
+    public MapGatherStatusResponse CancelMapGatherRequest(string requestId)
+    {
+        requestId = (requestId ?? string.Empty).Trim();
+        if (activeMapGatherRequest == null ||
+            !string.Equals(activeMapGatherRequest.RequestId, requestId, StringComparison.OrdinalIgnoreCase))
+        {
+            return GetMapGatherRequestStatus(requestId);
+        }
+
+        var response = CompleteActiveMapGatherRequest(false, MapGatherRequestStates.Cancelled, "Map gather request cancelled.");
+        ClearOneShotMapRun();
+        Stop();
+        return response;
+    }
+
+    private MapGatherStatusResponse TryStartOneShotMapRun(MapGatherStartRequest request, TreasureMapInfo map, string message)
+    {
+        var response = BuildMapGatherResponse(
+            request,
+            accepted: true,
+            terminal: false,
+            success: false,
+            state: MapGatherRequestStates.RunningMap,
+            message: message,
+            map);
+
+        activeMapGatherRequest = response;
+        oneShotMapRunTargetItemId = map.ItemId;
+        oneShotMapRunTargetName = map.Name;
+        oneShotMapRunRequestId = request.RequestId;
+
+        if (Start())
+            return response;
+
+        ClearOneShotMapRun();
+        return CompleteActiveMapGatherRequest(false, MapGatherRequestStates.Failed, string.IsNullOrWhiteSpace(WarningMessage)
+            ? $"Could not start one-shot map run for {map.Name}."
+            : WarningMessage);
+    }
+
+    private MapGatherStatusResponse BuildMapGatherResponse(
+        MapGatherStartRequest request,
+        bool accepted,
+        bool terminal,
+        bool success,
+        string state,
+        string message,
+        TreasureMapInfo? map)
+        => MapGatherCatalog.ApplyMapMetadata(new MapGatherStatusResponse
+        {
+            RequestId = request.RequestId,
+            ItemId = request.ItemId,
+            MapName = request.MapName,
+            RunAfterGather = request.RunAfterGather,
+            Accepted = accepted,
+            Terminal = terminal,
+            Success = success,
+            State = state,
+            Message = message,
+        }, map);
+
+    private MapGatherStatusResponse CompleteMapGatherRequest(MapGatherStatusResponse response)
+    {
+        response.Terminal = true;
+        RememberMapGatherResponse(response);
+        if (activeMapGatherRequest != null &&
+            string.Equals(activeMapGatherRequest.RequestId, response.RequestId, StringComparison.OrdinalIgnoreCase))
+        {
+            activeMapGatherRequest = null;
+        }
+
+        return response;
+    }
+
+    private MapGatherStatusResponse CompleteActiveMapGatherRequest(bool success, string state, string message)
+    {
+        if (activeMapGatherRequest == null)
+            return MapGatherStatusResponse.Rejected(string.Empty, 0, string.Empty, false, message);
+
+        activeMapGatherRequest.Success = success;
+        activeMapGatherRequest.Terminal = true;
+        activeMapGatherRequest.State = state;
+        activeMapGatherRequest.Message = message;
+        var response = activeMapGatherRequest;
+        activeMapGatherRequest = null;
+        return RememberMapGatherResponse(response);
+    }
+
+    private MapGatherStatusResponse RememberMapGatherResponse(MapGatherStatusResponse response)
+    {
+        if (string.IsNullOrWhiteSpace(response.RequestId))
+            return response;
+
+        mapGatherRequestHistory[response.RequestId] = response;
+        if (mapGatherRequestHistory.Count <= 20)
+            return response;
+
+        var key = mapGatherRequestHistory.Keys.FirstOrDefault();
+        if (key != null)
+            mapGatherRequestHistory.Remove(key);
+
+        return response;
+    }
+
+    private void RefreshActiveMapGatherRequestStatus()
+    {
+        if (activeMapGatherRequest == null || activeMapGatherRequest.Terminal)
+            return;
+
+        if (oneShotMapRunTargetItemId != 0)
+        {
+            activeMapGatherRequest.State = MapGatherRequestStates.RunningMap;
+            activeMapGatherRequest.Message = string.IsNullOrWhiteSpace(StateDetail)
+                ? $"Running {activeMapGatherRequest.MapName}."
+                : StateDetail;
+            return;
+        }
+
+        if (State == BotState.GatheringMap)
+        {
+            activeMapGatherRequest.State = MapGatherRequestStates.Gathering;
+            activeMapGatherRequest.Message = string.IsNullOrWhiteSpace(StateDetail)
+                ? $"Gathering {activeMapGatherRequest.MapName}."
+                : StateDetail;
+        }
+    }
+
+    private void ClearOneShotMapRun()
+    {
+        oneShotMapRunTargetItemId = 0;
+        oneShotMapRunTargetName = string.Empty;
+        oneShotMapRunRequestId = string.Empty;
+    }
+
     private bool TryStartMapGatherFallback(IReadOnlyCollection<uint> enabledMapIds, string fallbackError)
     {
         if (_plugin.SelectedGatherJobId == 0)
@@ -4161,13 +4459,47 @@ public class StateManager : IDisposable
         }
 
         var targetName = mapGatherTargetName;
+        var targetItemId = mapGatherTargetItemId;
         var manualCommand = mapGatherManualCommandActive;
+        var activeRequest = activeMapGatherRequest;
+        var runAfterGather = activeRequest?.RunAfterGather == true &&
+                             activeRequest.ItemId == targetItemId;
         failedGatherMapIdsThisRun.Remove(mapGatherTargetItemId);
         ResetMapGathering(cancelGatherBuddy: false);
         lastMapScanTime = DateTime.MinValue;
         RetryCount = 0;
         CurrentLocation = null;
         ResetPerMapCommandTriggers();
+
+        if (runAfterGather && activeRequest != null)
+        {
+            TransitionTo(BotState.Idle, $"Gathered {targetName}; starting one-shot map run...");
+            if (TreasureMapData.KnownMaps.TryGetValue(targetItemId, out var map))
+            {
+                TryStartOneShotMapRun(new MapGatherStartRequest
+                {
+                    RequestId = activeRequest.RequestId,
+                    ItemId = targetItemId,
+                    MapName = targetName,
+                    RunAfterGather = true,
+                }, map, $"Gathered {targetName}; running one map.");
+            }
+            else
+            {
+                CompleteActiveMapGatherRequest(false, MapGatherRequestStates.Failed, $"Gathered {targetName}, but map metadata was unavailable for run-after.");
+            }
+            return;
+        }
+
+        if (activeRequest != null && activeRequest.ItemId == targetItemId)
+        {
+            CompleteActiveMapGatherRequest(true, MapGatherRequestStates.Completed, $"Gathered {targetName}.");
+            if (activeRequest.RequestId.StartsWith("command-", StringComparison.OrdinalIgnoreCase))
+                _plugin.PrintChat($"Gathered {targetName}.");
+            TransitionTo(BotState.Idle, $"Gathered {targetName}.");
+            return;
+        }
+
         if (manualCommand)
         {
             _plugin.PrintChat($"Gathered {targetName}.");
@@ -4212,8 +4544,13 @@ public class StateManager : IDisposable
                 $"[Gather] Leaving current job after gather failure; currentJob={FormatClassJob(_plugin.JobSwitchService.GetCurrentClassJobId())}; returnJob={FormatClassJob(mapGatherReturnJob.ClassJobId)}.");
 
         var manualCommand = mapGatherManualCommandActive;
+        var activeRequest = activeMapGatherRequest;
+        var targetItemId = mapGatherTargetItemId;
         ResetMapGathering(cancelGatherBuddy: false);
         SetWarning($"Could not gather {targetName}: {detail}");
+        if (activeRequest != null && activeRequest.ItemId == targetItemId)
+            CompleteActiveMapGatherRequest(false, MapGatherRequestStates.Failed, WarningMessage);
+
         if (manualCommand)
         {
             _plugin.PrintChat(WarningMessage);
@@ -9693,6 +10030,9 @@ public class StateManager : IDisposable
 
         if (TrySelectPendingAlexandriteInventoryMap(mapSources))
             return;
+
+        if (TrySelectOneShotInventoryMap(mapSources))
+            return;
         
         if (maps.Count == 0)
         {
@@ -9783,6 +10123,75 @@ public class StateManager : IDisposable
         }
         
         TransitionTo(BotState.OpeningMap, $"Opening {mapName}...");
+    }
+
+    private bool TrySelectOneShotInventoryMap(Dictionary<uint, MapSourceCount> mapSources)
+    {
+        if (oneShotMapRunTargetItemId == 0)
+            return false;
+
+        var targetItemId = oneShotMapRunTargetItemId;
+        var mapName = string.IsNullOrWhiteSpace(oneShotMapRunTargetName)
+            ? TreasureMapData.KnownMaps.TryGetValue(targetItemId, out var info) ? info.Name : $"ID {targetItemId}"
+            : oneShotMapRunTargetName;
+
+        var inventoryCount = mapSources.TryGetValue(targetItemId, out var sourceCount)
+            ? sourceCount.Inventory
+            : 0;
+
+        if (inventoryCount <= 0)
+        {
+            var message = $"Expected {mapName} in inventory for one-shot map run, but it was not found.";
+            if (activeMapGatherRequest != null &&
+                string.Equals(activeMapGatherRequest.RequestId, oneShotMapRunRequestId, StringComparison.OrdinalIgnoreCase))
+            {
+                CompleteActiveMapGatherRequest(false, MapGatherRequestStates.Failed, message);
+            }
+
+            ClearOneShotMapRun();
+            SetWarning(message);
+            TransitionTo(BotState.Error, message);
+            return true;
+        }
+
+        ClearWarning();
+
+        if (_plugin.RetainerMapRetrievalService.TryCloseRetainerUiBeforeMapOpen(out var closeRetainerStatus))
+        {
+            StateDetail = closeRetainerStatus;
+            lastMapScanTime = DateTime.MinValue;
+            return true;
+        }
+
+        SelectedMapItemId = targetItemId;
+        NormalizeLandingModeForSelectedMap("[OneShotMap]");
+        _plugin.AddDebugLog($"[OneShotMap] Selected forced map target: {mapName} (ID {SelectedMapItemId}).");
+        _plugin.AddDebugLog($"[Landing] SelectedMapItemId={SelectedMapItemId}; LandingMode={currentLandingMode}.");
+        if (IsThiefUnderwaterLandingMode())
+            LogThiefWaterInfo($"[Underwater] Thief map selected; using {currentLandingMode} landing mode for map ID {SelectedMapItemId}.");
+
+        initialMapCount = _plugin.InventoryService.GetMapCount(SelectedMapItemId);
+        mapCountChecked = false;
+        mapOpeningRetried = false;
+        ClearSelectedMapRunCountDecrement("[OneShotMap]");
+        ClearCompletedStaleKeyItemSuppression("[OneShotMap] starting forced map");
+        ResetPerMapCommandTriggers();
+        _plugin.AddDebugLog($"[OneShotMap] Initial map count: {initialMapCount}; run count decrement suppressed.");
+
+        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
+                      Plugin.Condition[ConditionFlag.BetweenAreas51];
+        if (!loading)
+        {
+            var cleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
+            _plugin.AddDebugLog($"[OneShotMap] Cleared existing map flag (verified={cleared})");
+        }
+        else
+        {
+            _plugin.AddDebugLog("[OneShotMap] Skipping flag clear during zone transition");
+        }
+
+        TransitionTo(BotState.OpeningMap, $"Opening {mapName}...");
+        return true;
     }
 
     private bool TrySelectPendingAlexandriteInventoryMap(Dictionary<uint, MapSourceCount> mapSources)
@@ -13410,7 +13819,8 @@ public class StateManager : IDisposable
         if (TryResumeAlexandriteAfterCompleted())
             return;
 
-        if (_plugin.Configuration.AutoStartNextMap)
+        var oneShotMapRunCompleting = oneShotMapRunTargetItemId != 0;
+        if (!oneShotMapRunCompleting && _plugin.Configuration.AutoStartNextMap)
         {
             if (TryHoldCompletedNextMapStartup("[CompletedNextMap]"))
                 return;
@@ -13471,13 +13881,27 @@ public class StateManager : IDisposable
                 return;
         }
 
-        if (TryRunCompletedMapRefreshBeforeDecisions())
+        if (!oneShotMapRunCompleting && TryRunCompletedMapRefreshBeforeDecisions())
             return;
 
-        var remainingMaps = HasRemainingEnabledMaps("[Completed]");
+        var remainingMaps = !oneShotMapRunCompleting && HasRemainingEnabledMaps("[Completed]");
         RunFinishCommandsOnce("[Completed] run complete");
         if (!remainingMaps)
             RunReturnWhenDoneOnce("[Completed] no maps remaining");
+
+        if (oneShotMapRunCompleting)
+        {
+            var completedName = oneShotMapRunTargetName;
+            if (activeMapGatherRequest != null &&
+                string.Equals(activeMapGatherRequest.RequestId, oneShotMapRunRequestId, StringComparison.OrdinalIgnoreCase))
+            {
+                CompleteActiveMapGatherRequest(true, MapGatherRequestStates.Completed, $"Ran one {completedName}.");
+            }
+
+            _plugin.AddDebugLog($"[OneShotMap] Completed forced one-shot map run for {completedName}; AutoStartNextMap suppressed.");
+            ClearOneShotMapRun();
+        }
+
         RetryCount = 0;
         TransitionTo(BotState.Idle, "Run complete.");
     }
@@ -15925,7 +16349,21 @@ public class StateManager : IDisposable
 
         var resetOpeningChestLifecycle = ShouldResetOpeningChestLifecycleForTransition(newState);
         if (newState == BotState.Error)
+        {
             ResetAdsRepairHandoffTracking();
+            if (oneShotMapRunTargetItemId != 0)
+            {
+                var failedName = oneShotMapRunTargetName;
+                if (activeMapGatherRequest != null &&
+                    string.Equals(activeMapGatherRequest.RequestId, oneShotMapRunRequestId, StringComparison.OrdinalIgnoreCase))
+                {
+                    CompleteActiveMapGatherRequest(false, MapGatherRequestStates.Failed, detail);
+                }
+
+                _plugin.AddDebugLog($"[OneShotMap] Failed forced one-shot map run for {failedName}: {detail}");
+                ClearOneShotMapRun();
+            }
+        }
 
         if (newState == BotState.Teleporting && prev != BotState.Teleporting)
             ResetPortaPraetoriaTakeoffNudge("[TransitionTo] new teleport", stopAutomove: true);

@@ -914,7 +914,7 @@ public class MainWindow : Window, IDisposable
                         };
                         var statusIcon = map.Status switch
                         {
-                            ImplementationStatus.Implemented => "[OK]",
+                            ImplementationStatus.Implemented => "OK",
                             ImplementationStatus.WIP => "[WIP]",
                             _ => "[--]",
                         };

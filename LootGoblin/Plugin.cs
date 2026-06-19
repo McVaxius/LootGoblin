@@ -73,6 +73,7 @@ public sealed class Plugin : IDalamudPlugin
     public JobSwitchService JobSwitchService { get; init; }
     public MapAllowanceService MapAllowanceService { get; init; }
     public GatherBuddyRebornService GatherBuddyRebornService { get; init; }
+    public LootGoblinMapGatherIpcService MapGatherIpcService { get; init; }
 
     // IPC
     public MapFlagService MapFlagService { get; init; }
@@ -200,6 +201,7 @@ public sealed class Plugin : IDalamudPlugin
 
         // Initialize state machine
         StateManager = new StateManager(this, Framework, Log);
+        MapGatherIpcService = new LootGoblinMapGatherIpcService(this, PluginInterface, Log);
         if (DedicatedDiagnosticLog.IsEnabled)
         {
             StateManager.WriteDiagnosticSnapshot("dedicated-log-initial");
@@ -271,6 +273,7 @@ public sealed class Plugin : IDalamudPlugin
         AdsReflectionIpcService.Dispose();
         RetainerMapRetrievalService.Dispose();
         GatherBuddyRebornService.Dispose();
+        MapGatherIpcService.Dispose();
         MapAllowanceService.Dispose();
         JobSwitchService.Dispose();
 
@@ -580,7 +583,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnCommand(string command, string args)
     {
-        var arg = args.Trim().ToLowerInvariant();
+        var trimmedArgs = args.Trim();
+        var arg = trimmedArgs.ToLowerInvariant();
 
         switch (arg)
         {
@@ -627,11 +631,19 @@ public sealed class Plugin : IDalamudPlugin
                 }
                 break;
 
-            case "gather":
-                StateManager.StartConfiguredMapGatherCommand();
-                break;
-
             default:
+                if (arg == "gather")
+                {
+                    StateManager.StartConfiguredMapGatherCommand();
+                    break;
+                }
+
+                if (arg.StartsWith("gather ", StringComparison.Ordinal))
+                {
+                    StateManager.StartMapGatherCommand(trimmedArgs["gather".Length..].Trim());
+                    break;
+                }
+
                 MainWindow.Toggle();
                 break;
         }
