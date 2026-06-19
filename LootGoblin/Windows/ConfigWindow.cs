@@ -165,7 +165,7 @@ public class ConfigWindow : Window, IDisposable
             "Blank uses the player's current job at start.");
 
         DrawJobCombo(
-            "Gather job",
+            "Gather job (current character)",
             plugin.SelectedGatherJobId,
             ClassJobOptions.GatherJobs,
             "Disabled",

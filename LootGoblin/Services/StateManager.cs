@@ -3948,7 +3948,7 @@ public class StateManager : IDisposable
                 terminal: true,
                 success: false,
                 state: MapGatherRequestStates.Rejected,
-                message: "Gather job not configured.",
+                message: "Gather job disabled for current character. Set LootGoblin > Settings > Run > Gather job.",
                 map));
 
         if (!TryBeginMapGather(map.ItemId, map.Name, manualCommand: true, failureContext: "specific map gather request"))
