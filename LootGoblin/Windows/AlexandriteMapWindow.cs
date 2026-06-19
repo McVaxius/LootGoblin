@@ -9,6 +9,8 @@ namespace LootGoblin.Windows;
 
 public class AlexandriteMapWindow : Window, IDisposable
 {
+    private const uint MysteriousMapItemId = AlexandritePolicy.MysteriousMapItemId;
+
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
@@ -22,6 +24,7 @@ public class AlexandriteMapWindow : Window, IDisposable
         : base("Alexandrite Maps##AlexandriteMapWindow")
     {
         this.plugin = plugin;
+        runCount = plugin.Configuration.AlexandriteRunCount;
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(320, 200),
@@ -36,17 +39,25 @@ public class AlexandriteMapWindow : Window, IDisposable
         var sm = plugin.StateManager;
         var isRunning = sm.State == BotState.AlexandriteFarming;
         var isBusy = sm.State != BotState.Idle && sm.State != BotState.Error && sm.State != BotState.Completed;
+        var isLoggedIn = Plugin.ClientState.IsLoggedIn;
+        var poetics = isLoggedIn ? GameHelpers.GetCurrentPoetics() : 0;
+        var inventoryMapCount = isLoggedIn ? GameHelpers.GetInventoryItemCount(MysteriousMapItemId) : 0;
+        var hasActiveMysteriousMap = isLoggedIn && HasActiveMysteriousMap();
+        var runLimit = AlexandritePolicy.EvaluateRunLimit(
+            runCount,
+            inventoryMapCount,
+            hasActiveMysteriousMap,
+            poetics);
 
         // Poetics display
-        if (Plugin.ClientState.IsLoggedIn)
+        if (isLoggedIn)
         {
-            var poetics = GameHelpers.GetCurrentPoetics();
             ImGui.Text("Poetics: ");
             ImGui.SameLine();
-            var poeticsColor = poetics >= 75 ? ColorGreen : ColorRed;
+            var poeticsColor = poetics >= AlexandritePolicy.PoeticsPerMysteriousMap ? ColorGreen : ColorRed;
             ImGui.TextColored(poeticsColor, $"{poetics}/2000");
             ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, $"  (75 per map)");
+            ImGui.TextColored(ColorGrey, $"  ({AlexandritePolicy.PoeticsPerMysteriousMap} per map)");
         }
         else
         {
@@ -64,14 +75,30 @@ public class AlexandriteMapWindow : Window, IDisposable
             ImGui.SameLine();
             ImGui.SetNextItemWidth(100);
             ImGui.InputInt("##runcount", ref runCount);
-            if (runCount < 1) runCount = 1;
-            if (runCount > 100) runCount = 100;
+            runLimit = AlexandritePolicy.EvaluateRunLimit(
+                runCount,
+                inventoryMapCount,
+                hasActiveMysteriousMap,
+                poetics);
+            runCount = runLimit.RequestedRuns;
         }
         else
         {
             ImGui.Text("Runs: ");
             ImGui.SameLine();
             ImGui.TextColored(ColorCyan, $"{sm.AlexandriteRunsCompleted} done, {sm.AlexandriteRunsRemaining} remaining");
+        }
+
+        ImGui.Spacing();
+
+        ImGui.Text("Runnable: ");
+        ImGui.SameLine();
+        ImGui.TextColored(runLimit.CanStart ? ColorGreen : ColorRed, $"{runLimit.MaxRunnableRuns}");
+        if (isLoggedIn)
+        {
+            ImGui.TextColored(
+                ColorGrey,
+                $"{runLimit.InventoryMapCount} inventory + {runLimit.ActiveMapCount} active + {runLimit.PurchasableMapCount} from Poetics");
         }
 
         ImGui.Spacing();
@@ -86,17 +113,24 @@ public class AlexandriteMapWindow : Window, IDisposable
         }
         else
         {
-            if (isBusy)
+            var startDisabled = isBusy || !runLimit.CanStart;
+            if (startDisabled)
                 ImGui.BeginDisabled();
 
             if (ImGui.Button("Start##alexstart", new Vector2(120, 0)))
             {
-                plugin.Configuration.AlexandriteRunCount = runCount;
+                runLimit = AlexandritePolicy.EvaluateRunLimit(
+                    runCount,
+                    inventoryMapCount,
+                    hasActiveMysteriousMap,
+                    poetics);
+                runCount = runLimit.RequestedRuns;
+                plugin.Configuration.AlexandriteRunCount = runLimit.RequestedRuns;
                 plugin.Configuration.Save();
-                sm.StartAlexandriteFarming(runCount);
+                sm.StartAlexandriteFarming(runLimit.RequestedRuns);
             }
 
-            if (isBusy)
+            if (startDisabled)
                 ImGui.EndDisabled();
         }
 
@@ -121,15 +155,15 @@ public class AlexandriteMapWindow : Window, IDisposable
         }
 
         // Mysterious Map count
-        if (Plugin.ClientState.IsLoggedIn)
+        if (isLoggedIn)
         {
-            var mapCount = GameHelpers.GetInventoryItemCount(7885);
-            if (mapCount > 0)
-            {
-                ImGui.Text("Maps in inventory: ");
-                ImGui.SameLine();
-                ImGui.TextColored(ColorGreen, $"{mapCount}");
-            }
+            ImGui.Text("Maps in inventory: ");
+            ImGui.SameLine();
+            ImGui.TextColored(inventoryMapCount > 0 ? ColorGreen : ColorGrey, $"{inventoryMapCount}");
+
+            ImGui.Text("Active map: ");
+            ImGui.SameLine();
+            ImGui.TextColored(hasActiveMysteriousMap ? ColorGreen : ColorGrey, hasActiveMysteriousMap ? "yes" : "no");
         }
 
         ImGui.Spacing();
@@ -137,4 +171,8 @@ public class AlexandriteMapWindow : Window, IDisposable
         ImGui.TextColored(ColorGrey, "Revenant's Toll (75 Poetics each), then");
         ImGui.TextColored(ColorGrey, "runs each map automatically.");
     }
+
+    private bool HasActiveMysteriousMap()
+        => plugin.InventoryService.TryFindTreasureMapKeyItem(out var keyItem) &&
+           keyItem.KnownMapItemId == MysteriousMapItemId;
 }
