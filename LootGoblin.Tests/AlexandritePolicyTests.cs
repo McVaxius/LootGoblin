@@ -1,10 +1,14 @@
 using LootGoblin.Services;
+using System;
+using System.Numerics;
 using Xunit;
 
 namespace LootGoblin.Tests;
 
 public sealed class AlexandritePolicyTests
 {
+    private static readonly Vector3 AurianaPosition = new(62.98f, 31.29f, -737.07f);
+
     [Fact]
     public void PoeticsOnlyMaxRunsUsesSeventyFivePoeticsPerMap()
     {
@@ -75,5 +79,128 @@ public sealed class AlexandritePolicyTests
         Assert.Equal(0, state.MaxRunnableRuns);
         Assert.Equal(0, state.RequestedRuns);
         Assert.False(state.CanStart);
+    }
+
+    [Fact]
+    public void BuyStartSkipsLifestreamWhenNearAurianaInMorDhona()
+    {
+        var position = new Vector3(AurianaPosition.X + 49.9f, AurianaPosition.Y, AurianaPosition.Z);
+
+        var action = AlexandritePolicy.EvaluateBuyStart(
+            inventoryMapCount: 0,
+            territoryId: AlexandritePolicy.MorDhonaTerritoryId,
+            playerPosition: position,
+            aurianaPosition: AurianaPosition);
+
+        Assert.Equal(AlexandriteBuyStartAction.SkipLifestream, action);
+    }
+
+    [Fact]
+    public void BuyStartUsesLifestreamAtFiftyYalmsFromAuriana()
+    {
+        var position = new Vector3(AurianaPosition.X + 50.0f, AurianaPosition.Y, AurianaPosition.Z);
+
+        var action = AlexandritePolicy.EvaluateBuyStart(
+            inventoryMapCount: 0,
+            territoryId: AlexandritePolicy.MorDhonaTerritoryId,
+            playerPosition: position,
+            aurianaPosition: AurianaPosition);
+
+        Assert.Equal(AlexandriteBuyStartAction.UseLifestream, action);
+    }
+
+    [Fact]
+    public void BuyStartUsesLifestreamOutsideMorDhona()
+    {
+        var action = AlexandritePolicy.EvaluateBuyStart(
+            inventoryMapCount: 0,
+            territoryId: 148,
+            playerPosition: AurianaPosition,
+            aurianaPosition: AurianaPosition);
+
+        Assert.Equal(AlexandriteBuyStartAction.UseLifestream, action);
+    }
+
+    [Fact]
+    public void BuyStartUsesLifestreamWhenPlayerPositionUnknown()
+    {
+        var action = AlexandritePolicy.EvaluateBuyStart(
+            inventoryMapCount: 0,
+            territoryId: AlexandritePolicy.MorDhonaTerritoryId,
+            playerPosition: null,
+            aurianaPosition: AurianaPosition);
+
+        Assert.Equal(AlexandriteBuyStartAction.UseLifestream, action);
+    }
+
+    [Fact]
+    public void BuyStartUsesInventoryMapBeforeLifestreamPolicy()
+    {
+        var action = AlexandritePolicy.EvaluateBuyStart(
+            inventoryMapCount: 1,
+            territoryId: 148,
+            playerPosition: null,
+            aurianaPosition: AurianaPosition);
+
+        Assert.Equal(AlexandriteBuyStartAction.UseInventoryMap, action);
+    }
+
+    [Fact]
+    public void LifestreamArrivalWaitsForPlayerReadiness()
+    {
+        var decision = AlexandritePolicy.EvaluateLifestreamArrival(
+            loading: false,
+            territoryId: AlexandritePolicy.MorDhonaTerritoryId,
+            settleElapsed: TimeSpan.FromSeconds(2),
+            requiredSettleDelay: TimeSpan.FromSeconds(1),
+            hasPlayer: true,
+            playerIsCasting: false,
+            conditionCasting: false,
+            playerAvailable: false);
+
+        Assert.False(decision.CanAdvance);
+        Assert.Equal(AlexandriteLifestreamArrivalWaitReason.PlayerUnavailable, decision.WaitReason);
+    }
+
+    [Fact]
+    public void ApproachMountsBeforeMovingWhenUnmounted()
+    {
+        var action = AlexandritePolicy.EvaluateApproach(
+            hasPlayerPosition: true,
+            distanceToAuriana: 100f,
+            mounted: false,
+            mounting: false);
+
+        Assert.Equal(AlexandriteApproachAction.Mount, action);
+    }
+
+    [Fact]
+    public void ApproachWaitsThroughMountingBeforeMoving()
+    {
+        var action = AlexandritePolicy.EvaluateApproach(
+            hasPlayerPosition: true,
+            distanceToAuriana: 100f,
+            mounted: false,
+            mounting: true);
+
+        Assert.Equal(AlexandriteApproachAction.WaitForMounting, action);
+    }
+
+    [Fact]
+    public void ApproachDismountsAtAurianaBeforeInteract()
+    {
+        var mountedAction = AlexandritePolicy.EvaluateApproach(
+            hasPlayerPosition: true,
+            distanceToAuriana: 4.9f,
+            mounted: true,
+            mounting: false);
+        var unmountedAction = AlexandritePolicy.EvaluateApproach(
+            hasPlayerPosition: true,
+            distanceToAuriana: 4.9f,
+            mounted: false,
+            mounting: false);
+
+        Assert.Equal(AlexandriteApproachAction.Dismount, mountedAction);
+        Assert.Equal(AlexandriteApproachAction.Interact, unmountedAction);
     }
 }

@@ -674,6 +674,10 @@ public class StateManager : IDisposable
     private bool alexandriteSessionActive;
     private bool alexandriteAwaitingMapCompletion;
     private uint pendingAlexandriteMapTargetItemId;
+    private bool alexandriteSawBetweenAreas;
+    private DateTime alexandriteLastLoadingAt = DateTime.MinValue;
+    private DateTime alexandriteLoadingClearedAt = DateTime.MinValue;
+    private DateTime alexandriteApproachLastMountAttemptAt = DateTime.MinValue;
     public int AlexandriteRunsRemaining => alexandriteRunsRemaining;
     public int AlexandriteRunsCompleted => alexandriteRunsCompleted;
 
@@ -2014,6 +2018,13 @@ public class StateManager : IDisposable
             teleportSawBetweenAreas = true;
             teleportLastLoadingAt = DateTime.Now;
             teleportLoadingClearedAt = DateTime.MinValue;
+        }
+
+        if (State == BotState.AlexandriteFarming && alexandriteStep == 0 && alexandriteActionIssued)
+        {
+            alexandriteSawBetweenAreas = true;
+            alexandriteLastLoadingAt = DateTime.Now;
+            alexandriteLoadingClearedAt = DateTime.MinValue;
         }
 
         var portaPraetoriaNudgeHadMovement = portaPraetoriaTakeoffNudgeActive;
@@ -16584,10 +16595,9 @@ public class StateManager : IDisposable
     // ─── Alexandrite Farming ──────────────────────────────────────────────────
 
     private static readonly Vector3 AurianaPosition = new(62.98f, 31.29f, -737.07f);
-    private const uint MorDhonaTerritoryId = 156;
-    private const uint RevenantsTollAetheryteId = 24; // Revenant's Toll aetheryte
+    private const uint MorDhonaTerritoryId = AlexandritePolicy.MorDhonaTerritoryId;
     private static DateTime lastPoeticsLog = DateTime.MinValue; // Rate limiting for poetics logging
-    private const uint MysteriousMapItemId = 7884; // Mysterious Map
+    private const uint MysteriousMapItemId = AlexandritePolicy.MysteriousMapItemId; // Mysterious Map
     private static readonly string[] AlexandritePurchaseCleanupAddons =
     [
         "SelectYesno",
@@ -16624,6 +16634,8 @@ public class StateManager : IDisposable
         alexandriteStep = 0;
         alexandriteActionIssued = false;
         pendingAlexandriteMapTargetItemId = 0;
+        ResetAlexandriteLifestreamWait();
+        ResetAlexandriteApproachState();
         alexandriteStepTime = DateTime.Now;
 
         _plugin.AddDebugLog($"[Alexandrite] Starting {runCount} run(s)");
@@ -16634,7 +16646,8 @@ public class StateManager : IDisposable
     private void TickAlexandriteFarming()
     {
         var nav = _plugin.NavigationService;
-        var stepElapsed = (DateTime.Now - alexandriteStepTime).TotalSeconds;
+        var now = DateTime.Now;
+        var stepElapsed = (now - alexandriteStepTime).TotalSeconds;
 
         if (alexandriteRunsRemaining <= 0)
         {
@@ -16644,87 +16657,145 @@ public class StateManager : IDisposable
             return;
         }
 
-        // Check if we already have a Mysterious Map in inventory
-        var hasMap = GameHelpers.GetInventoryItemCount(MysteriousMapItemId) > 0;
-
         switch (alexandriteStep)
         {
-            case 0: // Teleport to Revenant's Toll
+            case 0: // Return to Revenant's Toll when needed
                 if (!alexandriteActionIssued)
                 {
-                    if (Plugin.ClientState.TerritoryType == MorDhonaTerritoryId)
+                    var buyStartAction = AlexandritePolicy.EvaluateBuyStart(
+                        GameHelpers.GetInventoryItemCount(MysteriousMapItemId),
+                        Plugin.ClientState.TerritoryType,
+                        Plugin.ObjectTable.LocalPlayer?.Position,
+                        AurianaPosition);
+
+                    if (buyStartAction == AlexandriteBuyStartAction.UseInventoryMap)
                     {
-                        // Already in Mor Dhona
-                        if (hasMap)
-                        {
-                            _plugin.AddDebugLog("[Alexandrite] Already have Mysterious Map - skipping purchase");
-                            BeginAlexandriteInventoryMapRun("[Alexandrite] existing map");
-                            return;
-                        }
-                        alexandriteStep = 1; // Skip teleport
-                        alexandriteStepTime = DateTime.Now;
-                        alexandriteActionIssued = false;
-                        return;
-                    }
-                    else if (hasMap)
-                    {
-                        _plugin.AddDebugLog("[Alexandrite] Already have Mysterious Map - skipping to use");
+                        _plugin.AddDebugLog("[Alexandrite] Already have Mysterious Map - skipping purchase");
                         BeginAlexandriteInventoryMapRun("[Alexandrite] existing map");
                         return;
                     }
 
-                    nav.TeleportToAetheryte(RevenantsTollAetheryteId);
+                    if (buyStartAction == AlexandriteBuyStartAction.SkipLifestream)
+                    {
+                        _plugin.AddDebugLog("[Alexandrite] Already near Auriana in Mor Dhona - skipping /li rev");
+                        alexandriteStep = 1; // Skip teleport
+                        alexandriteStepTime = now;
+                        alexandriteActionIssued = false;
+                        ResetAlexandriteLifestreamWait();
+                        ResetAlexandriteApproachState();
+                        return;
+                    }
+
+                    if (!_plugin.IsLifestreamAvailable)
+                    {
+                        _plugin.ShowLifestreamMissingToast();
+                        HandleError("[Alexandrite] Lifestream is not loaded; cannot return to Revenant's Toll.");
+                        return;
+                    }
+
+                    if (Plugin.Condition[ConditionFlag.InCombat])
+                    {
+                        HandleError("[Alexandrite] Cannot return to Revenant's Toll while in combat.");
+                        return;
+                    }
+
+                    if (nav.State != NavigationState.Idle)
+                        nav.StopNavigation();
+
+                    ResetAlexandriteLifestreamWait();
+                    if (!CommandHelper.TrySendCommand(AlexandritePolicy.LifestreamRevenantsTollCommand))
+                    {
+                        HandleError("[Alexandrite] Failed to send /li rev.");
+                        return;
+                    }
+
                     alexandriteActionIssued = true;
-                    alexandriteStepTime = DateTime.Now;
-                    StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Teleporting...";
+                    alexandriteStepTime = now;
+                    StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Returning to Revenant's Toll...";
+                    _plugin.AddDebugLog($"[Alexandrite] Sent {AlexandritePolicy.LifestreamRevenantsTollCommand} before purchase");
                     return;
                 }
 
-                if (stepElapsed < 5.0) return;
-                if (nav.IsTeleporting()) return;
-
-                if (Plugin.ClientState.TerritoryType == MorDhonaTerritoryId)
+                if (TryFinishAlexandriteLifestreamReturn(now, stepElapsed))
                 {
                     alexandriteStep = 1;
-                    alexandriteStepTime = DateTime.Now;
+                    alexandriteStepTime = now;
                     alexandriteActionIssued = false;
-                    _plugin.AddDebugLog("[Alexandrite] Arrived in Mor Dhona");
-                }
-                else if (stepElapsed > 30.0)
-                {
-                    HandleError("[Alexandrite] Teleport to Mor Dhona timed out");
-                }
-                return;
-
-            case 1: // Walk to Auriana NPC
-                if (!alexandriteActionIssued)
-                {
-                    // Clear any existing navigation flags before starting purchase
-                    CommandHelper.SendCommand("/vnav clearflag");
-                    _plugin.AddDebugLog("[Alexandrite] Cleared navigation flags before purchase");
-                    
-                    nav.MoveToPosition(AurianaPosition);
-                    alexandriteActionIssued = true;
-                    alexandriteStepTime = DateTime.Now;
-                    StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Walking to Auriana...";
-                    _plugin.AddDebugLog("[Alexandrite] Walking to Auriana NPC");
-                    return;
-                }
-
-                var playerPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
-                var distToNpc = Vector3.Distance(playerPos, AurianaPosition);
-                if (distToNpc < 5.0f)
-                {
-                    nav.StopNavigation();
-                    alexandriteStep = 2;
-                    alexandriteStepTime = DateTime.Now;
-                    alexandriteActionIssued = false;
-                    _plugin.AddDebugLog($"[Alexandrite] Near Auriana ({distToNpc:F1}y)");
+                    ResetAlexandriteApproachState();
+                    _plugin.AddDebugLog("[Alexandrite] Ready in Mor Dhona after /li rev");
                 }
                 else if (stepElapsed > 60.0)
                 {
-                    HandleError("[Alexandrite] Walk to Auriana timed out");
+                    HandleError("[Alexandrite] /li rev return to Mor Dhona timed out");
                 }
+                return;
+
+            case 1: // Mounted approach to Auriana NPC
+                var player = Plugin.ObjectTable.LocalPlayer;
+                var hasPlayerPosition = player != null;
+                var distToNpc = hasPlayerPosition
+                    ? Vector3.Distance(player!.Position, AurianaPosition)
+                    : float.MaxValue;
+                var mounted = Plugin.Condition[ConditionFlag.Mounted];
+                var mounting = Plugin.Condition[ConditionFlag.Mounting71];
+                var approachAction = AlexandritePolicy.EvaluateApproach(
+                    hasPlayerPosition,
+                    distToNpc,
+                    mounted,
+                    mounting);
+
+                switch (approachAction)
+                {
+                    case AlexandriteApproachAction.WaitForPlayerPosition:
+                        StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for player position...";
+                        return;
+
+                    case AlexandriteApproachAction.Mount:
+                        if (now - alexandriteApproachLastMountAttemptAt >= TimeSpan.FromSeconds(3))
+                        {
+                            alexandriteApproachLastMountAttemptAt = now;
+                            nav.MountUp();
+                            _plugin.AddDebugLog("[Alexandrite] Mounting before Auriana approach");
+                        }
+                        StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Mounting for Auriana...";
+                        if (stepElapsed > 90.0)
+                            HandleError("[Alexandrite] Mount before Auriana approach timed out");
+                        return;
+
+                    case AlexandriteApproachAction.WaitForMounting:
+                        StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for mount...";
+                        return;
+
+                    case AlexandriteApproachAction.MoveToAuriana:
+                        if (!alexandriteActionIssued)
+                        {
+                            CommandHelper.SendCommand("/vnav clearflag");
+                            _plugin.AddDebugLog("[Alexandrite] Cleared navigation flags before purchase");
+                            alexandriteActionIssued = true;
+                        }
+
+                        nav.MoveToPosition(AurianaPosition);
+                        StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Riding to Auriana...";
+                        if (stepElapsed > 90.0)
+                            HandleError("[Alexandrite] Mounted approach to Auriana timed out");
+                        return;
+
+                    case AlexandriteApproachAction.Dismount:
+                        nav.StopNavigation();
+                        _mountService.Dismount();
+                        StateDetail = $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Dismounting at Auriana...";
+                        return;
+
+                    case AlexandriteApproachAction.Interact:
+                        nav.StopNavigation();
+                        alexandriteStep = 2;
+                        alexandriteStepTime = now;
+                        alexandriteActionIssued = false;
+                        ResetAlexandriteApproachState();
+                        _plugin.AddDebugLog($"[Alexandrite] Near Auriana ({distToNpc:F1}y) and unmounted");
+                        return;
+                }
+
                 return;
 
             case 2: // Interact with Auriana NPC
@@ -16835,6 +16906,79 @@ public class StateManager : IDisposable
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
+    private bool TryFinishAlexandriteLifestreamReturn(DateTime now, double stepElapsed)
+    {
+        var loading = IsAreaTransitionActive() || _plugin.NavigationService.IsTeleporting();
+        if (loading)
+        {
+            alexandriteSawBetweenAreas = true;
+            alexandriteLastLoadingAt = now;
+            alexandriteLoadingClearedAt = DateTime.MinValue;
+        }
+        else if (alexandriteLoadingClearedAt == DateTime.MinValue)
+        {
+            alexandriteLoadingClearedAt = now;
+        }
+
+        var settleAnchor = alexandriteLoadingClearedAt == DateTime.MinValue
+            ? alexandriteStepTime
+            : alexandriteLoadingClearedAt;
+        var settleElapsed = now - settleAnchor;
+        var player = Plugin.ObjectTable.LocalPlayer;
+        var decision = AlexandritePolicy.EvaluateLifestreamArrival(
+            loading,
+            Plugin.ClientState.TerritoryType,
+            settleElapsed,
+            TeleportArrivalSettleDelay,
+            player != null,
+            player?.IsCasting == true,
+            Plugin.Condition[ConditionFlag.Casting],
+            GameHelpers.IsPlayerAvailable());
+
+        if (decision.CanAdvance)
+        {
+            var lastLoadingText = alexandriteLastLoadingAt == DateTime.MinValue
+                ? "never"
+                : $"{(now - alexandriteLastLoadingAt).TotalSeconds:F1}s ago";
+            _plugin.AddDebugLog(
+                $"[Alexandrite] /li rev settled after {stepElapsed:F1}s; " +
+                $"sawBetweenAreas={alexandriteSawBetweenAreas}; lastLoading={lastLoadingText}.");
+            ResetAlexandriteLifestreamWait();
+            return true;
+        }
+
+        StateDetail = decision.WaitReason switch
+        {
+            AlexandriteLifestreamArrivalWaitReason.Loading =>
+                $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for area load...",
+            AlexandriteLifestreamArrivalWaitReason.WrongTerritory =>
+                $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for Mor Dhona...",
+            AlexandriteLifestreamArrivalWaitReason.Settling =>
+                $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for arrival settle...",
+            AlexandriteLifestreamArrivalWaitReason.NoPlayer =>
+                $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for player...",
+            AlexandriteLifestreamArrivalWaitReason.Casting =>
+                $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for cast lock...",
+            AlexandriteLifestreamArrivalWaitReason.PlayerUnavailable =>
+                $"Alexandrite {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Waiting for player readiness...",
+            _ => StateDetail,
+        };
+
+        return false;
+    }
+
+    private void ResetAlexandriteLifestreamWait()
+    {
+        alexandriteSawBetweenAreas = false;
+        alexandriteLastLoadingAt = DateTime.MinValue;
+        alexandriteLoadingClearedAt = DateTime.MinValue;
+    }
+
+    private void ResetAlexandriteApproachState()
+    {
+        alexandriteApproachLastMountAttemptAt = DateTime.MinValue;
+    }
+
     private void BeginAlexandriteInventoryMapRun(string source)
     {
         _plugin.SetBotEnabled(true, "alexandrite:map-handoff");
@@ -16847,6 +16991,8 @@ public class StateManager : IDisposable
         alexandriteStep = 0;
         alexandriteStepTime = DateTime.Now;
         alexandriteActionIssued = false;
+        ResetAlexandriteLifestreamWait();
+        ResetAlexandriteApproachState();
 
         var loading = Plugin.Condition[ConditionFlag.BetweenAreas] ||
                       Plugin.Condition[ConditionFlag.BetweenAreas51];
@@ -16888,6 +17034,8 @@ public class StateManager : IDisposable
             alexandriteStep = 0;
             alexandriteStepTime = DateTime.Now;
             alexandriteActionIssued = false;
+            ResetAlexandriteLifestreamWait();
+            ResetAlexandriteApproachState();
             TransitionTo(
                 BotState.AlexandriteFarming,
                 $"Alexandrite run {alexandriteRunsCompleted + 1}/{alexandriteRunsCompleted + alexandriteRunsRemaining}: Starting...");
@@ -16938,6 +17086,8 @@ public class StateManager : IDisposable
         alexandriteStep = 0;
         alexandriteActionIssued = false;
         pendingAlexandriteMapTargetItemId = 0;
+        ResetAlexandriteLifestreamWait();
+        ResetAlexandriteApproachState();
         alexandriteStepTime = DateTime.MinValue;
     }
 
