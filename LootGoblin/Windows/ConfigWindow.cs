@@ -464,7 +464,7 @@ public class ConfigWindow : Window, IDisposable
         DrawConfigCheckbox("Auto Discard (/ays discard)", configuration.EnableAutoDiscard, value => configuration.EnableAutoDiscard = value,
             "Runs /ays discard every 30s during a mounted safe idle window. Defers while in combat, loading, or cutscene-like states. Requires AutoRetainer plugin.");
         DrawConfigCheckbox("Auto Sync FATE", configuration.AutoSyncFate, value => configuration.AutoSyncFate = value,
-            "Runs /levelsync on after joining a FATE. Defers while mounted or riding pillion.");
+            "Runs /levelsync on after joining a FATE and pauses coffer/portal recovery for joined-FATE handling. Turn off to ignore joined FATEs during map coffer flow.");
 
         DrawAdsBmrAdjustmentsSection();
 

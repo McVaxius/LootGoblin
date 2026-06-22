@@ -1129,7 +1129,11 @@ public class StateManager : IDisposable
 
     private bool TryGetOutdoorMapFlowHoldReason(out string reason)
     {
-        var joinedFate = _plugin.FateSyncService.TryGetJoinedFateId(out var fateId);
+        var joinedFate = false;
+        ushort fateId = 0;
+        if (IsJoinedFateInterventionAllowed())
+            joinedFate = _plugin.FateSyncService.TryGetJoinedFateId(out fateId);
+
         if (Plugin.Condition[ConditionFlag.InCombat] && !IsMountedOrActualInFlight())
         {
             reason = joinedFate
@@ -1144,6 +1148,9 @@ public class StateManager : IDisposable
 
     private bool IsJoinedFateOutdoorInterventionFlowActive()
     {
+        if (!IsJoinedFateInterventionAllowed())
+            return false;
+
         if (State is BotState.Idle or BotState.Error)
             return false;
 
@@ -1178,8 +1185,15 @@ public class StateManager : IDisposable
     private void EnterOutdoorMapFlowHold(string reason, string source)
     {
         var now = DateTime.Now;
-        var joinedFateHold = _plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
-                             IsJoinedFateOutdoorInterventionFlowActive();
+        var joinedFateHold = false;
+        ushort fateId = 0;
+        if (IsJoinedFateInterventionAllowed() &&
+            _plugin.FateSyncService.TryGetJoinedFateId(out fateId) &&
+            IsJoinedFateOutdoorInterventionFlowActive())
+        {
+            joinedFateHold = true;
+        }
+
         var entering = !outdoorMapFlowHoldActive ||
                        outdoorMapFlowHoldState != State ||
                        !string.Equals(outdoorMapFlowHoldReason, reason, StringComparison.Ordinal);
@@ -1220,7 +1234,8 @@ public class StateManager : IDisposable
 
     private void PrepareOutdoorMapFlowHoldEntry(string source, string reason)
     {
-        if (_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
+        if (IsJoinedFateInterventionAllowed() &&
+            _plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
             IsJoinedFateOutdoorInterventionFlowActive())
         {
             overworldRecoveryRequiresPartyMountWait = false;
@@ -1287,6 +1302,9 @@ public class StateManager : IDisposable
         DateTime now,
         bool updateStateDetail)
     {
+        if (!IsJoinedFateInterventionAllowed())
+            return false;
+
         var mountedOrFlying = _plugin.NavigationService.IsMounted() ||
                               _plugin.NavigationService.IsFlying() ||
                               Plugin.Condition[ConditionFlag.Mounting71] ||
@@ -1395,6 +1413,9 @@ public class StateManager : IDisposable
         openingChestJoinedFateHoldStartedAt = DateTime.MinValue;
         openingChestJoinedFateHoldLastLogAt = DateTime.MinValue;
     }
+
+    private bool IsJoinedFateInterventionAllowed()
+        => _plugin.Configuration.AutoSyncFate;
 
     private bool TryRecoverForwardAfterOutdoorMapFlowHold(BotState heldState, string heldReason)
     {
@@ -11549,6 +11570,20 @@ public class StateManager : IDisposable
 
     private bool TryHoldOpeningChestForJoinedFate(DateTime now, IGameObject? visibleCoffer)
     {
+        if (!IsJoinedFateInterventionAllowed())
+        {
+            if (openingChestJoinedFateHoldActive)
+            {
+                var heldFateId = openingChestJoinedFateId;
+                ClearOpeningChestJoinedFateHold();
+                chestDisappearedTime = DateTime.MinValue;
+                _plugin.AddDebugLog(
+                    $"[OpeningChest][FATE] Auto Sync FATE is off; cleared joined FATE {heldFateId} hold and resumed normal chest/portal recovery.");
+            }
+
+            return false;
+        }
+
         if (!_plugin.FateSyncService.TryGetJoinedFateId(out var fateId))
         {
             if (!openingChestJoinedFateHoldActive)
@@ -15256,7 +15291,8 @@ public class StateManager : IDisposable
         if (loading)
             return;
 
-        if (_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
+        if (IsJoinedFateInterventionAllowed() &&
+            _plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
             IsJoinedFateCombatAutomationFlowActive())
         {
             if (bossModOutdoorSuppressionActive)
@@ -15414,7 +15450,8 @@ public class StateManager : IDisposable
 
     private bool TryKeepCombatAutomationForJoinedFate(string reason)
     {
-        if (!_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) ||
+        if (!IsJoinedFateInterventionAllowed() ||
+            !_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) ||
             !IsJoinedFateCombatAutomationFlowActive())
         {
             return false;
@@ -15426,6 +15463,9 @@ public class StateManager : IDisposable
 
     private bool IsJoinedFateCombatAutomationFlowActive()
     {
+        if (!IsJoinedFateInterventionAllowed())
+            return false;
+
         if (State is BotState.Idle or BotState.Error)
             return false;
 
@@ -15451,6 +15491,9 @@ public class StateManager : IDisposable
 
     private void EnsureJoinedFateCombatAutomation(ushort fateId, string reason)
     {
+        if (!IsJoinedFateInterventionAllowed())
+            return;
+
         if (bossModOutdoorSuppressionActive)
             RestoreBossModOutdoorSuppression($"joined FATE {fateId} combat automation for {reason}", markCombatAutomationEnabled: true);
 
@@ -15473,7 +15516,8 @@ public class StateManager : IDisposable
     {
         if (inCombat && bossModOutdoorSuppressionActive)
         {
-            if (_plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
+            if (IsJoinedFateInterventionAllowed() &&
+                _plugin.FateSyncService.TryGetJoinedFateId(out var fateId) &&
                 IsJoinedFateCombatAutomationFlowActive())
             {
                 EnsureJoinedFateCombatAutomation(fateId, $"combat enable for {reason}");
