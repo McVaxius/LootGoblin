@@ -12,8 +12,36 @@ public sealed class MapGatherCharacterConfig
     public uint SelectedGatherJobId { get; set; } = 0;
     public List<uint> GatherEnabledMapTypes { get; set; } = new();
     public MapAllowanceStatus? MapAllowanceStatusSnapshot { get; set; }
+    public bool OverrideCommandTriggers { get; set; }
+    public List<string>? LandingOrDutyCommandTriggers { get; set; }
+    public List<string>? FinishCommandTriggers { get; set; }
 
     public bool HasGatherJob => SelectedGatherJobId != 0;
+
+    public IReadOnlyList<string> GetLandingOrDutyCommandTriggers(IReadOnlyList<string>? globalTriggers)
+        => OverrideCommandTriggers && LandingOrDutyCommandTriggers is { Count: > 0 } triggers
+            ? triggers
+            : globalTriggers ?? Array.Empty<string>();
+
+    public IReadOnlyList<string> GetFinishCommandTriggers(IReadOnlyList<string>? globalTriggers)
+        => OverrideCommandTriggers && FinishCommandTriggers is { Count: > 0 } triggers
+            ? triggers
+            : globalTriggers ?? Array.Empty<string>();
+
+    public void SetCommandTriggerOverride(
+        bool enabled,
+        IReadOnlyList<string>? landingOrDutySource,
+        IReadOnlyList<string>? finishSource)
+    {
+        OverrideCommandTriggers = enabled;
+        if (enabled)
+        {
+            LandingOrDutyCommandTriggers ??= CloneCommandTriggers(landingOrDutySource);
+            FinishCommandTriggers ??= CloneCommandTriggers(finishSource);
+        }
+
+        NormalizeCommandTriggers();
+    }
 
     public bool IsMapGatherEnabled(uint itemId)
         => itemId != 0 && GatherEnabledMapTypes?.Any(enabledId => enabledId == itemId) == true;
@@ -76,12 +104,42 @@ public sealed class MapGatherCharacterConfig
 
         if (MapAllowanceStatusSnapshot is { } snapshot && !snapshot.IsAvailable)
             MapAllowanceStatusSnapshot = null;
+
+        NormalizeCommandTriggers();
     }
 
     private static IEnumerable<uint> NormalizeMapIds(IEnumerable<uint>? mapIds)
         => (mapIds ?? Array.Empty<uint>())
             .Where(itemId => itemId != 0)
             .Distinct();
+
+    private void NormalizeCommandTriggers()
+    {
+        if (LandingOrDutyCommandTriggers != null)
+            EnsureCommandTriggerRows(LandingOrDutyCommandTriggers);
+
+        if (FinishCommandTriggers != null)
+            EnsureCommandTriggerRows(FinishCommandTriggers);
+    }
+
+    private static List<string> CloneCommandTriggers(IReadOnlyList<string>? source)
+    {
+        var commands = new List<string>();
+        if (source != null)
+        {
+            foreach (var command in source)
+                commands.Add(command ?? string.Empty);
+        }
+
+        EnsureCommandTriggerRows(commands);
+        return commands;
+    }
+
+    private static void EnsureCommandTriggerRows(List<string> commands)
+    {
+        if (commands.Count == 0)
+            commands.Add(string.Empty);
+    }
 }
 
 [Serializable]

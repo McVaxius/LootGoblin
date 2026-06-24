@@ -79,4 +79,32 @@ public sealed class MapGatherCharacterConfigTests
         Assert.False(status.IsReady);
         Assert.Equal(TimeSpan.FromHours(17).Add(TimeSpan.FromMinutes(15)), status.Remaining);
     }
+
+    [Fact]
+    public void CommandTriggersUseGlobalWhenOverrideDisabled()
+    {
+        var profile = new MapGatherCharacterConfig
+        {
+            OverrideCommandTriggers = false,
+            LandingOrDutyCommandTriggers = new List<string> { "/character landing" },
+            FinishCommandTriggers = new List<string> { "/character finish" },
+        };
+
+        Assert.Equal(new[] { "/global landing" }, profile.GetLandingOrDutyCommandTriggers(new[] { "/global landing" }));
+        Assert.Equal(new[] { "/global finish" }, profile.GetFinishCommandTriggers(new[] { "/global finish" }));
+    }
+
+    [Fact]
+    public void CommandTriggerOverridesTakePrecedenceWhenEnabled()
+    {
+        var profile = new MapGatherCharacterConfig
+        {
+            OverrideCommandTriggers = true,
+            LandingOrDutyCommandTriggers = new List<string> { "/character landing" },
+            FinishCommandTriggers = new List<string> { "/character finish" },
+        };
+
+        Assert.Equal(new[] { "/character landing" }, profile.GetLandingOrDutyCommandTriggers(new[] { "/global landing" }));
+        Assert.Equal(new[] { "/character finish" }, profile.GetFinishCommandTriggers(new[] { "/global finish" }));
+    }
 }

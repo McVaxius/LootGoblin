@@ -29,6 +29,7 @@
     <Compile Include="..\LootGoblin\Models\MapGatherContracts.cs" Link="Models\MapGatherContracts.cs" />
     <Compile Include="..\LootGoblin\MapGatherCharacterConfig.cs" Link="MapGatherCharacterConfig.cs" />
     <Compile Include="..\LootGoblin\Services\MapAllowanceContentsInfoParser.cs" Link="Services\MapAllowanceContentsInfoParser.cs" />
+    <Compile Include="..\LootGoblin\Services\MapAllowanceCooldownPolicy.cs" Link="Services\MapAllowanceCooldownPolicy.cs" />
     <Compile Include="..\LootGoblin\Services\MapAllowanceHeaderPolicy.cs" Link="Services\MapAllowanceHeaderPolicy.cs" />
     <Compile Include="..\LootGoblin\Services\MapAllowanceSnapshotPolicy.cs" Link="Services\MapAllowanceSnapshotPolicy.cs" />
     <Compile Include="..\LootGoblin\Services\MapAllowanceStatus.cs" Link="Services\MapAllowanceStatus.cs" />

@@ -405,7 +405,7 @@ public sealed class Plugin : IDalamudPlugin
         AddDebugLog($"[GatherProfile] Cleared active character binding ({reason}).");
     }
 
-    private void SaveActiveMapGatherConfig(string reason)
+    internal void SaveActiveMapGatherConfig(string reason)
     {
         if (ActiveMapGatherContentId == 0)
             return;
@@ -1009,8 +1009,16 @@ public sealed class Plugin : IDalamudPlugin
             changed = true;
         }
 
+        if (configuration.Version < 9)
+        {
+            configuration.MaxMapAllowanceWaitMinutes = 10;
+            configuration.Version = 9;
+            changed = true;
+        }
+
         configuration.NormalizeConfiguredMapRuns();
         configuration.NormalizeConfiguredJobAndGatherMaps();
+        configuration.MaxMapAllowanceWaitMinutes = Math.Clamp(configuration.MaxMapAllowanceWaitMinutes, 0, 1440);
         configuration.MapGatherCharacterConfigs ??= new MapGatherCharacterConfigStore();
         configuration.MapGatherCharacterConfigs.Normalize();
 

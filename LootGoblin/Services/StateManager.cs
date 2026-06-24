@@ -314,7 +314,6 @@ public class StateManager : IDisposable
     private int treasureHighLowObservedStage = 1; // Local gamble stage estimate for solver/observe modes
     private string treasureHighLowLastSnapshotSignature = string.Empty; // One log per UI transition
     private string treasureHighLowLastDecisionSignature = string.Empty; // Prevent repeated clicks on unchanged UI
-    private bool combatMovementForbidSentThisCombat; // One-shot BMR/VBM movement forbid guard per combat
     private bool bossModOutdoorSuppressionActive; // BMR/VBM off while outdoor BossMod danger/radar output is visible
     private string bossModOutdoorSuppressionReason = "off";
     private bool bossModDangerProbeLoggedOnce;
@@ -4198,8 +4197,37 @@ public class StateManager : IDisposable
             return true;
         }
 
-        if (!_plugin.MapAllowanceService.IsAllowanceReady(out var allowanceDetail))
+        var allowanceStatus = _plugin.MapAllowanceService.GetStatus(force: true);
+        if (!allowanceStatus.IsReady)
         {
+            var allowanceDetail = allowanceStatus.IsAvailable
+                ? $"Map allowance locked for {allowanceStatus.CompactText}."
+                : $"Map allowance status unavailable: {allowanceStatus.Error}";
+
+            if (!manualCommand)
+            {
+                var cooldownDecision = MapAllowanceCooldownPolicy.Evaluate(
+                    allowanceStatus,
+                    _plugin.Configuration.MaxMapAllowanceWaitMinutes);
+
+                if (cooldownDecision == MapAllowanceCooldownDecision.Wait)
+                {
+                    var detail = $"Waiting for map allowance ({allowanceStatus.CompactText} remaining).";
+                    if (!string.Equals(StateDetail, detail, StringComparison.Ordinal))
+                        _plugin.AddDebugLog($"[Gather] {targetName} deferred: {detail}");
+
+                    StateDetail = detail;
+                    ClearWarning();
+                    return true;
+                }
+
+                if (cooldownDecision == MapAllowanceCooldownDecision.Stop)
+                {
+                    StopRunForLongMapAllowanceCooldown(targetName, allowanceStatus);
+                    return true;
+                }
+            }
+
             SetWarning($"Skipping map gathering for {targetName}: {allowanceDetail}");
             _plugin.AddDebugLog($"[Gather] {targetName} skipped: {allowanceDetail}");
             return false;
@@ -4236,6 +4264,18 @@ public class StateManager : IDisposable
         EnterMapGatherStep(MapGatherStep.SwitchingToGatherJob, $"Switching to gather job for {targetName}...");
         TransitionTo(BotState.GatheringMap, manualCommand ? $"Gathering {targetName}..." : $"Gathering missing {targetName}...");
         return true;
+    }
+
+    private void StopRunForLongMapAllowanceCooldown(string targetName, MapAllowanceStatus status)
+    {
+        var maxWaitMinutes = Math.Clamp(_plugin.Configuration.MaxMapAllowanceWaitMinutes, 0, 1440);
+        var detail = $"Map allowance for {targetName} is locked for {status.CompactText}, longer than the {maxWaitMinutes}m wait limit.";
+        SetWarning(detail);
+        _plugin.AddDebugLog($"[Gather] {detail} Finishing run.");
+        RunFinishCommandsOnce("[Gather] map allowance cooldown exceeded wait limit");
+        RunReturnWhenDoneOnce("[Gather] map allowance cooldown exceeded wait limit");
+        RetryCount = 0;
+        TransitionTo(BotState.Idle, detail);
     }
 
     private void TickGatheringMap()
@@ -5520,7 +5560,9 @@ public class StateManager : IDisposable
             return;
 
         landingCommandsRanThisMap = true;
-        RunConfiguredCommands(_plugin.Configuration.LandingOrDutyCommandTriggers, reason);
+        RunConfiguredCommands(
+            _plugin.ActiveMapGatherConfig.GetLandingOrDutyCommandTriggers(_plugin.Configuration.LandingOrDutyCommandTriggers),
+            reason);
     }
 
     private void RunDutyEntryCommandsOnce(string reason)
@@ -5529,7 +5571,9 @@ public class StateManager : IDisposable
             return;
 
         dutyEntryCommandsRanThisMap = true;
-        RunConfiguredCommands(_plugin.Configuration.LandingOrDutyCommandTriggers, reason);
+        RunConfiguredCommands(
+            _plugin.ActiveMapGatherConfig.GetLandingOrDutyCommandTriggers(_plugin.Configuration.LandingOrDutyCommandTriggers),
+            reason);
     }
 
     private void RunFinishCommandsOnce(string reason)
@@ -5538,7 +5582,9 @@ public class StateManager : IDisposable
             return;
 
         finishCommandsRanThisRun = true;
-        RunConfiguredCommands(_plugin.Configuration.FinishCommandTriggers, reason);
+        RunConfiguredCommands(
+            _plugin.ActiveMapGatherConfig.GetFinishCommandTriggers(_plugin.Configuration.FinishCommandTriggers),
+            reason);
     }
 
     private void RunReturnWhenDoneOnce(string reason)
@@ -5558,7 +5604,7 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[ReturnWhenDone] Sent {command} for {reason}.");
     }
 
-    private void RunConfiguredCommands(List<string>? commands, string reason)
+    private void RunConfiguredCommands(IReadOnlyList<string>? commands, string reason)
     {
         if (commands == null || commands.Count == 0)
             return;
@@ -12308,7 +12354,6 @@ public class StateManager : IDisposable
     private void OnCombatStart()
     {
         SetCombatAutomationForCombatState(inCombat: true, "combat start");
-        SendCombatMovementForbidOn(); // Keep this in mind for later. we may want to disable this have to see how it behaves in certain situations haha.
         ResetPortaPraetoriaTakeoffNudge("[Combat] combat start", stopAutomove: true);
         ResetOpeningChestFlagFallback("combat start", logIfActive: true);
         ResetPortalGroundApproachTracking(resetFailure: true);
@@ -12344,7 +12389,6 @@ public class StateManager : IDisposable
         if (!TryKeepCombatAutomationForJoinedFate("combat end while joined FATE"))
             SetCombatAutomationForCombatState(inCombat: false, "combat end");
 
-        combatMovementForbidSentThisCombat = false;
         lastCombatEndTime = DateTime.Now;
 
         if (IsJoinedFateOutdoorInterventionFlowActive())
@@ -15546,17 +15590,6 @@ public class StateManager : IDisposable
             joinedFateCombatAutomationFateId = 0;
         }
         _plugin.AddDebugLog($"[CombatAutomation] BMR/VBM {(inCombat ? "enabled" : "disabled")} for {reason}.");
-    }
-
-    private void SendCombatMovementForbidOn()
-    {
-        if (combatMovementForbidSentThisCombat)
-            return;
-
-        SendCombatAutomationCommand("/bmrai forbidmovement on", "combat movement forbid");
-        SendCombatAutomationCommand("/vbmai forbidmovement on", "combat movement forbid");
-        combatMovementForbidSentThisCombat = true;
-        _plugin.AddDebugLog("[CombatAutomation] BMR/VBM forbidmovement enabled for combat start.");
     }
 
     private static OverworldLandingMode ResolveLandingMode(uint mapItemId)

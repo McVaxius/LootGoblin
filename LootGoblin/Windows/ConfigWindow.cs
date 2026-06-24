@@ -27,6 +27,8 @@ public class ConfigWindow : Window, IDisposable
     private readonly List<string> finishCommandTriggerDrafts = new();
     private bool commandTriggerDraftsDirty;
     private bool commandTriggerDraftsInitialized;
+    private bool commandTriggerDraftsUseCharacterOverride;
+    private string commandTriggerDraftsCharacterKey = string.Empty;
     private string commandTriggerStatus = string.Empty;
 
     public ConfigWindow(Plugin plugin) : base("Loot Goblin Settings###LootGoblinConfig")
@@ -93,8 +95,11 @@ public class ConfigWindow : Window, IDisposable
 
     public override void Draw()
     {
-        if (!commandTriggerDraftsInitialized || ImGui.IsWindowAppearing())
+        if (!commandTriggerDraftsInitialized || ImGui.IsWindowAppearing() || CommandTriggerDraftSourceChanged())
+        {
+            SaveCommandTriggerDraftsIfDirty("draft source refresh");
             RefreshCommandTriggerDrafts();
+        }
 
         ImGui.Text("Loot Goblin Settings");
         ImGui.Separator();
@@ -172,6 +177,16 @@ public class ConfigWindow : Window, IDisposable
             value => plugin.SetSelectedGatherJobId(value),
             "Blank disables map gathering.",
             saveAfterSet: false);
+
+        var maxMapAllowanceWaitMinutes = Math.Clamp(configuration.MaxMapAllowanceWaitMinutes, 0, 1440);
+        ImGui.SetNextItemWidth(120);
+        if (ImGui.InputInt("Max map allowance wait (min)", ref maxMapAllowanceWaitMinutes))
+        {
+            configuration.MaxMapAllowanceWaitMinutes = Math.Clamp(maxMapAllowanceWaitMinutes, 0, 1440);
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("When missing-map gathering is the only remaining action, wait this long for a map allowance before finishing the run.");
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -472,6 +487,7 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
         ImGui.Text("Command Triggers");
+        DrawCommandTriggerScopeSelector();
         ImGui.Spacing();
 
         DrawCommandTriggerList("Landing / Duty Entry", landingCommandTriggerDrafts, Configuration.LandingOrDutyCommandTriggerDefaults);
@@ -857,6 +873,31 @@ public class ConfigWindow : Window, IDisposable
         return changed;
     }
 
+    private void DrawCommandTriggerScopeSelector()
+    {
+        if (plugin.ActiveMapGatherContentId == 0)
+        {
+            ImGui.TextDisabled("Editing global command triggers. Log in to edit a character override.");
+            return;
+        }
+
+        var useCharacterOverride = plugin.ActiveMapGatherConfig.OverrideCommandTriggers;
+        if (ImGui.Checkbox("Use current-character command trigger override", ref useCharacterOverride))
+        {
+            SaveCommandTriggerDraftsIfDirty("command trigger override toggle");
+            plugin.ActiveMapGatherConfig.SetCommandTriggerOverride(
+                useCharacterOverride,
+                configuration.LandingOrDutyCommandTriggers,
+                configuration.FinishCommandTriggers);
+            plugin.SaveActiveMapGatherConfig("command trigger override changed");
+            RefreshCommandTriggerDrafts();
+        }
+
+        ImGui.TextDisabled(useCharacterOverride
+            ? $"Editing character profile {plugin.ActiveMapGatherCharacterKey}."
+            : "Editing global command triggers.");
+    }
+
     private void DrawCommandTriggerList(string label, List<string> drafts, IReadOnlyList<string> defaults)
     {
         EnsureCommandTriggerDraftRows(drafts);
@@ -925,10 +966,22 @@ public class ConfigWindow : Window, IDisposable
 
     private void RefreshCommandTriggerDrafts()
     {
-        CopyCommandTriggerValues(configuration.LandingOrDutyCommandTriggers, landingCommandTriggerDrafts);
-        CopyCommandTriggerValues(configuration.FinishCommandTriggers, finishCommandTriggerDrafts);
+        var useCharacterOverride = IsUsingCharacterCommandTriggerOverride();
+        var activeProfile = plugin.ActiveMapGatherConfig;
+        CopyCommandTriggerValues(
+            useCharacterOverride
+                ? activeProfile.GetLandingOrDutyCommandTriggers(configuration.LandingOrDutyCommandTriggers)
+                : configuration.LandingOrDutyCommandTriggers,
+            landingCommandTriggerDrafts);
+        CopyCommandTriggerValues(
+            useCharacterOverride
+                ? activeProfile.GetFinishCommandTriggers(configuration.FinishCommandTriggers)
+                : configuration.FinishCommandTriggers,
+            finishCommandTriggerDrafts);
         commandTriggerDraftsDirty = false;
         commandTriggerDraftsInitialized = true;
+        commandTriggerDraftsUseCharacterOverride = useCharacterOverride;
+        commandTriggerDraftsCharacterKey = plugin.ActiveMapGatherCharacterKey;
     }
 
     private void SaveCommandTriggerDraftsIfDirty(string reason)
@@ -936,16 +989,42 @@ public class ConfigWindow : Window, IDisposable
         if (!commandTriggerDraftsDirty)
             return;
 
-        configuration.LandingOrDutyCommandTriggers ??= Configuration.CreateDefaultLandingOrDutyCommandTriggers();
-        configuration.FinishCommandTriggers ??= Configuration.CreateDefaultFinishCommandTriggers();
+        if (IsUsingCharacterCommandTriggerOverride())
+        {
+            var activeProfile = plugin.ActiveMapGatherConfig;
+            activeProfile.SetCommandTriggerOverride(
+                true,
+                configuration.LandingOrDutyCommandTriggers,
+                configuration.FinishCommandTriggers);
+            activeProfile.LandingOrDutyCommandTriggers ??= new List<string>();
+            activeProfile.FinishCommandTriggers ??= new List<string>();
+            ReplaceCommandTriggerValues(activeProfile.LandingOrDutyCommandTriggers, landingCommandTriggerDrafts);
+            ReplaceCommandTriggerValues(activeProfile.FinishCommandTriggers, finishCommandTriggerDrafts);
+            plugin.SaveActiveMapGatherConfig($"command triggers saved: {reason}");
+            commandTriggerStatus = "Character command triggers saved.";
+        }
+        else
+        {
+            configuration.LandingOrDutyCommandTriggers ??= Configuration.CreateDefaultLandingOrDutyCommandTriggers();
+            configuration.FinishCommandTriggers ??= Configuration.CreateDefaultFinishCommandTriggers();
 
-        ReplaceCommandTriggerValues(configuration.LandingOrDutyCommandTriggers, landingCommandTriggerDrafts);
-        ReplaceCommandTriggerValues(configuration.FinishCommandTriggers, finishCommandTriggerDrafts);
-        configuration.Save();
+            ReplaceCommandTriggerValues(configuration.LandingOrDutyCommandTriggers, landingCommandTriggerDrafts);
+            ReplaceCommandTriggerValues(configuration.FinishCommandTriggers, finishCommandTriggerDrafts);
+            configuration.Save();
+            commandTriggerStatus = "Global command triggers saved.";
+        }
+
         commandTriggerDraftsDirty = false;
-        commandTriggerStatus = "Command triggers saved.";
         Plugin.Log.Information($"[ConfigWindow] Command triggers saved ({reason}).");
     }
+
+    private bool IsUsingCharacterCommandTriggerOverride()
+        => plugin.ActiveMapGatherContentId != 0 && plugin.ActiveMapGatherConfig.OverrideCommandTriggers;
+
+    private bool CommandTriggerDraftSourceChanged()
+        => commandTriggerDraftsInitialized &&
+           (commandTriggerDraftsUseCharacterOverride != IsUsingCharacterCommandTriggerOverride() ||
+            !string.Equals(commandTriggerDraftsCharacterKey, plugin.ActiveMapGatherCharacterKey, StringComparison.OrdinalIgnoreCase));
 
     private static void CopyCommandTriggerValues(IReadOnlyList<string>? source, List<string> destination)
     {
