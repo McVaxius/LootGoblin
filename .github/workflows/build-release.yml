@@ -27,9 +27,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Download Dalamud Staging
+      - name: Download Dalamud
         run: |
-          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/stg/latest.zip -OutFile latest.zip
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/api15/latest.zip -OutFile latest.zip
           Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev\"
 
       - name: Build
@@ -69,7 +69,7 @@ jobs:
           if [ "${{ github.ref_type }}" == "tag" ]; then
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
-            echo "version=v0.4.2.2" >> $GITHUB_OUTPUT
+            echo "version=v0.4.2.3" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Release
