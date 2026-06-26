@@ -219,12 +219,12 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Open the Loot Goblin main window. Args: config, on, off, status"
+            HelpMessage = "Open the Loot Goblin main window. Args: config, start, stop, on, off, status"
         });
 
         CommandManager.AddHandler(CommandAlias, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Open the Loot Goblin main window. Args: config, on, off, status"
+            HelpMessage = "Open the Loot Goblin main window. Args: config, start, stop, on, off, status"
         });
 
         PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
@@ -597,6 +597,21 @@ public sealed class Plugin : IDalamudPlugin
             case "enable":
                 SetBotEnabled(true, "command:on");
                 PrintChat("Loot Goblin enabled.");
+                break;
+
+            case "start":
+                SetBotEnabled(true, "command:start");
+                PrintChat(StateManager.Start()
+                    ? "Loot Goblin started."
+                    : string.IsNullOrWhiteSpace(StateManager.WarningMessage)
+                        ? "Loot Goblin not started."
+                        : StateManager.WarningMessage);
+                break;
+
+            case "stop":
+                SetBotEnabled(false, "command:stop");
+                StateManager.Stop("command:stop");
+                PrintChat("Loot Goblin stopped.");
                 break;
 
             case "off":
