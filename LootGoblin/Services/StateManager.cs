@@ -6500,7 +6500,7 @@ public class StateManager : IDisposable
         if (targets.LandingTarget == Vector3.Zero || currentPos == Vector3.Zero)
             return Vector3.Zero;
 
-        if (activeUnderwaterBounceSpecialDestinationIndex > 0
+        if (targets.Basis == "stored RealXYZ" || activeUnderwaterBounceSpecialDestinationIndex > 0
             && ShouldUseUnderwaterBounceSpecialFinalTarget(activeUnderwaterBounceSpecialDestinationIndex))
         {
             return targets.LandingTarget;
