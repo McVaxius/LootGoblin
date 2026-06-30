@@ -5864,6 +5864,9 @@ public class StateManager : IDisposable
 
     private bool ShouldWaitForPartyBeforeTakeoffForCurrentMap()
     {
+        if (IsThiefMap(SelectedMapItemId))
+            return false;
+
         return IsThiefUnderwaterPartyWaitContext()
             ? _plugin.Configuration.WaitForPartyForThiefMapsUnderwater
             : _plugin.Configuration.WaitForParty;
@@ -5878,6 +5881,9 @@ public class StateManager : IDisposable
 
     private bool ShouldWaitForUnderwaterMapContentParty()
     {
+        if (IsThiefMap(SelectedMapItemId))
+            return false;
+
         return IsThiefUnderwaterPartyWaitContext()
             && _plugin.Configuration.WaitForPartyForThiefMapsUnderwater;
     }
