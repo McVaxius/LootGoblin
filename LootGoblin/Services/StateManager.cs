@@ -367,6 +367,8 @@ public class StateManager : IDisposable
     private static readonly TimeSpan OverworldRecoveryNoProgressRepathTimeout = TimeSpan.FromSeconds(10.0);
     private static readonly TimeSpan OverworldRecoveryNoProgressTeleportTimeout = TimeSpan.FromSeconds(25.0);
     private static readonly TimeSpan OverworldRecoveryTeleportDecisionLogInterval = TimeSpan.FromSeconds(5.0);
+    private static readonly TimeSpan VnavPathFailureNudgeDuration = TimeSpan.FromSeconds(3.0);
+    private const int VnavPathFailureNudgeThreshold = 20;
     private static readonly TimeSpan TeleportArrivalSettleDelay = TimeSpan.FromSeconds(1.0);
     private const float PortalInteractionRange = 3.0f;
     private const float PortalStrictInteractionRange = 1.6f;
@@ -628,6 +630,9 @@ public class StateManager : IDisposable
     private DateTime lastVnavPathFailureTime = DateTime.MinValue;
     private string lastVnavPathFailureText = string.Empty;
     private bool flyFlagFallbackUsedThisFlight;
+    private int vnavPathFailureCountThisFlight;
+    private bool vnavPathFailureNudgeActive;
+    private DateTime vnavPathFailureNudgeStartedAt = DateTime.MinValue;
     private DateTime lastUnderwaterBounceDescentStart = DateTime.MinValue;
     private bool underwaterBounceHoldLogged;
     private bool underwaterBounceSuppressedVnavLogged;
@@ -858,9 +863,14 @@ public class StateManager : IDisposable
         {
             ResetAreaMapAutoClose();
             LogUnderwaterFlagApproachDisabledAbandoned(DateTime.Now);
+            ResetVnavPathFailureNudge("framework disabled", stopAutomove: true);
             return;
         }
-        if (IsPaused) return;
+        if (IsPaused)
+        {
+            ResetVnavPathFailureNudge("framework paused", stopAutomove: true);
+            return;
+        }
         if (State == BotState.Idle || State == BotState.Error) return;
 
         var now2 = DateTime.Now;
@@ -2073,6 +2083,7 @@ public class StateManager : IDisposable
 
         var hadMovement = autoMoveActive
             || portaPraetoriaNudgeHadMovement
+            || vnavPathFailureNudgeActive
             || descentInProgress
             || descentMode
             || underwaterTargetPosition != Vector3.Zero
@@ -2091,6 +2102,7 @@ public class StateManager : IDisposable
 
         CommandHelper.SendCommand("/automove off");
         ResetPortaPraetoriaTakeoffNudge("[BetweenAreas] area load", stopAutomove: false);
+        ResetVnavPathFailureNudge("area load", stopAutomove: false);
         autoMoveActive = false;
         descentInProgress = false;
         descentMode = false;
@@ -2511,6 +2523,7 @@ public class StateManager : IDisposable
         WritePreTerminalSnapshot($"pause:{source}");
         IsPaused = true;
         _plugin.NavigationService.StopNavigation();
+        ResetVnavFlyFlagFallbackState();
         _plugin.AddDebugLog($"Bot paused; source={source}.");
     }
 
@@ -4809,6 +4822,75 @@ public class StateManager : IDisposable
         lastVnavPathFailureText = text;
         if (shouldLog)
             _plugin.AddDebugLog($"[Flying] Observed vnav path failure: {text}");
+
+        if (vnavPathFailureNudgeActive)
+            return;
+
+        vnavPathFailureCountThisFlight++;
+        if (vnavPathFailureCountThisFlight <= VnavPathFailureNudgeThreshold)
+            return;
+
+        BeginVnavPathFailureNudge(now, text);
+    }
+
+    private void BeginVnavPathFailureNudge(DateTime now, string text)
+    {
+        if (vnavPathFailureNudgeActive)
+            return;
+
+        if (_plugin.NavigationService.State != NavigationState.Idle || _plugin.VNavIPC.IsNavigating)
+            _plugin.NavigationService.StopNavigation();
+
+        CommandHelper.SendCommand("/automove on");
+        vnavPathFailureNudgeActive = true;
+        vnavPathFailureNudgeStartedAt = now;
+        vnavPathFailureCountThisFlight = 0;
+        stateActionIssued = false;
+        StateDetail = "Nudging forward after repeated vnav path failures...";
+        _plugin.AddDebugLog(
+            $"[Flying] Observed more than {VnavPathFailureNudgeThreshold} vnav path failures; " +
+            $"stopped vnav and nudging forward for {VnavPathFailureNudgeDuration.TotalSeconds:F0}s. Last failure: {text}");
+    }
+
+    private bool TryHoldVnavPathFailureNudge(DateTime now)
+    {
+        if (!vnavPathFailureNudgeActive)
+            return false;
+
+        var elapsed = now - vnavPathFailureNudgeStartedAt;
+        if (elapsed < VnavPathFailureNudgeDuration)
+        {
+            var remaining = Math.Max(0.0, (VnavPathFailureNudgeDuration - elapsed).TotalSeconds);
+            StateDetail = $"Nudging forward after repeated vnav path failures... ({remaining:F1}s)";
+            stateStartTime = now;
+            return true;
+        }
+
+        CommandHelper.SendCommand("/automove off");
+        vnavPathFailureNudgeActive = false;
+        vnavPathFailureNudgeStartedAt = DateTime.MinValue;
+        stateActionIssued = false;
+        lastStuckCheckPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
+        lastStuckCheckTime = now;
+        _plugin.AddDebugLog("[Flying] Repeated vnav path failure nudge complete; automove stopped and flight navigation will reissue.");
+        return false;
+    }
+
+    private void ResetVnavPathFailureNudge(string source, bool stopAutomove)
+    {
+        vnavPathFailureCountThisFlight = 0;
+        if (!vnavPathFailureNudgeActive)
+        {
+            vnavPathFailureNudgeStartedAt = DateTime.MinValue;
+            return;
+        }
+
+        vnavPathFailureNudgeActive = false;
+        vnavPathFailureNudgeStartedAt = DateTime.MinValue;
+        if (stopAutomove)
+            CommandHelper.SendCommand("/automove off");
+
+        _plugin.AddDebugLog($"[Flying] Cleared repeated vnav path failure nudge ({source}).");
     }
 
     public void NotifyChatMessage(string text)
@@ -5018,6 +5100,7 @@ public class StateManager : IDisposable
         lastVnavPathFailureTime = DateTime.MinValue;
         lastVnavPathFailureText = string.Empty;
         flyFlagFallbackUsedThisFlight = false;
+        ResetVnavPathFailureNudge("vnav/flying reset", stopAutomove: true);
     }
 
     private void ResetKeyItemMapRecoveryState(bool clearActiveKey = false)
@@ -11281,6 +11364,10 @@ public class StateManager : IDisposable
             return;
         }
 
+        var now = DateTime.Now;
+        if (TryHoldVnavPathFailureNudge(now))
+            return;
+
         var nav = _plugin.NavigationService;
         var currentPos = Plugin.ObjectTable.LocalPlayer?.Position ?? Vector3.Zero;
         var activeNavTargets = ResolveOverworldNavigationTargets();
@@ -11423,7 +11510,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        var now = DateTime.Now;
+        now = DateTime.Now;
         if (TryFallbackToFlyFlagAfterVnavFailure(now))
             return;
 
