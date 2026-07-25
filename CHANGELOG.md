@@ -2,7 +2,10 @@
 
 All notable changes to LootGoblin will be documented in this file.
 
-## [Unreleased] - 2026-03-25
+## [Unreleased] - 2026-07-25
+
+### Added
+- **Moogle Treasure Trove reminder** - On each character load, Loot Goblin now checks Eventy's public event schedule and shows one normal toast when a Moogle Treasure Trove event is active. The check uses a bounded timeout, six-hour memory cache, cancellation on unload, and silent failure behavior.
 
 ### Fixed
 - **BossMod outdoor suppression** - Outdoor BMR/VBM suppression now requires visible BossMod danger signals (BMR active module or VBM forbidden zones), shows the detected state in the main UI, and restores AI once the outdoor flow ends on foot.

@@ -38,5 +38,6 @@
     <Compile Include="..\LootGoblin\Services\MapGatherRequestParser.cs" Link="Services\MapGatherRequestParser.cs" />
     <Compile Include="..\LootGoblin\Services\PartyProximityEvaluator.cs" Link="Services\PartyProximityEvaluator.cs" />
     <Compile Include="..\LootGoblin\Services\PortalTimeoutPolicy.cs" Link="Services\PortalTimeoutPolicy.cs" />
+    <Compile Include="..\LootGoblin\Services\MogtomeEventPolicy.cs" Link="Services\MogtomeEventPolicy.cs" />
   </ItemGroup>
 </Project>

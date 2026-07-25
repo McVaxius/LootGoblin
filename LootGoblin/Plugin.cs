@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
@@ -108,6 +109,8 @@ public sealed class Plugin : IDalamudPlugin
     private IReadOnlyList<uint> cachedRetainerRunnableMapIds = Array.Empty<uint>();
     private string cachedRetainerRunnableMapIdsSignature = string.Empty;
     private bool observedEnabledState;
+    private readonly MogtomeEventClient mogtomeEventClient;
+    private long mogtomeReminderGeneration;
 
     private sealed record PluginAvailabilityCacheEntry(bool IsLoaded, DateTime ExpiresAtUtc);
 
@@ -193,11 +196,15 @@ public sealed class Plugin : IDalamudPlugin
         MapAllowanceService = new MapAllowanceService(this, Log);
         GatherBuddyRebornService = new GatherBuddyRebornService(this, PluginInterface, Log);
         RefreshActiveMapGatherCharacterBinding();
+        mogtomeEventClient = new MogtomeEventClient(Log);
 
         // Auto-update community data on login
         ClientState.Login += OnLogin;
         if (ClientState.IsLoggedIn)
+        {
             QueueCommunityLocationRefresh("plugin load while already logged in");
+            QueueMogtomeReminder("plugin load while already logged in");
+        }
 
         // Initialize state machine
         StateManager = new StateManager(this, Framework, Log);
@@ -276,6 +283,8 @@ public sealed class Plugin : IDalamudPlugin
         MapGatherIpcService.Dispose();
         MapAllowanceService.Dispose();
         JobSwitchService.Dispose();
+        Interlocked.Increment(ref mogtomeReminderGeneration);
+        mogtomeEventClient.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
         CommandManager.RemoveHandler(CommandAlias);
@@ -305,6 +314,37 @@ public sealed class Plugin : IDalamudPlugin
     {
         RefreshActiveMapGatherCharacterBinding();
         QueueCommunityLocationRefresh("login");
+        QueueMogtomeReminder("login");
+    }
+
+    private void QueueMogtomeReminder(string reason)
+    {
+        var generation = Interlocked.Increment(ref mogtomeReminderGeneration);
+        _ = ObserveMogtomeReminderAsync(generation, reason);
+    }
+
+    private async Task ObserveMogtomeReminderAsync(long generation, string reason)
+    {
+        try
+        {
+            var events = await mogtomeEventClient.GetEventsAsync().ConfigureAwait(false);
+            if (!MogtomeEventPolicy.IsActive(events, DateTimeOffset.UtcNow))
+                return;
+
+            await Framework.RunOnFrameworkThread(() =>
+            {
+                if (!ClientState.IsLoggedIn || generation != Volatile.Read(ref mogtomeReminderGeneration))
+                    return;
+
+                ToastGui.ShowNormal(
+                    "Moogle Treasure Trove is active — check the current rewards for treasure maps and riches to hunt with Loot Goblin.");
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(
+                $"[LootGoblin][Mogtome] Reminder check during {reason} failed: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     internal uint SelectedGatherJobId => ActiveMapGatherConfig.SelectedGatherJobId;

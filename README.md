@@ -54,6 +54,8 @@ Every `/lg` command also works with `/lootgoblin`. `/lg debug` toggles map diagn
 10. Dungeon handling either sends `/ads inside` and waits for ADS ownership, or falls back to Loot Goblin's legacy dungeon solver.
 11. Completion runs finish commands, checks for remaining enabled inventory/saddlebag/retainer maps, optionally retrieves another map, and loops when auto-start is enabled.
 
+When a character loads during an active **Moogle Treasure Trove** event, Loot Goblin shows one normal reminder toast. Event timing is checked dynamically against Eventy's public event feed, cached for six hours, and failures remain silent.
+
 ## Configuration
 
 Map settings control enabled map types, per-map run counts, gatherable-map choices, saddlebag retrieval, retainer retrieval, and whether all known map types are shown.
