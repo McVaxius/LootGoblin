@@ -27,11 +27,21 @@ public enum TreasureHighLowMode
     ObserveOnly,
 }
 
+public enum RsrTargetHostileType : byte
+{
+    AllTargetsCanAttack,
+    TargetsHaveTarget,
+    AllTargetsWhenSoloInDuty,
+    AllTargetsWhenSolo,
+    SoloDeepDungeonSmart,
+}
+
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
     public const int MapRunCountMax = int.MaxValue;
     public const int DefaultCommandTriggerRowCount = 10;
+    public const RsrTargetHostileType DefaultRsrTargetHostileType = RsrTargetHostileType.TargetsHaveTarget;
 
     private static readonly string[] LandingOrDutyCommandTriggerDefaultValues =
     {
@@ -126,6 +136,7 @@ public class Configuration : IPluginConfiguration
     // Automation
     public bool EnableAutoDiscard { get; set; } = false;
     public bool AutoSyncFate { get; set; } = true;
+    public RsrTargetHostileType RsrTargetHostileType { get; set; } = DefaultRsrTargetHostileType;
     public bool BmrReduceActivationRangeForOutdoorAreas { get; set; } = true;
     public bool BmrDisableHuntModules { get; set; } = true;
     public int FeedMeItemId { get; set; } = 4650;
@@ -155,6 +166,8 @@ public class Configuration : IPluginConfiguration
     {
         PartyTeleportDelaySeconds = Math.Clamp(PartyTeleportDelaySeconds, 0, 300);
         MaxMapAllowanceWaitMinutes = Math.Clamp(MaxMapAllowanceWaitMinutes, 0, 1440);
+        if (!Enum.IsDefined(typeof(RsrTargetHostileType), RsrTargetHostileType))
+            RsrTargetHostileType = DefaultRsrTargetHostileType;
         NormalizeConfiguredJobAndGatherMaps();
         MapGatherCharacterConfigs ??= new MapGatherCharacterConfigStore();
         MapGatherCharacterConfigs.Normalize();

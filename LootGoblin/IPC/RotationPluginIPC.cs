@@ -17,6 +17,16 @@ public class RotationPluginInfo
 
 public class RotationPluginIPC : IDisposable
 {
+    private enum RsrOtherCommandType : byte
+    {
+        Settings,
+        Rotations,
+        DutyRotations,
+        DoActions,
+        ToggleActions,
+        NextAction,
+    }
+
     private readonly IDalamudPluginInterface _pluginInterface;
     private readonly IPluginLog _log;
     private readonly Plugin _plugin;
@@ -86,6 +96,22 @@ public class RotationPluginIPC : IDisposable
         _log = log;
 
         CheckAvailability();
+    }
+
+    public bool TrySetRsrHostileType(RsrTargetHostileType hostileType)
+    {
+        try
+        {
+            var subscriber = _pluginInterface.GetIpcSubscriber<RsrOtherCommandType, string, object>("RotationSolverReborn.OtherCommand");
+            subscriber.InvokeAction(RsrOtherCommandType.Settings, $"HostileType {hostileType}");
+            _log.Debug($"[RSR] Applied hostile targeting via IPC: {hostileType}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log.Warning($"[RSR] Failed to apply hostile targeting {hostileType}; continuing with the rotation command: {ex.Message}");
+            return false;
+        }
     }
 
     public void Dispose() { }

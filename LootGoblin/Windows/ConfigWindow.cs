@@ -16,6 +16,14 @@ public class ConfigWindow : Window, IDisposable
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
+    private static readonly string[] RsrTargetHostileTypeLabels =
+    {
+        "All Attackable Targets",
+        "Previously Engaged Targets",
+        "All Targets When Solo in Duty",
+        "All Targets When Solo",
+        "Solo Deep Dungeon Smart",
+    };
     
     private readonly Configuration configuration;
     private readonly Plugin plugin;
@@ -480,6 +488,16 @@ public class ConfigWindow : Window, IDisposable
             "Runs /ays discard every 30s during a mounted safe idle window. Defers while in combat, loading, or cutscene-like states. Requires AutoRetainer plugin.");
         DrawConfigCheckbox("Auto Sync FATE", configuration.AutoSyncFate, value => configuration.AutoSyncFate = value,
             "Runs /levelsync on after joining a FATE and pauses coffer/portal recovery for joined-FATE handling. Turn off to ignore joined FATEs during map coffer flow.");
+
+        var rsrTargetHostileTypeIndex = (int)configuration.RsrTargetHostileType;
+        ImGui.SetNextItemWidth(240f);
+        if (ImGui.Combo("RSR hostile targeting", ref rsrTargetHostileTypeIndex, RsrTargetHostileTypeLabels, RsrTargetHostileTypeLabels.Length))
+        {
+            configuration.RsrTargetHostileType = (RsrTargetHostileType)rsrTargetHostileTypeIndex;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Applied through RSR IPC immediately before /rotation auto or /rotation manual command triggers.");
 
         DrawAdsBmrAdjustmentsSection();
 

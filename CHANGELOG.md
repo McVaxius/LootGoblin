@@ -6,6 +6,7 @@ All notable changes to LootGoblin will be documented in this file.
 
 ### Added
 - **Moogle Treasure Trove reminder** - On each character load, Loot Goblin now checks Eventy's public event schedule and shows one normal toast when a Moogle Treasure Trove event is active. The check uses a bounded timeout, six-hour memory cache, cancellation on unload, and silent failure behavior.
+- **RSR hostile targeting** - Added a persisted Integrations setting for FrenRider's five hostile-target modes that applies through RSR IPC before `/rotation auto` or `/rotation manual` command triggers.
 
 ### Fixed
 - **BossMod outdoor suppression** - Outdoor BMR/VBM suppression now requires visible BossMod danger signals (BMR active module or VBM forbidden zones), shows the detected state in the main UI, and restores AI once the outdoor flow ends on foot.

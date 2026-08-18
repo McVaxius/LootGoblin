@@ -5706,12 +5706,24 @@ public class StateManager : IDisposable
                 continue;
             }
 
+            if (IsRsrActivationCommand(trimmed))
+                _plugin.RotationPluginIPC.TrySetRsrHostileType(_plugin.Configuration.RsrTargetHostileType);
+
             if (CommandHelper.TrySendCommand(trimmed))
                 sent++;
         }
 
         if (sent > 0)
             _plugin.AddDebugLog($"[CommandTrigger] Sent {sent} command(s) for {reason}.");
+    }
+
+    private static bool IsRsrActivationCommand(string command)
+    {
+        var parts = command.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 2
+            && string.Equals(parts[0], "/rotation", StringComparison.OrdinalIgnoreCase)
+            && (string.Equals(parts[1], "auto", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(parts[1], "manual", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsCombatAutomationCommand(string command) =>

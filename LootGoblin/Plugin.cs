@@ -1114,6 +1114,12 @@ public sealed class Plugin : IDalamudPlugin
             changed = true;
         }
 
+        if (!Enum.IsDefined(typeof(RsrTargetHostileType), configuration.RsrTargetHostileType))
+        {
+            configuration.RsrTargetHostileType = Configuration.DefaultRsrTargetHostileType;
+            changed = true;
+        }
+
         return changed;
     }
 
