@@ -9,6 +9,7 @@ All notable changes to LootGoblin will be documented in this file.
 - **RSR hostile targeting** - Added a persisted Integrations setting for FrenRider's five hostile-target modes that applies through RSR IPC before `/rotation auto` or `/rotation manual` command triggers.
 
 ### Fixed
+- **Completed-duty exit** - Loot Goblin now stops dungeon progression on completion and uses the configured local-delay, party-departure, ADS-delay, or manual exit mode so the map owner can leave reliably.
 - **BossMod outdoor suppression** - Outdoor BMR/VBM suppression now requires visible BossMod danger signals (BMR active module or VBM forbidden zones), shows the detected state in the main UI, and restores AI once the outdoor flow ends on foot.
 - **Slope chest/portal approach** - Nearby overworld coffers and portals now get a bounded on-foot vnav approach on slopes before mounted recovery, and portal close nudge uses captured XYZ ground vnav instead of lockon+automove.
 - **Close coffer recovery** - OpeningChest now walks to flat, nearby targetable overworld coffers before escalating to mounted flight recovery, avoiding mount attempts for live coffers within 10y and 0.3y vertical delta.

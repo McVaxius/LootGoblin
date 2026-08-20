@@ -36,6 +36,14 @@ public enum RsrTargetHostileType : byte
     SoloDeepDungeonSmart,
 }
 
+public enum DutyExitMode
+{
+    LocalAfterDelay,
+    LocalWhenPartyLeaves,
+    AdsAfterDelay,
+    None,
+}
+
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
@@ -77,6 +85,7 @@ public class Configuration : IPluginConfiguration
     public static List<string> CreateDefaultFinishCommandTriggers() => new(FinishCommandTriggerDefaultValues);
 
     private int partyTeleportDelaySeconds = 0;
+    private int dutyExitDelaySeconds = 20;
 
     public int Version { get; set; } = 0;
 
@@ -111,6 +120,12 @@ public class Configuration : IPluginConfiguration
     public bool AutoStartNextMap { get; set; } = true;
     public bool EnableStateLogging { get; set; } = true;
     public bool UseAdsInsteadOfLegacyDungeonSolver { get; set; } = true;
+    public DutyExitMode CompletedDutyExitMode { get; set; } = DutyExitMode.AdsAfterDelay;
+    public int DutyExitDelaySeconds
+    {
+        get => dutyExitDelaySeconds;
+        set => dutyExitDelaySeconds = Math.Max(1, value);
+    }
     public bool EnableRetainerMapRetrieval { get; set; } = true;
     public bool EnableSaddlebagMapRetrieval { get; set; } = true;
     public int RepairThresholdPercent { get; set; } = 75;
@@ -165,7 +180,10 @@ public class Configuration : IPluginConfiguration
     public void Save()
     {
         PartyTeleportDelaySeconds = Math.Clamp(PartyTeleportDelaySeconds, 0, 300);
+        DutyExitDelaySeconds = Math.Max(1, DutyExitDelaySeconds);
         MaxMapAllowanceWaitMinutes = Math.Clamp(MaxMapAllowanceWaitMinutes, 0, 1440);
+        if (!Enum.IsDefined(typeof(DutyExitMode), CompletedDutyExitMode))
+            CompletedDutyExitMode = DutyExitMode.AdsAfterDelay;
         if (!Enum.IsDefined(typeof(RsrTargetHostileType), RsrTargetHostileType))
             RsrTargetHostileType = DefaultRsrTargetHostileType;
         NormalizeConfiguredJobAndGatherMaps();

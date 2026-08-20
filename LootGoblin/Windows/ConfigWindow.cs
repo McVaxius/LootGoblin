@@ -457,6 +457,12 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
+        DrawDutyExitBehaviour();
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
         DrawConfigCheckbox("Auto Loot Chest", configuration.AutoLootChest, value => configuration.AutoLootChest = value);
 
         var chestRange = configuration.ChestInteractionRange;
@@ -474,6 +480,51 @@ public class ConfigWindow : Window, IDisposable
         }
 
         DrawGamblerLureModeCombo();
+    }
+
+    private void DrawDutyExitBehaviour()
+    {
+        ImGui.Text("Completed-duty exit");
+
+        if (ImGui.RadioButton("Loot Goblin: exit after delay", configuration.CompletedDutyExitMode == DutyExitMode.LocalAfterDelay))
+        {
+            configuration.CompletedDutyExitMode = DutyExitMode.LocalAfterDelay;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Use Loot Goblin's local Leave Duty flow after the configured delay.");
+
+        if (ImGui.RadioButton("Loot Goblin: exit when all others have left", configuration.CompletedDutyExitMode == DutyExitMode.LocalWhenPartyLeaves))
+        {
+            configuration.CompletedDutyExitMode = DutyExitMode.LocalWhenPartyLeaves;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Use Loot Goblin's local Leave Duty flow once no other loaded party members remain in the duty territory.");
+
+        if (ImGui.RadioButton("ADS: exit after delay", configuration.CompletedDutyExitMode == DutyExitMode.AdsAfterDelay))
+        {
+            configuration.CompletedDutyExitMode = DutyExitMode.AdsAfterDelay;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Send /ads leave once after the configured delay.");
+
+        if (ImGui.RadioButton("No automatic exit", configuration.CompletedDutyExitMode == DutyExitMode.None))
+        {
+            configuration.CompletedDutyExitMode = DutyExitMode.None;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Stop dungeon progression after completion and wait for a manual duty exit.");
+
+        var exitDelaySeconds = Math.Max(1, configuration.DutyExitDelaySeconds);
+        ImGui.SetNextItemWidth(80f);
+        if (ImGui.InputInt("Duty-end delay (s)", ref exitDelaySeconds))
+        {
+            configuration.DutyExitDelaySeconds = Math.Max(1, exitDelaySeconds);
+            configuration.Save();
+        }
     }
 
     private void DrawIntegrationsTab()

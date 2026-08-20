@@ -54,6 +54,14 @@ internal enum MapGatherStep
     SwitchingBack,
 }
 
+internal enum DutyExitLeaveStep
+{
+    None,
+    OpenContentsFinderMenu,
+    ClickLeaveButton,
+    ConfirmLeave,
+}
+
 public class StateManager : IDisposable
 {
     private readonly record struct ActiveMapTargetKey(uint EventItemId, uint MapItemId);
@@ -560,6 +568,16 @@ public class StateManager : IDisposable
     private bool adsInsideRetrySent;
     private bool adsLeaveIssued;
     private bool adsUnreadableStatusLogged;
+    private bool completedDutyExitActive;
+    private DateTime completedDutyExitAt = DateTime.MinValue;
+    private DateTime completedDutyEnteredAt = DateTime.MinValue;
+    private bool completedDutyExitActionIssued;
+    private DateTime completedDutyExitLastPartyCheckAt = DateTime.MinValue;
+    private DutyExitLeaveStep dutyExitLeaveStep = DutyExitLeaveStep.None;
+    private DateTime dutyExitLeaveStepDueAt = DateTime.MinValue;
+    private int dutyExitConfirmationAttemptCount;
+    private const int MaxDutyExitConfirmationAttempts = 3;
+    private const double DutyExitPartyGraceSeconds = 30.0;
     private bool adsRepairHandoffActive;
     private bool adsRepairUtilityObserved;
     private DateTime adsRepairHandoffStarted = DateTime.MinValue;
@@ -724,11 +742,14 @@ public class StateManager : IDisposable
         _framework = framework;
         _log = log;
         _mountService = new MountService(plugin);
+        Plugin.DutyState.DutyCompleted += OnDutyCompleted;
         _framework.Update += OnFrameworkUpdate;
     }
 
     public void Dispose()
     {
+        CancelDutyExitLeaveSequence("dispose");
+        Plugin.DutyState.DutyCompleted -= OnDutyCompleted;
         _framework.Update -= OnFrameworkUpdate;
     }
 
@@ -764,12 +785,14 @@ public class StateManager : IDisposable
 
         if (IsAreaTransitionActive())
         {
+            CancelDutyExitLeaveSequence("between areas");
             StartSection("between-areas");
             HandleBetweenAreasTick();
             return;
         }
 
         betweenAreasMovementStopped = false;
+        ResetCompletedDutyExitAfterLeavingDuty();
 
         if (TickAcceptedPartyTeleportOfferRestart())
             return;
@@ -872,6 +895,9 @@ public class StateManager : IDisposable
             return;
         }
         if (State == BotState.Idle || State == BotState.Error) return;
+
+        if (TryHandleCompletedDutyExit())
+            return;
 
         var now2 = DateTime.Now;
         if ((now2 - lastTickTime).TotalSeconds < TickIntervalSeconds) return;
@@ -2264,6 +2290,9 @@ public class StateManager : IDisposable
                 TransitionTo(BotState.OpeningChest, "Map duty active outside treasure dungeon - recovering coffer/portal...");
                 return;
             }
+
+            dungeonConfirmedThisMap = true;
+            completedDutyEnteredAt = DateTime.Now;
 
             if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver
                 && _plugin.IsAdsAvailable)
@@ -14311,6 +14340,8 @@ public class StateManager : IDisposable
         }
 
         dungeonConfirmedThisMap = true;
+        if (!loading && completedDutyEnteredAt == DateTime.MinValue)
+            completedDutyEnteredAt = DateTime.Now;
         ResetUnderwaterXyzDigRetryState();
 
         if (_plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && _plugin.IsAdsAvailable)
@@ -15317,6 +15348,217 @@ public class StateManager : IDisposable
         _plugin.AddDebugLog($"[ADS] Active ADS ownership detected from LootGoblin state {State}; yielding dungeon control ({adsStatus.OwnershipMode}/{adsStatus.ExecutionPhase}).");
         TransitionTo(BotState.Completed, "ADS owns the duty - waiting for completion...");
         return true;
+    }
+
+    private void OnDutyCompleted(Dalamud.Game.DutyState.IDutyStateEventArgs args)
+    {
+        var territoryId = args.TerritoryType.RowId;
+        var lootGoblinOwnsDuty = IsTreasureDungeonTerritory(territoryId)
+                                 && (adsDutyHandoffActive || (dungeonConfirmedThisMap && IsDungeonState(State)));
+        if (!lootGoblinOwnsDuty)
+            return;
+
+        if (completedDutyExitActive)
+        {
+            _plugin.AddDebugLog($"[DutyExit] Ignored duplicate DutyCompleted event for territory {territoryId}.");
+            return;
+        }
+
+        completedDutyExitActive = true;
+        completedDutyExitAt = DateTime.Now;
+        completedDutyExitActionIssued = false;
+        completedDutyExitLastPartyCheckAt = DateTime.MinValue;
+        dutyExitConfirmationAttemptCount = 0;
+        CancelDutyExitLeaveSequence("new duty completion");
+
+        if (completedDutyEnteredAt == DateTime.MinValue)
+            completedDutyEnteredAt = completedDutyExitAt;
+
+        _plugin.NavigationService.StopNavigation();
+        autoMoveActive = false;
+
+        if (adsDutyHandoffActive)
+        {
+            CommandHelper.SendCommand("/ads stop");
+            _plugin.AddDebugLog($"[DutyExit] DutyCompleted for territory {territoryId}; stopped ADS progression immediately.");
+        }
+        else
+        {
+            _plugin.AddDebugLog($"[DutyExit] DutyCompleted for territory {territoryId}; stopped Loot Goblin dungeon progression.");
+        }
+
+        StateDetail = "Duty completed - preparing configured exit...";
+    }
+
+    private bool TryHandleCompletedDutyExit()
+    {
+        if (!completedDutyExitActive)
+            return false;
+
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            StateDetail = "Duty completed - waiting for combat to end before exit...";
+            return true;
+        }
+
+        TickDutyExitLeaveSequence();
+        if (completedDutyExitActionIssued)
+        {
+            StateDetail = dutyExitLeaveStep == DutyExitLeaveStep.None
+                ? "Duty exit requested - waiting to leave duty..."
+                : "Running Loot Goblin Leave Duty sequence...";
+            return true;
+        }
+
+        var mode = _plugin.Configuration.CompletedDutyExitMode;
+        if (mode == DutyExitMode.None)
+        {
+            CancelDutyExitLeaveSequence("manual exit configured");
+            StateDetail = "Duty completed - waiting for manual exit...";
+            return true;
+        }
+
+        if (mode == DutyExitMode.LocalWhenPartyLeaves)
+        {
+            var sinceEntry = completedDutyEnteredAt == DateTime.MinValue
+                ? 0.0
+                : (DateTime.Now - completedDutyEnteredAt).TotalSeconds;
+            if (sinceEntry < DutyExitPartyGraceSeconds)
+            {
+                StateDetail = $"Duty completed - party exit grace period ({DutyExitPartyGraceSeconds - sinceEntry:F0}s)...";
+                return true;
+            }
+
+            var now = DateTime.UtcNow;
+            if ((now - completedDutyExitLastPartyCheckAt).TotalSeconds < 3.0)
+                return true;
+
+            completedDutyExitLastPartyCheckAt = now;
+            if (!_plugin.PartyService.UpdatePartyStatus())
+            {
+                StateDetail = "Duty completed - waiting for party status...";
+                return true;
+            }
+
+            var otherMembersInTerritory = _plugin.PartyService.PartyMembers.Count(member =>
+                !member.IsLocalPlayer && member.IsLoaded && member.IsInSameTerritory);
+            if (otherMembersInTerritory > 0)
+            {
+                StateDetail = $"Duty completed - waiting for {otherMembersInTerritory} other party member(s) to leave...";
+                return true;
+            }
+
+            BeginLocalDutyExit("all other loaded same-territory party members left");
+            return true;
+        }
+
+        var elapsed = (DateTime.Now - completedDutyExitAt).TotalSeconds;
+        var delaySeconds = Math.Max(1, _plugin.Configuration.DutyExitDelaySeconds);
+        if (elapsed < delaySeconds)
+        {
+            var method = mode == DutyExitMode.AdsAfterDelay ? "ADS" : "Loot Goblin";
+            StateDetail = $"Duty completed - {method} exit in {delaySeconds - elapsed:F0}s...";
+            return true;
+        }
+
+        if (mode == DutyExitMode.AdsAfterDelay)
+        {
+            completedDutyExitActionIssued = true;
+            CommandHelper.SendCommand("/ads leave");
+            _plugin.AddDebugLog($"[DutyExit] Sent /ads leave once after {elapsed:F1}s (configured {delaySeconds}s).");
+            StateDetail = "ADS leave requested - waiting for duty exit...";
+            return true;
+        }
+
+        BeginLocalDutyExit($"configured {delaySeconds}s duty-end delay elapsed");
+        return true;
+    }
+
+    private void ResetCompletedDutyExitAfterLeavingDuty()
+    {
+        var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
+                     Plugin.Condition[ConditionFlag.BoundByDuty56];
+        if (inDuty)
+            return;
+
+        if (completedDutyExitActive)
+        {
+            CancelDutyExitLeaveSequence("duty exited");
+            completedDutyExitActive = false;
+            completedDutyExitAt = DateTime.MinValue;
+            completedDutyExitActionIssued = false;
+            completedDutyExitLastPartyCheckAt = DateTime.MinValue;
+            dutyExitConfirmationAttemptCount = 0;
+            ResetAdsHandoffTracking();
+            _plugin.AddDebugLog("[DutyExit] Duty exit detected; reset completed-duty exit state and resumed normal completion flow.");
+        }
+
+        completedDutyEnteredAt = DateTime.MinValue;
+    }
+
+    private void BeginLocalDutyExit(string reason)
+    {
+        completedDutyExitActionIssued = true;
+        dutyExitConfirmationAttemptCount = 0;
+        CommandHelper.SendCommand("/dutyfinder");
+        ScheduleDutyExitLeaveStep(DutyExitLeaveStep.OpenContentsFinderMenu, TimeSpan.FromMilliseconds(500));
+        _plugin.AddDebugLog($"[DutyExit] Started Loot Goblin Leave Duty sequence: {reason}.");
+        StateDetail = "Opening Duty Finder to leave duty...";
+    }
+
+    private void TickDutyExitLeaveSequence()
+    {
+        if (dutyExitLeaveStep == DutyExitLeaveStep.None || DateTime.UtcNow < dutyExitLeaveStepDueAt)
+            return;
+
+        var step = dutyExitLeaveStep;
+        dutyExitLeaveStep = DutyExitLeaveStep.None;
+
+        try
+        {
+            switch (step)
+            {
+                case DutyExitLeaveStep.OpenContentsFinderMenu:
+                    GameHelpers.FireAddonCallback("ContentsFinderMenu", true, 0);
+                    ScheduleDutyExitLeaveStep(DutyExitLeaveStep.ClickLeaveButton, TimeSpan.FromMilliseconds(500));
+                    break;
+                case DutyExitLeaveStep.ClickLeaveButton:
+                    GameHelpers.FireAddonCallback("ContentsFinderMenu", true, 43);
+                    ScheduleDutyExitLeaveStep(DutyExitLeaveStep.ConfirmLeave, TimeSpan.FromMilliseconds(500));
+                    break;
+                case DutyExitLeaveStep.ConfirmLeave:
+                    dutyExitConfirmationAttemptCount++;
+                    if (GameHelpers.ClickYesIfVisible("DutyExit.LeaveDuty") ||
+                        dutyExitConfirmationAttemptCount >= MaxDutyExitConfirmationAttempts)
+                    {
+                        break;
+                    }
+
+                    ScheduleDutyExitLeaveStep(DutyExitLeaveStep.ConfirmLeave, TimeSpan.FromMilliseconds(500));
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _plugin.AddDebugLog($"[DutyExit] Leave Duty sequence step {step} failed: {ex.Message}");
+            CancelDutyExitLeaveSequence("step exception");
+        }
+    }
+
+    private void ScheduleDutyExitLeaveStep(DutyExitLeaveStep step, TimeSpan delay)
+    {
+        dutyExitLeaveStep = step;
+        dutyExitLeaveStepDueAt = DateTime.UtcNow + delay;
+    }
+
+    private void CancelDutyExitLeaveSequence(string reason)
+    {
+        if (dutyExitLeaveStep != DutyExitLeaveStep.None)
+            _plugin.AddDebugLog($"[DutyExit] Cancelled Leave Duty sequence: {reason}.");
+
+        dutyExitLeaveStep = DutyExitLeaveStep.None;
+        dutyExitLeaveStepDueAt = DateTime.MinValue;
+        dutyExitConfirmationAttemptCount = 0;
     }
 
     private bool TryHandleAdsCompletedHandoff()
