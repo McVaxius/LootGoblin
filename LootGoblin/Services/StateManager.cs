@@ -3951,19 +3951,45 @@ public class StateManager : IDisposable
             ? Guid.NewGuid().ToString("N")
             : request.RequestId.Trim();
 
-        var resolved = request.ItemId != 0
-            ? MapGatherRequestParser.ResolveMap(request.ItemId.ToString())
-            : MapGatherRequestParser.ResolveMap(request.MapName);
+        TreasureMapInfo map;
+        if (request.UseConfiguredMap)
+        {
+            var configuredItemId = _plugin.Configuration
+                .GetRunnableMapIds(TreasureMapData.AllMapItemIds)
+                .FirstOrDefault(itemId =>
+                    _plugin.Configuration.IsMapTypeEnabled(itemId) &&
+                    TreasureMapData.KnownMaps.TryGetValue(itemId, out var configuredMap) &&
+                    configuredMap.IsGatherable);
+            if (configuredItemId == 0 ||
+                !TreasureMapData.KnownMaps.TryGetValue(configuredItemId, out var configuredMap))
+            {
+                return RememberMapGatherResponse(MapGatherStatusResponse.Rejected(
+                    request.RequestId,
+                    0,
+                    string.Empty,
+                    request.RunAfterGather,
+                    "No active configured map remains enabled, known, and gatherable."));
+            }
 
-        if (!resolved.Success || resolved.Map == null)
-            return RememberMapGatherResponse(MapGatherStatusResponse.Rejected(
-                request.RequestId,
-                request.ItemId,
-                request.MapName,
-                request.RunAfterGather,
-                resolved.ErrorMessage));
+            map = configuredMap;
+        }
+        else
+        {
+            var resolved = request.ItemId != 0
+                ? MapGatherRequestParser.ResolveMap(request.ItemId.ToString())
+                : MapGatherRequestParser.ResolveMap(request.MapName);
 
-        var map = resolved.Map;
+            if (!resolved.Success || resolved.Map == null)
+                return RememberMapGatherResponse(MapGatherStatusResponse.Rejected(
+                    request.RequestId,
+                    request.ItemId,
+                    request.MapName,
+                    request.RunAfterGather,
+                    resolved.ErrorMessage));
+
+            map = resolved.Map;
+        }
+
         request.ItemId = map.ItemId;
         request.MapName = map.Name;
 

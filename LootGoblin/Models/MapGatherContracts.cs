@@ -22,6 +22,7 @@ public sealed class MapGatherStartRequest
     public string RequestId { get; set; } = string.Empty;
     public uint ItemId { get; set; }
     public string MapName { get; set; } = string.Empty;
+    public bool UseConfiguredMap { get; set; }
     public bool RunAfterGather { get; set; }
 }
 

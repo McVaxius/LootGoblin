@@ -5,6 +5,7 @@ All notable changes to LootGoblin will be documented in this file.
 ## [Unreleased] - 2026-07-25
 
 ### Added
+- **Configured-map gather IPC selection** - `MapGatherStartRequest.UseConfiguredMap` is a backward-compatible, default-false option. When true, LootGoblin selects the first active configured map that is still enabled, known, and gatherable, and rejects terminally when no such map remains. Requests that leave it false retain existing ItemId/MapName resolution, and both paths reuse the unchanged inventory-present run, gather-then-run, terminal status, and cancellation lifecycle.
 - **Moogle Treasure Trove reminder** - On each character load, Loot Goblin now checks Eventy's public event schedule and shows one normal toast when a Moogle Treasure Trove event is active. The check uses a bounded timeout, six-hour memory cache, cancellation on unload, and silent failure behavior.
 - **RSR hostile targeting** - Added a persisted Integrations setting for FrenRider's five hostile-target modes that applies through RSR IPC before `/rotation auto` or `/rotation manual` command triggers.
 
