@@ -5,6 +5,8 @@ All notable changes to LootGoblin will be documented in this file.
 ## [Unreleased] - 2026-07-25
 
 ### Added
+- **Opt-in Emptor map purchasing** - Marketable map rows now expose a default-off cart and per-map gil cap. After inventory, saddlebag, retainer, and gathering sources are exhausted, LootGoblin can submit one-item Emptor v1 orders, verify the purchased map in normal inventory, and avoid retrying failed or fully exhausted map searches for the rest of the run.
+- **Marketboard travel and party restoration** - The new Marketboard settings tab adds sticky-success or rotating world order, optional same-DC/local-region/OCE scopes, supported Lifestream world travel, strict leader/roster checks before disbanding, return-to-start verification, and immediate/30-second party re-invites with configurable timeout continuation.
 - **Configured-map gather IPC selection** - `MapGatherStartRequest.UseConfiguredMap` is a backward-compatible, default-false option. When true, LootGoblin selects the first active configured map that is still enabled, known, and gatherable, and rejects terminally when no such map remains. Requests that leave it false retain existing ItemId/MapName resolution, and both paths reuse the unchanged inventory-present run, gather-then-run, terminal status, and cancellation lifecycle.
 - **Moogle Treasure Trove reminder** - On each character load, Loot Goblin now checks Eventy's public event schedule and shows one normal toast when a Moogle Treasure Trove event is active. The check uses a bounded timeout, six-hour memory cache, cancellation on unload, and silent failure behavior.
 - **RSR hostile targeting** - Added a persisted Integrations setting for FrenRider's five hostile-target modes that applies through RSR IPC before `/rotation auto` or `/rotation manual` command triggers.
@@ -19,6 +21,7 @@ All notable changes to LootGoblin will be documented in this file.
 - **Retainer map lookup parsing** - `XA.Database.SearchItems` now parses newline pipe rows (`Character|World|ContainerName|ItemName|ItemId|Quantity|IsHq`) instead of JSON, filters to current character/world retainer containers, and fails visibly when target retainer selection cannot be confirmed.
 
 ### Changed
+- **Immediate market stop ownership** - Stop, reset, and unload now cancel only LootGoblin's recorded Emptor order once, abort only Lifestream travel that LootGoblin successfully started, clear market-search runtime state, and warn when manual world return or party restoration may still be required.
 - **Dungeon object handling cadence** - Dungeon interaction retries now run on a 1-second cadence to match the faster proven chest/portal handling rhythm
 - **Dungeon object scan overhead** - `FindDungeonObjects()` no longer target-swaps every candidate just to validate ordinary dungeon loot/progression objects, reducing per-scan overhead while preserving the dedicated ghost-object checks where they still matter
 - **UI warning surface** - The main window now shows a red warning when LootGoblin is continuing from an already-set map flag without maps left in inventory

@@ -374,6 +374,12 @@ public class MainWindow : Window, IDisposable
                         ImGui.SameLine();
                         DrawMapGatherCheckbox(itemId, mapAllowanceStatus);
                         ImGui.SameLine();
+                        var isMarketable = item is { } itemRow && itemRow.ItemSearchCategory.RowId != 0;
+                        if (isMarketable)
+                        {
+                            DrawMapPurchaseControls(itemId);
+                            ImGui.SameLine();
+                        }
                         ImGui.Text($"{itemName} x{quantity}");
                         ImGui.SameLine();
                         var combinedSaddlebag = kvp.Value.Saddlebag + kvp.Value.PremiumSaddlebag;
@@ -520,6 +526,43 @@ public class MainWindow : Window, IDisposable
         ImGui.TextColored(ColorGrey, "Blue X: unavailable through gathering");
         ImGui.TextColored(ColorGrey, "Red X overlay: allowance cooldown");
         ImGui.EndTooltip();
+    }
+
+    private void DrawMapPurchaseControls(uint itemId)
+    {
+        var gilCap = plugin.Configuration.GetMapPurchaseGilCap(itemId);
+        var purchaseEnabled = plugin.Configuration.IsMapPurchaseEnabled(itemId);
+        var canEnable = gilCap > 0;
+
+        if (ImGuiEx.Checkbox(
+                FontAwesomeIcon.ShoppingCart,
+                ColorGreen,
+                ColorGrey,
+                null,
+                null,
+                $"##purchase_{itemId}",
+                ref purchaseEnabled,
+                canEnable))
+        {
+            plugin.Configuration.SetMapPurchaseEnabled(itemId, purchaseEnabled);
+            plugin.Configuration.Save();
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.SetTooltip(canEnable
+                ? "Cart: buy one missing map through Emptor after gathering is unavailable."
+                : "Set a positive maximum gil price before enabling this cart.");
+        }
+
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(90f);
+        if (ImGui.InputInt($"##purchase_cap_{itemId}", ref gilCap, 0, 0))
+        {
+            plugin.Configuration.SetMapPurchaseGilCap(itemId, gilCap);
+            plugin.Configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Maximum gil for one map. Zero disables purchasing for this map.");
     }
 
     private void DrawMapRunCountEditor(uint itemId, bool isEnabled)
@@ -684,6 +727,12 @@ public class MainWindow : Window, IDisposable
     {
         var sources = cachedMapSources.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         foreach (var mapId in plugin.ActiveGatherEnabledMapTypes)
+        {
+            if (!sources.ContainsKey(mapId))
+                sources[mapId] = new MapSourceCount();
+        }
+
+        foreach (var mapId in plugin.Configuration.PurchaseEnabledMapTypes ?? new List<uint>())
         {
             if (!sources.ContainsKey(mapId))
                 sources[mapId] = new MapSourceCount();

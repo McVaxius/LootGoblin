@@ -54,6 +54,8 @@ public enum PartyCoordinationState
     Error,
 }
 
+public sealed record TravelPartyMember(string Name, ulong ContentId, uint HomeWorldId, bool IsLocalPlayer);
+
 public class PartyService : IDisposable
 {
     private readonly Plugin _plugin;
@@ -209,6 +211,129 @@ public class PartyService : IDisposable
         }
 
         return allInSameZone;
+    }
+
+    public bool TryCaptureTravelRoster(out List<TravelPartyMember> roster, out string detail)
+    {
+        roster = new List<TravelPartyMember>();
+        detail = string.Empty;
+        if (!_clientState.IsLoggedIn ||
+            _condition[ConditionFlag.BetweenAreas] ||
+            _condition[ConditionFlag.BetweenAreas51])
+        {
+            detail = "Party roster is unavailable while loading or logged out.";
+            return false;
+        }
+
+        var localPlayer = _objectTable.LocalPlayer;
+        if (localPlayer == null)
+        {
+            detail = "Local player is unavailable.";
+            return false;
+        }
+
+        if (_partyList.Length <= 1)
+        {
+            detail = "Player is solo; no party roster needs restoration.";
+            return true;
+        }
+
+        if (_partyList.Length > 8)
+        {
+            detail = "Alliance rosters are not supported for market-board travel.";
+            return false;
+        }
+
+        var leaderIndex = (int)_partyList.PartyLeaderIndex;
+        if (leaderIndex < 0 || leaderIndex >= _partyList.Length)
+        {
+            detail = "Party leader identity is unavailable.";
+            return false;
+        }
+
+        var localIndex = -1;
+        for (var i = 0; i < _partyList.Length; i++)
+        {
+            var member = _partyList[i];
+            if (member == null)
+            {
+                detail = $"Party member slot {i + 1} is unavailable.";
+                roster.Clear();
+                return false;
+            }
+
+            var name = member.Name.TextValue.Trim();
+            var contentId = member.ContentId;
+            var homeWorldId = member.World.RowId;
+            if (string.IsNullOrWhiteSpace(name) || contentId == 0 || homeWorldId == 0)
+            {
+                detail = $"Party member slot {i + 1} has incomplete name, Content ID, or home-world identity.";
+                roster.Clear();
+                return false;
+            }
+
+            var isLocal = member.EntityId == localPlayer.EntityId || member.GameObject?.EntityId == localPlayer.EntityId;
+            if (isLocal)
+                localIndex = i;
+            roster.Add(new TravelPartyMember(name, contentId, homeWorldId, isLocal));
+        }
+
+        if (localIndex < 0)
+        {
+            detail = "Local player was not found in the native party roster.";
+            roster.Clear();
+            return false;
+        }
+
+        if (leaderIndex != localIndex)
+        {
+            detail = "Local player is not the party leader.";
+            roster.Clear();
+            return false;
+        }
+
+        detail = $"Captured {roster.Count} complete native party identities.";
+        return true;
+    }
+
+    public bool IsNativePartySolo()
+        => !_condition[ConditionFlag.BetweenAreas] &&
+           !_condition[ConditionFlag.BetweenAreas51] &&
+           _partyList.Length <= 1;
+
+    public bool TryGetMissingTravelMembers(
+        IReadOnlyCollection<TravelPartyMember> capturedRoster,
+        out List<TravelPartyMember> missing,
+        out string detail)
+    {
+        missing = new List<TravelPartyMember>();
+        detail = string.Empty;
+        if (!_clientState.IsLoggedIn ||
+            _condition[ConditionFlag.BetweenAreas] ||
+            _condition[ConditionFlag.BetweenAreas51])
+        {
+            detail = "Party roster is unavailable while loading or logged out.";
+            return false;
+        }
+
+        var present = new HashSet<ulong>();
+        for (var i = 0; i < _partyList.Length; i++)
+        {
+            var member = _partyList[i];
+            if (member?.ContentId is > 0)
+                present.Add(member.ContentId);
+        }
+
+        foreach (var member in capturedRoster)
+        {
+            if (!member.IsLocalPlayer && !present.Contains(member.ContentId))
+                missing.Add(member);
+        }
+
+        detail = missing.Count == 0
+            ? "Captured party roster is restored."
+            : $"Waiting for {missing.Count} captured party member(s).";
+        return true;
     }
 
     private PartyMember CreatePartyMember(IPartyMember partyMember, IGameObject localPlayer, uint localTerritoryId)

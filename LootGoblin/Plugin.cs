@@ -81,6 +81,8 @@ public sealed class Plugin : IDalamudPlugin
     public MapFlagService MapFlagService { get; init; }
     public VNavIPC VNavIPC { get; init; }
     public YesAlreadyIPC YesAlreadyIPC { get; init; }
+    public EmptorIPC EmptorIPC { get; init; }
+    public LifestreamIPC LifestreamIPC { get; init; }
 
     // Mount data
     public string[] MountNames { get; private set; } = Array.Empty<string>();
@@ -159,6 +161,8 @@ public sealed class Plugin : IDalamudPlugin
         // Initialize IPC
         MapFlagService = new MapFlagService(this, Log);
         VNavIPC = new VNavIPC(this, PluginInterface, Log);
+        EmptorIPC = new EmptorIPC(PluginInterface, Log);
+        LifestreamIPC = new LifestreamIPC(PluginInterface, Log);
         RotationPluginIPC = new RotationPluginIPC(this, PluginInterface, Log);
         YesAlreadyIPC = new YesAlreadyIPC(this, Log);
 
@@ -274,6 +278,8 @@ public sealed class Plugin : IDalamudPlugin
         ChestDetectionService.Dispose();
         RotationPluginIPC.Dispose();
         VNavIPC.Dispose();
+        EmptorIPC.Dispose();
+        LifestreamIPC.Dispose();
         MapFlagService.Dispose();
         MapDetectionService.Dispose();
         InventoryService.Dispose();
@@ -1072,8 +1078,23 @@ public sealed class Plugin : IDalamudPlugin
             changed = true;
         }
 
+        if (configuration.Version < 10)
+        {
+            configuration.PurchaseEnabledMapTypes = new List<uint>();
+            configuration.MapPurchaseGilCaps = new Dictionary<uint, int>();
+            configuration.EnableSameDataCenterMapTravel = false;
+            configuration.MarketWorldStartMode = MarketWorldStartMode.StickySuccess;
+            configuration.IncludeDataCenterTravelForMapPurchases = false;
+            configuration.IncludeOceTravelForMapPurchases = false;
+            configuration.ContinueAfterPartialPartyRestore = true;
+            configuration.PartyRestoreTimeoutSeconds = 300;
+            configuration.Version = 10;
+            changed = true;
+        }
+
         configuration.NormalizeConfiguredMapRuns();
         configuration.NormalizeConfiguredJobAndGatherMaps();
+        configuration.NormalizeMapPurchaseSettings();
         configuration.MaxMapAllowanceWaitMinutes = Math.Clamp(configuration.MaxMapAllowanceWaitMinutes, 0, 1440);
         configuration.MapGatherCharacterConfigs ??= new MapGatherCharacterConfigStore();
         configuration.MapGatherCharacterConfigs.Normalize();

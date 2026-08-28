@@ -14,6 +14,8 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 using ECommons.Automation;
 using LootGoblin.Models;
+using LootGoblin.IPC;
+using Lumina.Excel.Sheets;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.System.String;
@@ -52,6 +54,28 @@ internal enum MapGatherStep
     WaitingForMap,
     ClosingGatherWindow,
     SwitchingBack,
+}
+
+internal enum MarketPurchaseStep
+{
+    Idle,
+    PreparingPartyTravel,
+    WaitingForCityTeleport,
+    WaitingForPartyDisband,
+    TravelingToWorld,
+    SubmittingOrder,
+    PollingOrder,
+    WaitingForEmptorCleanup,
+    ReturningToStartWorld,
+    RestoringParty,
+}
+
+internal enum MarketPurchaseOutcome
+{
+    None,
+    InventoryReady,
+    Exhausted,
+    Failed,
 }
 
 internal enum DutyExitLeaveStep
@@ -208,6 +232,41 @@ public class StateManager : IDisposable
     private string oneShotMapRunTargetName = string.Empty;
     private string oneShotMapRunRequestId = string.Empty;
     private readonly HashSet<uint> failedGatherMapIdsThisRun = new();
+    private MarketPurchaseStep marketPurchaseStep = MarketPurchaseStep.Idle;
+    private MarketPurchaseOutcome marketPurchaseOutcome;
+    private readonly HashSet<uint> failedMarketMapIdsThisRun = new();
+    private readonly HashSet<uint> exhaustedMarketMapIdsThisRun = new();
+    private readonly HashSet<uint> marketVisitedWorldIds = new();
+    private readonly List<uint> marketWorldOrder = new();
+    private readonly List<TravelPartyMember> marketCapturedParty = new();
+    private uint marketTargetItemId;
+    private string marketTargetName = string.Empty;
+    private int marketGilCap;
+    private int marketInitialInventoryCount;
+    private uint marketStartingWorldId;
+    private uint marketTargetWorldId;
+    private int marketWorldOrderIndex;
+    private uint marketRotationCursorWorldId;
+    private uint marketStickySuccessWorldId;
+    private string marketOwnedOrderId = string.Empty;
+    private bool marketOwnedOrderCancelIssued;
+    private bool marketAddonCloseAttempted;
+    private EmptorOrderStatus? marketTerminalOrder;
+    private string marketPendingOperationalFailure = string.Empty;
+    private DateTime marketNextOrderPollAt = DateTime.MinValue;
+    private DateTime marketStepStartedAt = DateTime.MinValue;
+    private DateTime marketTravelSettledAt = DateTime.MinValue;
+    private bool marketOwnsLifestreamTravel;
+    private uint marketTravelDestinationWorldId;
+    private int marketCityTeleportAttemptIndex;
+    private uint marketCityTeleportTerritoryId;
+    private bool marketDisbandCommandIssued;
+    private bool marketDisbandConfirmIssued;
+    private bool marketPartyWasDisbanded;
+    private DateTime marketPartyRestoreStartedAt = DateTime.MinValue;
+    private DateTime marketLastPartyInviteAt = DateTime.MinValue;
+    private string marketOutcomeDetail = string.Empty;
+    private bool marketReturnToCompletedWhenDone;
     private bool areaMapAutoCloseQueued;
     private DateTime areaMapAutoCloseQueuedAt = DateTime.MinValue;
     private DateTime areaMapAutoCloseLastAttemptAt = DateTime.MinValue;
@@ -494,6 +553,20 @@ public class StateManager : IDisposable
     private int saddlebagInitialSaddlebagCount;
     private SaddlebagMovePlan? saddlebagMovePlan;
     private static readonly TimeSpan StartMapRefreshSaddlebagTimeout = TimeSpan.FromSeconds(6.0);
+    private static readonly TimeSpan MarketWorldTravelTimeout = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan MarketCityTeleportTimeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan MarketPartyDisbandTimeout = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan MarketOrderPollInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan MarketEmptorCleanupTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan MarketTerminalSettleDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan MarketWorldArrivalSettleDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan MarketPartyInviteInterval = TimeSpan.FromSeconds(30);
+    private static readonly (uint AetheryteId, uint TerritoryId, string Name)[] MarketWorldVisitCities =
+    {
+        (9, 130, "Ul'dah"),
+        (2, 132, "Gridania"),
+        (8, 129, "Limsa Lominsa"),
+    };
     private bool startMapRefreshPending;
     private bool startMapRefreshOpenedSaddlebag;
     private string startMapRefreshScope = "Start";
@@ -748,6 +821,7 @@ public class StateManager : IDisposable
 
     public void Dispose()
     {
+        _ = StopMarketPurchaseImmediately();
         CancelDutyExitLeaveSequence("dispose");
         Plugin.DutyState.DutyCompleted -= OnDutyCompleted;
         _framework.Update -= OnFrameworkUpdate;
@@ -2163,6 +2237,8 @@ public class StateManager : IDisposable
             return false;
         }
 
+        _ = StopMarketPurchaseImmediately();
+
         var startMapFlagCleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
         _plugin.AddDebugLog($"[Start] Preflight cleared map flag before start flow: verified={startMapFlagCleared}.");
 
@@ -2477,6 +2553,7 @@ public class StateManager : IDisposable
     public void Stop([CallerMemberName] string source = "unattributed")
     {
         WritePreTerminalSnapshot($"stop:{source}");
+        var marketStopWarning = StopMarketPurchaseImmediately();
         ClearPendingPartyTeleportOffer(null);
         ClearAcceptedPartyTeleportOfferRestart(null);
         startPreflightReadyAt = DateTime.MinValue;
@@ -2506,11 +2583,17 @@ public class StateManager : IDisposable
         ClearOutdoorMapFlowHold();
         ClearWarning();
         TransitionTo(BotState.Idle, $"Stopped by user ({source}).");
+        if (!string.IsNullOrWhiteSpace(marketStopWarning))
+        {
+            SetWarning(marketStopWarning);
+            _plugin.PrintChat(marketStopWarning);
+        }
     }
 
     public void ResetAll([CallerMemberName] string source = "unattributed")
     {
         WritePreTerminalSnapshot($"reset-all:{source}");
+        var marketStopWarning = StopMarketPurchaseImmediately();
         ClearPendingPartyTeleportOffer(null);
         ClearAcceptedPartyTeleportOfferRestart(null);
         startPreflightReadyAt = DateTime.MinValue;
@@ -2543,6 +2626,11 @@ public class StateManager : IDisposable
         ClearOutdoorMapFlowHold();
         ClearWarning();
         TransitionTo(BotState.Idle, $"Full reset by user ({source}).");
+        if (!string.IsNullOrWhiteSpace(marketStopWarning))
+        {
+            SetWarning(marketStopWarning);
+            _plugin.PrintChat(marketStopWarning);
+        }
         _plugin.AddDebugLog("All plugin states reset.");
     }
 
@@ -3394,6 +3482,866 @@ public class StateManager : IDisposable
             .ToList();
     }
 
+    private bool TryStartMarketPurchaseFallback(
+        IReadOnlyCollection<uint> enabledMapIds,
+        string fallbackError,
+        bool returnToCompletedWhenDone = false)
+    {
+        if (marketPurchaseStep != MarketPurchaseStep.Idle)
+            return true;
+
+        var candidates = enabledMapIds
+            .Where(itemId =>
+                !failedMarketMapIdsThisRun.Contains(itemId) &&
+                !exhaustedMarketMapIdsThisRun.Contains(itemId) &&
+                _plugin.Configuration.IsMapPurchaseEnabled(itemId) &&
+                _plugin.Configuration.GetMapPurchaseGilCap(itemId) > 0 &&
+                IsMarketableMap(itemId))
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            _plugin.AddDebugLog("[MarketPurchase] No enabled market-purchase candidate remains this run.");
+            return false;
+        }
+
+        var targetItemId = candidates[0];
+        _plugin.EmptorIPC.RefreshStatus(force: true);
+        if (!_plugin.EmptorIPC.IsAvailable)
+        {
+            failedMarketMapIdsThisRun.Add(targetItemId);
+            StateDetail = $"Skipping market purchase for map {targetItemId}: {_plugin.EmptorIPC.StatusText}";
+            _plugin.AddDebugLog($"[MarketPurchase] {StateDetail} Fallback context: {fallbackError}");
+            return false;
+        }
+
+        var currentWorldId = GetCurrentWorldId();
+        if (currentWorldId == 0)
+        {
+            failedMarketMapIdsThisRun.Add(targetItemId);
+            StateDetail = $"Skipping market purchase for map {targetItemId}: current world is unavailable.";
+            _plugin.AddDebugLog($"[MarketPurchase] {StateDetail}");
+            return false;
+        }
+
+        var worldOrder = BuildMarketWorldOrder(currentWorldId);
+        if (worldOrder.Count == 0)
+        {
+            failedMarketMapIdsThisRun.Add(targetItemId);
+            StateDetail = $"Skipping market purchase for map {targetItemId}: no eligible public worlds were found.";
+            _plugin.AddDebugLog($"[MarketPurchase] {StateDetail}");
+            return false;
+        }
+
+        ResetMarketSearchRuntime();
+        marketTargetItemId = targetItemId;
+        marketTargetName = TreasureMapData.KnownMaps.TryGetValue(targetItemId, out var info)
+            ? info.Name
+            : $"ID {targetItemId}";
+        marketGilCap = _plugin.Configuration.GetMapPurchaseGilCap(targetItemId);
+        marketInitialInventoryCount = _plugin.InventoryService.GetMapCount(targetItemId);
+        marketStartingWorldId = currentWorldId;
+        marketWorldOrder.AddRange(ApplyMarketWorldStartMode(worldOrder));
+        marketWorldOrderIndex = 0;
+        marketReturnToCompletedWhenDone = returnToCompletedWhenDone;
+        marketOutcomeDetail = fallbackError;
+
+        _plugin.AddDebugLog(
+            $"[MarketPurchase] Starting one-item search for {marketTargetName} at <= {marketGilCap:N0} gil. " +
+            $"World order: {string.Join(" -> ", marketWorldOrder.Select(GetWorldName))}.");
+        BeginMarketWorldAttempt();
+        return true;
+    }
+
+    private List<uint> BuildMarketWorldOrder(uint currentWorldId)
+    {
+        var worldSheet = Plugin.DataManager.GetExcelSheet<World>();
+        if (worldSheet == null || !worldSheet.TryGetRow(currentWorldId, out var currentWorld))
+            return new List<uint>();
+
+        var currentDataCenterId = currentWorld.DataCenter.RowId;
+        var currentRegionId = currentWorld.DataCenter.ValueNullable?.Region.RowId ?? 0;
+        var publicWorlds = worldSheet
+            .Where(world => world.IsPublic && world.DataCenter.RowId != 0 && !string.IsNullOrWhiteSpace(world.Name.ToString()))
+            .ToList();
+
+        var result = new List<uint> { currentWorldId };
+        if (_plugin.Configuration.EnableSameDataCenterMapTravel)
+        {
+            result.AddRange(publicWorlds
+                .Where(world => world.DataCenter.RowId == currentDataCenterId && world.RowId != currentWorldId)
+                .OrderBy(world => world.RowId)
+                .Select(world => world.RowId));
+        }
+
+        if (_plugin.Configuration.IncludeDataCenterTravelForMapPurchases && currentRegionId != 0)
+        {
+            result.AddRange(publicWorlds
+                .Where(world =>
+                    world.DataCenter.RowId != currentDataCenterId &&
+                    (world.DataCenter.ValueNullable?.Region.RowId ?? 0) == currentRegionId)
+                .OrderBy(world => world.DataCenter.RowId)
+                .ThenBy(world => world.RowId)
+                .Select(world => world.RowId));
+
+            const uint oceRegionId = 4;
+            if (_plugin.Configuration.IncludeOceTravelForMapPurchases && currentRegionId != oceRegionId)
+            {
+                result.AddRange(publicWorlds
+                    .Where(world => (world.DataCenter.ValueNullable?.Region.RowId ?? 0) == oceRegionId)
+                    .OrderBy(world => world.DataCenter.RowId)
+                    .ThenBy(world => world.RowId)
+                    .Select(world => world.RowId));
+            }
+        }
+
+        return result.Distinct().ToList();
+    }
+
+    private IReadOnlyList<uint> ApplyMarketWorldStartMode(IReadOnlyList<uint> baseOrder)
+    {
+        if (baseOrder.Count <= 1)
+            return baseOrder.ToList();
+
+        var preferredWorldId = _plugin.Configuration.MarketWorldStartMode == MarketWorldStartMode.StickySuccess
+            ? marketStickySuccessWorldId
+            : 0;
+        if (preferredWorldId != 0)
+        {
+            var preferredIndex = baseOrder.ToList().IndexOf(preferredWorldId);
+            if (preferredIndex >= 0)
+                return baseOrder.Skip(preferredIndex).Concat(baseOrder.Take(preferredIndex)).ToList();
+        }
+
+        if (_plugin.Configuration.MarketWorldStartMode == MarketWorldStartMode.Rotate && marketRotationCursorWorldId != 0)
+        {
+            var cursorIndex = baseOrder.ToList().IndexOf(marketRotationCursorWorldId);
+            if (cursorIndex >= 0)
+            {
+                var nextIndex = (cursorIndex + 1) % baseOrder.Count;
+                return baseOrder.Skip(nextIndex).Concat(baseOrder.Take(nextIndex)).ToList();
+            }
+        }
+
+        return baseOrder.ToList();
+    }
+
+    private void TickMarketPurchase()
+    {
+        switch (marketPurchaseStep)
+        {
+            case MarketPurchaseStep.PreparingPartyTravel:
+                TickMarketPartyTravelPreparation();
+                break;
+            case MarketPurchaseStep.WaitingForCityTeleport:
+                TickMarketCityTeleport();
+                break;
+            case MarketPurchaseStep.WaitingForPartyDisband:
+                TickMarketPartyDisband();
+                break;
+            case MarketPurchaseStep.TravelingToWorld:
+                TickMarketWorldTravel();
+                break;
+            case MarketPurchaseStep.SubmittingOrder:
+                TickMarketOrderSubmission();
+                break;
+            case MarketPurchaseStep.PollingOrder:
+                TickMarketOrderPolling();
+                break;
+            case MarketPurchaseStep.WaitingForEmptorCleanup:
+                TickMarketEmptorCleanup();
+                break;
+            case MarketPurchaseStep.ReturningToStartWorld:
+                TickMarketReturnToStartWorld();
+                break;
+            case MarketPurchaseStep.RestoringParty:
+                TickMarketPartyRestoration();
+                break;
+        }
+    }
+
+    private void BeginMarketWorldAttempt()
+    {
+        while (marketWorldOrderIndex < marketWorldOrder.Count &&
+               marketVisitedWorldIds.Contains(marketWorldOrder[marketWorldOrderIndex]))
+        {
+            marketWorldOrderIndex++;
+        }
+
+        if (marketWorldOrderIndex >= marketWorldOrder.Count)
+        {
+            exhaustedMarketMapIdsThisRun.Add(marketTargetItemId);
+            FinishMarketSearch(
+                MarketPurchaseOutcome.Exhausted,
+                $"No acceptable {marketTargetName} listing remained on any enabled world.",
+                verifiedEmptorPurchase: false);
+            return;
+        }
+
+        marketTargetWorldId = marketWorldOrder[marketWorldOrderIndex];
+        var currentWorldId = GetCurrentWorldId();
+        if (currentWorldId == marketTargetWorldId)
+        {
+            marketVisitedWorldIds.Add(marketTargetWorldId);
+            marketTravelSettledAt = DateTime.Now;
+            EnterMarketPurchaseStep(
+                MarketPurchaseStep.SubmittingOrder,
+                $"Searching {GetWorldName(marketTargetWorldId)} for {marketTargetName}...");
+            return;
+        }
+
+        if (!marketPartyWasDisbanded && !_plugin.PartyService.IsNativePartySolo())
+        {
+            marketCityTeleportAttemptIndex = 0;
+            marketCityTeleportTerritoryId = 0;
+            EnterMarketPurchaseStep(
+                MarketPurchaseStep.PreparingPartyTravel,
+                $"Preparing party for travel to {GetWorldName(marketTargetWorldId)}...");
+            return;
+        }
+
+        BeginMarketWorldTravel();
+    }
+
+    private void TickMarketPartyTravelPreparation()
+    {
+        _plugin.LifestreamIPC.RefreshStatus(force: true);
+        if (!_plugin.LifestreamIPC.IsAvailable)
+        {
+            FailMarketSearchForRun($"Lifestream is required for off-world map purchasing: {_plugin.LifestreamIPC.StatusText}");
+            return;
+        }
+
+        if (_plugin.PartyService.IsNativePartySolo())
+        {
+            BeginMarketWorldTravel();
+            return;
+        }
+
+        var currentTerritoryId = Plugin.ClientState.TerritoryType;
+        if (MarketWorldVisitCities.Any(city => city.TerritoryId == currentTerritoryId))
+        {
+            CaptureAndDisbandMarketParty();
+            return;
+        }
+
+        while (marketCityTeleportAttemptIndex < MarketWorldVisitCities.Length)
+        {
+            var city = MarketWorldVisitCities[marketCityTeleportAttemptIndex++];
+            if (!_plugin.LifestreamIPC.TryTeleport(city.AetheryteId, out var error))
+            {
+                _plugin.AddDebugLog($"[MarketPurchase] Could not use {city.Name} for party parking: {error}");
+                continue;
+            }
+
+            marketOwnsLifestreamTravel = true;
+            marketCityTeleportTerritoryId = city.TerritoryId;
+            EnterMarketPurchaseStep(
+                MarketPurchaseStep.WaitingForCityTeleport,
+                $"Teleporting the party to {city.Name} before world travel...");
+            return;
+        }
+
+        FailMarketSearchForRun("No unlocked World Visit city aetheryte was available (Ul'dah, Gridania, or Limsa Lominsa).");
+    }
+
+    private void TickMarketCityTeleport()
+    {
+        if (Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51])
+            return;
+
+        var busyKnown = _plugin.LifestreamIPC.TryIsBusy(out var busy);
+        if (Plugin.ClientState.TerritoryType == marketCityTeleportTerritoryId && (!busyKnown || !busy))
+        {
+            marketOwnsLifestreamTravel = false;
+            CaptureAndDisbandMarketParty();
+            return;
+        }
+
+        if (DateTime.Now - marketStepStartedAt <= MarketCityTeleportTimeout)
+        {
+            StateDetail = "Waiting to arrive at the World Visit city aetheryte...";
+            return;
+        }
+
+        AbortOwnedMarketTravel();
+        FailMarketSearchForRun("Timed out teleporting the party to a World Visit city aetheryte.");
+    }
+
+    private void CaptureAndDisbandMarketParty()
+    {
+        if (!_plugin.PartyService.TryCaptureTravelRoster(out var roster, out var detail))
+        {
+            FailMarketSearchForRun($"Party cannot be safely disbanded for world travel: {detail}");
+            return;
+        }
+
+        if (roster.Count == 0)
+        {
+            BeginMarketWorldTravel();
+            return;
+        }
+
+        marketCapturedParty.Clear();
+        marketCapturedParty.AddRange(roster);
+        marketDisbandCommandIssued = CommandHelper.TrySendCommand("/pcmd disband");
+        marketDisbandConfirmIssued = false;
+        if (!marketDisbandCommandIssued)
+        {
+            marketCapturedParty.Clear();
+            FailMarketSearchForRun("Could not issue the party disband command.");
+            return;
+        }
+
+        _plugin.AddDebugLog($"[MarketPurchase] {detail} Disband command issued before off-world travel.");
+        EnterMarketPurchaseStep(MarketPurchaseStep.WaitingForPartyDisband, "Disbanding party before world travel...");
+    }
+
+    private void TickMarketPartyDisband()
+    {
+        if (_plugin.PartyService.IsNativePartySolo())
+        {
+            marketPartyWasDisbanded = true;
+            _plugin.AddDebugLog("[MarketPurchase] Party disband verified; player is solo.");
+            BeginMarketWorldTravel();
+            return;
+        }
+
+        if (!marketDisbandConfirmIssued && DateTime.Now - marketStepStartedAt >= TimeSpan.FromSeconds(1))
+        {
+            marketDisbandConfirmIssued = true;
+            ClickYesIfVisibleWithDiagnostics("[MarketPurchase] party disband");
+        }
+
+        if (DateTime.Now - marketStepStartedAt <= MarketPartyDisbandTimeout)
+            return;
+
+        marketCapturedParty.Clear();
+        FailMarketSearchForRun("Party disband could not be verified; off-world purchasing was not started.");
+    }
+
+    private void BeginMarketWorldTravel()
+    {
+        var currentWorldId = GetCurrentWorldId();
+        if (currentWorldId == marketTargetWorldId)
+        {
+            marketVisitedWorldIds.Add(marketTargetWorldId);
+            marketTravelSettledAt = DateTime.Now;
+            EnterMarketPurchaseStep(
+                MarketPurchaseStep.SubmittingOrder,
+                $"Searching {GetWorldName(marketTargetWorldId)} for {marketTargetName}...");
+            return;
+        }
+
+        _plugin.LifestreamIPC.RefreshStatus(force: true);
+        var error = _plugin.LifestreamIPC.StatusText;
+        if (!_plugin.LifestreamIPC.IsAvailable ||
+            !_plugin.LifestreamIPC.TryChangeWorld(marketTargetWorldId, out error))
+        {
+            FailMarketSearchForRun(
+                string.IsNullOrWhiteSpace(error)
+                    ? $"Lifestream could not start travel to {GetWorldName(marketTargetWorldId)}."
+                    : error);
+            return;
+        }
+
+        marketOwnsLifestreamTravel = true;
+        marketTravelDestinationWorldId = marketTargetWorldId;
+        marketTravelSettledAt = DateTime.MinValue;
+        EnterMarketPurchaseStep(
+            MarketPurchaseStep.TravelingToWorld,
+            $"Traveling to {GetWorldName(marketTargetWorldId)} for {marketTargetName}...");
+    }
+
+    private void TickMarketWorldTravel()
+    {
+        var now = DateTime.Now;
+        var currentWorldId = GetCurrentWorldId();
+        var loading = Plugin.Condition[ConditionFlag.BetweenAreas] || Plugin.Condition[ConditionFlag.BetweenAreas51];
+        var busyKnown = _plugin.LifestreamIPC.TryIsBusy(out var busy);
+        if (!loading && currentWorldId == marketTravelDestinationWorldId && (!busyKnown || !busy))
+        {
+            if (marketTravelSettledAt == DateTime.MinValue)
+            {
+                marketTravelSettledAt = now;
+                StateDetail = $"Arrived on {GetWorldName(currentWorldId)}; waiting for world travel to settle...";
+                return;
+            }
+
+            if (now - marketTravelSettledAt < MarketWorldArrivalSettleDelay)
+                return;
+
+            marketOwnsLifestreamTravel = false;
+            marketVisitedWorldIds.Add(marketTargetWorldId);
+            EnterMarketPurchaseStep(
+                MarketPurchaseStep.SubmittingOrder,
+                $"Searching {GetWorldName(marketTargetWorldId)} for {marketTargetName}...");
+            return;
+        }
+
+        if (now - marketStepStartedAt <= MarketWorldTravelTimeout)
+            return;
+
+        AbortOwnedMarketTravel();
+        FailMarketSearchForRun($"Timed out traveling to {GetWorldName(marketTravelDestinationWorldId)}.");
+    }
+
+    private void TickMarketOrderSubmission()
+    {
+        if (DateTime.Now - marketTravelSettledAt < MarketWorldArrivalSettleDelay)
+            return;
+
+        var inventoryCount = _plugin.InventoryService.GetMapCount(marketTargetItemId);
+        if (inventoryCount > marketInitialInventoryCount || inventoryCount > 0)
+        {
+            FinishMarketSearch(
+                MarketPurchaseOutcome.InventoryReady,
+                $"{marketTargetName} appeared in inventory before an Emptor order was submitted.",
+                verifiedEmptorPurchase: false);
+            return;
+        }
+
+        if (!_plugin.Configuration.IsMapPurchaseEnabled(marketTargetItemId) ||
+            _plugin.Configuration.GetMapPurchaseGilCap(marketTargetItemId) <= 0 ||
+            !IsMarketableMap(marketTargetItemId))
+        {
+            FailMarketSearchForRun($"Purchase settings for {marketTargetName} are no longer valid.");
+            return;
+        }
+
+        if (!_plugin.EmptorIPC.TrySubmitOrder(marketTargetItemId, marketGilCap, out var orderId, out var error))
+        {
+            FailMarketSearchForRun(error);
+            return;
+        }
+
+        marketOwnedOrderId = orderId;
+        marketOwnedOrderCancelIssued = false;
+        marketAddonCloseAttempted = false;
+        marketTerminalOrder = null;
+        marketNextOrderPollAt = DateTime.MinValue;
+        _plugin.AddDebugLog(
+            $"[MarketPurchase] Submitted owned Emptor order {marketOwnedOrderId} for one {marketTargetName} at <= {marketGilCap:N0} gil on {GetWorldName(marketTargetWorldId)}.");
+        EnterMarketPurchaseStep(MarketPurchaseStep.PollingOrder, $"Emptor is searching for {marketTargetName}...");
+    }
+
+    private void TickMarketOrderPolling()
+    {
+        var now = DateTime.Now;
+        if (now < marketNextOrderPollAt)
+            return;
+        marketNextOrderPollAt = now + MarketOrderPollInterval;
+
+        if (!_plugin.EmptorIPC.TryGetOrder(marketOwnedOrderId, marketTargetItemId, out var status, out var error))
+        {
+            FailMarketSearchForRun(error);
+            return;
+        }
+
+        if (!status.IsTerminal)
+        {
+            if (status.State is not "queued" and not "running")
+            {
+                FailMarketSearchForRun($"Emptor returned unknown order state '{status.State}'.");
+                return;
+            }
+
+            StateDetail = string.IsNullOrWhiteSpace(status.Message)
+                ? $"Emptor order {marketOwnedOrderId} is {status.State}..."
+                : status.Message;
+            return;
+        }
+
+        marketTerminalOrder = status;
+        EnterMarketPurchaseStep(
+            MarketPurchaseStep.WaitingForEmptorCleanup,
+            $"Emptor order finished ({status.State}); waiting for market-board cleanup...");
+    }
+
+    private void TickMarketEmptorCleanup()
+    {
+        if (marketTerminalOrder == null && string.IsNullOrWhiteSpace(marketPendingOperationalFailure))
+        {
+            FailMarketSearchForRun("Emptor terminal order data was lost.");
+            return;
+        }
+
+        var now = DateTime.Now;
+        var busyKnown = _plugin.EmptorIPC.TryIsBusy(out var busy);
+        var elapsed = now - marketStepStartedAt;
+        if (elapsed < MarketTerminalSettleDelay || busyKnown && busy && elapsed < MarketEmptorCleanupTimeout)
+            return;
+
+        if (!marketAddonCloseAttempted)
+        {
+            marketAddonCloseAttempted = true;
+            foreach (var addonName in new[] { "ItemSearch", "ItemSearchResult" })
+            {
+                if (GameHelpers.IsAddonVisible(addonName))
+                    GameHelpers.TryCloseAddonByCallback(addonName);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(marketPendingOperationalFailure))
+        {
+            var detail = marketPendingOperationalFailure;
+            marketPendingOperationalFailure = string.Empty;
+            FinishMarketSearch(MarketPurchaseOutcome.Failed, detail, verifiedEmptorPurchase: false);
+            return;
+        }
+
+        var terminal = marketTerminalOrder!;
+        var inventoryVerified = _plugin.InventoryService.GetMapCount(marketTargetItemId) > marketInitialInventoryCount ||
+                                _plugin.InventoryService.GetMapCount(marketTargetItemId) > 0;
+        var indeterminate = string.Equals(terminal.StoppedReason, "Indeterminate", StringComparison.OrdinalIgnoreCase);
+        if ((terminal.PurchasedQuantity == 1 || indeterminate) &&
+            !inventoryVerified &&
+            elapsed < MarketEmptorCleanupTimeout)
+        {
+            StateDetail = $"Waiting to verify {marketTargetName} in inventory...";
+            return;
+        }
+        if (terminal.PurchasedQuantity == 1 && inventoryVerified)
+        {
+            FinishMarketSearch(
+                MarketPurchaseOutcome.InventoryReady,
+                $"Purchased and verified one {marketTargetName} on {GetWorldName(marketTargetWorldId)}.",
+                verifiedEmptorPurchase: true);
+            return;
+        }
+
+        if (indeterminate && inventoryVerified)
+        {
+            FinishMarketSearch(
+                MarketPurchaseOutcome.InventoryReady,
+                $"Emptor reported Indeterminate, but {marketTargetName} is present in inventory; no order will be resubmitted.",
+                verifiedEmptorPurchase: false);
+            return;
+        }
+
+        if (terminal.State == "completed" && IsNoAcceptableListing(terminal))
+        {
+            _plugin.AddDebugLog(
+                $"[MarketPurchase] No acceptable listing on {GetWorldName(marketTargetWorldId)} " +
+                $"(reason={terminal.StoppedReason}, exhausted={terminal.ListingsExhausted}).");
+            AdvanceMarketWorld();
+            return;
+        }
+
+        var reason = string.IsNullOrWhiteSpace(terminal.StoppedReason) ? terminal.State : terminal.StoppedReason;
+        if (indeterminate)
+            reason = "Indeterminate without a verified inventory map";
+        FailMarketSearchForRun(
+            string.IsNullOrWhiteSpace(terminal.Message)
+                ? $"Emptor purchase failed operationally: {reason}."
+                : $"Emptor purchase failed operationally: {reason}. {terminal.Message}");
+    }
+
+    private static bool IsNoAcceptableListing(EmptorOrderStatus status)
+        => status.ListingsExhausted ||
+           status.StoppedReason.Equals("PriceExceeded", StringComparison.OrdinalIgnoreCase) ||
+           status.StoppedReason.Equals("NoListings", StringComparison.OrdinalIgnoreCase) ||
+           status.StoppedReason.Equals("BudgetExceeded", StringComparison.OrdinalIgnoreCase) ||
+           status.StoppedReason.Equals("Overshoot", StringComparison.OrdinalIgnoreCase);
+
+    private void AdvanceMarketWorld()
+    {
+        marketOwnedOrderId = string.Empty;
+        marketOwnedOrderCancelIssued = false;
+        marketAddonCloseAttempted = false;
+        marketTerminalOrder = null;
+        marketWorldOrderIndex++;
+        BeginMarketWorldAttempt();
+    }
+
+    private void FailMarketSearchForRun(string detail)
+    {
+        failedMarketMapIdsThisRun.Add(marketTargetItemId);
+        if (!string.IsNullOrWhiteSpace(marketOwnedOrderId) &&
+            marketTerminalOrder == null &&
+            !marketOwnedOrderCancelIssued)
+        {
+            marketOwnedOrderCancelIssued = true;
+            if (!_plugin.EmptorIPC.TryCancelOrder(marketOwnedOrderId, out var cancelError) && !string.IsNullOrWhiteSpace(cancelError))
+                _plugin.AddDebugLog($"[MarketPurchase] {cancelError}");
+
+            marketPendingOperationalFailure = detail;
+            EnterMarketPurchaseStep(
+                MarketPurchaseStep.WaitingForEmptorCleanup,
+                "Stopping the owned Emptor order and waiting for market-board cleanup...");
+            return;
+        }
+
+        _plugin.AddDebugLog($"[MarketPurchase] Operational failure for {marketTargetName}: {detail}");
+        FinishMarketSearch(MarketPurchaseOutcome.Failed, detail, verifiedEmptorPurchase: false);
+    }
+
+    private void FinishMarketSearch(MarketPurchaseOutcome outcome, string detail, bool verifiedEmptorPurchase)
+    {
+        marketPurchaseOutcome = outcome;
+        marketOutcomeDetail = detail;
+        var endingWorldId = GetCurrentWorldId();
+        if (endingWorldId != 0)
+            marketRotationCursorWorldId = endingWorldId;
+        if (verifiedEmptorPurchase)
+            marketStickySuccessWorldId = marketTargetWorldId;
+
+        marketOwnedOrderId = string.Empty;
+        marketOwnedOrderCancelIssued = false;
+        marketAddonCloseAttempted = false;
+        marketTerminalOrder = null;
+        marketPendingOperationalFailure = string.Empty;
+        var currentWorldId = GetCurrentWorldId();
+        if (currentWorldId != 0 && currentWorldId != marketStartingWorldId)
+        {
+            marketOwnsLifestreamTravel = false;
+            marketTravelDestinationWorldId = marketStartingWorldId;
+            EnterMarketPurchaseStep(
+                MarketPurchaseStep.ReturningToStartWorld,
+                $"Returning to {GetWorldName(marketStartingWorldId)} before restoring the party...");
+            return;
+        }
+
+        BeginMarketPartyRestorationOrComplete();
+    }
+
+    private void TickMarketReturnToStartWorld()
+    {
+        if (GetCurrentWorldId() == marketStartingWorldId &&
+            !Plugin.Condition[ConditionFlag.BetweenAreas] &&
+            !Plugin.Condition[ConditionFlag.BetweenAreas51])
+        {
+            var busyKnown = _plugin.LifestreamIPC.TryIsBusy(out var busy);
+            if (!busyKnown || !busy)
+            {
+                marketOwnsLifestreamTravel = false;
+                BeginMarketPartyRestorationOrComplete();
+                return;
+            }
+        }
+
+        if (!marketOwnsLifestreamTravel)
+        {
+            if (!_plugin.LifestreamIPC.TryChangeWorld(marketStartingWorldId, out var error))
+            {
+                FailMarketReturn($"Could not return to {GetWorldName(marketStartingWorldId)}: {error}");
+                return;
+            }
+
+            marketOwnsLifestreamTravel = true;
+            marketStepStartedAt = DateTime.Now;
+            return;
+        }
+
+        if (DateTime.Now - marketStepStartedAt <= MarketWorldTravelTimeout)
+            return;
+
+        AbortOwnedMarketTravel();
+        FailMarketReturn($"Timed out returning to {GetWorldName(marketStartingWorldId)}. Party invites were not sent from the wrong world.");
+    }
+
+    private void BeginMarketPartyRestorationOrComplete()
+    {
+        if (!marketPartyWasDisbanded || marketCapturedParty.Count == 0)
+        {
+            CompleteMarketSearchHandoff();
+            return;
+        }
+
+        if (GetCurrentWorldId() != marketStartingWorldId)
+        {
+            FailMarketReturn("Party restoration was blocked because the player is not on the captured starting world.");
+            return;
+        }
+
+        marketPartyRestoreStartedAt = DateTime.Now;
+        marketLastPartyInviteAt = DateTime.MinValue;
+        EnterMarketPurchaseStep(MarketPurchaseStep.RestoringParty, "Restoring the captured party roster...");
+        TickMarketPartyRestoration();
+    }
+
+    private void TickMarketPartyRestoration()
+    {
+        if (GetCurrentWorldId() != marketStartingWorldId)
+        {
+            FailMarketReturn("Party restoration stopped because the player left the captured starting world.");
+            return;
+        }
+
+        if (!_plugin.PartyService.TryGetMissingTravelMembers(marketCapturedParty, out var missing, out var detail))
+        {
+            StateDetail = detail;
+            return;
+        }
+
+        if (missing.Count == 0)
+        {
+            _plugin.AddDebugLog("[MarketPurchase] Captured party roster restoration verified.");
+            CompleteMarketSearchHandoff();
+            return;
+        }
+
+        var now = DateTime.Now;
+        if (marketLastPartyInviteAt == DateTime.MinValue || now - marketLastPartyInviteAt >= MarketPartyInviteInterval)
+        {
+            marketLastPartyInviteAt = now;
+            foreach (var member in missing)
+            {
+                var worldName = GetWorldName(member.HomeWorldId);
+                CommandHelper.TrySendCommand($"/invite {member.Name}@{worldName}");
+            }
+            _plugin.AddDebugLog($"[MarketPurchase] Invited {missing.Count} missing captured party member(s).");
+        }
+
+        var timeout = TimeSpan.FromSeconds(_plugin.Configuration.PartyRestoreTimeoutSeconds);
+        if (now - marketPartyRestoreStartedAt < timeout)
+        {
+            StateDetail = $"Restoring party: {missing.Count} captured member(s) still missing...";
+            return;
+        }
+
+        var missingNames = string.Join(", ", missing.Select(member => member.Name));
+        if (_plugin.Configuration.ContinueAfterPartialPartyRestore)
+        {
+            var warning = $"Party restoration timed out; continuing without: {missingNames}.";
+            SetWarning(warning);
+            _plugin.PrintChat(warning);
+            _plugin.AddDebugLog($"[MarketPurchase] {warning}");
+            CompleteMarketSearchHandoff();
+            return;
+        }
+
+        var stopMessage = $"Party restoration timed out; stopped with missing members: {missingNames}.";
+        SetWarning(stopMessage);
+        _plugin.PrintChat(stopMessage);
+        ResetMarketSearchRuntime();
+        TransitionTo(BotState.Error, stopMessage);
+    }
+
+    private void CompleteMarketSearchHandoff()
+    {
+        var outcome = marketPurchaseOutcome;
+        var detail = marketOutcomeDetail;
+        var returnToCompleted = marketReturnToCompletedWhenDone;
+        _plugin.AddDebugLog($"[MarketPurchase] Search finished: {outcome}. {detail}");
+        ResetMarketSearchRuntime();
+        lastMapScanTime = DateTime.MinValue;
+        StateDetail = detail;
+
+        if (returnToCompleted && outcome != MarketPurchaseOutcome.InventoryReady)
+            TransitionTo(BotState.Completed, detail);
+    }
+
+    private void FailMarketReturn(string detail)
+    {
+        var warning = $"{detail} Manual world return and party restoration may be required.";
+        _plugin.AddDebugLog($"[MarketPurchase] {warning}");
+        SetWarning(warning);
+        _plugin.PrintChat(warning);
+        ResetMarketSearchRuntime();
+        TransitionTo(BotState.Error, warning);
+    }
+
+    private string StopMarketPurchaseImmediately()
+    {
+        if (!string.IsNullOrWhiteSpace(marketOwnedOrderId) && !marketOwnedOrderCancelIssued)
+        {
+            marketOwnedOrderCancelIssued = true;
+            if (!_plugin.EmptorIPC.TryCancelOrder(marketOwnedOrderId, out var cancelError) && !string.IsNullOrWhiteSpace(cancelError))
+                _plugin.AddDebugLog($"[MarketPurchase][Stop] {cancelError}");
+        }
+
+        AbortOwnedMarketTravel();
+
+        var manualRecoveryRequired = marketPurchaseStep != MarketPurchaseStep.Idle &&
+                                     (marketPartyWasDisbanded ||
+                                      marketStartingWorldId != 0 && GetCurrentWorldId() != marketStartingWorldId);
+        var warning = manualRecoveryRequired
+            ? $"Market purchase stopped immediately. Return manually to {GetWorldName(marketStartingWorldId)} and restore the captured party if needed."
+            : string.Empty;
+        ResetMarketRunState();
+        return warning;
+    }
+
+    private void AbortOwnedMarketTravel()
+    {
+        if (!marketOwnsLifestreamTravel)
+            return;
+
+        marketOwnsLifestreamTravel = false;
+        if (!_plugin.LifestreamIPC.TryAbort(out var error) && !string.IsNullOrWhiteSpace(error))
+            _plugin.AddDebugLog($"[MarketPurchase] {error}");
+    }
+
+    private void ResetMarketRunState()
+    {
+        ResetMarketSearchRuntime();
+        failedMarketMapIdsThisRun.Clear();
+        exhaustedMarketMapIdsThisRun.Clear();
+        marketRotationCursorWorldId = 0;
+        marketStickySuccessWorldId = 0;
+    }
+
+    private void ResetMarketSearchRuntime()
+    {
+        marketPurchaseStep = MarketPurchaseStep.Idle;
+        marketPurchaseOutcome = MarketPurchaseOutcome.None;
+        marketVisitedWorldIds.Clear();
+        marketWorldOrder.Clear();
+        marketCapturedParty.Clear();
+        marketTargetItemId = 0;
+        marketTargetName = string.Empty;
+        marketGilCap = 0;
+        marketInitialInventoryCount = 0;
+        marketStartingWorldId = 0;
+        marketTargetWorldId = 0;
+        marketWorldOrderIndex = 0;
+        marketOwnedOrderId = string.Empty;
+        marketOwnedOrderCancelIssued = false;
+        marketAddonCloseAttempted = false;
+        marketTerminalOrder = null;
+        marketNextOrderPollAt = DateTime.MinValue;
+        marketStepStartedAt = DateTime.MinValue;
+        marketTravelSettledAt = DateTime.MinValue;
+        marketOwnsLifestreamTravel = false;
+        marketTravelDestinationWorldId = 0;
+        marketCityTeleportAttemptIndex = 0;
+        marketCityTeleportTerritoryId = 0;
+        marketDisbandCommandIssued = false;
+        marketDisbandConfirmIssued = false;
+        marketPartyWasDisbanded = false;
+        marketPartyRestoreStartedAt = DateTime.MinValue;
+        marketLastPartyInviteAt = DateTime.MinValue;
+        marketOutcomeDetail = string.Empty;
+        marketReturnToCompletedWhenDone = false;
+    }
+
+    private void EnterMarketPurchaseStep(MarketPurchaseStep step, string detail)
+    {
+        marketPurchaseStep = step;
+        marketStepStartedAt = DateTime.Now;
+        StateDetail = detail;
+        _plugin.AddDebugLog($"[MarketPurchase] {step}: {detail}");
+    }
+
+    private static bool IsMarketableMap(uint itemId)
+    {
+        var itemSheet = Plugin.DataManager.GetExcelSheet<Item>();
+        return itemSheet != null &&
+               itemSheet.TryGetRow(itemId, out var item) &&
+               item.ItemSearchCategory.RowId != 0;
+    }
+
+    private static uint GetCurrentWorldId()
+        => Plugin.ObjectTable.LocalPlayer?.CurrentWorld.RowId ?? 0;
+
+    private static string GetWorldName(uint worldId)
+    {
+        var worldSheet = Plugin.DataManager.GetExcelSheet<World>();
+        return worldSheet != null && worldSheet.TryGetRow(worldId, out var world)
+            ? world.Name.ToString()
+            : $"world {worldId}";
+    }
+
     private void TryRetrieveSaddlebagMap(uint mapItemId)
     {
         if (!_plugin.Configuration.EnableSaddlebagMapRetrieval)
@@ -3812,6 +4760,8 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[RetainerMap] Retrieval disabled. {emptyInventoryError}");
             if (allowGatherFallback && TryStartMapGatherFallback(enabledMapIds, emptyInventoryError))
                 return true;
+            if (allowGatherFallback && TryStartMarketPurchaseFallback(enabledMapIds, emptyInventoryError))
+                return true;
 
             HandleError(emptyInventoryError);
             return true;
@@ -3841,6 +4791,8 @@ public class StateManager : IDisposable
             case RetainerMapRetrievalResult.NotAvailable:
                 _plugin.AddDebugLog($"[RetainerMap] No enabled retainer map available. {emptyInventoryError}");
                 if (allowGatherFallback && TryStartMapGatherFallback(enabledMapIds, emptyInventoryError))
+                    return true;
+                if (allowGatherFallback && TryStartMarketPurchaseFallback(enabledMapIds, emptyInventoryError))
                     return true;
 
                 HandleError(emptyInventoryError);
@@ -10219,6 +11171,12 @@ public class StateManager : IDisposable
 
     private void TickSelectingMap()
     {
+        if (marketPurchaseStep != MarketPurchaseStep.Idle)
+        {
+            TickMarketPurchase();
+            return;
+        }
+
         if (TickStartMapRefresh())
             return;
 
@@ -14118,6 +15076,17 @@ public class StateManager : IDisposable
             var enabledForGather = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
             if (TryStartMapGatherFallback(enabledForGather, "No runnable maps in inventory, saddlebags, or retainers."))
                 return;
+            if (TryStartMarketPurchaseFallback(
+                    enabledForGather,
+                    "No runnable maps in inventory, saddlebags, retainers, or gathering.",
+                    returnToCompletedWhenDone: true))
+            {
+                RetryCount = 0;
+                CurrentLocation = null;
+                ResetPerMapCommandTriggers();
+                TransitionTo(BotState.SelectingMap, "Purchasing the next configured map through Emptor...");
+                return;
+            }
         }
 
         if (!oneShotMapRunCompleting && TryRunCompletedMapRefreshBeforeDecisions())

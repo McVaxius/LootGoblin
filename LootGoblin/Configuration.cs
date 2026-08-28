@@ -44,6 +44,12 @@ public enum DutyExitMode
     None,
 }
 
+public enum MarketWorldStartMode
+{
+    StickySuccess,
+    Rotate,
+}
+
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
@@ -142,11 +148,21 @@ public class Configuration : IPluginConfiguration
     public List<uint> EnabledMapTypes { get; set; } = new();
     public Dictionary<uint, int> MapRunCounts { get; set; } = new();
     public List<uint> GatherEnabledMapTypes { get; set; } = new();
+    public List<uint> PurchaseEnabledMapTypes { get; set; } = new();
+    public Dictionary<uint, int> MapPurchaseGilCaps { get; set; } = new();
     public bool ShowAllKnownMapTypes { get; set; } = false;
     public float ChestInteractionRange { get; set; } = 5f;
     public bool AutoLootChest { get; set; } = true;
     public int ChestOpenTimeout { get; set; } = 10;
     public TreasureHighLowMode TreasureHighLowMode { get; set; } = TreasureHighLowMode.SolveExpectedValue;
+
+    // Optional market-board map purchasing
+    public bool EnableSameDataCenterMapTravel { get; set; } = false;
+    public MarketWorldStartMode MarketWorldStartMode { get; set; } = MarketWorldStartMode.StickySuccess;
+    public bool IncludeDataCenterTravelForMapPurchases { get; set; } = false;
+    public bool IncludeOceTravelForMapPurchases { get; set; } = false;
+    public bool ContinueAfterPartialPartyRestore { get; set; } = true;
+    public int PartyRestoreTimeoutSeconds { get; set; } = 300;
 
     // Automation
     public bool EnableAutoDiscard { get; set; } = false;
@@ -187,6 +203,7 @@ public class Configuration : IPluginConfiguration
         if (!Enum.IsDefined(typeof(RsrTargetHostileType), RsrTargetHostileType))
             RsrTargetHostileType = DefaultRsrTargetHostileType;
         NormalizeConfiguredJobAndGatherMaps();
+        NormalizeMapPurchaseSettings();
         MapGatherCharacterConfigs ??= new MapGatherCharacterConfigStore();
         MapGatherCharacterConfigs.Normalize();
         Plugin.PluginInterface.SavePluginConfig(this);
@@ -287,6 +304,81 @@ public class Configuration : IPluginConfiguration
         SetMapRunCount(itemId, remaining);
         Save();
         return true;
+    }
+
+    public bool IsMapPurchaseEnabled(uint itemId)
+        => itemId != 0 &&
+           GetMapPurchaseGilCap(itemId) > 0 &&
+           PurchaseEnabledMapTypes?.Any(enabledId => enabledId == itemId) == true;
+
+    public int GetMapPurchaseGilCap(uint itemId)
+    {
+        if (itemId == 0)
+            return 0;
+
+        MapPurchaseGilCaps ??= new Dictionary<uint, int>();
+        return MapPurchaseGilCaps.TryGetValue(itemId, out var cap)
+            ? Math.Clamp(cap, 0, 999_999_999)
+            : 0;
+    }
+
+    public void SetMapPurchaseEnabled(uint itemId, bool enabled)
+    {
+        if (itemId == 0)
+            return;
+
+        PurchaseEnabledMapTypes ??= new List<uint>();
+        enabled &= GetMapPurchaseGilCap(itemId) > 0;
+        if (enabled)
+        {
+            if (!PurchaseEnabledMapTypes.Contains(itemId))
+                PurchaseEnabledMapTypes.Add(itemId);
+        }
+        else
+        {
+            PurchaseEnabledMapTypes.RemoveAll(enabledId => enabledId == itemId);
+        }
+
+        NormalizeMapPurchaseSettings();
+    }
+
+    public void SetMapPurchaseGilCap(uint itemId, int cap)
+    {
+        if (itemId == 0)
+            return;
+
+        MapPurchaseGilCaps ??= new Dictionary<uint, int>();
+        cap = Math.Clamp(cap, 0, 999_999_999);
+        if (cap == 0)
+        {
+            MapPurchaseGilCaps.Remove(itemId);
+            PurchaseEnabledMapTypes?.RemoveAll(enabledId => enabledId == itemId);
+        }
+        else
+        {
+            MapPurchaseGilCaps[itemId] = cap;
+        }
+
+        NormalizeMapPurchaseSettings();
+    }
+
+    public void NormalizeMapPurchaseSettings()
+    {
+        MapPurchaseGilCaps ??= new Dictionary<uint, int>();
+        PurchaseEnabledMapTypes ??= new List<uint>();
+
+        MapPurchaseGilCaps = MapPurchaseGilCaps
+            .Where(kvp => kvp.Key != 0 && kvp.Value > 0)
+            .ToDictionary(kvp => kvp.Key, kvp => Math.Clamp(kvp.Value, 1, 999_999_999));
+        PurchaseEnabledMapTypes = NormalizeMapIds(PurchaseEnabledMapTypes)
+            .Where(itemId => MapPurchaseGilCaps.ContainsKey(itemId))
+            .ToList();
+
+        if (!Enum.IsDefined(typeof(MarketWorldStartMode), MarketWorldStartMode))
+            MarketWorldStartMode = MarketWorldStartMode.StickySuccess;
+        PartyRestoreTimeoutSeconds = Math.Clamp(PartyRestoreTimeoutSeconds, 30, 3600);
+        if (!IncludeDataCenterTravelForMapPurchases)
+            IncludeOceTravelForMapPurchases = false;
     }
 
     public void NormalizeConfiguredMapRuns()

@@ -127,6 +127,12 @@ public class ConfigWindow : Window, IDisposable
                 ImGui.EndTabItem();
             }
 
+            if (ImGui.BeginTabItem("Marketboard"))
+            {
+                DrawMarketboardTab();
+                ImGui.EndTabItem();
+            }
+
             if (ImGui.BeginTabItem("Travel"))
             {
                 DrawTravelTab();
@@ -343,6 +349,96 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
         DrawMountSelection();
+    }
+
+    private void DrawMarketboardTab()
+    {
+        plugin.EmptorIPC.RefreshStatus();
+        plugin.LifestreamIPC.RefreshStatus();
+
+        ImGui.Text("Purchase requirements");
+        ImGui.BulletText("Enable a cart on a marketable map row and set a positive maximum gil price.");
+        ImGui.BulletText("LootGoblin only submits one-item orders and verifies the map in normal inventory.");
+        ImGui.BulletText("Emptor v1 or newer is required; purchasing remains optional.");
+        ImGui.TextColored(
+            plugin.EmptorIPC.IsAvailable ? ColorGreen : ColorRed,
+            plugin.EmptorIPC.StatusText);
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        DrawConfigCheckbox(
+            "Include same-data-center server travel for purchasing maps",
+            configuration.EnableSameDataCenterMapTravel,
+            value => configuration.EnableSameDataCenterMapTravel = value,
+            "After trying the current world, visit each other public world on the current data center at most once for that map.");
+
+        if (!configuration.EnableSameDataCenterMapTravel)
+            ImGui.BeginDisabled();
+
+        var rotate = configuration.MarketWorldStartMode == MarketWorldStartMode.Rotate;
+        if (ImGui.RadioButton("Rotate", rotate))
+        {
+            configuration.MarketWorldStartMode = MarketWorldStartMode.Rotate;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("The next map search starts after the world where the previous search ended.");
+
+        var sticky = configuration.MarketWorldStartMode == MarketWorldStartMode.StickySuccess;
+        if (ImGui.RadioButton("Sticky success", sticky))
+        {
+            configuration.MarketWorldStartMode = MarketWorldStartMode.StickySuccess;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Start on the last world that sold a map, then try each remaining unvisited world if it has no acceptable listing.");
+
+        if (!configuration.EnableSameDataCenterMapTravel)
+            ImGui.EndDisabled();
+
+        ImGui.TextColored(
+            plugin.LifestreamIPC.IsAvailable ? ColorGreen : ColorGrey,
+            plugin.LifestreamIPC.StatusText);
+
+        ImGui.Spacing();
+        var continueAfterTimeout = configuration.ContinueAfterPartialPartyRestore;
+        if (ImGui.Checkbox("Continue if not all party members rejoin after", ref continueAfterTimeout))
+        {
+            configuration.ContinueAfterPartialPartyRestore = continueAfterTimeout;
+            configuration.Save();
+        }
+        ImGui.SameLine();
+        var restoreTimeout = Math.Clamp(configuration.PartyRestoreTimeoutSeconds, 30, 3600);
+        ImGui.SetNextItemWidth(90f);
+        if (ImGui.InputInt("seconds##MarketPartyRestoreTimeout", ref restoreTimeout))
+        {
+            configuration.PartyRestoreTimeoutSeconds = Math.Clamp(restoreTimeout, 30, 3600);
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("LootGoblin invites missing captured members immediately and every 30 seconds. Unchecked stops the run when this timeout expires.");
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        DrawConfigCheckbox(
+            "Include data center travel for purchasing maps",
+            configuration.IncludeDataCenterTravelForMapPurchases,
+            value => configuration.IncludeDataCenterTravelForMapPurchases = value,
+            "After the current data center is exhausted, visit public worlds on other data centers in the current region.");
+
+        if (!configuration.IncludeDataCenterTravelForMapPurchases)
+            ImGui.BeginDisabled();
+        DrawConfigCheckbox(
+            "Include visiting OCE for maps once local data centers are exhausted",
+            configuration.IncludeOceTravelForMapPurchases,
+            value => configuration.IncludeOceTravelForMapPurchases = value,
+            "Appends Oceanian public worlds after every enabled local-region data center has been exhausted.");
+        if (!configuration.IncludeDataCenterTravelForMapPurchases)
+            ImGui.EndDisabled();
     }
 
     private void DrawPartyTab()
