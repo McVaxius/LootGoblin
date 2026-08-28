@@ -363,6 +363,8 @@ public class ConfigWindow : Window, IDisposable
         ImGui.TextColored(
             plugin.EmptorIPC.IsAvailable ? ColorGreen : ColorRed,
             plugin.EmptorIPC.StatusText);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("Requires Emptor API v1 or newer. LootGoblin orders one map at the configured gil cap and only continues after verifying it in normal inventory.");
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -372,7 +374,7 @@ public class ConfigWindow : Window, IDisposable
             "Include same-data-center server travel for purchasing maps",
             configuration.EnableSameDataCenterMapTravel,
             value => configuration.EnableSameDataCenterMapTravel = value,
-            "After trying the current world, visit each other public world on the current data center at most once for that map.");
+            "Try the current world first, then each remaining public world on the current data center once per map search.");
 
         if (!configuration.EnableSameDataCenterMapTravel)
             ImGui.BeginDisabled();
@@ -383,8 +385,8 @@ public class ConfigWindow : Window, IDisposable
             configuration.MarketWorldStartMode = MarketWorldStartMode.Rotate;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("The next map search starts after the world where the previous search ended.");
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("For the next map search, start after the world where the previous search ended, wrapping to the beginning when needed.");
 
         var sticky = configuration.MarketWorldStartMode == MarketWorldStartMode.StickySuccess;
         if (ImGui.RadioButton("Sticky success", sticky))
@@ -392,8 +394,8 @@ public class ConfigWindow : Window, IDisposable
             configuration.MarketWorldStartMode = MarketWorldStartMode.StickySuccess;
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Start on the last world that sold a map, then try each remaining unvisited world if it has no acceptable listing.");
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("Start on the last world that successfully sold a map, then try each remaining unvisited enabled world if it has no acceptable listing. This is the default.");
 
         if (!configuration.EnableSameDataCenterMapTravel)
             ImGui.EndDisabled();
@@ -401,6 +403,8 @@ public class ConfigWindow : Window, IDisposable
         ImGui.TextColored(
             plugin.LifestreamIPC.IsAvailable ? ColorGreen : ColorGrey,
             plugin.LifestreamIPC.StatusText);
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("Lifestream is required for off-world searches. LootGoblin verifies arrival and returns to the starting world before restoring the party.");
 
         ImGui.Spacing();
         var continueAfterTimeout = configuration.ContinueAfterPartialPartyRestore;
@@ -409,6 +413,8 @@ public class ConfigWindow : Window, IDisposable
             configuration.ContinueAfterPartialPartyRestore = continueAfterTimeout;
             configuration.Save();
         }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("Invite missing captured members immediately and every 30 seconds after returning. Checked continues with whoever rejoined after timeout; unchecked stops.");
         ImGui.SameLine();
         var restoreTimeout = Math.Clamp(configuration.PartyRestoreTimeoutSeconds, 30, 3600);
         ImGui.SetNextItemWidth(90f);
@@ -417,8 +423,8 @@ public class ConfigWindow : Window, IDisposable
             configuration.PartyRestoreTimeoutSeconds = Math.Clamp(restoreTimeout, 30, 3600);
             configuration.Save();
         }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("LootGoblin invites missing captured members immediately and every 30 seconds. Unchecked stops the run when this timeout expires.");
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("Maximum time to wait for the captured roster to rejoin. Allowed range is 30–3600 seconds; default is 300.");
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -428,7 +434,7 @@ public class ConfigWindow : Window, IDisposable
             "Include data center travel for purchasing maps",
             configuration.IncludeDataCenterTravelForMapPurchases,
             value => configuration.IncludeDataCenterTravelForMapPurchases = value,
-            "After the current data center is exhausted, visit public worlds on other data centers in the current region.");
+            "After the current data center is exhausted, visit public worlds on other data centers in the current region once per map search.");
 
         if (!configuration.IncludeDataCenterTravelForMapPurchases)
             ImGui.BeginDisabled();
@@ -436,7 +442,7 @@ public class ConfigWindow : Window, IDisposable
             "Include visiting OCE for maps once local data centers are exhausted",
             configuration.IncludeOceTravelForMapPurchases,
             value => configuration.IncludeOceTravelForMapPurchases = value,
-            "Appends Oceanian public worlds after every enabled local-region data center has been exhausted.");
+            "After enabled local-region data centers are exhausted, try public OCE worlds. Requires data-center travel and defaults off.");
         if (!configuration.IncludeDataCenterTravelForMapPurchases)
             ImGui.EndDisabled();
     }
@@ -716,7 +722,7 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
-        if (!string.IsNullOrWhiteSpace(tooltip) && ImGui.IsItemHovered())
+        if (!string.IsNullOrWhiteSpace(tooltip) && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             ImGui.SetTooltip(tooltip);
     }
 
