@@ -39,6 +39,7 @@ public class ConfigWindow : Window, IDisposable
     private bool commandTriggerDraftsUseCharacterOverride;
     private string commandTriggerDraftsCharacterKey = string.Empty;
     private string commandTriggerStatus = string.Empty;
+    private bool selectMarketboardTab;
 
     public ConfigWindow(Plugin plugin) : base("Loot Goblin Settings###LootGoblinConfig")
     {
@@ -59,6 +60,12 @@ public class ConfigWindow : Window, IDisposable
     public override void OnClose()
     {
         SaveCommandTriggerDraftsIfDirty("close");
+    }
+
+    internal void OpenMarketboardTab()
+    {
+        selectMarketboardTab = true;
+        IsOpen = true;
     }
 
     private void EnsureFoodItemsLoaded()
@@ -128,11 +135,15 @@ public class ConfigWindow : Window, IDisposable
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Marketboard"))
+            var marketboardTabFlags = selectMarketboardTab
+                ? ImGuiTabItemFlags.SetSelected
+                : ImGuiTabItemFlags.None;
+            if (ImGui.BeginTabItem("Marketboard", marketboardTabFlags))
             {
                 DrawMarketboardTab();
                 ImGui.EndTabItem();
             }
+            selectMarketboardTab = false;
 
             if (ImGui.BeginTabItem("Travel"))
             {
@@ -359,6 +370,11 @@ public class ConfigWindow : Window, IDisposable
 
         if (!plugin.EmptorIPC.IsAvailable)
             DrawEmptorInstallGuidance();
+        else
+        {
+            DrawEmptorPriceRefreshControls();
+            ImGui.Spacing();
+        }
 
         ImGui.Text("Purchase requirements");
         ImGui.BulletText("Enable a cart on a marketable map row and set a positive maximum gil price.");
@@ -486,6 +502,45 @@ public class ConfigWindow : Window, IDisposable
         if (!configuration.IncludeDataCenterTravelForMapPurchases)
             ImGui.EndDisabled();
     }
+
+    private void DrawEmptorPriceRefreshControls()
+    {
+        var emptor = plugin.EmptorIPC;
+        var now = DateTime.UtcNow;
+        var remaining = emptor.GetManualPriceRefreshCooldown(now);
+        var pending = emptor.IsPriceRefreshPending || emptor.IsManualPriceRefreshRequested;
+        var blocked = pending || !emptor.IsAvailable || emptor.ApiVersion < 5 || remaining > TimeSpan.Zero;
+
+        if (blocked)
+            ImGui.BeginDisabled();
+        if (ImGui.SmallButton("Refresh Emptor Prices"))
+            emptor.RequestManualPriceRefresh(Plugin.ClientState.IsLoggedIn, out _);
+        if (blocked)
+            ImGui.EndDisabled();
+
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            var tooltip = pending
+                ? "An Emptor price lookup is pending."
+                : !emptor.IsAvailable || emptor.ApiVersion < 5
+                    ? "Emptor API v5 or newer is required for price hints."
+                    : remaining > TimeSpan.Zero
+                        ? $"Manual refresh is available in {FormatPriceCountdown(remaining)}."
+                        : "Queue one global refresh for all marketable known maps using the current travel scope.";
+            ImGui.SetTooltip(tooltip);
+        }
+
+        if (remaining > TimeSpan.Zero)
+        {
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, $"Next manual refresh: {FormatPriceCountdown(remaining)}");
+        }
+
+        ImGui.TextColored(ColorGrey, $"  {emptor.PriceStatusText}");
+    }
+
+    private static string FormatPriceCountdown(TimeSpan remaining)
+        => $"{Math.Max(0, (int)remaining.TotalMinutes):00}:{Math.Max(0, remaining.Seconds):00}";
 
     private static void DrawEmptorInstallGuidance()
     {

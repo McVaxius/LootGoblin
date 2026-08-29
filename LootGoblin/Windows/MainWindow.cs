@@ -319,8 +319,6 @@ public class MainWindow : Window, IDisposable
 
                 DrawMapAllowanceHeader(mapAllowanceStatus, hasGatherJob, plugin.Configuration.DebugMode);
                 ImGui.Spacing();
-                DrawEmptorPriceRefreshControls();
-                ImGui.Spacing();
 
                 if (displayedMapSources.Count == 0)
                 {
@@ -533,6 +531,38 @@ public class MainWindow : Window, IDisposable
 
     private void DrawMapPurchaseControls(uint itemId)
     {
+        if (!plugin.EmptorIPC.IsAvailable)
+        {
+            var openMarketboardSettings = false;
+            if (ImGuiEx.Checkbox(
+                    FontAwesomeIcon.ShoppingCart,
+                    ColorGrey,
+                    ColorGrey,
+                    null,
+                    null,
+                    $"##purchase_unavailable_{itemId}",
+                    ref openMarketboardSettings,
+                    true))
+            {
+                plugin.OpenMarketboardSettings();
+            }
+
+            var itemMin = ImGui.GetItemRectMin();
+            var itemMax = ImGui.GetItemRectMax();
+            var drawList = ImGui.GetWindowDrawList();
+            var overlayColor = ImGui.GetColorU32(ColorRed);
+            drawList.AddLine(itemMin, itemMax, overlayColor, 2f);
+            drawList.AddLine(
+                new Vector2(itemMin.X, itemMax.Y),
+                new Vector2(itemMax.X, itemMin.Y),
+                overlayColor,
+                2f);
+
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Emptor is unavailable. Open Marketboard settings for installation guidance.");
+            return;
+        }
+
         var gilCap = plugin.Configuration.GetMapPurchaseGilCap(itemId);
         var purchaseEnabled = plugin.Configuration.IsMapPurchaseEnabled(itemId);
         var canEnable = gilCap > 0;
@@ -582,42 +612,6 @@ public class MainWindow : Window, IDisposable
         }
     }
 
-    private void DrawEmptorPriceRefreshControls()
-    {
-        var emptor = plugin.EmptorIPC;
-        var now = DateTime.UtcNow;
-        var remaining = emptor.GetManualPriceRefreshCooldown(now);
-        var pending = emptor.IsPriceRefreshPending || emptor.IsManualPriceRefreshRequested;
-        var blocked = pending || !emptor.IsAvailable || emptor.ApiVersion < 5 || remaining > TimeSpan.Zero;
-
-        if (blocked)
-            ImGui.BeginDisabled();
-        if (ImGui.SmallButton("Refresh Emptor Prices"))
-            emptor.RequestManualPriceRefresh(Plugin.ClientState.IsLoggedIn, out _);
-        if (blocked)
-            ImGui.EndDisabled();
-
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-        {
-            var tooltip = pending
-                ? "An Emptor price lookup is pending."
-                : !emptor.IsAvailable || emptor.ApiVersion < 5
-                    ? "Emptor API v5 or newer is required for price hints."
-                    : remaining > TimeSpan.Zero
-                        ? $"Manual refresh is available in {FormatPriceCountdown(remaining)}."
-                        : "Queue one global refresh for all marketable known maps using the current travel scope.";
-            ImGui.SetTooltip(tooltip);
-        }
-
-        if (remaining > TimeSpan.Zero)
-        {
-            ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, $"Next manual refresh: {FormatPriceCountdown(remaining)}");
-        }
-
-        ImGui.TextColored(ColorGrey, $"  {emptor.PriceStatusText}");
-    }
-
     private void DrawMapPriceCeilingTooltip(uint itemId)
     {
         var emptor = plugin.EmptorIPC;
@@ -647,9 +641,6 @@ public class MainWindow : Window, IDisposable
         ImGui.TextColored(ColorGrey, "Listings can change after lookup. Refresh is manual and rate-limited to five minutes.");
         ImGui.EndTooltip();
     }
-
-    private static string FormatPriceCountdown(TimeSpan remaining)
-        => $"{Math.Max(0, (int)remaining.TotalMinutes):00}:{Math.Max(0, remaining.Seconds):00}";
 
     private void DrawMapRunCountEditor(uint itemId, bool isEnabled)
     {

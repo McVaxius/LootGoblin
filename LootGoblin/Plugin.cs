@@ -1016,6 +1016,7 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     public void ToggleConfigUi() => ConfigWindow.Toggle();
+    internal void OpenMarketboardSettings() => ConfigWindow.OpenMarketboardTab();
     public void ToggleMainUi() => MainWindow.Toggle();
 
     private static bool ApplyConfigurationMigrations(Configuration configuration, bool isNewConfiguration)
