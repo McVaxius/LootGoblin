@@ -16,6 +16,18 @@ public class ConfigWindow : Window, IDisposable
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
+    private const string EmptorRepositoryUrl = "https://raw.githubusercontent.com/Evernow/DalamudPlugins/main/pluginmaster.json";
+    private static readonly (string Key, string Label)[] EmptorMarketboardCities =
+    {
+        (string.Empty, "Ul'dah (Emptor default)"),
+        ("limsa", "Limsa Lominsa"),
+        ("gridania", "Gridania"),
+        ("ishgard", "Foundation"),
+        ("kugane", "Kugane"),
+        ("crystarium", "The Crystarium"),
+        ("sharlayan", "Old Sharlayan"),
+        ("tuliyollal", "Tuliyollal"),
+    };
     private static readonly string[] RsrTargetHostileTypeLabels =
     {
         "All Attackable Targets",
@@ -356,15 +368,51 @@ public class ConfigWindow : Window, IDisposable
         plugin.EmptorIPC.RefreshStatus();
         plugin.LifestreamIPC.RefreshStatus();
 
+        if (!plugin.EmptorIPC.IsAvailable)
+            DrawEmptorInstallGuidance();
+
         ImGui.Text("Purchase requirements");
         ImGui.BulletText("Enable a cart on a marketable map row and set a positive maximum gil price.");
-        ImGui.BulletText("LootGoblin only submits one-item orders and verifies the map in normal inventory.");
-        ImGui.BulletText("Emptor v1 or newer is required; purchasing remains optional.");
+        ImGui.BulletText("LootGoblin submits quantity-one orders and can prepare up to three maps per trip.");
+        ImGui.BulletText("Emptor v1+ supports the default city; choosing another city requires Emptor v4+.");
+
+        var configuredCityKey = configuration.EmptorMarketboardCityKey?.Trim() ?? string.Empty;
+        var cityNeedsV4 = !string.IsNullOrEmpty(configuredCityKey) &&
+                          plugin.EmptorIPC.ApiVersion is > 0 and < 4;
+        var emptorStatus = cityNeedsV4
+            ? $"Configured city '{configuredCityKey}' requires Emptor API v4 or newer; detected v{plugin.EmptorIPC.ApiVersion}."
+            : plugin.EmptorIPC.StatusText;
         ImGui.TextColored(
-            plugin.EmptorIPC.IsAvailable ? ColorGreen : ColorRed,
-            plugin.EmptorIPC.StatusText);
+            plugin.EmptorIPC.IsAvailable && !cityNeedsV4 ? ColorGreen : ColorRed,
+            emptorStatus);
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Requires Emptor API v1 or newer. LootGoblin orders one map at the configured gil cap and only continues after verifying it in normal inventory.");
+            ImGui.SetTooltip("Blank/default city omits the city request field for Emptor v1-v3 compatibility. A selected city is sent only through Emptor API v4 or newer.");
+
+        var currentCityLabel = EmptorMarketboardCities
+            .FirstOrDefault(city => string.Equals(city.Key, configuredCityKey, StringComparison.OrdinalIgnoreCase))
+            .Label;
+        if (string.IsNullOrWhiteSpace(currentCityLabel))
+            currentCityLabel = $"Unknown ({configuredCityKey})";
+        if (ImGui.BeginCombo("Emptor marketboard city", currentCityLabel))
+        {
+            foreach (var city in EmptorMarketboardCities)
+            {
+                var selected = string.Equals(city.Key, configuredCityKey, StringComparison.OrdinalIgnoreCase);
+                if (ImGui.Selectable(city.Label, selected))
+                {
+                    configuration.EmptorMarketboardCityKey = city.Key;
+                    configuration.Save();
+                    configuredCityKey = city.Key;
+                }
+
+                if (selected)
+                    ImGui.SetItemDefaultFocus();
+            }
+
+            ImGui.EndCombo();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Chooses where Emptor travels for its marketboard. Ul'dah stores a blank key and keeps Emptor's default behavior.");
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -445,6 +493,27 @@ public class ConfigWindow : Window, IDisposable
             "After enabled local-region data centers are exhausted, try public OCE worlds. Requires data-center travel and defaults off.");
         if (!configuration.IncludeDataCenterTravelForMapPurchases)
             ImGui.EndDisabled();
+    }
+
+    private static void DrawEmptorInstallGuidance()
+    {
+        ImGui.SetWindowFontScale(1.35f);
+        ImGui.TextColored(ColorRed, "EMPTOR IS NOT INSTALLED OR LOADED");
+        ImGui.SetWindowFontScale(1f);
+        ImGui.TextWrapped("Add Emptor's custom repository in Dalamud Settings, then install Emptor from the plugin installer.");
+
+        if (ImGui.Button("Copy Emptor repo URL"))
+            ImGui.SetClipboardText(EmptorRepositoryUrl);
+        ImGui.SameLine();
+        if (ImGui.Button("Open /xlsettings"))
+            CommandHelper.SendCommand("/xlsettings");
+        ImGui.SameLine();
+        if (ImGui.Button("Open /xlplugins"))
+            CommandHelper.SendCommand("/xlplugins");
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
     }
 
     private void DrawPartyTab()

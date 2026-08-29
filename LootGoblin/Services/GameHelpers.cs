@@ -516,6 +516,13 @@ public static class GameHelpers
         _lastConfirmDialogLogTime = DateTime.MinValue;
     }
 
+    public static void CancelPendingMapDecipher()
+    {
+        ResetPendingMapLookup();
+        ResetPendingMapSelection();
+        ResetPendingConfirmDialogWatch();
+    }
+
     /// <summary>
     /// Generic SelectYesno handler - clicks Yes on any visible SelectYesno dialog.
     /// Call this from state ticks whenever we expect a Yes/No dialog.

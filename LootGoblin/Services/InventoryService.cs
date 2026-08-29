@@ -28,6 +28,16 @@ public sealed record SaddlebagMovePlan(
     int DestinationSlot,
     int SourceQuantity);
 
+public sealed record InventoryToSaddlebagMovePlan(
+    uint ItemId,
+    InventoryType SourceType,
+    int SourceSlot,
+    InventoryType DestinationType,
+    int DestinationSlot,
+    int SourceQuantity,
+    int InitialInventoryCount,
+    int InitialSaddlebagCount);
+
 public sealed record RetainerMapMovePlan(
     uint ItemId,
     InventoryType SourceType,
@@ -377,6 +387,175 @@ public class InventoryService : IDisposable
         }
     }
 
+    public unsafe bool TryPlanInventoryMapToSaddlebagMove(
+        uint itemId,
+        out InventoryToSaddlebagMovePlan plan,
+        out string detail)
+    {
+        plan = null!;
+        detail = string.Empty;
+
+        try
+        {
+            var manager = InventoryManager.Instance();
+            if (manager == null)
+            {
+                detail = "InventoryManager is null";
+                return false;
+            }
+
+            if (!TryFindInventorySource(manager, itemId, out var sourceType, out var sourceSlot, out var sourceQuantity))
+            {
+                detail = "Purchased map was not found in normal inventory.";
+                return false;
+            }
+
+            if (sourceQuantity != 1)
+            {
+                detail = $"Expected one purchased map in {sourceType}[{sourceSlot}], found quantity {sourceQuantity}.";
+                return false;
+            }
+
+            if (!TryFindEmptySaddlebagSlot(manager, out var destinationType, out var destinationSlot))
+            {
+                detail = "No empty loaded saddlebag slot is available.";
+                return false;
+            }
+
+            var initialInventoryCount = GetMapCount(manager, itemId, GetInventoryContainerSpecs());
+            var initialSaddlebagCount = GetMapCount(manager, itemId, GetSaddlebagContainerSpecs());
+            if (initialInventoryCount != 1)
+            {
+                detail = $"Expected exactly one purchased map in normal inventory before storage, found {initialInventoryCount}.";
+                return false;
+            }
+
+            plan = new InventoryToSaddlebagMovePlan(
+                itemId,
+                sourceType,
+                sourceSlot,
+                destinationType,
+                destinationSlot,
+                sourceQuantity,
+                initialInventoryCount,
+                initialSaddlebagCount);
+            detail = $"Selected {sourceType}[{sourceSlot}] -> {destinationType}[{destinationSlot}] " +
+                     $"(inventory={initialInventoryCount}, saddlebag={initialSaddlebagCount})";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            detail = ex.Message;
+            Plugin.LogError($"Failed to plan map {itemId} inventory-to-saddlebag move: {ex.Message}");
+            return false;
+        }
+    }
+
+    public unsafe bool TryMovePlannedInventoryMapToSaddlebag(
+        InventoryToSaddlebagMovePlan plan,
+        out string detail)
+    {
+        detail = string.Empty;
+
+        try
+        {
+            var manager = InventoryManager.Instance();
+            if (manager == null)
+            {
+                detail = "InventoryManager is null";
+                return false;
+            }
+
+            if (!TryGetLoadedPlannedSlots(manager, plan, out var sourceSlot, out var destinationSlot, out detail))
+                return false;
+
+            if (sourceSlot->ItemId != plan.ItemId || (int)sourceSlot->Quantity != plan.SourceQuantity)
+            {
+                detail = $"Source slot changed before move. Expected {plan.ItemId} x{plan.SourceQuantity} in {plan.SourceType}[{plan.SourceSlot}].";
+                return false;
+            }
+
+            if (destinationSlot->ItemId != 0)
+            {
+                detail = $"Destination slot changed before move. {plan.DestinationType}[{plan.DestinationSlot}] is no longer empty.";
+                return false;
+            }
+
+            var inventoryCount = GetMapCount(manager, plan.ItemId, GetInventoryContainerSpecs());
+            var saddlebagCount = GetMapCount(manager, plan.ItemId, GetSaddlebagContainerSpecs());
+            if (inventoryCount != plan.InitialInventoryCount || saddlebagCount != plan.InitialSaddlebagCount)
+            {
+                detail = $"Map counts changed before move. Expected inventory/saddlebag " +
+                         $"{plan.InitialInventoryCount}/{plan.InitialSaddlebagCount}, found {inventoryCount}/{saddlebagCount}.";
+                return false;
+            }
+
+            manager->MoveItemSlot(
+                plan.SourceType,
+                (ushort)plan.SourceSlot,
+                plan.DestinationType,
+                (ushort)plan.DestinationSlot,
+                true);
+            detail = $"Move issued for map {plan.ItemId}: {plan.SourceType}[{plan.SourceSlot}] -> " +
+                     $"{plan.DestinationType}[{plan.DestinationSlot}]";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            detail = ex.Message;
+            Plugin.LogError($"Failed to execute map {plan.ItemId} inventory-to-saddlebag move: {ex.Message}");
+            return false;
+        }
+    }
+
+    public unsafe bool TryConfirmInventoryMapMovedToSaddlebag(
+        InventoryToSaddlebagMovePlan plan,
+        out string detail)
+    {
+        detail = string.Empty;
+
+        try
+        {
+            var manager = InventoryManager.Instance();
+            if (manager == null)
+            {
+                detail = "InventoryManager is null";
+                return false;
+            }
+
+            if (!TryGetLoadedPlannedSlots(manager, plan, out var sourceSlot, out var destinationSlot, out detail))
+                return false;
+
+            var inventoryCount = GetMapCount(manager, plan.ItemId, GetInventoryContainerSpecs());
+            var saddlebagCount = GetMapCount(manager, plan.ItemId, GetSaddlebagContainerSpecs());
+            var expectedInventoryCount = plan.InitialInventoryCount - plan.SourceQuantity;
+            var expectedSaddlebagCount = plan.InitialSaddlebagCount + plan.SourceQuantity;
+            if (sourceSlot->ItemId != 0 ||
+                destinationSlot->ItemId != plan.ItemId ||
+                (int)destinationSlot->Quantity != plan.SourceQuantity ||
+                inventoryCount != expectedInventoryCount ||
+                saddlebagCount != expectedSaddlebagCount)
+            {
+                detail = $"Waiting for exact move confirmation: source={sourceSlot->ItemId}, " +
+                         $"destination={destinationSlot->ItemId} x{destinationSlot->Quantity}, " +
+                         $"inventory/saddlebag={inventoryCount}/{saddlebagCount}, " +
+                         $"expected=0 and {plan.ItemId} x{plan.SourceQuantity}, {expectedInventoryCount}/{expectedSaddlebagCount}.";
+                return false;
+            }
+
+            detail = $"Confirmed {plan.ItemId} moved to {plan.DestinationType}[{plan.DestinationSlot}]; " +
+                     $"inventory {plan.InitialInventoryCount}->{inventoryCount}, " +
+                     $"saddlebag {plan.InitialSaddlebagCount}->{saddlebagCount}.";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            detail = ex.Message;
+            Plugin.LogError($"Failed to confirm map {plan.ItemId} inventory-to-saddlebag move: {ex.Message}");
+            return false;
+        }
+    }
+
     public unsafe bool TryMovePlannedSaddlebagMap(SaddlebagMovePlan plan, out string detail)
     {
         detail = "";
@@ -637,6 +816,39 @@ public class InventoryService : IDisposable
         return false;
     }
 
+    private static unsafe bool TryFindInventorySource(
+        InventoryManager* manager,
+        uint itemId,
+        out InventoryType sourceType,
+        out int sourceSlot,
+        out int sourceQuantity)
+    {
+        sourceType = default;
+        sourceSlot = -1;
+        sourceQuantity = 0;
+
+        foreach (var spec in GetInventoryContainerSpecs())
+        {
+            var container = manager->GetInventoryContainer(spec.Type);
+            if (container == null || !container->IsLoaded)
+                continue;
+
+            for (var i = 0; i < container->Size; i++)
+            {
+                var slot = container->GetInventorySlot(i);
+                if (slot == null || slot->ItemId != itemId)
+                    continue;
+
+                sourceType = spec.Type;
+                sourceSlot = i;
+                sourceQuantity = (int)slot->Quantity;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static unsafe bool TryScanRetainerSource(
         InventoryManager* manager,
         uint itemId,
@@ -712,6 +924,83 @@ public class InventoryService : IDisposable
         }
 
         return false;
+    }
+
+    private static unsafe bool TryFindEmptySaddlebagSlot(
+        InventoryManager* manager,
+        out InventoryType destinationType,
+        out int destinationSlot)
+    {
+        destinationType = default;
+        destinationSlot = -1;
+
+        foreach (var spec in GetSaddlebagContainerSpecs())
+        {
+            var container = manager->GetInventoryContainer(spec.Type);
+            if (container == null || !container->IsLoaded)
+                continue;
+
+            for (var i = 0; i < container->Size; i++)
+            {
+                var slot = container->GetInventorySlot(i);
+                if (slot == null || slot->ItemId != 0)
+                    continue;
+
+                destinationType = spec.Type;
+                destinationSlot = i;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static unsafe bool TryGetLoadedPlannedSlots(
+        InventoryManager* manager,
+        InventoryToSaddlebagMovePlan plan,
+        out InventoryItem* sourceSlot,
+        out InventoryItem* destinationSlot,
+        out string detail)
+    {
+        sourceSlot = null;
+        destinationSlot = null;
+        detail = string.Empty;
+
+        var sourceContainer = manager->GetInventoryContainer(plan.SourceType);
+        if (sourceContainer == null || !sourceContainer->IsLoaded)
+        {
+            detail = $"Source container {plan.SourceType} is not loaded.";
+            return false;
+        }
+
+        var destinationContainer = manager->GetInventoryContainer(plan.DestinationType);
+        if (destinationContainer == null || !destinationContainer->IsLoaded)
+        {
+            detail = $"Destination container {plan.DestinationType} is not loaded.";
+            return false;
+        }
+
+        if (plan.SourceSlot < 0 || plan.SourceSlot >= sourceContainer->Size)
+        {
+            detail = $"Source slot {plan.SourceSlot} is out of range for {plan.SourceType}.";
+            return false;
+        }
+
+        if (plan.DestinationSlot < 0 || plan.DestinationSlot >= destinationContainer->Size)
+        {
+            detail = $"Destination slot {plan.DestinationSlot} is out of range for {plan.DestinationType}.";
+            return false;
+        }
+
+        sourceSlot = sourceContainer->GetInventorySlot(plan.SourceSlot);
+        destinationSlot = destinationContainer->GetInventorySlot(plan.DestinationSlot);
+        if (sourceSlot == null || destinationSlot == null)
+        {
+            detail = "A planned inventory slot is unavailable.";
+            return false;
+        }
+
+        return true;
     }
 
     private static IReadOnlyList<ContainerSpec> GetContainerSpecs(bool includeSaddlebags)

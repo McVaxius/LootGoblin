@@ -550,7 +550,7 @@ public class MainWindow : Window, IDisposable
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
             ImGui.SetTooltip(canEnable
-                ? "Cart: buy one missing map through Emptor after gathering is unavailable."
+                ? "Cart: buy missing maps through Emptor after gathering is unavailable. A market trip may prepare up to three, capped by remaining runs."
                 : "Set a positive maximum gil price before enabling this cart.");
         }
 

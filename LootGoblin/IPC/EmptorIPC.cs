@@ -62,6 +62,14 @@ public sealed class EmptorIPC : IDisposable
     }
 
     public bool TrySubmitOrder(uint itemId, int maximumGil, out string orderId, out string error)
+        => TrySubmitOrder(itemId, maximumGil, string.Empty, out orderId, out error);
+
+    public bool TrySubmitOrder(
+        uint itemId,
+        int maximumGil,
+        string cityKey,
+        out string orderId,
+        out string error)
     {
         orderId = string.Empty;
         error = string.Empty;
@@ -78,21 +86,27 @@ public sealed class EmptorIPC : IDisposable
             return false;
         }
 
-        var request = JsonSerializer.Serialize(new
+        cityKey = cityKey?.Trim() ?? string.Empty;
+        if (!string.IsNullOrEmpty(cityKey) && ApiVersion < 4)
         {
-            totalGilBudget = maximumGil,
-            items = new[]
+            error = $"Emptor API v4 or newer is required for the configured marketboard city; detected v{ApiVersion}. Select Ul'dah (Emptor default) to keep using Emptor v1-v3.";
+            return false;
+        }
+
+        var items = new[]
+        {
+            new
             {
-                new
-                {
-                    itemId,
-                    maxUnitPrice = maximumGil,
-                    quantity = 1,
-                    quality = "either",
-                    overshoot = "skip",
-                },
+                itemId,
+                maxUnitPrice = maximumGil,
+                quantity = 1,
+                quality = "either",
+                overshoot = "skip",
             },
-        });
+        };
+        var request = string.IsNullOrEmpty(cityKey)
+            ? JsonSerializer.Serialize(new { totalGilBudget = maximumGil, items })
+            : JsonSerializer.Serialize(new { totalGilBudget = maximumGil, city = cityKey, items });
 
         try
         {

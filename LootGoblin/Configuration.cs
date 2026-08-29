@@ -157,6 +157,7 @@ public class Configuration : IPluginConfiguration
     public TreasureHighLowMode TreasureHighLowMode { get; set; } = TreasureHighLowMode.SolveExpectedValue;
 
     // Optional market-board map purchasing
+    public string EmptorMarketboardCityKey { get; set; } = string.Empty;
     public bool EnableSameDataCenterMapTravel { get; set; } = false;
     public MarketWorldStartMode MarketWorldStartMode { get; set; } = MarketWorldStartMode.StickySuccess;
     public bool IncludeDataCenterTravelForMapPurchases { get; set; } = false;
@@ -364,6 +365,7 @@ public class Configuration : IPluginConfiguration
 
     public void NormalizeMapPurchaseSettings()
     {
+        EmptorMarketboardCityKey = EmptorMarketboardCityKey?.Trim() ?? string.Empty;
         MapPurchaseGilCaps ??= new Dictionary<uint, int>();
         PurchaseEnabledMapTypes ??= new List<uint>();
 

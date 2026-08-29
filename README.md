@@ -60,6 +60,10 @@ When a character loads during an active **Moogle Treasure Trove** event, Loot Go
 
 Map settings control enabled map types, per-map run counts, gatherable-map choices, saddlebag retrieval, retainer retrieval, and whether all known map types are shown.
 
+Marketboard settings control optional Emptor purchasing after inventory, saddlebag, retainer, and gathering sources are exhausted. Ul'dah (Emptor default) leaves the request city blank and works with Emptor API v1 or newer; selecting Limsa Lominsa, Gridania, Foundation, Kugane, The Crystarium, Old Sharlayan, or Tuliyollal requires Emptor API v4 or newer. If Emptor is missing, the Marketboard tab shows its repository URL and buttons for `/xlsettings` and `/xlplugins`.
+
+Each Emptor order requests exactly one map at the configured per-map gil cap. A trip is capped by that map's remaining run count: one run leaves one map in inventory; two runs use saddlebag + inventory when saddlebag retrieval is enabled, or deciphered key item + inventory when it is disabled; three or unlimited runs use saddlebag + deciphered key item + inventory. With saddlebag retrieval disabled, a trip can prepare at most two. Because every map has its own cap, one trip can spend the configured cap up to three times. If an extra purchase, guarded saddlebag move, or decipher step fails after a map is secured, Loot Goblin returns and restores the party, warns, and continues with the secured stock.
+
 Party settings control wait-for-party behavior, thief-map underwater waits, mounted-party checks, teleport delay, dismount waits, and optional required-party-count thresholds.
 
 Dungeon settings control ADS handoff. When enabled and ADS is loaded, Loot Goblin sends `/ads inside` after a treasure dungeon is confirmed and waits for ADS to finish. If ADS is missing, Loot Goblin warns and can fall back to its legacy solver.
@@ -81,6 +85,7 @@ Required for normal map travel:
 
 Optional:
 
+- **Emptor**: optional missing-map market purchases. Add `https://raw.githubusercontent.com/Evernow/DalamudPlugins/main/pluginmaster.json` in Dalamud Settings, then install Emptor from `/xlplugins`. API v1+ supports the default Ul'dah route; city selection requires v4+.
 - **ADS**: dungeon solver handoff, ADS loot UI, ADS repair, and BMR reflection settings.
 - **XADB** and **XASlave**: retainer/saddlebag map retrieval support.
 - **AutoRetainer**: auto-discard command support through `/ays discard`.

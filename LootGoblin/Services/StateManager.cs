@@ -66,6 +66,12 @@ internal enum MarketPurchaseStep
     SubmittingOrder,
     PollingOrder,
     WaitingForEmptorCleanup,
+    OpeningBatchSaddlebag,
+    WaitingForBatchSaddlebag,
+    WaitingForBatchSaddlebagStable,
+    MovingBatchMapToSaddlebag,
+    ConfirmingBatchSaddlebagMove,
+    DecipheringBatchMap,
     ReturningToStartWorld,
     RestoringParty,
 }
@@ -267,6 +273,20 @@ public class StateManager : IDisposable
     private DateTime marketLastPartyInviteAt = DateTime.MinValue;
     private string marketOutcomeDetail = string.Empty;
     private bool marketReturnToCompletedWhenDone;
+    private string marketEmptorCityKey = string.Empty;
+    private int marketBatchRequestedCount;
+    private int marketBatchTargetCount;
+    private int marketBatchSecuredCount;
+    private bool marketBatchUseSaddlebag;
+    private bool marketBatchSaddlebagStored;
+    private bool marketBatchUseKeyItem;
+    private bool marketBatchKeyItemStored;
+    private InventoryToSaddlebagMovePlan? marketBatchSaddlebagMovePlan;
+    private DateTime marketBatchSaddlebagAddonVisibleSince = DateTime.MinValue;
+    private bool marketBatchDecipherIssued;
+    private int marketBatchDecipherInitialInventoryCount;
+    private DateTime marketBatchNextDecipherAttemptAt = DateTime.MinValue;
+    private string marketBatchDeferredWarning = string.Empty;
     private bool areaMapAutoCloseQueued;
     private DateTime areaMapAutoCloseQueuedAt = DateTime.MinValue;
     private DateTime areaMapAutoCloseLastAttemptAt = DateTime.MinValue;
@@ -561,6 +581,8 @@ public class StateManager : IDisposable
     private static readonly TimeSpan MarketTerminalSettleDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan MarketWorldArrivalSettleDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan MarketPartyInviteInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan MarketBatchDecipherTimeout = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan MarketBatchDecipherRetryInterval = TimeSpan.FromSeconds(1);
     private static readonly (uint AetheryteId, uint TerritoryId, string Name)[] MarketWorldVisitCities =
     {
         (9, 130, "Ul'dah"),
@@ -3514,6 +3536,15 @@ public class StateManager : IDisposable
             return false;
         }
 
+        var configuredCityKey = _plugin.Configuration.EmptorMarketboardCityKey?.Trim() ?? string.Empty;
+        if (!string.IsNullOrEmpty(configuredCityKey) && _plugin.EmptorIPC.ApiVersion < 4)
+        {
+            failedMarketMapIdsThisRun.Add(targetItemId);
+            StateDetail = $"Skipping market purchase for map {targetItemId}: configured city '{configuredCityKey}' requires Emptor API v4 or newer; detected v{_plugin.EmptorIPC.ApiVersion}.";
+            _plugin.AddDebugLog($"[MarketPurchase] {StateDetail}");
+            return false;
+        }
+
         var currentWorldId = GetCurrentWorldId();
         if (currentWorldId == 0)
         {
@@ -3539,6 +3570,25 @@ public class StateManager : IDisposable
             : $"ID {targetItemId}";
         marketGilCap = _plugin.Configuration.GetMapPurchaseGilCap(targetItemId);
         marketInitialInventoryCount = _plugin.InventoryService.GetMapCount(targetItemId);
+        marketEmptorCityKey = configuredCityKey;
+        var configuredRuns = _plugin.Configuration.GetMapRunCount(targetItemId);
+        marketBatchRequestedCount = configuredRuns == Configuration.MapRunCountMax
+            ? 3
+            : Math.Clamp(configuredRuns, 1, 3);
+        var hasActiveKeyItem = _plugin.InventoryService.TryFindTreasureMapKeyItem(out _);
+        var physicalCapacity = 1 +
+                               (_plugin.Configuration.EnableSaddlebagMapRetrieval ? 1 : 0) +
+                               (hasActiveKeyItem ? 0 : 1);
+        marketBatchTargetCount = Math.Min(marketBatchRequestedCount, physicalCapacity);
+        marketBatchUseSaddlebag = _plugin.Configuration.EnableSaddlebagMapRetrieval && marketBatchTargetCount >= 2;
+        marketBatchUseKeyItem = marketBatchTargetCount >= 3 ||
+                                marketBatchTargetCount >= 2 && !marketBatchUseSaddlebag;
+        if (marketBatchTargetCount < marketBatchRequestedCount)
+        {
+            marketBatchDeferredWarning = _plugin.Configuration.EnableSaddlebagMapRetrieval
+                ? $"Only {marketBatchTargetCount} of {marketBatchRequestedCount} requested map slots are available because a treasure-map key item is already occupied."
+                : $"Saddlebag map retrieval is disabled, so this trip can prepare only {marketBatchTargetCount} of {marketBatchRequestedCount} requested maps.";
+        }
         marketStartingWorldId = currentWorldId;
         marketWorldOrder.AddRange(ApplyMarketWorldStartMode(worldOrder));
         marketWorldOrderIndex = 0;
@@ -3546,7 +3596,8 @@ public class StateManager : IDisposable
         marketOutcomeDetail = fallbackError;
 
         _plugin.AddDebugLog(
-            $"[MarketPurchase] Starting one-item search for {marketTargetName} at <= {marketGilCap:N0} gil. " +
+            $"[MarketPurchase] Starting {marketBatchTargetCount}-map batch for {marketTargetName} at <= {marketGilCap:N0} gil per map " +
+            $"(requested={marketBatchRequestedCount}, saddlebag={marketBatchUseSaddlebag}, keyItem={marketBatchUseKeyItem}, city='{marketEmptorCityKey}'). " +
             $"World order: {string.Join(" -> ", marketWorldOrder.Select(GetWorldName))}.");
         BeginMarketWorldAttempt();
         return true;
@@ -3649,6 +3700,24 @@ public class StateManager : IDisposable
                 break;
             case MarketPurchaseStep.WaitingForEmptorCleanup:
                 TickMarketEmptorCleanup();
+                break;
+            case MarketPurchaseStep.OpeningBatchSaddlebag:
+                TickOpeningMarketBatchSaddlebag();
+                break;
+            case MarketPurchaseStep.WaitingForBatchSaddlebag:
+                TickWaitingForMarketBatchSaddlebag();
+                break;
+            case MarketPurchaseStep.WaitingForBatchSaddlebagStable:
+                TickWaitingForStableMarketBatchSaddlebag();
+                break;
+            case MarketPurchaseStep.MovingBatchMapToSaddlebag:
+                TickMovingMarketBatchMapToSaddlebag();
+                break;
+            case MarketPurchaseStep.ConfirmingBatchSaddlebagMove:
+                TickConfirmingMarketBatchSaddlebagMove();
+                break;
+            case MarketPurchaseStep.DecipheringBatchMap:
+                TickDecipheringMarketBatchMap();
                 break;
             case MarketPurchaseStep.ReturningToStartWorld:
                 TickMarketReturnToStartWorld();
@@ -3893,9 +3962,17 @@ public class StateManager : IDisposable
         var inventoryCount = _plugin.InventoryService.GetMapCount(marketTargetItemId);
         if (inventoryCount > marketInitialInventoryCount || inventoryCount > 0)
         {
+            HandleSecuredMarketInventoryMap(
+                $"{marketTargetName} appeared in inventory before an Emptor order was submitted.",
+                verifiedEmptorPurchase: false);
+            return;
+        }
+
+        if (marketBatchSecuredCount > 0 && !MarketBatchAllowsAnotherOrder())
+        {
             FinishMarketSearch(
                 MarketPurchaseOutcome.InventoryReady,
-                $"{marketTargetName} appeared in inventory before an Emptor order was submitted.",
+                $"Prepared {marketBatchSecuredCount} {marketTargetName} map(s); the configured remaining run count no longer allows another order.",
                 verifiedEmptorPurchase: false);
             return;
         }
@@ -3908,7 +3985,12 @@ public class StateManager : IDisposable
             return;
         }
 
-        if (!_plugin.EmptorIPC.TrySubmitOrder(marketTargetItemId, marketGilCap, out var orderId, out var error))
+        if (!_plugin.EmptorIPC.TrySubmitOrder(
+                marketTargetItemId,
+                marketGilCap,
+                marketEmptorCityKey,
+                out var orderId,
+                out var error))
         {
             FailMarketSearchForRun(error);
             return;
@@ -4002,8 +4084,7 @@ public class StateManager : IDisposable
         }
         if (terminal.PurchasedQuantity == 1 && inventoryVerified)
         {
-            FinishMarketSearch(
-                MarketPurchaseOutcome.InventoryReady,
+            HandleSecuredMarketInventoryMap(
                 $"Purchased and verified one {marketTargetName} on {GetWorldName(marketTargetWorldId)}.",
                 verifiedEmptorPurchase: true);
             return;
@@ -4011,8 +4092,7 @@ public class StateManager : IDisposable
 
         if (indeterminate && inventoryVerified)
         {
-            FinishMarketSearch(
-                MarketPurchaseOutcome.InventoryReady,
+            HandleSecuredMarketInventoryMap(
                 $"Emptor reported Indeterminate, but {marketTargetName} is present in inventory; no order will be resubmitted.",
                 verifiedEmptorPurchase: false);
             return;
@@ -4034,6 +4114,385 @@ public class StateManager : IDisposable
             string.IsNullOrWhiteSpace(terminal.Message)
                 ? $"Emptor purchase failed operationally: {reason}."
                 : $"Emptor purchase failed operationally: {reason}. {terminal.Message}");
+    }
+
+    private void HandleSecuredMarketInventoryMap(string detail, bool verifiedEmptorPurchase)
+    {
+        marketBatchSecuredCount++;
+        if (verifiedEmptorPurchase)
+            marketStickySuccessWorldId = marketTargetWorldId;
+
+        ClearCurrentMarketOrderRuntime();
+        _plugin.AddDebugLog(
+            $"[MarketPurchase][Batch] Secured {marketBatchSecuredCount}/{marketBatchTargetCount} {marketTargetName} map(s). {detail}");
+
+        if (marketBatchSecuredCount >= marketBatchTargetCount || !MarketBatchAllowsAnotherOrder())
+        {
+            FinishMarketSearch(
+                MarketPurchaseOutcome.InventoryReady,
+                $"Prepared {marketBatchSecuredCount} of {marketBatchTargetCount} planned {marketTargetName} map(s). {detail}",
+                verifiedEmptorPurchase: false);
+            return;
+        }
+
+        if (marketBatchUseSaddlebag && !marketBatchSaddlebagStored)
+        {
+            BeginMarketBatchSaddlebagStorage();
+            return;
+        }
+
+        if (marketBatchUseKeyItem && !marketBatchKeyItemStored)
+        {
+            BeginMarketBatchDecipher();
+            return;
+        }
+
+        AddMarketBatchWarning("No safe storage slot remained for another map order.");
+        FinishMarketSearch(
+            MarketPurchaseOutcome.InventoryReady,
+            $"Prepared {marketBatchSecuredCount} of {marketBatchTargetCount} planned {marketTargetName} map(s).",
+            verifiedEmptorPurchase: false);
+    }
+
+    private bool MarketBatchAllowsAnotherOrder()
+    {
+        if (marketBatchSecuredCount >= marketBatchTargetCount)
+            return false;
+
+        var configuredRuns = _plugin.Configuration.GetMapRunCount(marketTargetItemId);
+        if (configuredRuns == Configuration.MapRunCountMax)
+            return true;
+
+        var resolvedKeyRuns = marketBatchKeyItemStored && selectedMapRunCountDecremented ? 1 : 0;
+        var securedAwaitingRuns = Math.Max(0, marketBatchSecuredCount - resolvedKeyRuns);
+        return configuredRuns > securedAwaitingRuns;
+    }
+
+    private void PrepareNextMarketBatchOrder()
+    {
+        if (!MarketBatchAllowsAnotherOrder())
+        {
+            FinishMarketSearch(
+                MarketPurchaseOutcome.InventoryReady,
+                $"Prepared {marketBatchSecuredCount} {marketTargetName} map(s); the configured remaining run count no longer allows another order.",
+                verifiedEmptorPurchase: false);
+            return;
+        }
+
+        var inventoryCount = _plugin.InventoryService.GetMapCount(marketTargetItemId);
+        if (inventoryCount > 0)
+        {
+            AddMarketBatchWarning($"Normal inventory still contains {inventoryCount} {marketTargetName} map(s), so another quantity-one order was not submitted.");
+            FinishMarketSearch(
+                MarketPurchaseOutcome.InventoryReady,
+                $"Prepared {marketBatchSecuredCount} of {marketBatchTargetCount} planned {marketTargetName} map(s).",
+                verifiedEmptorPurchase: false);
+            return;
+        }
+
+        ClearCurrentMarketOrderRuntime();
+        marketInitialInventoryCount = inventoryCount;
+        EnterMarketPurchaseStep(
+            MarketPurchaseStep.SubmittingOrder,
+            $"Buying map {marketBatchSecuredCount + 1} of {marketBatchTargetCount}: {marketTargetName}...");
+    }
+
+    private void ClearCurrentMarketOrderRuntime()
+    {
+        marketOwnedOrderId = string.Empty;
+        marketOwnedOrderCancelIssued = false;
+        marketAddonCloseAttempted = false;
+        marketTerminalOrder = null;
+        marketPendingOperationalFailure = string.Empty;
+        marketNextOrderPollAt = DateTime.MinValue;
+    }
+
+    private void BeginMarketBatchSaddlebagStorage()
+    {
+        marketBatchSaddlebagMovePlan = null;
+        marketBatchSaddlebagAddonVisibleSince = DateTime.MinValue;
+        EnterMarketPurchaseStep(
+            MarketPurchaseStep.OpeningBatchSaddlebag,
+            $"Opening saddlebag to store {marketTargetName} before the next order...");
+    }
+
+    private void TickOpeningMarketBatchSaddlebag()
+    {
+        if (MarketBatchStepTimedOut("opening InventoryBuddy"))
+            return;
+
+        if (!CanRunSaddlebagAction(out var reason))
+        {
+            StateDetail = $"Waiting to open saddlebag for map batching: {reason}";
+            return;
+        }
+
+        if (GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            marketBatchSaddlebagAddonVisibleSince = DateTime.Now;
+            EnterMarketPurchaseStep(
+                MarketPurchaseStep.WaitingForBatchSaddlebagStable,
+                $"Waiting for saddlebag UI to stabilize before storing {marketTargetName}...");
+            return;
+        }
+
+        CommandHelper.SendCommand("/saddlebag");
+        EnterMarketPurchaseStep(
+            MarketPurchaseStep.WaitingForBatchSaddlebag,
+            $"Waiting for InventoryBuddy before storing {marketTargetName}...");
+    }
+
+    private void TickWaitingForMarketBatchSaddlebag()
+    {
+        if (MarketBatchStepTimedOut("waiting for InventoryBuddy"))
+            return;
+
+        if (!CanRunSaddlebagAction(out var reason))
+        {
+            StateDetail = $"Waiting for saddlebag UI during map batching: {reason}";
+            return;
+        }
+
+        if (!GameHelpers.IsAddonVisible("InventoryBuddy"))
+            return;
+
+        marketBatchSaddlebagAddonVisibleSince = DateTime.Now;
+        EnterMarketPurchaseStep(
+            MarketPurchaseStep.WaitingForBatchSaddlebagStable,
+            $"Waiting for saddlebag UI to stabilize before storing {marketTargetName}...");
+    }
+
+    private void TickWaitingForStableMarketBatchSaddlebag()
+    {
+        if (MarketBatchStepTimedOut("waiting for stable InventoryBuddy"))
+            return;
+
+        if (!CanRunSaddlebagAction(out var reason))
+        {
+            StateDetail = $"Waiting for stable saddlebag UI during map batching: {reason}";
+            return;
+        }
+
+        if (!GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            EnterMarketPurchaseStep(
+                MarketPurchaseStep.OpeningBatchSaddlebag,
+                $"Reopening saddlebag to store {marketTargetName}...");
+            return;
+        }
+
+        if (DateTime.Now - marketBatchSaddlebagAddonVisibleSince < SaddlebagAddonStableDelay)
+            return;
+
+        _plugin.InventoryService.ScanForMapSources(includeSaddlebags: true);
+        if (!_plugin.InventoryService.TryPlanInventoryMapToSaddlebagMove(
+                marketTargetItemId,
+                out var plan,
+                out var detail))
+        {
+            FailMarketBatchStep($"Could not plan safe saddlebag storage: {detail}");
+            return;
+        }
+
+        marketBatchSaddlebagMovePlan = plan;
+        _plugin.AddDebugLog($"[MarketPurchase][Batch] Inventory-to-saddlebag plan: {detail}");
+        EnterMarketPurchaseStep(
+            MarketPurchaseStep.MovingBatchMapToSaddlebag,
+            $"Moving {marketTargetName} into the saddlebag...");
+    }
+
+    private void TickMovingMarketBatchMapToSaddlebag()
+    {
+        if (MarketBatchStepTimedOut("moving the purchased map into the saddlebag"))
+            return;
+        if (DateTime.Now - marketStepStartedAt < TimeSpan.FromMilliseconds(500))
+            return;
+
+        if (marketBatchSaddlebagMovePlan == null)
+        {
+            FailMarketBatchStep("The inventory-to-saddlebag move plan was lost.");
+            return;
+        }
+
+        if (!CanRunSaddlebagAction(out var reason))
+        {
+            StateDetail = $"Waiting to store the purchased map: {reason}";
+            return;
+        }
+
+        if (!GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            FailMarketBatchStep("InventoryBuddy closed before the planned saddlebag move.");
+            return;
+        }
+
+        if (!_plugin.InventoryService.TryMovePlannedInventoryMapToSaddlebag(
+                marketBatchSaddlebagMovePlan,
+                out var detail))
+        {
+            FailMarketBatchStep($"The guarded saddlebag move was not issued: {detail}");
+            return;
+        }
+
+        _plugin.AddDebugLog($"[MarketPurchase][Batch] {detail}");
+        EnterMarketPurchaseStep(
+            MarketPurchaseStep.ConfirmingBatchSaddlebagMove,
+            $"Confirming {marketTargetName} moved into the saddlebag...");
+    }
+
+    private void TickConfirmingMarketBatchSaddlebagMove()
+    {
+        if (MarketBatchStepTimedOut("confirming the saddlebag move"))
+            return;
+
+        if (marketBatchSaddlebagMovePlan == null)
+        {
+            FailMarketBatchStep("The inventory-to-saddlebag confirmation plan was lost.");
+            return;
+        }
+
+        if (!_plugin.InventoryService.TryConfirmInventoryMapMovedToSaddlebag(
+                marketBatchSaddlebagMovePlan,
+                out var detail))
+        {
+            StateDetail = detail;
+            if (!GameHelpers.IsAddonVisible("InventoryBuddy"))
+                FailMarketBatchStep($"InventoryBuddy closed before move confirmation: {detail}");
+            return;
+        }
+
+        _plugin.AddDebugLog($"[MarketPurchase][Batch] {detail}");
+        if (GameHelpers.IsAddonVisible("InventoryBuddy"))
+            GameHelpers.CloseCurrentAddon();
+
+        marketBatchSaddlebagStored = true;
+        marketBatchSaddlebagMovePlan = null;
+        marketBatchSaddlebagAddonVisibleSince = DateTime.MinValue;
+        PrepareNextMarketBatchOrder();
+    }
+
+    private bool MarketBatchStepTimedOut(string action)
+    {
+        if (DateTime.Now - marketStepStartedAt <= SaddlebagStepTimeout)
+            return false;
+
+        FailMarketBatchStep($"Timed out {action} after {SaddlebagStepTimeout.TotalSeconds:F0} seconds.");
+        return true;
+    }
+
+    private void BeginMarketBatchDecipher()
+    {
+        if (_plugin.InventoryService.TryFindTreasureMapKeyItem(out var existingKeyItem))
+        {
+            FailMarketBatchStep($"Cannot decipher a batch map because key item '{existingKeyItem.DisplayName}' is already occupied.");
+            return;
+        }
+
+        marketBatchDecipherInitialInventoryCount = _plugin.InventoryService.GetMapCount(marketTargetItemId);
+        if (marketBatchDecipherInitialInventoryCount <= 0)
+        {
+            FailMarketBatchStep($"Cannot decipher {marketTargetName} because it is no longer in normal inventory.");
+            return;
+        }
+
+        SelectedMapItemId = marketTargetItemId;
+        NormalizeLandingModeForSelectedMap("[MarketPurchase][Batch]");
+        initialMapCount = marketBatchDecipherInitialInventoryCount;
+        mapCountChecked = false;
+        mapOpeningRetried = false;
+        MarkSelectedMapRunCountPending("[MarketPurchase][Batch]");
+        ClearCompletedStaleKeyItemSuppression("[MarketPurchase][Batch] deciphering secured map");
+        ResetPerMapCommandTriggers();
+        _plugin.TreasureMapLocationService.ClearCapturedLocation();
+        if (!Plugin.Condition[ConditionFlag.BetweenAreas] && !Plugin.Condition[ConditionFlag.BetweenAreas51])
+        {
+            var cleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
+            _plugin.AddDebugLog($"[MarketPurchase][Batch] Cleared map flag before batch decipher (verified={cleared}).");
+        }
+
+        marketBatchDecipherIssued = false;
+        marketBatchNextDecipherAttemptAt = DateTime.MinValue;
+        EnterMarketPurchaseStep(
+            MarketPurchaseStep.DecipheringBatchMap,
+            $"Deciphering {marketTargetName} into the key-item slot before the next order...");
+    }
+
+    private void TickDecipheringMarketBatchMap()
+    {
+        var inventoryCount = _plugin.InventoryService.GetMapCount(marketTargetItemId);
+        if (inventoryCount < marketBatchDecipherInitialInventoryCount &&
+            _plugin.InventoryService.TryFindTreasureMapKeyItem(out var keyItem) &&
+            (keyItem.KnownMapItemId == 0 || keyItem.KnownMapItemId == marketTargetItemId))
+        {
+            UpdateActiveKeyItemMap(keyItem, "[MarketPurchase][Batch]");
+            activeKeyItemRecoveryPopupShown = true;
+            marketBatchKeyItemStored = true;
+            GameHelpers.CancelPendingMapDecipher();
+            marketBatchDecipherIssued = false;
+            if (TryResolveActiveKeyItemMapTarget(keyItem, out _, out var recoverySource))
+            {
+                ConsumeSelectedMapRunCountIfPending("[MarketPurchase][Batch] target resolved");
+                _plugin.AddDebugLog(
+                    $"[MarketPurchase][Batch] Cached deciphered target from {recoverySource}; travel remains deferred until market return and party restoration finish.");
+            }
+            else
+            {
+                _plugin.AddDebugLog(
+                    "[MarketPurchase][Batch] Key item confirmed; target is still resolving and run-count decrement remains armed.");
+            }
+
+            PrepareNextMarketBatchOrder();
+            return;
+        }
+
+        if (DateTime.Now - marketStepStartedAt > MarketBatchDecipherTimeout)
+        {
+            GameHelpers.CancelPendingMapDecipher();
+            marketBatchDecipherIssued = false;
+            if (inventoryCount >= marketBatchDecipherInitialInventoryCount)
+                ClearSelectedMapRunCountDecrement("[MarketPurchase][Batch] decipher failed with inventory intact");
+            FailMarketBatchStep(
+                $"Could not confirm {marketTargetName} in the key-item slot within {MarketBatchDecipherTimeout.TotalSeconds:F0} seconds.");
+            return;
+        }
+
+        if (marketBatchDecipherIssued)
+        {
+            ClickYesIfVisibleWithDiagnostics("MarketPurchase.BatchDecipherConfirm");
+            return;
+        }
+
+        if (DateTime.Now < marketBatchNextDecipherAttemptAt)
+            return;
+
+        marketBatchNextDecipherAttemptAt = DateTime.Now + MarketBatchDecipherRetryInterval;
+        if (GameHelpers.UseItem(marketTargetItemId, _plugin.InventoryService))
+        {
+            marketBatchDecipherIssued = true;
+            _plugin.AddDebugLog($"[MarketPurchase][Batch] Batch decipher triggered for {marketTargetName}.");
+        }
+    }
+
+    private void FailMarketBatchStep(string detail)
+    {
+        if (GameHelpers.IsAddonVisible("InventoryBuddy"))
+            GameHelpers.CloseCurrentAddon();
+
+        marketBatchSaddlebagMovePlan = null;
+        marketBatchSaddlebagAddonVisibleSince = DateTime.MinValue;
+        AddMarketBatchWarning(detail);
+        _plugin.AddDebugLog($"[MarketPurchase][Batch] Partial batch: {detail}");
+        FinishMarketSearch(
+            MarketPurchaseOutcome.InventoryReady,
+            $"Prepared {marketBatchSecuredCount} of {marketBatchTargetCount} planned {marketTargetName} map(s); continuing with secured stock.",
+            verifiedEmptorPurchase: false);
+    }
+
+    private void AddMarketBatchWarning(string detail)
+    {
+        marketBatchDeferredWarning = string.IsNullOrWhiteSpace(marketBatchDeferredWarning)
+            ? detail
+            : $"{marketBatchDeferredWarning} {detail}";
     }
 
     private static bool IsNoAcceptableListing(EmptorOrderStatus status)
@@ -4077,6 +4536,22 @@ public class StateManager : IDisposable
 
     private void FinishMarketSearch(MarketPurchaseOutcome outcome, string detail, bool verifiedEmptorPurchase)
     {
+        if (marketBatchSecuredCount > 0 && outcome != MarketPurchaseOutcome.InventoryReady)
+        {
+            AddMarketBatchWarning($"An additional batch step failed: {detail}");
+            outcome = MarketPurchaseOutcome.InventoryReady;
+            detail = $"Prepared {marketBatchSecuredCount} of {marketBatchTargetCount} planned {marketTargetName} map(s); continuing with secured stock.";
+        }
+
+        if (marketBatchSecuredCount > 0 && !string.IsNullOrWhiteSpace(marketBatchDeferredWarning))
+        {
+            var warning = $"Market batch warning: {marketBatchDeferredWarning} Continuing with {marketBatchSecuredCount} secured {marketTargetName} map(s).";
+            SetWarning(warning);
+            _plugin.PrintChat(warning);
+            _plugin.AddDebugLog($"[MarketPurchase][Batch] {warning}");
+            detail = $"{detail} {warning}";
+        }
+
         marketPurchaseOutcome = outcome;
         marketOutcomeDetail = detail;
         var endingWorldId = GetCurrentWorldId();
@@ -4243,6 +4718,22 @@ public class StateManager : IDisposable
 
     private string StopMarketPurchaseImmediately()
     {
+        if (marketPurchaseStep == MarketPurchaseStep.DecipheringBatchMap || marketBatchDecipherIssued)
+        {
+            GameHelpers.CancelPendingMapDecipher();
+            ClearSelectedMapRunCountDecrement("[MarketPurchase][Stop]");
+        }
+
+        if ((marketPurchaseStep is MarketPurchaseStep.OpeningBatchSaddlebag
+            or MarketPurchaseStep.WaitingForBatchSaddlebag
+            or MarketPurchaseStep.WaitingForBatchSaddlebagStable
+            or MarketPurchaseStep.MovingBatchMapToSaddlebag
+            or MarketPurchaseStep.ConfirmingBatchSaddlebagMove) &&
+            GameHelpers.IsAddonVisible("InventoryBuddy"))
+        {
+            GameHelpers.CloseCurrentAddon();
+        }
+
         if (!string.IsNullOrWhiteSpace(marketOwnedOrderId) && !marketOwnedOrderCancelIssued)
         {
             marketOwnedOrderCancelIssued = true;
@@ -4283,6 +4774,9 @@ public class StateManager : IDisposable
 
     private void ResetMarketSearchRuntime()
     {
+        if (marketBatchDecipherIssued)
+            GameHelpers.CancelPendingMapDecipher();
+
         marketPurchaseStep = MarketPurchaseStep.Idle;
         marketPurchaseOutcome = MarketPurchaseOutcome.None;
         marketVisitedWorldIds.Clear();
@@ -4299,6 +4793,7 @@ public class StateManager : IDisposable
         marketOwnedOrderCancelIssued = false;
         marketAddonCloseAttempted = false;
         marketTerminalOrder = null;
+        marketPendingOperationalFailure = string.Empty;
         marketNextOrderPollAt = DateTime.MinValue;
         marketStepStartedAt = DateTime.MinValue;
         marketTravelSettledAt = DateTime.MinValue;
@@ -4313,6 +4808,20 @@ public class StateManager : IDisposable
         marketLastPartyInviteAt = DateTime.MinValue;
         marketOutcomeDetail = string.Empty;
         marketReturnToCompletedWhenDone = false;
+        marketEmptorCityKey = string.Empty;
+        marketBatchRequestedCount = 0;
+        marketBatchTargetCount = 0;
+        marketBatchSecuredCount = 0;
+        marketBatchUseSaddlebag = false;
+        marketBatchSaddlebagStored = false;
+        marketBatchUseKeyItem = false;
+        marketBatchKeyItemStored = false;
+        marketBatchSaddlebagMovePlan = null;
+        marketBatchSaddlebagAddonVisibleSince = DateTime.MinValue;
+        marketBatchDecipherIssued = false;
+        marketBatchDecipherInitialInventoryCount = 0;
+        marketBatchNextDecipherAttemptAt = DateTime.MinValue;
+        marketBatchDeferredWarning = string.Empty;
     }
 
     private void EnterMarketPurchaseStep(MarketPurchaseStep step, string detail)
