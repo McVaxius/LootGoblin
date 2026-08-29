@@ -111,6 +111,7 @@ public sealed class Plugin : IDalamudPlugin
     private string lastSlowUpdateSource = "none";
     private IReadOnlyList<uint> cachedRetainerRunnableMapIds = Array.Empty<uint>();
     private string cachedRetainerRunnableMapIdsSignature = string.Empty;
+    private IReadOnlyList<uint> marketableKnownMapItemIds = Array.Empty<uint>();
     private bool observedEnabledState;
     private readonly MogtomeEventClient mogtomeEventClient;
     private long mogtomeReminderGeneration;
@@ -162,6 +163,7 @@ public sealed class Plugin : IDalamudPlugin
         MapFlagService = new MapFlagService(this, Log);
         VNavIPC = new VNavIPC(this, PluginInterface, Log);
         EmptorIPC = new EmptorIPC(PluginInterface, Log);
+        marketableKnownMapItemIds = GetMarketableKnownMapItemIds();
         LifestreamIPC = new LifestreamIPC(PluginInterface, Log);
         RotationPluginIPC = new RotationPluginIPC(this, PluginInterface, Log);
         YesAlreadyIPC = new YesAlreadyIPC(this, Log);
@@ -542,6 +544,10 @@ public sealed class Plugin : IDalamudPlugin
             var loading = IsAreaTransitionActive();
             if (!loading)
             {
+                Measure("emptor-prices", () => EmptorIPC.UpdatePrices(
+                    ClientState.IsLoggedIn,
+                    marketableKnownMapItemIds,
+                    GetEmptorPriceLookupScope()));
                 Measure("fate-sync", FateSyncService.Update);
                 Measure("food", FoodService.Update);
                 Measure("ads-reflection", () => AdsReflectionIpcService.Update());
@@ -605,6 +611,33 @@ public sealed class Plugin : IDalamudPlugin
         TreasureMapLocationService.CheckAvailability(logStatus);
         RotationPluginIPC.CheckAvailability(logStatus);
         GatherBuddyRebornService.CheckAvailability(logStatus);
+        EmptorIPC.RefreshStatus();
+    }
+
+    internal EmptorPriceLookupScope GetEmptorPriceLookupScope()
+    {
+        if (Configuration.IncludeDataCenterTravelForMapPurchases)
+        {
+            return Configuration.IncludeOceTravelForMapPurchases
+                ? EmptorPriceLookupScope.Reachable
+                : EmptorPriceLookupScope.Region;
+        }
+
+        return Configuration.EnableSameDataCenterMapTravel
+            ? EmptorPriceLookupScope.DataCenter
+            : EmptorPriceLookupScope.World;
+    }
+
+    private static IReadOnlyList<uint> GetMarketableKnownMapItemIds()
+    {
+        var itemSheet = DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
+        if (itemSheet == null)
+            return Array.Empty<uint>();
+
+        return TreasureMapData.AllMapItemIds
+            .Where(itemId => itemSheet.GetRow(itemId) is { } item && item.ItemSearchCategory.RowId != 0)
+            .OrderBy(itemId => itemId)
+            .ToArray();
     }
 
     private IReadOnlyList<uint> GetCachedRetainerRunnableMapIds()
@@ -1089,6 +1122,14 @@ public sealed class Plugin : IDalamudPlugin
             configuration.ContinueAfterPartialPartyRestore = true;
             configuration.PartyRestoreTimeoutSeconds = 300;
             configuration.Version = 10;
+            changed = true;
+        }
+
+        if (configuration.Version < 11)
+        {
+            if (string.IsNullOrWhiteSpace(configuration.EmptorMarketboardCityKey))
+                configuration.EmptorMarketboardCityKey = "limsa";
+            configuration.Version = 11;
             changed = true;
         }
 

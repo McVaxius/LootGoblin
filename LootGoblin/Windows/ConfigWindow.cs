@@ -17,17 +17,6 @@ public class ConfigWindow : Window, IDisposable
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
     private const string EmptorRepositoryUrl = "https://raw.githubusercontent.com/Evernow/DalamudPlugins/main/pluginmaster.json";
-    private static readonly (string Key, string Label)[] EmptorMarketboardCities =
-    {
-        (string.Empty, "Ul'dah (Emptor default)"),
-        ("limsa", "Limsa Lominsa"),
-        ("gridania", "Gridania"),
-        ("ishgard", "Foundation"),
-        ("kugane", "Kugane"),
-        ("crystarium", "The Crystarium"),
-        ("sharlayan", "Old Sharlayan"),
-        ("tuliyollal", "Tuliyollal"),
-    };
     private static readonly string[] RsrTargetHostileTypeLabels =
     {
         "All Attackable Targets",
@@ -374,7 +363,8 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Text("Purchase requirements");
         ImGui.BulletText("Enable a cart on a marketable map row and set a positive maximum gil price.");
         ImGui.BulletText("LootGoblin submits quantity-one orders and can prepare up to three maps per trip.");
-        ImGui.BulletText("Emptor v1+ supports the default city; choosing another city requires Emptor v4+.");
+        ImGui.BulletText("Limsa Lominsa is the default. City selection requires Emptor v4+; blank Ul'dah remains compatible with v1-v3.");
+        ImGui.BulletText("Emptor v5+ supplies session-only NQ minimum-listing price hints for known marketable maps.");
 
         var configuredCityKey = configuration.EmptorMarketboardCityKey?.Trim() ?? string.Empty;
         var cityNeedsV4 = !string.IsNullOrEmpty(configuredCityKey) &&
@@ -388,14 +378,15 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             ImGui.SetTooltip("Blank/default city omits the city request field for Emptor v1-v3 compatibility. A selected city is sent only through Emptor API v4 or newer.");
 
-        var currentCityLabel = EmptorMarketboardCities
+        var cityOptions = plugin.EmptorIPC.CityOptions;
+        var currentCityLabel = cityOptions
             .FirstOrDefault(city => string.Equals(city.Key, configuredCityKey, StringComparison.OrdinalIgnoreCase))
-            .Label;
+            ?.Label;
         if (string.IsNullOrWhiteSpace(currentCityLabel))
             currentCityLabel = $"Unknown ({configuredCityKey})";
         if (ImGui.BeginCombo("Emptor marketboard city", currentCityLabel))
         {
-            foreach (var city in EmptorMarketboardCities)
+            foreach (var city in cityOptions)
             {
                 var selected = string.Equals(city.Key, configuredCityKey, StringComparison.OrdinalIgnoreCase);
                 if (ImGui.Selectable(city.Label, selected))
@@ -413,6 +404,7 @@ public class ConfigWindow : Window, IDisposable
         }
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Chooses where Emptor travels for its marketboard. Ul'dah stores a blank key and keeps Emptor's default behavior.");
+        ImGui.TextColored(ColorGrey, plugin.EmptorIPC.CityOptionsStatusText);
 
         ImGui.Spacing();
         ImGui.Separator();

@@ -60,7 +60,9 @@ When a character loads during an active **Moogle Treasure Trove** event, Loot Go
 
 Map settings control enabled map types, per-map run counts, gatherable-map choices, saddlebag retrieval, retainer retrieval, and whether all known map types are shown.
 
-Marketboard settings control optional Emptor purchasing after inventory, saddlebag, retainer, and gathering sources are exhausted. Ul'dah (Emptor default) leaves the request city blank and works with Emptor API v1 or newer; selecting Limsa Lominsa, Gridania, Foundation, Kugane, The Crystarium, Old Sharlayan, or Tuliyollal requires Emptor API v4 or newer. If Emptor is missing, the Marketboard tab shows its repository URL and buttons for `/xlsettings` and `/xlplugins`.
+Marketboard settings control optional Emptor purchasing after inventory, saddlebag, retainer, and gathering sources are exhausted. Limsa Lominsa is the default for new configurations, and existing blank/Ul'dah defaults migrate to Limsa. Emptor API v4 or newer supplies the available city list dynamically; when that IPC is missing or invalid, Loot Goblin retains its built-in choices. Selecting Ul'dah stores the existing blank compatibility key, while any nonblank city requires Emptor v4+. Existing nonblank city choices are preserved. If Emptor is missing, the Marketboard tab shows its repository URL and buttons for `/xlsettings` and `/xlplugins`.
+
+With Emptor v5+, Loot Goblin requests one session-only batch of NQ minimum-listing hints for all known marketable maps after load, deferring it to first login when needed. The lookup scope follows the travel settings: current world, current data center, current region, or reachable regions plus Materia. Hover a map's gil ceiling to see its hint, source world/location, age, scope, and staleness warning; **Use** explicitly copies a positive hint into that ceiling without enabling the cart. Prices are never cached to disk or written into ceilings automatically. A global manual refresh is available after a visible five-minute cooldown, and changing travel settings does not itself refresh prices.
 
 Each Emptor order requests exactly one map at the configured per-map gil cap. A trip is capped by that map's remaining run count: one run leaves one map in inventory; two runs use saddlebag + inventory when saddlebag retrieval is enabled, or deciphered key item + inventory when it is disabled; three or unlimited runs use saddlebag + deciphered key item + inventory. With saddlebag retrieval disabled, a trip can prepare at most two. Because every map has its own cap, one trip can spend the configured cap up to three times. If an extra purchase, guarded saddlebag move, or decipher step fails after a map is secured, Loot Goblin returns and restores the party, warns, and continues with the secured stock.
 
@@ -85,7 +87,7 @@ Required for normal map travel:
 
 Optional:
 
-- **Emptor**: optional missing-map market purchases. Add `https://raw.githubusercontent.com/Evernow/DalamudPlugins/main/pluginmaster.json` in Dalamud Settings, then install Emptor from `/xlplugins`. API v1+ supports the default Ul'dah route; city selection requires v4+.
+- **Emptor**: optional missing-map market purchases. Add `https://raw.githubusercontent.com/Evernow/DalamudPlugins/main/pluginmaster.json` in Dalamud Settings, then install Emptor from `/xlplugins`. Dynamic city selection and the default Limsa route require API v4+; session price hints require v5+. Blank Ul'dah remains the v1-v3 purchase compatibility choice.
 - **ADS**: dungeon solver handoff, ADS loot UI, ADS repair, and BMR reflection settings.
 - **XADB** and **XASlave**: retainer/saddlebag map retrieval support.
 - **AutoRetainer**: auto-discard command support through `/ays discard`.

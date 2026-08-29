@@ -21,6 +21,7 @@ using ECommons.UIHelpers;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using LootGoblin.IPC;
 using LootGoblin.Models;
 using LootGoblin.Services;
 
@@ -318,6 +319,8 @@ public class MainWindow : Window, IDisposable
 
                 DrawMapAllowanceHeader(mapAllowanceStatus, hasGatherJob, plugin.Configuration.DebugMode);
                 ImGui.Spacing();
+                DrawEmptorPriceRefreshControls();
+                ImGui.Spacing();
 
                 if (displayedMapSources.Count == 0)
                 {
@@ -562,8 +565,91 @@ public class MainWindow : Window, IDisposable
             plugin.Configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Maximum gil for one map. Zero disables purchasing for this map.");
+            DrawMapPriceCeilingTooltip(itemId);
+
+        if (plugin.EmptorIPC.TryGetPriceSnapshot(itemId, out var snapshot) &&
+            snapshot.HasPositiveHint &&
+            snapshot.NqMinimumListing is { } priceHint)
+        {
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"Use##purchase_hint_{itemId}"))
+            {
+                plugin.Configuration.SetMapPurchaseGilCap(itemId, (int)priceHint);
+                plugin.Configuration.Save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Copy this session's positive NQ minimum-listing hint into the ceiling. This does not enable the cart.");
+        }
     }
+
+    private void DrawEmptorPriceRefreshControls()
+    {
+        var emptor = plugin.EmptorIPC;
+        var now = DateTime.UtcNow;
+        var remaining = emptor.GetManualPriceRefreshCooldown(now);
+        var pending = emptor.IsPriceRefreshPending || emptor.IsManualPriceRefreshRequested;
+        var blocked = pending || !emptor.IsAvailable || emptor.ApiVersion < 5 || remaining > TimeSpan.Zero;
+
+        if (blocked)
+            ImGui.BeginDisabled();
+        if (ImGui.SmallButton("Refresh Emptor Prices"))
+            emptor.RequestManualPriceRefresh(Plugin.ClientState.IsLoggedIn, out _);
+        if (blocked)
+            ImGui.EndDisabled();
+
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            var tooltip = pending
+                ? "An Emptor price lookup is pending."
+                : !emptor.IsAvailable || emptor.ApiVersion < 5
+                    ? "Emptor API v5 or newer is required for price hints."
+                    : remaining > TimeSpan.Zero
+                        ? $"Manual refresh is available in {FormatPriceCountdown(remaining)}."
+                        : "Queue one global refresh for all marketable known maps using the current travel scope.";
+            ImGui.SetTooltip(tooltip);
+        }
+
+        if (remaining > TimeSpan.Zero)
+        {
+            ImGui.SameLine();
+            ImGui.TextColored(ColorGrey, $"Next manual refresh: {FormatPriceCountdown(remaining)}");
+        }
+
+        ImGui.TextColored(ColorGrey, $"  {emptor.PriceStatusText}");
+    }
+
+    private void DrawMapPriceCeilingTooltip(uint itemId)
+    {
+        var emptor = plugin.EmptorIPC;
+        var scope = emptor.LastPriceLookupScope ?? plugin.GetEmptorPriceLookupScope();
+        var hasSnapshot = emptor.TryGetPriceSnapshot(itemId, out var snapshot);
+
+        ImGui.BeginTooltip();
+        ImGui.TextUnformatted("Maximum gil for one map. Zero disables purchasing for this map.");
+        ImGui.Separator();
+
+        if (hasSnapshot && snapshot.NqMinimumListing is > 0)
+            ImGui.TextUnformatted($"Emptor NQ minimum listing: {snapshot.NqMinimumListing:N0} gil");
+        else
+            ImGui.TextUnformatted("Emptor NQ minimum listing: unavailable");
+
+        ImGui.TextUnformatted($"World: {(hasSnapshot && !string.IsNullOrWhiteSpace(snapshot.World) ? snapshot.World : "unavailable")}");
+        ImGui.TextUnformatted($"Location: {(hasSnapshot && !string.IsNullOrWhiteSpace(snapshot.Location) ? snapshot.Location : "unavailable")}");
+        ImGui.TextUnformatted($"Age: {(hasSnapshot && !string.IsNullOrWhiteSpace(snapshot.Age) ? snapshot.Age : "not reported")}");
+        ImGui.TextUnformatted($"Lookup scope: {EmptorIPC.GetScopeLabel(hasSnapshot ? snapshot.Scope : scope)}");
+
+        var unavailableReason = hasSnapshot ? snapshot.Error : emptor.PriceStatusText;
+        if (!string.IsNullOrWhiteSpace(unavailableReason) && (!hasSnapshot || !snapshot.HasPositiveHint))
+            ImGui.TextColored(ColorYellow, unavailableReason);
+
+        ImGui.Spacing();
+        ImGui.TextColored(ColorGrey, "Price hints live only for this Loot Goblin session; they are not saved to disk.");
+        ImGui.TextColored(ColorGrey, "Listings can change after lookup. Refresh is manual and rate-limited to five minutes.");
+        ImGui.EndTooltip();
+    }
+
+    private static string FormatPriceCountdown(TimeSpan remaining)
+        => $"{Math.Max(0, (int)remaining.TotalMinutes):00}:{Math.Max(0, remaining.Seconds):00}";
 
     private void DrawMapRunCountEditor(uint itemId, bool isEnabled)
     {

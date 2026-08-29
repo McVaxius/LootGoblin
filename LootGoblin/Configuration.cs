@@ -157,7 +157,7 @@ public class Configuration : IPluginConfiguration
     public TreasureHighLowMode TreasureHighLowMode { get; set; } = TreasureHighLowMode.SolveExpectedValue;
 
     // Optional market-board map purchasing
-    public string EmptorMarketboardCityKey { get; set; } = string.Empty;
+    public string EmptorMarketboardCityKey { get; set; } = "limsa";
     public bool EnableSameDataCenterMapTravel { get; set; } = false;
     public MarketWorldStartMode MarketWorldStartMode { get; set; } = MarketWorldStartMode.StickySuccess;
     public bool IncludeDataCenterTravelForMapPurchases { get; set; } = false;
