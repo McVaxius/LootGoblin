@@ -10513,9 +10513,20 @@ public class StateManager : IDisposable
         if (inDuty && IsTreasureDungeonTerritory(Plugin.ClientState.TerritoryType))
             return false;
 
+        if (openingChestCofferMountRecoveryEntityId != 0 &&
+            openingChestCofferMountRecoveryEntityId != chest.EntityId)
+        {
+            ResetOpeningChestCofferMountRecovery();
+        }
+
+        // Keep flight recovery in control until its strict landing handoff.
+        var requiresFlightHandoff = !Plugin.Condition[ConditionFlag.Diving] &&
+                                    !IsThiefUnderwaterLandingMode() &&
+                                    (_plugin.NavigationService.IsFlying() || openingChestCofferMountRecoveryActive);
         var yDistance = Math.Abs(yDelta);
         var handoffDistance = Math.Min(range, OpeningChestCofferMountRecoveryDistance);
-        var closeTargetableCoffer = chest.IsTargetable &&
+        var closeTargetableCoffer = !requiresFlightHandoff &&
+                                    chest.IsTargetable &&
                                     distance > handoffDistance &&
                                     distance < OpeningChestCofferCloseDismountDistance &&
                                     !Plugin.Condition[ConditionFlag.Diving];
@@ -10547,7 +10558,7 @@ public class StateManager : IDisposable
             return false;
         }
 
-        if (ShouldUseNearOpeningChestCofferGroundApproach(chest, playerPosition))
+        if (!requiresFlightHandoff && ShouldUseNearOpeningChestCofferGroundApproach(chest, playerPosition))
         {
             if (distance <= range)
                 return false;
@@ -10561,14 +10572,8 @@ public class StateManager : IDisposable
 
         var displaced = distance > OpeningChestCofferMountRecoveryDistance ||
                         yDistance >= OpeningChestCofferMountRecoveryYDelta;
-        if (!displaced && !openingChestCofferMountRecoveryActive)
+        if (!displaced && !openingChestCofferMountRecoveryActive && !requiresFlightHandoff)
             return false;
-
-        if (openingChestCofferMountRecoveryEntityId != 0 &&
-            openingChestCofferMountRecoveryEntityId != chest.EntityId)
-        {
-            ResetOpeningChestCofferMountRecovery();
-        }
 
         var withinRecoveryHandoff = distance <= handoffDistance &&
                                     yDistance < OpeningChestCofferMountRecoveryYDelta;
