@@ -400,7 +400,8 @@ public class StateManager : IDisposable
     private bool treasureHighLowExhaustedLogged; // Prevent exhausted-strategy log spam
     private int treasureHighLowObservedStage = 1; // Local gamble stage estimate for solver/observe modes
     private string treasureHighLowLastSnapshotSignature = string.Empty; // One log per UI transition
-    private string treasureHighLowLastDecisionSignature = string.Empty; // Prevent repeated clicks on unchanged UI
+    private TreasureHighLowSnapshot? treasureHighLowLastDecision; // Last successful interaction, with its effective stage
+    private bool treasureHighLowDecisionResolving; // Observed loss of a playable choice after that interaction
     private bool bossModOutdoorSuppressionActive; // BMR/VBM off while outdoor BossMod danger/radar output is visible
     private string bossModOutdoorSuppressionReason = "off";
     private bool bossModDangerProbeLoggedOnce;
@@ -17869,6 +17870,12 @@ public class StateManager : IDisposable
     {
         if (!treasureHighLowVisible)
         {
+            if (_plugin.Configuration.TreasureHighLowMode == TreasureHighLowMode.SolveExpectedValue &&
+                treasureHighLowLastDecision != null)
+            {
+                treasureHighLowDecisionResolving = true;
+            }
+
             if (now >= treasureHighLowNextRetryAt)
             {
                 treasureHighLowNextRetryAt = now.Add(TreasureHighLowReopenRetryInterval);
@@ -17885,13 +17892,41 @@ public class StateManager : IDisposable
 
     private bool TryHandleTreasureHighLowSolverMode(DateTime now)
     {
-        if (now < treasureHighLowNextRetryAt)
+        var solveExpectedValue = _plugin.Configuration.TreasureHighLowMode == TreasureHighLowMode.SolveExpectedValue;
+        if (now < treasureHighLowNextRetryAt && (!solveExpectedValue || treasureHighLowLastDecision == null))
         {
             StateDetail = "Waiting for Higher/Lower solver UI to settle...";
             return true;
         }
 
         var snapshot = ReadTreasureHighLowSnapshot();
+        var playable = !solveExpectedValue ||
+                       (snapshot.IsReliable &&
+                        TryResolveTreasureHighLowWorldObject(TreasureHighLowAction.PlayHigher, out _, out _) &&
+                        TryResolveTreasureHighLowWorldObject(TreasureHighLowAction.PlayLower, out _, out _));
+
+        // Observe resolution even during the interaction delay so an equal-card return can rearm the solver.
+        if (solveExpectedValue && treasureHighLowLastDecision != null)
+        {
+            if (!playable)
+            {
+                treasureHighLowDecisionResolving = true;
+            }
+            else if (treasureHighLowDecisionResolving)
+            {
+                treasureHighLowObservedStage = snapshot.Stage ?? Math.Clamp(
+                    treasureHighLowLastDecision.Stage!.Value + (snapshot.Card != treasureHighLowLastDecision.Card ? 1 : 0), 1, 5);
+                treasureHighLowLastDecision = null;
+                treasureHighLowDecisionResolving = false;
+            }
+        }
+
+        if (now < treasureHighLowNextRetryAt)
+        {
+            StateDetail = "Waiting for Higher/Lower solver UI to settle...";
+            return true;
+        }
+
         LogTreasureHighLowSnapshot(snapshot);
 
         if (_plugin.Configuration.TreasureHighLowMode == TreasureHighLowMode.ObserveOnly)
@@ -17916,13 +17951,21 @@ public class StateManager : IDisposable
             return true;
         }
 
-        if (snapshot.Signature == treasureHighLowLastDecisionSignature)
+        if (!playable)
+        {
+            StateDetail = "Waiting for targetable High/Low world objects...";
+            treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
+            return true;
+        }
+
+        var stage = Math.Clamp(snapshot.Stage ?? treasureHighLowObservedStage, 1, 5);
+        if (treasureHighLowLastDecision != null &&
+            snapshot.Card == treasureHighLowLastDecision.Card && stage == treasureHighLowLastDecision.Stage)
         {
             StateDetail = "Waiting for Higher/Lower UI to change after solver callback...";
             return true;
         }
 
-        var stage = Math.Clamp(snapshot.Stage ?? treasureHighLowObservedStage, 1, 5);
         var decision = TreasureHighLowSolver.Decide(stage, snapshot.Card!.Value);
 
         if (!TryResolveTreasureHighLowWorldObject(decision.Action, out var target, out var targetReason))
@@ -17940,10 +17983,12 @@ public class StateManager : IDisposable
         var solverFired = GameHelpers.InteractWithObject(target);
         treasureHighLowAttemptCount++;
         treasureHighLowNextRetryAt = now.Add(TreasureHighLowSettleDelay);
-        treasureHighLowLastDecisionSignature = snapshot.Signature;
-
-        if (solverFired && decision.Action is (TreasureHighLowAction.PlayHigher or TreasureHighLowAction.PlayLower))
-            treasureHighLowObservedStage = Math.Clamp(stage + 1, 1, 5);
+        if (solverFired)
+        {
+            treasureHighLowLastDecision = snapshot with { Stage = stage };
+            treasureHighLowDecisionResolving = false;
+            treasureHighLowObservedStage = stage;
+        }
 
         StateDetail = solverFired
             ? $"Playing Higher/Lower stage {stage}: {decision.Action}..."
@@ -18043,7 +18088,7 @@ public class StateManager : IDisposable
             ? "single visible card digit and bounded stage"
             : $"card candidates={string.Join(",", cardCandidates)} stage={stage} source={stageSource}";
 
-        return new TreasureHighLowSnapshot(card, cardCandidates, stage, stageSource, reliable, reason, visibleTexts);
+        return new TreasureHighLowSnapshot(card, cardCandidates, parsedStage, stageSource, reliable, reason, visibleTexts);
     }
 
     private static unsafe void CollectTextFromKnownNodeRanges(AtkUnitBase* unit, List<TreasureHighLowTextEntry> visibleTexts)
@@ -18144,7 +18189,8 @@ public class StateManager : IDisposable
         treasureHighLowExhaustedLogged = false;
         treasureHighLowObservedStage = 1;
         treasureHighLowLastSnapshotSignature = string.Empty;
-        treasureHighLowLastDecisionSignature = string.Empty;
+        treasureHighLowLastDecision = null;
+        treasureHighLowDecisionResolving = false;
     }
 
     private sealed record TreasureHighLowSnapshot(

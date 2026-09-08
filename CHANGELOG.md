@@ -14,6 +14,8 @@ All notable changes to LootGoblin will be documented in this file.
 - **RSR hostile targeting** - Added a persisted Integrations setting for FrenRider's five hostile-target modes that applies through RSR IPC before `/rotation auto` or `/rotation manual` command triggers.
 
 ### Fixed
+- **Automatic map allowance checks** - `/timers` now opens automatically only when the current character has an unlocked selected gathering job; disabled gathering no longer opens it.
+- **Higher/Lower equal-card rerolls** - Solve Expected Value now waits for successful interaction and an observed resolution before retrying an equal card, and advances its estimated round only when the completed transition returns a different card.
 - **Coffer recovery landing** - Non-underwater coffer approaches now bypass early ground/dismount shortcuts while airborne or mounted recovery is active, preserving the flight handoff at the configured range capped at 3y and less than 0.5y vertical difference.
 - **Completed-duty exit** - Loot Goblin now stops dungeon progression on completion and uses the configured local-delay, party-departure, ADS-delay, or manual exit mode so the map owner can leave reliably.
 - **BossMod outdoor suppression** - Outdoor BMR/VBM suppression now requires visible BossMod danger signals (BMR active module or VBM forbidden zones), shows the detected state in the main UI, and restores AI once the outdoor flow ends on foot.

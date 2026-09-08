@@ -5,6 +5,7 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using LootGoblin.Models;
 
 namespace LootGoblin.Services;
 
@@ -351,6 +352,26 @@ public sealed class MapAllowanceService : IDisposable
     {
         if (autoOpenPending || now - lastAutoOpenAttemptUtc < AutoOpenRetryInterval)
             return;
+
+        if (!Plugin.PlayerState.IsLoaded ||
+            activeContentId == 0 ||
+            Plugin.PlayerState.ContentId != activeContentId ||
+            plugin.ActiveMapGatherContentId != activeContentId)
+        {
+            return;
+        }
+
+        var gatherJobId = plugin.SelectedGatherJobId;
+        if (gatherJobId == 0 || !ClassJobOptions.IsGatherJob(gatherJobId))
+            return;
+
+        var classJobs = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.ClassJob>();
+        if (classJobs == null ||
+            !classJobs.TryGetRow(gatherJobId, out var gatherJob) ||
+            Plugin.PlayerState.GetClassJobLevel(gatherJob) <= 0)
+        {
+            return;
+        }
 
         lastAutoOpenAttemptUtc = now;
         if (!CommandHelper.TrySendCommand("/timers"))
