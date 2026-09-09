@@ -38,7 +38,7 @@ Common commands:
 /lg fetchretainer
 ```
 
-Every `/lg` command also works with `/lootgoblin`. `/lg debug` toggles map diagnostics in the UI. `/lg fetchretainer` starts manual retainer map retrieval when XADB/XASlave support is available and a configured map exists on a retainer.
+Every `/lg` command also works with `/lootgoblin`. `/lg debug` toggles map diagnostics in the UI. `/lg fetchretainer` starts manual retainer map retrieval when XADB is available and a configured map exists on a retainer.
 
 ## Core Workflow
 
@@ -58,7 +58,9 @@ When a character loads during an active **Moogle Treasure Trove** event, Loot Go
 
 ## Configuration
 
-Map settings control enabled map types, per-map run counts, gatherable-map choices, saddlebag retrieval, retainer retrieval, and whether all known map types are shown.
+Use **Search settings** above the nine settings tabs to highlight matching tabs, including settings currently hidden behind another option. Search ignores case and requires every word to match within a tab's terms: try `discard`, `inventory space`, `leave duty`, or `repair`. Select a highlighted tab to view its controls; **Clear** or closing settings resets the search. Brief guidance in each tab explains setup requirements and labels factory defaults separately from your current selections.
+
+**Map Queue** in the main window controls enabled map types, per-map run counts, gatherable-map choices, and whether all known map types are shown. The **Maps** settings tab controls saddlebag/retainer retrieval and location updates.
 
 Marketboard settings control optional Emptor purchasing after inventory, saddlebag, retainer, and gathering sources are exhausted. Limsa Lominsa is the default for new configurations, and existing blank/Ul'dah defaults migrate to Limsa. Emptor API v4 or newer supplies the available city list dynamically; when that IPC is missing or invalid, Loot Goblin retains its built-in choices. Selecting Ul'dah stores the existing blank compatibility key, while any nonblank city requires Emptor v4+. Existing nonblank city choices are preserved. If Emptor is missing, the Marketboard tab shows its repository URL and buttons for `/xlsettings` and `/xlplugins`.
 
@@ -89,8 +91,8 @@ Optional:
 
 - **Emptor**: optional missing-map market purchases. Add `https://raw.githubusercontent.com/Evernow/DalamudPlugins/main/pluginmaster.json` in Dalamud Settings, then install Emptor from `/xlplugins`. Dynamic city selection and the default Limsa route require API v4+; session price hints require v5+. Blank Ul'dah remains the v1-v3 purchase compatibility choice.
 - **ADS**: dungeon solver handoff, ADS loot UI, ADS repair, and BMR reflection settings.
-- **XADB** and **XASlave**: retainer/saddlebag map retrieval support.
-- **AutoRetainer**: auto-discard command support through `/ays discard`.
+- **XADB**: retainer map lookup. Loot Goblin handles retainer and saddlebag retrieval through the game UI.
+- **AutoRetainer**: auto-discard command support through `/ays discard`; requires a configured discard list. Auto Discard is off by factory default. When selected, it runs while Loot Goblin is enabled, during safe mounted windows.
 - **RotationSolver Reborn, BossMod Reborn, VBM, Wrath**: command-trigger and combat automation support. BossMod Reborn is detected as the map-AI-capable option.
 - **TextAdvance**: optional Alexandrite dialogue support.
 - **GatherBuddyReborn**: optional map gathering support.

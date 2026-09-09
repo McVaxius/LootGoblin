@@ -16,6 +16,52 @@ public class ConfigWindow : Window, IDisposable
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
+    // Include conditional controls here so they remain discoverable regardless of current selections.
+    private static readonly Dictionary<string, string> SettingsTabSearchTerms = new()
+    {
+        ["Run"] = "Combat job current job gearset class selection; Gather job (current character) disabled gathering prerequisites " +
+            "GatherBuddyReborn GBR botanist miner fisher unlocked Map Queue gatherable maps; " +
+            "Max map allowance wait (min) minutes cooldown timers; Return when done return destination Lifestream FC free company personal house inn; " +
+            "ADS repair threshold % percent repair mode durability gear equipment self NPC no inn + no TP teleport factory defaults",
+        ["Maps"] = "Map Queue map selection enabled types run counts gather choices show all known maps; " +
+            "Fetch maps from retainers retrieval withdraw retainer bell XA Database XADB; " +
+            "Fetch maps from saddlebags inventory saddlebag storage; Auto-update locations on login download updated locs " +
+            "community location data coordinates database dependencies factory defaults",
+        ["Marketboard"] = "Emptor install repository copy repo URL open /xlsettings /xlplugins plugin installer API v1 v2 v3 v4 v5; " +
+            "Purchase requirements buy buying shopping cart marketable maps maximum gil price cap ceiling quantity orders trip; " +
+            "Refresh Emptor Prices hints NQ minimum listing session cooldown countdown pending scope; " +
+            "Emptor marketboard city Limsa Lominsa Ul'dah Gridania Kugane Crystarium Old Sharlayan Tuliyollal; " +
+            "Include same-data-center server travel for purchasing maps world visit rotate sticky success; " +
+            "Continue if not all party members rejoin after seconds party restore restoration timeout invite roster leader disband; " +
+            "Include data center travel for purchasing maps DC region Lifestream starting world; " +
+            "Include visiting OCE for maps once local data centers are exhausted Oceania Materia factory defaults",
+        ["Travel"] = "Auto Teleport Lifestream /li; Require vnavmesh vnav navigation pathfinding movement flying requirements; " +
+            "Do not use Tamamizu aetheryte avoid skip destination; Nav Timeout (s) seconds; " +
+            "Mount Selection search manual mounting unlocked Company Chocobo factory defaults",
+        ["Party"] = "Wait for Party; Wait for Party for thief maps / underwater; Require All Mounted takeoff remount recovery; " +
+            "Party Wait Timeout (s) seconds; Time to wait before teleporting (s) delay; OPEN ADS LOOT OPTIONS; " +
+            "Wait for party before dismounting landing proximity distance 10 yalms; Specify number of party to wait for " +
+            "Players to wait for count threshold other players excludes self; Summon Chocobo companion Gysahl Greens " +
+            "Companion Stance Free Defender Attacker Healer Follow sanctuary duties optional factory defaults",
+        ["Dungeon/Loot"] = "Use ADS for dungeon phase handoff /ads inside legacy solver portal duty entry; " +
+            "Completed-duty exit leave duty Loot Goblin: exit after delay exit when all others have left party departure " +
+            "ADS: exit after delay /ads leave No automatic exit manual Duty-end delay (s) seconds; " +
+            "Auto Loot Chest coffer Interaction Range (y) yalms Chest Open Timeout (s); " +
+            "Gambler's Lure Solver Higher/Lower High/Low cards minigame Solve EV expected value Skip Observe only factory defaults",
+        ["Integrations"] = "Optional automation plugins; Food search selected Use HQ food high quality NQ Clear Food " +
+            "Search for Food if Depleted inventory fallback buff Boiled Egg FrenRider; " +
+            "Auto Discard (/ays discard) AutoRetainer configured discard list inventory space cleanup safe mounted windows enabled; " +
+            "Auto Sync FATE /levelsync; RSR hostile targeting RotationSolver Reborn All Attackable Targets Previously Engaged Targets " +
+            "All Targets When Solo in Duty All Targets When Solo Solo Deep Dungeon Smart; " +
+            "ADS BMR Adjustments BossMod Reborn reduce activation range for outdoor areas MaxLoadDistance Disable Hunt Modules reflection; " +
+            "Command Triggers slash commands Landing Duty Entry Finish Defaults add remove slots global profile " +
+            "Use current-character command trigger override /rotation auto manual cancel /bmrai /vbmai VBM /fr /cbt follow combat factory defaults",
+        ["Interface"] = "Show Main Window on Login visibility behavior; Movable Settings Window move lock position; " +
+            "Krangle Names name obfuscation privacy player party server world display factory defaults",
+        ["Advanced"] = "Debug Mode Enable State Logging Map Diagnostics location data aetheryte collection tools " +
+            "Ground-only map diagnostics; Write dedicated LootGoblin diagnostic log Open Log Folder Write Snapshot Now " +
+            "troubleshooting debug logs; Disable Pandora's Box; Test ADS Repair Mode factory defaults",
+    };
     private const string EmptorRepositoryUrl = "https://raw.githubusercontent.com/Evernow/DalamudPlugins/main/pluginmaster.json";
     private static readonly string[] RsrTargetHostileTypeLabels =
     {
@@ -28,6 +74,7 @@ public class ConfigWindow : Window, IDisposable
     
     private readonly Configuration configuration;
     private readonly Plugin plugin;
+    private string settingsSearch = string.Empty;
     private string mountSearch = "";
     private string foodSearch = "";
     private readonly List<(uint Id, string Name)> foodItems = new();
@@ -60,6 +107,7 @@ public class ConfigWindow : Window, IDisposable
     public override void OnClose()
     {
         SaveCommandTriggerDraftsIfDirty("close");
+        settingsSearch = string.Empty;
     }
 
     internal void OpenMarketboardTab()
@@ -121,15 +169,37 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
+        ImGui.SetNextItemWidth(220);
+        ImGui.InputText("Search settings", ref settingsSearch, 128);
+        ImGui.SameLine();
+        if (ImGui.SmallButton("Clear##SettingsSearch"))
+            settingsSearch = string.Empty;
+
+        var searchWords = settingsSearch.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var matchingTabs = searchWords.Length == 0
+            ? Array.Empty<string>()
+            : SettingsTabSearchTerms
+                .Where(tab => searchWords.All(word =>
+                    tab.Key.Contains(word, StringComparison.OrdinalIgnoreCase) ||
+                    tab.Value.Contains(word, StringComparison.OrdinalIgnoreCase)))
+                .Select(tab => tab.Key)
+                .ToArray();
+
+        if (searchWords.Length > 0 && matchingTabs.Length == 0)
+            ImGui.TextDisabled("No matching tabs.");
+        else
+            ImGui.TextDisabled("Matching tabs are highlighted. Select a tab to view settings.");
+        ImGui.Spacing();
+
         if (ImGui.BeginTabBar("##LootGoblinSettingsTabs"))
         {
-            if (ImGui.BeginTabItem("Run"))
+            if (BeginSettingsTab("Run", matchingTabs))
             {
                 DrawRunTab();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Maps"))
+            if (BeginSettingsTab("Maps", matchingTabs))
             {
                 DrawMapsTab();
                 ImGui.EndTabItem();
@@ -138,44 +208,44 @@ public class ConfigWindow : Window, IDisposable
             var marketboardTabFlags = selectMarketboardTab
                 ? ImGuiTabItemFlags.SetSelected
                 : ImGuiTabItemFlags.None;
-            if (ImGui.BeginTabItem("Marketboard", marketboardTabFlags))
+            if (BeginSettingsTab("Marketboard", matchingTabs, marketboardTabFlags))
             {
                 DrawMarketboardTab();
                 ImGui.EndTabItem();
             }
             selectMarketboardTab = false;
 
-            if (ImGui.BeginTabItem("Travel"))
+            if (BeginSettingsTab("Travel", matchingTabs))
             {
                 DrawTravelTab();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Party"))
+            if (BeginSettingsTab("Party", matchingTabs))
             {
                 DrawPartyTab();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Dungeon/Loot"))
+            if (BeginSettingsTab("Dungeon/Loot", matchingTabs))
             {
                 DrawDungeonLootTab();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Integrations"))
+            if (BeginSettingsTab("Integrations", matchingTabs))
             {
                 DrawIntegrationsTab();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Interface"))
+            if (BeginSettingsTab("Interface", matchingTabs))
             {
                 DrawInterfaceTab();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Advanced"))
+            if (BeginSettingsTab("Advanced", matchingTabs))
             {
                 DrawAdvancedTab();
                 ImGui.EndTabItem();
@@ -185,8 +255,25 @@ public class ConfigWindow : Window, IDisposable
         }
     }
 
+    private static bool BeginSettingsTab(string label, string[] matchingTabs, ImGuiTabItemFlags flags = ImGuiTabItemFlags.None)
+    {
+        var matches = matchingTabs.Contains(label);
+        if (matches)
+            ImGui.PushStyleColor(ImGuiCol.Text, ColorYellow);
+
+        var selected = ImGui.BeginTabItem(label, flags);
+        if (matches)
+            ImGui.PopStyleColor();
+
+        return selected;
+    }
+
     private void DrawRunTab()
     {
+        ImGui.TextWrapped("Choose a combat job, or keep Current job. Gathering needs GatherBuddyReborn, an unlocked gather job with a gearset, and a gatherable map enabled for gathering in Map Queue.");
+        ImGui.TextWrapped("Factory defaults: current combat job; gathering off. The controls below show your current selections.");
+        ImGui.Spacing();
+
         DrawJobCombo(
             "Combat job",
             configuration.SelectedCombatJobId,
@@ -218,6 +305,7 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
+        ImGui.TextWrapped("Return when done optionally uses Lifestream once enabled map sources are exhausted. Factory default: off.");
         var returnWhenDone = configuration.ReturnWhenDoneEnabled;
         if (ImGui.Checkbox("Return when done", ref returnWhenDone))
         {
@@ -246,6 +334,8 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
 
+        ImGui.Spacing();
+        ImGui.TextWrapped("Repair uses ADS; a 0% threshold disables it. Factory defaults: 75%, NPC no inn.");
         var repairThreshold = Math.Clamp(configuration.RepairThresholdPercent, 0, 100);
         if (ImGui.SliderInt("Repair threshold %", ref repairThreshold, 0, 100))
         {
@@ -313,6 +403,10 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawMapsTab()
     {
+        ImGui.TextWrapped("Use Map Queue in the main window to select maps and run counts. Retrieval below supplies enabled maps when inventory runs out.");
+        ImGui.TextWrapped("Retainers need XA Database (XADB) and a reachable retainer bell. Saddlebag retrieval uses /saddlebag. Both retrieval options are on by factory default.");
+        ImGui.Spacing();
+
         DrawConfigCheckbox("Fetch maps from retainers", configuration.EnableRetainerMapRetrieval, value => configuration.EnableRetainerMapRetrieval = value,
             "When no enabled map is in inventory, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell.");
         DrawConfigCheckbox("Fetch maps from saddlebags", configuration.EnableSaddlebagMapRetrieval, value => configuration.EnableSaddlebagMapRetrieval = value,
@@ -345,6 +439,10 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawTravelTab()
     {
+        ImGui.TextWrapped("Map travel uses Lifestream for teleports and vnavmesh for movement. Choose an unlocked mount below for manual mounting.");
+        ImGui.TextWrapped("Factory defaults: Auto Teleport and Require vnavmesh on; Company Chocobo selected.");
+        ImGui.Spacing();
+
         DrawConfigCheckbox("Auto Teleport", configuration.AutoTeleport, value => configuration.AutoTeleport = value);
         DrawConfigCheckbox("Require vnavmesh", configuration.RequireVNav, value => configuration.RequireVNav = value);
         DrawConfigCheckbox("Do not use Tamamizu aetheryte", configuration.AvoidTamamizuAetheryte, value => configuration.AvoidTamamizuAetheryte = value,
@@ -565,6 +663,10 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawPartyTab()
     {
+        ImGui.TextWrapped("Party waits coordinate takeoff, remounting and arrival; thief-map underwater waits have their own switch. Player-count thresholds count other players, excluding you.");
+        ImGui.TextWrapped("The optional chocobo companion needs Gysahl Greens. Factory defaults: party and all-mounted waits on; companion summon off.");
+        ImGui.Spacing();
+
         var waitForParty = configuration.WaitForParty;
         if (ImGui.Checkbox("Wait for Party", ref waitForParty))
         {
@@ -659,6 +761,10 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawDungeonLootTab()
     {
+        ImGui.TextWrapped("ADS handoff runs /ads inside after confirmed duty entry. Completed-duty exit chooses a local delay, party departure, ADS delay or manual exit; chest and solver options are below.");
+        ImGui.TextWrapped("Factory defaults: ADS handoff on; ADS exit after 20 seconds; Auto Loot Chest on; Gambler's Lure set to Solve EV (expected value).");
+        ImGui.Spacing();
+
         var useAdsDungeonSolver = configuration.UseAdsInsteadOfLegacyDungeonSolver;
         if (ImGui.Checkbox("Use ADS for dungeon phase", ref useAdsDungeonSolver))
         {
@@ -747,6 +853,9 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawIntegrationsTab()
     {
+        ImGui.TextWrapped("Configure optional food, discard and combat automation here. Command Triggers run slash commands at Landing / Duty Entry and Finish; review them for the plugins you use.");
+        ImGui.Spacing();
+
         DrawFoodSection();
 
         ImGui.Spacing();
@@ -754,7 +863,9 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Spacing();
 
         DrawConfigCheckbox("Auto Discard (/ays discard)", configuration.EnableAutoDiscard, value => configuration.EnableAutoDiscard = value,
-            "Runs /ays discard every 30s during a mounted safe idle window. Defers while in combat, loading, or cutscene-like states. Requires AutoRetainer plugin.");
+            "While Loot Goblin is enabled, runs /ays discard every 30s during safe mounted windows. Defers in combat, loading or cutscenes. Requires AutoRetainer and a configured discard list.");
+        ImGui.TextWrapped("Auto Discard needs AutoRetainer with a configured discard list. When selected, it runs while Loot Goblin is enabled, during safe mounted windows. Factory default: off.");
+        ImGui.Spacing();
         DrawConfigCheckbox("Auto Sync FATE", configuration.AutoSyncFate, value => configuration.AutoSyncFate = value,
             "Runs /levelsync on after joining a FATE and pauses coffer/portal recovery for joined-FATE handling. Turn off to ignore joined FATEs during map coffer flow.");
 
@@ -787,6 +898,10 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawInterfaceTab()
     {
+        ImGui.TextWrapped("Control login visibility and settings-window movement. Krangle Names obfuscates player and server names displayed by Loot Goblin.");
+        ImGui.TextWrapped("Factory defaults: show the main window on login and allow settings movement; name obfuscation off.");
+        ImGui.Spacing();
+
         DrawConfigCheckbox("Show Main Window on Login", configuration.ShowMainWindow, value => configuration.ShowMainWindow = value);
         DrawConfigCheckbox("Movable Settings Window", configuration.IsConfigWindowMovable, value => configuration.IsConfigWindowMovable = value);
         DrawConfigCheckbox("Krangle Names", configuration.KrangleNames, value => configuration.KrangleNames = value);
@@ -794,6 +909,10 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawAdvancedTab()
     {
+        ImGui.TextWrapped("Use these controls for diagnostics and troubleshooting. The snapshot button needs dedicated logging; Test ADS Repair Mode starts a repair using the mode selected in Run.");
+        ImGui.TextWrapped("Factory defaults: state logging on; Debug Mode, map diagnostics and dedicated file logging off.");
+        ImGui.Spacing();
+
         DrawConfigCheckbox("Debug Mode", configuration.DebugMode, value => configuration.DebugMode = value);
         DrawConfigCheckbox("Enable State Logging", configuration.EnableStateLogging, value => configuration.EnableStateLogging = value);
         DrawConfigCheckbox("Map Diagnostics", configuration.ShowDebugMapCompletion, value => configuration.ShowDebugMapCompletion = value,
