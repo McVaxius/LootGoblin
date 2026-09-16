@@ -2262,6 +2262,8 @@ public class StateManager : IDisposable
 
         _ = StopMarketPurchaseImmediately();
 
+        _plugin.RotationPluginIPC.RestoreRsrHealing();
+
         var startMapFlagCleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
         _plugin.AddDebugLog($"[Start] Preflight cleared map flag before start flow: verified={startMapFlagCleared}.");
 
