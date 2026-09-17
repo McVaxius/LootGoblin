@@ -10041,6 +10041,7 @@ public class StateManager : IDisposable
 
     private bool TryResolveOpeningChestFlagRealYFallbackTarget(
         bool allowPortalRetryWindow,
+        Vector3? liveCofferPosition,
         out Vector3 target,
         out string basis)
     {
@@ -10055,6 +10056,13 @@ public class StateManager : IDisposable
             CurrentLocation.TerritoryId != Plugin.ClientState.TerritoryType)
         {
             return false;
+        }
+
+        if (liveCofferPosition is Vector3 chestPosition)
+        {
+            target = chestPosition + new Vector3(0, 5f, 0);
+            basis = "Live coffer XYZ + 5y";
+            return true;
         }
 
         var entry = _plugin.MapLocationDatabase.FindEntry(CurrentLocation.TerritoryId, CurrentLocation.X, CurrentLocation.Z);
@@ -10207,6 +10215,7 @@ public class StateManager : IDisposable
         var allowPortalRetryWindow = kind == OpeningChestFlagFallbackKind.Portal;
         if (!TryResolveOpeningChestFlagRealYFallbackTarget(
                 allowPortalRetryWindow,
+                kind == OpeningChestFlagFallbackKind.Coffer ? originalTarget : null,
                 out var fallbackTarget,
                 out var basis))
         {

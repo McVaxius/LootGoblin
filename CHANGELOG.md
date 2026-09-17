@@ -15,6 +15,7 @@ All notable changes to LootGoblin will be documented in this file.
 - **RSR hostile targeting** - Added a persisted Integrations setting for FrenRider's five hostile-target modes that applies through RSR IPC before `/rotation auto` or `/rotation manual` command triggers.
 
 ### Fixed
+- **Live coffer recovery target** - Existing one-shot coffer recovery now approaches 5y above the detected chest before resuming descent, landing, and interaction; JSON recovery remains available without a live coffer position, and portal recovery is unchanged.
 - Accepted Start restores the approved current-job RSR healing settings once after acceptance checks, replacing customized thresholds. IPC failures are logged without blocking Start.
 - **Automatic map allowance checks** - `/timers` now opens automatically only when the current character has an unlocked selected gathering job; disabled gathering no longer opens it.
 - **Higher/Lower equal-card rerolls** - Solve Expected Value now waits for successful interaction and an observed resolution before retrying an equal card, and advances its estimated round only when the completed transition returns a different card.
