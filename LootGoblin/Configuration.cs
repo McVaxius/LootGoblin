@@ -169,6 +169,7 @@ public class Configuration : IPluginConfiguration
     public bool EnableAutoDiscard { get; set; } = false;
     public bool AutoSyncFate { get; set; } = true;
     public RsrTargetHostileType RsrTargetHostileType { get; set; } = DefaultRsrTargetHostileType;
+    public bool ObstacleMapsOn { get; set; } = false;
     public bool BmrReduceActivationRangeForOutdoorAreas { get; set; } = true;
     public bool BmrDisableHuntModules { get; set; } = true;
     public int FeedMeItemId { get; set; } = 4650;

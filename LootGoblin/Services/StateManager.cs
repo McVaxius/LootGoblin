@@ -2263,6 +2263,10 @@ public class StateManager : IDisposable
         _ = StopMarketPurchaseImmediately();
 
         _plugin.RotationPluginIPC.RestoreRsrHealing();
+        Plugin.CommandManager.ProcessCommand(
+            _plugin.Configuration.ObstacleMapsOn
+                ? "/bmrai obstaclemaps on"
+                : "/bmrai obstaclemaps off");
 
         var startMapFlagCleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
         _plugin.AddDebugLog($"[Start] Preflight cleared map flag before start flow: verified={startMapFlagCleared}.");
@@ -7208,11 +7212,8 @@ public class StateManager : IDisposable
 
     private void RunConfiguredCommands(IReadOnlyList<string>? commands, string reason)
     {
-        if (commands == null || commands.Count == 0)
-            return;
-
         var sent = 0;
-        foreach (var command in commands)
+        foreach (var command in commands ?? Array.Empty<string>())
         {
             var trimmed = command?.Trim();
             if (string.IsNullOrWhiteSpace(trimmed))
@@ -7234,6 +7235,11 @@ public class StateManager : IDisposable
 
         if (sent > 0)
             _plugin.AddDebugLog($"[CommandTrigger] Sent {sent} command(s) for {reason}.");
+
+        Plugin.CommandManager.ProcessCommand(
+            _plugin.Configuration.ObstacleMapsOn
+                ? "/bmrai obstaclemaps on"
+                : "/bmrai obstaclemaps off");
     }
 
     private static bool IsRsrActivationCommand(string command)

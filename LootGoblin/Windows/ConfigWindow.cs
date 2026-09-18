@@ -58,7 +58,7 @@ public class ConfigWindow : Window, IDisposable
             "Use current-character command trigger override /rotation auto manual cancel /bmrai /vbmai VBM /fr /cbt follow combat factory defaults",
         ["Interface"] = "Show Main Window on Login visibility behavior; Movable Settings Window move lock position; " +
             "Krangle Names name obfuscation privacy player party server world display factory defaults",
-        ["Advanced"] = "Debug Mode Enable State Logging Map Diagnostics location data aetheryte collection tools " +
+        ["Advanced"] = "Obstacle maps on BossMod Reborn BMR; Debug Mode Enable State Logging Map Diagnostics location data aetheryte collection tools " +
             "Ground-only map diagnostics; Write dedicated LootGoblin diagnostic log Open Log Folder Write Snapshot Now " +
             "troubleshooting debug logs; Disable Pandora's Box; Test ADS Repair Mode factory defaults",
     };
@@ -909,6 +909,10 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawAdvancedTab()
     {
+        DrawConfigCheckbox("Obstacle maps on", configuration.ObstacleMapsOn, value => configuration.ObstacleMapsOn = value,
+            "Controls BossMod Reborn only. Default: off. Applies on Start and after each configured command batch, regardless of combat provider.");
+        ImGui.Spacing();
+
         ImGui.TextWrapped("Use these controls for diagnostics and troubleshooting. The snapshot button needs dedicated logging; Test ADS Repair Mode starts a repair using the mode selected in Run.");
         ImGui.TextWrapped("Factory defaults: state logging on; Debug Mode, map diagnostics and dedicated file logging off.");
         ImGui.Spacing();
