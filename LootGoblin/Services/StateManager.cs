@@ -7265,6 +7265,9 @@ public class StateManager : IDisposable
             return false;
         }
 
+        if (string.Equals(command, "/bmrai on", StringComparison.OrdinalIgnoreCase))
+            CommandHelper.TrySendCommand("/bmrai prefdistance 1.5");
+
         return CommandHelper.TrySendCommand(command);
     }
 
