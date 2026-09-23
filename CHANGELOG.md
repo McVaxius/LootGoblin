@@ -16,6 +16,7 @@ All notable changes to LootGoblin will be documented in this file.
 - **RSR hostile targeting** - Added a persisted Integrations setting for FrenRider's five hostile-target modes that applies through RSR IPC before `/rotation auto` or `/rotation manual` command triggers.
 
 ### Fixed
+- Send `/bmrai forbidactions off` immediately before enabling BMR AI through configured triggers and combat restoration so it can move into attack range, preserving availability checks and dodge clearance.
 - Apply DDUCK's 1.5-yalm dodge clearance before BMR activation through configured triggers, combat automation, and restoration.
 - **Live coffer recovery target** - Existing one-shot coffer recovery now approaches 5y above the detected chest before resuming descent, landing, and interaction; JSON recovery remains available without a live coffer position, and portal recovery is unchanged.
 - Accepted Start restores the approved current-job RSR healing settings once after acceptance checks, replacing customized thresholds. IPC failures are logged without blocking Start.
