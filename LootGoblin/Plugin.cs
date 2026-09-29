@@ -106,6 +106,7 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly string[] LegacyFinishCommandDefaults = { "/li fc", "/rotation cancel", "/bmrai off", "/vbmai off", string.Empty };
     private readonly Dictionary<string, PluginAvailabilityCacheEntry> pluginAvailabilityCache = new(StringComparer.Ordinal);
     private bool ecommonsInitialized;
+    private bool pendingInitialDiagnosticSnapshot;
     private DateTime nextFrameworkHitchLogUtc = DateTime.MinValue;
     private double lastSlowUpdateMs;
     private string lastSlowUpdateSource = "none";
@@ -216,11 +217,7 @@ public sealed class Plugin : IDalamudPlugin
         // Initialize state machine
         StateManager = new StateManager(this, Framework, Log);
         MapGatherIpcService = new LootGoblinMapGatherIpcService(this, PluginInterface, Log);
-        if (DedicatedDiagnosticLog.IsEnabled)
-        {
-            StateManager.WriteDiagnosticSnapshot("dedicated-log-initial");
-            DedicatedDiagnosticLog.Flush();
-        }
+        pendingInitialDiagnosticSnapshot = DedicatedDiagnosticLog.IsEnabled;
         SubscribeChatObservers();
 
         ConfigWindow = new ConfigWindow(this);
@@ -255,6 +252,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        pendingInitialDiagnosticSnapshot = false;
         SaveActiveMapGatherConfig("plugin unload");
         StateManager?.WriteDiagnosticSnapshot("plugin-unload");
         DedicatedDiagnosticLog.Flush();
@@ -517,6 +515,16 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        if (pendingInitialDiagnosticSnapshot)
+        {
+            pendingInitialDiagnosticSnapshot = false;
+            if (DedicatedDiagnosticLog.IsEnabled)
+            {
+                StateManager.WriteDiagnosticSnapshot("dedicated-log-initial");
+                DedicatedDiagnosticLog.Flush();
+            }
+        }
+
         RefreshActiveMapGatherCharacterBinding();
         ObserveEnabledState();
 
