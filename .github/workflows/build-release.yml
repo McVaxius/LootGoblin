@@ -9,7 +9,6 @@ on:
 
 env:
   PLUGIN_NAME: LootGoblin
-  SOLUTION_NAME: LootGoblin
   INTERNAL_NAME: LootGoblin
   RELEASE_DIR: LootGoblin\bin\x64\Release\LootGoblin
 
@@ -51,8 +50,8 @@ jobs:
 
       - name: Build
         run: |
-          dotnet restore -r win ${{ env.SOLUTION_NAME }}.sln
-          dotnet build ${{ env.SOLUTION_NAME }}.sln --configuration Release -p:Platform=x64
+          dotnet restore -r win LootGoblin/LootGoblin.csproj
+          dotnet build LootGoblin/LootGoblin.csproj --configuration Release -p:Platform=x64
         env:
           DOTNET_CLI_TELEMETRY_OPTOUT: true
 

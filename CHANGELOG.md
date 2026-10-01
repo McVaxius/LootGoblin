@@ -32,6 +32,8 @@ All notable changes to LootGoblin will be documented in this file.
 - **Retainer map lookup parsing** - `XA.Database.SearchItems` now parses newline pipe rows (`Character|World|ContainerName|ItemName|ItemId|Quantity|IsHq`) instead of JSON, filters to current character/world retainer containers, and fails visibly when target retainer selection cannot be confirmed.
 
 ### Changed
+- Build only the plugin project in GitHub Actions so test and regression projects do not block production artifacts.
+
 - **Cleaner Emptor map controls** - The map queue now hides unavailable Emptor controls behind a red-X cart shortcut to Marketboard settings, where manual price refresh now lives.
 - **Limsa marketboard default and dynamic cities** - Configuration schema v11 migrates new and existing blank/Ul'dah defaults to Limsa while preserving nonblank choices. Emptor v4+ city choices now come from `Emptor.GetCities`, with Ul'dah normalized back to the blank compatibility key and the existing built-in list retained only when city IPC is unavailable or invalid.
 - **In-memory price handling** - Emptor price responses, including malformed replies, pending/no-data items, per-item errors, and missing/old v5 IPC, remain unavailable hints only. Loot Goblin does not persist prices, write ceilings automatically, call price IPC from ImGui drawing, or alter purchase/travel execution.
