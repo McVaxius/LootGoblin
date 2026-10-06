@@ -16,11 +16,18 @@ using LootGoblin.IPC;
 using LootGoblin.Models;
 using LootGoblin.Services;
 using LootGoblin.Windows;
+using AethertekUI;
+using AethertekUI.Dalamud;
+using Dalamud.Interface.Utility;
+using Dalamud.Bindings.ImGui;
+using System.Numerics;
 
 namespace LootGoblin;
 
 public sealed class Plugin : IDalamudPlugin
 {
+    private readonly System.Collections.Generic.Dictionary<Dalamud.Interface.Windowing.IWindow, AethertekUI.MaterialWindowOpacity> windowOpacities = new();
+    private readonly AethertekUI.MaterialWindowOpacity fontStatusOpacity = new();
     private static Plugin? instance;
     internal static Plugin? Instance => instance;
 
@@ -38,6 +45,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
     [PluginService] internal static IToastGui ToastGui { get; private set; } = null!;
+    [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
     [PluginService] internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
     [PluginService] internal static IDutyState DutyState { get; private set; } = null!;
@@ -46,6 +54,18 @@ public sealed class Plugin : IDalamudPlugin
     private const string CommandAlias = "/lg";
 
     public Configuration Configuration { get; init; }
+    private LootGoblinFonts uiFonts = null!;
+    private MaterialTextHost shapedText = null!;
+    private UiText uiText = null!;
+    private MaterialTheme uiTheme = null!;
+    private readonly MaterialWindowFold fontStatusFold = new();
+    private readonly MaterialWindowDecorations fontStatusDecorations = new();
+    private MaterialOptions<string> languageOptions = null!;
+    private string appliedLanguage = "";
+    private uint appliedAccent;
+    private Vector3 accentDraft;
+    private int checkedFontGeneration = -1;
+    private bool fontIssueLogged;
     internal MapGatherCharacterConfig ActiveMapGatherConfig { get; private set; } = new();
     internal ulong ActiveMapGatherContentId { get; private set; }
     internal string ActiveMapGatherCharacterKey { get; private set; } = string.Empty;
@@ -130,6 +150,7 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin()
     {
         instance = this;
+        shapedText = new(TextureProvider);
         var loadedConfiguration = PluginInterface.GetPluginConfig() as Configuration;
         var isNewConfiguration = loadedConfiguration == null;
         Configuration = loadedConfiguration ?? new Configuration();
@@ -238,7 +259,8 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Open the Loot Goblin main window. Args: config, start, stop, on, off, status"
         });
 
-        PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
+        ApplyAppearance();
+        PluginInterface.UiBuilder.Draw += DrawUi;
         PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
         Framework.Update += OnFrameworkUpdate;
@@ -250,6 +272,128 @@ public sealed class Plugin : IDalamudPlugin
         Log.Information("===Loot Goblin loaded!===");
     }
 
+    private void DrawUi()
+    {
+        ApplyAppearance();
+        if (!MainWindow.IsOpen && !ConfigWindow.IsOpen && !AlexandriteMapWindow.IsOpen)
+            return;
+        using var text = uiText.Enter();
+        using var shaping = shapedText.Push();
+        if (!uiFonts.Ready)
+        {
+            if (!fontIssueLogged && uiFonts.LoadException is { } error)
+            {
+                Log.Error(error, "[LootGoblin] Required UI fonts failed to load.");
+                fontIssueLogged = true;
+            }
+            DrawFontStatus(uiFonts.LoadException is null);
+            return;
+        }
+        if (checkedFontGeneration != uiFonts.Generation)
+        {
+            try
+            {
+                var generation = uiFonts.Generation;
+                foreach (var role in Enum.GetValues<UiFontRole>())
+                    shapedText.Renderer.CheckGlyphs(uiText.RequiredText, LootGoblinPresentation.AtlasHeight(role) * ImGuiHelpers.GlobalScale);
+                uiFonts.CheckGlyphs(uiText.RequiredText.Select(MaterialText.NativeGlyphText));
+                checkedFontGeneration = generation;
+            }
+            catch (Exception ex)
+            {
+                if (!fontIssueLogged) { Log.Error(ex, "[LootGoblin] Required UI glyph coverage failed."); fontIssueLogged = true; }
+                DrawFontStatus(false);
+                return;
+            }
+        }
+        using var theme = MaterialTheme.Push(uiTheme, ImGuiHelpers.GlobalScale, MaterialStyleMode.ColorsOnly);
+        using var geometry = new MaterialStyleScope();
+        var compact = Configuration.UiCompact;
+        var scale = ImGuiHelpers.GlobalScale;
+        geometry.Style(ImGuiStyleVar.WindowPadding, new Vector2(compact ? 12 : 16) * scale);
+        geometry.Style(ImGuiStyleVar.ItemSpacing, new Vector2(compact ? 8 : 12, compact ? 6 : 10) * scale);
+        geometry.Style(ImGuiStyleVar.FramePadding, new Vector2(compact ? 8 : 12, compact ? 4 : 7) * scale);
+        geometry.Style(ImGuiStyleVar.CellPadding, new Vector2(compact ? 8 : 12, compact ? 5 : 8) * scale);
+        geometry.Style(ImGuiStyleVar.FrameRounding, 4 * scale);
+        geometry.Style(ImGuiStyleVar.FrameBorderSize, scale);
+        geometry.Style(ImGuiStyleVar.ChildRounding, 4 * scale);
+        using var body = uiFonts.Push(UiFontRole.Body);
+        using var chrome = MaterialWindowChrome.Push();
+        WindowSystem.Draw();
+        foreach (var window in WindowSystem.Windows)
+        {
+            if (!windowOpacities.TryGetValue(window, out var opacity))
+                windowOpacities.Add(window, opacity = new());
+            ApplyWindowOpacity(opacity, window.WindowName);
+        }
+    }
+
+    private void DrawFontStatus(bool loading)
+    {
+        using var statusPalette = MaterialTheme.Push(uiTheme, ImGuiHelpers.GlobalScale, MaterialStyleMode.ColorsOnly);
+        using var statusChrome = MaterialWindowChrome.Push();
+        ImGui.SetNextWindowSize(new Vector2(460 * ImGuiHelpers.GlobalScale, 0), ImGuiCond.Always);
+        fontStatusFold.PreDraw("Loot Goblin##FontStatus", null, null, reducedMotion: false,
+            prepareDecorations: fontStatusDecorations.Prepare);
+        try
+        {
+            if (ImGui.Begin("Loot Goblin##FontStatus", ImGuiWindowFlags.AlwaysAutoResize))
+            {
+                fontStatusDecorations.Paint();
+                MaterialText.TextWrapped(UiText.T(loading ? "Loading UI fonts..." : "UI fonts failed to load. See the plugin log."));
+            }
+        }
+        finally
+        {
+            ImGui.End();
+            fontStatusDecorations.Paint();
+            fontStatusFold.PostDraw();
+            ApplyWindowOpacity(fontStatusOpacity, "Loot Goblin##FontStatus");
+        }
+    }
+
+    private void ApplyAppearance()
+    {
+        var language = UiText.Languages.Any(l => l.Code == Configuration.UiLanguage) ? Configuration.UiLanguage : "en";
+        if (language != appliedLanguage)
+        {
+            uiFonts?.Dispose();
+            uiText?.Dispose();
+            uiText = new(language, role => uiFonts!.Push(role));
+            uiFonts = new(PluginInterface.UiBuilder.FontAtlas, uiText.GlyphRanges(), language);
+            languageOptions = new(UiText.Languages.Select(l => new MaterialOption<string>(l.Code, l.Code, l.Name)).ToArray());
+            appliedLanguage = language;
+            checkedFontGeneration = -1;
+            fontIssueLogged = false;
+        }
+        if (uiTheme is null || (Configuration.UiAccentRgb & 0xFFFFFF) != appliedAccent)
+        {
+            appliedAccent = Configuration.UiAccentRgb & 0xFFFFFF;
+            uiTheme = LootGoblinPresentation.Theme(appliedAccent);
+            var color = LootGoblinPresentation.Rgb(appliedAccent);
+            accentDraft = new(color.X, color.Y, color.Z);
+        }
+    }
+
+    internal void DrawAppearanceSelector()
+    {
+        var language = appliedLanguage;
+        using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(Configuration.UiCompact ? 28 : 32, 18));
+        var changed = MaterialAppearanceSelector.Draw("appearance", ref accentDraft, ref language, languageOptions,
+            new(UiText.T("Color"), UiText.T("Language"), UiText.T("Teal"), UiText.T("Blue"), UiText.T("Pink"), UiText.T("Custom RGB")), languageWidth: 140);
+        if (changed.AccentChanged) Configuration.UiAccentRgb = ((uint)Math.Clamp((int)MathF.Round(accentDraft.X * 255), 0, 255) << 16)
+            | ((uint)Math.Clamp((int)MathF.Round(accentDraft.Y * 255), 0, 255) << 8) | (uint)Math.Clamp((int)MathF.Round(accentDraft.Z * 255), 0, 255);
+        if (changed.LanguageChanged) Configuration.UiLanguage = language;
+        if (changed.AccentChanged || changed.LanguageChanged) Configuration.Save();
+    }
+
+    internal void DrawCompactSelector()
+    {
+        var compact = Configuration.UiCompact;
+        if (ImGui.Checkbox("C", ref compact)) { Configuration.UiCompact = compact; Configuration.Save(); }
+        if (ImGui.IsItemHovered()) MaterialText.SetTooltip(UiText.T("Compact mode"));
+    }
+
     public void Dispose()
     {
         pendingInitialDiagnosticSnapshot = false;
@@ -257,7 +401,10 @@ public sealed class Plugin : IDalamudPlugin
         StateManager?.WriteDiagnosticSnapshot("plugin-unload");
         DedicatedDiagnosticLog.Flush();
 
-        PluginInterface.UiBuilder.Draw -= WindowSystem.Draw;
+        PluginInterface.UiBuilder.Draw -= DrawUi;
+        uiFonts?.Dispose();
+        uiText?.Dispose();
+        shapedText?.Dispose();
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
         Framework.Update -= OnFrameworkUpdate;
@@ -1219,5 +1366,63 @@ public sealed class Plugin : IDalamudPlugin
             LogError($"Failed to load mount names: {ex.Message}");
             MountNames = new[] { "Mount Roulette", "Company Chocobo" };
         }
+    }
+
+    internal void ApplyWindowOpacity(AethertekUI.MaterialWindowOpacity opacity, string windowName)
+    {
+        var config = Configuration;
+        opacity.Apply(windowName, config.UiWindowOpacityPercent / 100f, config.UiTransparencyEnabled,
+            config.UiAutoFade, config.UiFadedOpacityPercent / 100f, config.UiUnfocusedDelaySeconds);
+    }
+
+    internal void DrawTransparencyToggle()
+    {
+        var enabled = Configuration.UiTransparencyEnabled;
+        if (Dalamud.Bindings.ImGui.ImGui.Checkbox(UiText.T("Transparency") + "###window-transparency-main", ref enabled))
+        { Configuration.UiTransparencyEnabled = enabled; Configuration.Save(); }
+    }
+
+    internal void DrawWindowSettings()
+    {
+        var config = Configuration;
+        var changed = false;
+        var compactVisible = config.UiCompactVisibleOnMainWindow;
+        if (ImGui.Checkbox(UiText.T("Compact visible on main window") + "###window-compact-visible", ref compactVisible))
+        { config.UiCompactVisibleOnMainWindow = compactVisible; changed = true; }
+        var languageVisible = config.UiLanguageVisibleOnMainWindow;
+        if (ImGui.Checkbox(UiText.T("Language visible on main window") + "###window-language-visible", ref languageVisible))
+        { config.UiLanguageVisibleOnMainWindow = languageVisible; changed = true; }
+        var enabled = config.UiTransparencyEnabled;
+        if (ImGui.Checkbox(UiText.T("Transparency") + "###window-transparency", ref enabled))
+        { config.UiTransparencyEnabled = enabled; changed = true; }
+        ImGui.BeginDisabled(!config.UiTransparencyEnabled);
+        ImGui.SetNextItemWidth(96 * AethertekUI.MaterialTheme.Metrics.Scale);
+        var normal = config.UiWindowOpacityPercent;
+        if (ImGui.InputInt(UiText.T("Opacity (%)") + "###window-opacity", ref normal))
+        { config.UiWindowOpacityPercent = normal; changed = true; }
+        var autoFade = config.UiAutoFade;
+        if (ImGui.Checkbox(UiText.T("Auto-fade when unfocused") + "###window-auto-fade", ref autoFade))
+        { config.UiAutoFade = autoFade; changed = true; }
+        ImGui.BeginDisabled(!config.UiAutoFade);
+        ImGui.SetNextItemWidth(96 * AethertekUI.MaterialTheme.Metrics.Scale);
+        var faded = config.UiFadedOpacityPercent;
+        if (ImGui.InputInt(UiText.T("Unfocused opacity (%)") + "###window-faded-opacity", ref faded))
+        { config.UiFadedOpacityPercent = faded; changed = true; }
+        ImGui.SetNextItemWidth(96 * AethertekUI.MaterialTheme.Metrics.Scale);
+        var delay = config.UiUnfocusedDelaySeconds;
+        if (ImGui.InputInt(UiText.T("Unfocused delay (seconds)") + "###window-unfocused-delay", ref delay))
+        { config.UiUnfocusedDelaySeconds = delay; changed = true; }
+        ImGui.EndDisabled();
+        ImGui.EndDisabled();
+        if (changed) Configuration.Save();
+    }
+
+    internal void DrawLanguageSelector()
+    {
+        var language = appliedLanguage;
+        using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(Configuration.UiCompact ? 28 : 32, 18));
+        if (!MaterialAppearanceSelector.DrawLanguage("appearance", ref language, languageOptions, 140)) return;
+        Configuration.UiLanguage = language;
+        Configuration.Save();
     }
 }

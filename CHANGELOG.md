@@ -1,5 +1,52 @@
 # Changelog
 
+## Unreleased - Hindi integration
+
+- Add the complete 1,365-entry Hindi catalog through the existing embedded resource route and append the Hindi language choice. Route UI measurement, painting, tooltips and retained editing through the shared Windows shaping host, retaining original controls, IDs, font roles, configuration and automation. Validate shaped glyphs before native atlas checks.
+- Debug x64 compilation passes with seven existing warnings and zero errors. The focused native checker passes 5,739 checks against exact current product/core bytes, covering compiled catalogs, six original font roles, complete Hindi caption ink, original IDs/actions, retained Unicode editing and opaque status values at both densities and 100%/150% scale. Game/GPU/IME acceptance remains separate.
+
+## Unreleased - Window appearance and transparency
+
+- Add the Window appearance settings section with retained colour, compact and language controls, independent main-window visibility preferences, and a main transparency switch. Save opacity/fade preferences through the existing configuration: 100% normal, automatic 50% after ten unfocused seconds by default; clamp opacity to 10 to 100% and delay to nonnegative values. Apply opacity once after native End and motion restoration for each window tree, including chrome, owned content and images. Build/configuration checks and game acceptance remain separate.
+
+
+## 2026-10-05 - Rounded window chrome and native minimize (source adoption)
+
+- Adopt rounded chrome and animated native minimize/restore through the native lifecycle for Main, Config, AlexandriteMap and font status. Preserve control identities, layout, saved geometry, actions and existing NoCollapse behavior.
+- Compilation, native interaction and game acceptance for this source adoption remain pending verification.
+
+## 2026-10-05 - Formatted-number font coverage
+
+- Include the selected UI culture's number-group separator in the existing font requirements, including French narrow nonbreaking spaces in market prices. Preserve raw service values and the original font roles, sources and merge order.
+
+## 2026-10-03 - AethertekUI adoption
+
+- Implement the approved full and compact presentation for the main window, with grouped panels, a map queue table and a live Bot State/Party/Food summary. Settings and Alexandrite share the appearance and density choices.
+- Add fourteen embedded UI languages, managed font coverage, and relative whole-theme colour selection through the header and Settings → Interface. Save selections through the existing plugin configuration and preserve semantic status colours and native control identities.
+- Append Vietnamese, Brazilian Portuguese, Indonesian, Polish and Turkish to the existing language choices. Each catalog covers the same 1,357 keys, including help, controls, status and diagnostic messages, while preserving the original nine choices, raw service arguments and format placeholders.
+- Search Settings using translated labels and existing English aliases, including appearance controls and conditional settings. Preserve the requirement that every search word match.
+- Translate authored party and price-tooltip status arguments, format typed UI numbers with the selected locale, and preserve empty or numbered service-message arguments without altering raw names, IDs, commands or logs.
+- Document the sibling AethertekUI build prerequisite and compilation-only verification route. Game font and screenshot acceptance remain pending.
+- Show the current assembly version in the main title while retaining its native window identity. Keep translated controls and action captions on one line, reflow complete controls, and preserve readable rounded-up editors and previews. Numeric inputs retain the original zero-step defaults and reserve button space only for explicitly enabled steps.
+- Measure queue headers, map names and editors in the active fonts; retain wider saved columns and horizontal access in narrow main, Settings and Alexandrite windows. Keep the existing actions and settings save paths.
+- Use shared Pulse/Group/Utensils/Crystal/Terminal meshes for the live summary, party, Alexandrite and command affordances, with a filled support heart. Compact summaries keep their labels and values together when space allows.
+- Align Current Run and Alexandrite values in measured translated columns, show empty map/location selections, and keep the Alexandrite crystal in its native title instead of repeating the heading. Match full-width open section and Alexandrite footer accent rules, with smaller compact section titles; retain extra live controls and diagnostic information.
+- Fold optional dependency details into an Integrations disclosure while keeping required availability and dependency refresh directly accessible. Align required status values and use semantic dots with readable available text.
+- Keep navigation status and condition indicators in the existing Navigation disclosure, avoid repeating an identical state detail, and wrap help/status text and guidance bullets against the visible pane even when wider controls require horizontal scrolling.
+- Use the shared Target crosshair for Current Run, preserving the Location pin for location affordances, and retain the approved regular/compact detail-row spacing in its measured panel.
+- Match the latest regular and compact references' darker backgrounds, panels, table headings, editors and secondary actions; keep relative accent recolouring and semantic status colours.
+- Budget native summary-cell padding before distributing widths, avoiding an unnecessary horizontal scrollbar. Keep queue padding within the approved 44/36-pixel row cadence so its final row remains visible; retain the existing table, saved widths and controls.
+- Keep secondary guidance readable using the theme's secondary foreground, retain outlined native controls, and size the shared compact checkbox consistently in the main header and Settings.
+- Hide native English queue-heading ink while drawing translated captions, avoiding visible remnants below CJK labels while retaining native header identities and behavior.
+- Match authored runtime messages using their ordered literal text instead of per-frame regular expressions. Preserve template priority, raw/empty arguments, repeated placeholders and final-newline handling while avoiding regex timeout failures during UI drawing.
+
+
+## 2026-10-02 - Build and release repair
+
+- Pin GitHub builds to SDK 10.0.201 and pass the downloaded Dalamud library path. Restore and build plugin projects with matching configuration, platform and runtime; stop on restore failure.
+- Keep build tokens read-only and release writes in a separate job. Use packaged manifest versions for untagged releases.
+- Local launchers build the plugin directly in the pinned environment and return its exit status.
+
 All notable changes to LootGoblin will be documented in this file.
 
 ## [Unreleased] - 2026-07-25

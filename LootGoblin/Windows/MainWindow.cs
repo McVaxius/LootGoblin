@@ -24,11 +24,13 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using LootGoblin.IPC;
 using LootGoblin.Models;
 using LootGoblin.Services;
+using AethertekUI;
 
 namespace LootGoblin.Windows;
 
 public class MainWindow : Window, IDisposable
 {
+    private readonly AethertekUI.Dalamud.MaterialWindowMotion windowMotion = new();
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
@@ -38,6 +40,7 @@ public class MainWindow : Window, IDisposable
 	private static readonly Vector4 ColorOrange = new(1f, 0.6f, 0f, 1f);
 
     private readonly Plugin plugin;
+    private static readonly string MainTitle = $"Loot Goblin {typeof(MainWindow).Assembly.GetName().Version}";
     private Dictionary<uint, int> cachedMaps = new();
     private Dictionary<uint, MapSourceCount> cachedMapSources = new();
     private DateTime lastScanTime = DateTime.MinValue;
@@ -58,49 +61,49 @@ public class MainWindow : Window, IDisposable
         };
 
         this.plugin = plugin;
+        Size = new Vector2(1080, 950);
+        SizeCondition = ImGuiCond.FirstUseEver;
+        Flags |= ImGuiWindowFlags.HorizontalScrollbar;
     }
 
     public void Dispose() { }
 
     private bool DiagnosticsVisible => plugin.Configuration.DebugMode || plugin.Configuration.ShowDebugMapCompletion;
 
+    public override void PreDraw()
+    {
+        windowMotion.Prepare(this, reducedMotion: false, roundedCorners: true);
+    }
+
+    public override void PostDraw()
+        => windowMotion.Restore(this);
+
     public override void Draw()
     {
+        windowMotion.DrawChrome();
+        UiGui.Title("Loot Goblin", MainTitle);
+        using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(plugin.Configuration.UiCompact ? 32 : 40));
         DrawHeaderSection();
         ImGui.Separator();
-        ImGui.Spacing();
-
         DrawBotControlSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
+        DrawSummaryStrip();
+        Panel("##MapQueuePanel", DrawMapInventorySection);
+        if (ImGui.GetContentRegionAvail().X >= 800 * MaterialTheme.Metrics.Scale && ImGui.BeginTable("##LootGoblinRunParty", 2, ImGuiTableFlags.SizingStretchSame))
+        {
+            ImGui.TableNextColumn();
+            Panel("##CurrentRunPanel", DrawCurrentRunSection);
+            ImGui.TableNextColumn();
+            Panel("##PartyPanel", () => { DrawPartySection(); DrawDependencySection(); });
+            ImGui.EndTable();
+        }
+        else
+        {
+            Panel("##CurrentRunPanel", DrawCurrentRunSection);
+            Panel("##PartyPanel", () => { DrawPartySection(); DrawDependencySection(); });
+        }
+        Panel("##NavigationPanel", DrawNavigationSection);
+        Panel("##CommandsPanel", DrawCommandsSection);
         DrawStatusSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        DrawMapInventorySection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        DrawCurrentRunSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        DrawPartySection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        DrawDependencySection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        DrawCommandsSection();
 
         if (DiagnosticsVisible)
         {
@@ -119,13 +122,79 @@ public class MainWindow : Window, IDisposable
         }
     }
 
+    private uint windowRootId;
+    private readonly Dictionary<string, float> panelHeights = new();
+    private static float Scale(float value) => value * MaterialTheme.Metrics.Scale;
+    private static void NextGroup(float width)
+    {
+        var right = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X;
+        if (ImGui.GetItemRectMax().X + ImGui.GetStyle().ItemSpacing.X + width <= right) ImGui.SameLine();
+    }
+    private void Panel(string id, Action draw)
+    {
+        var c = MaterialTheme.Current.Colors;
+        var padding = Scale(plugin.Configuration.UiCompact ? 10 : 14);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, c.Surface);
+        ImGui.PushStyleColor(ImGuiCol.Border, c.OutlineVariant);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Scale(4));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding));
+        // API 15's binding predates child auto-resize flags. Measure native content
+        // for the next frame, retaining each panel's own draw list and original ID root.
+        var height = panelHeights.GetValueOrDefault(id, Scale(id == "##MapQueuePanel" ? 300 : 220));
+        var visible = ImGui.BeginChild(id, new Vector2(0, height), true, ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.HorizontalScrollbar);
+        try
+        {
+            if (visible)
+            {
+                ImGuiP.PushOverrideID(windowRootId);
+                try { draw(); }
+                finally { ImGui.PopID(); }
+                panelHeights[id] = Math.Max(padding * 2 + ImGui.GetTextLineHeight(), ImGui.GetCursorPosY() + ImGui.GetScrollY() + padding);
+            }
+        }
+        finally { ImGui.EndChild(); ImGui.PopStyleVar(2); ImGui.PopStyleColor(2); }
+        ImGui.Dummy(new Vector2(0, Scale(plugin.Configuration.UiCompact ? 8 : 12)));
+    }
+
+    private void DrawSummaryStrip()
+    {
+        var compact = plugin.Configuration.UiCompact;
+        string[] labels = ["Bot State", "Party", "Food"];
+        string[] values = [plugin.StateManager.State.ToString(),
+            Plugin.PartyList.Length > 0 ? UiText.F("{0} members", Plugin.PartyList.Length) : UiText.T("Solo"),
+            string.IsNullOrWhiteSpace(plugin.FoodService.FoodStatus) ? "Idle" : plugin.FoodService.FoodStatus];
+        MaterialIcon[] icons = [MaterialIcon.Pulse, MaterialIcon.Group, MaterialIcon.Utensils];
+        var available = ImGui.GetContentRegionAvail().X;
+        var cellPadding = ImGui.GetStyle().CellPadding.X * 2;
+        var fittedWidth = Math.Max(0, (available - labels.Length * cellPadding - 2) / labels.Length);
+        var widths = labels.Select((label, index) => Math.Max(fittedWidth, LootGoblinPresentation.SummaryWidth(label, values[index], compact) - cellPadding)).ToArray();
+        var height = Scale(compact ? 52 : 76) + (widths.Sum() + labels.Length * cellPadding > available ? ImGui.GetStyle().ScrollbarSize : 0);
+        if (!ImGui.BeginTable("##LootGoblinSummary", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollX,
+            new Vector2(0, height))) return;
+        for (var column = 0; column < labels.Length; column++)
+            ImGui.TableSetupColumn(labels[column], ImGuiTableColumnFlags.WidthFixed, widths[column]);
+        for (var column = 0; column < labels.Length; column++)
+        {
+            ImGui.TableNextColumn();
+            LootGoblinPresentation.Summary(labels[column], values[column], icons[column], compact);
+        }
+        ImGui.EndTable();
+        ImGui.Separator();
+    }
+
     private void DrawHeaderSection()
     {
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
-        ImGui.Text($"Loot Goblin v{version}");
-
-        ImGui.SameLine(ImGui.GetWindowWidth() - 120);
-        if (ImGui.SmallButton("\u2661 Ko-fi \u2661"))
+        windowRootId = ImGui.GetID("");
+        var compact = plugin.Configuration.UiCompact;
+        LootGoblinPresentation.Chest(ImGui.GetCursorScreenPos(), Scale(compact ? 34 : 44), MaterialTheme.Current.Colors.Primary);
+        ImGui.Dummy(new Vector2(Scale(compact ? 38 : 48), Scale(compact ? 34 : 44)));
+        ImGui.SameLine();
+        ImGui.BeginGroup();
+        using (UiText.Font(compact ? UiFontRole.PluginName : UiFontRole.Title)) MaterialText.Text("Loot Goblin");
+        UiGui.TextDisabled("Automate your treasure map adventures.");
+        ImGui.EndGroup();
+        NextGroup(UiGui.ButtonWidth("\u2661 Ko-fi \u2661", MaterialIcon.Heart, UiText.T("Support development on Ko-fi")));
+        if (UiGui.Button("\u2661 Ko-fi \u2661", new Vector2(0, Scale(compact ? 32 : 40)), MaterialIcon.Heart, UiText.T("Support development on Ko-fi")))
         {
             System.Diagnostics.Process.Start(new ProcessStartInfo
             {
@@ -134,10 +203,15 @@ public class MainWindow : Window, IDisposable
             });
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Support development on Ko-fi");
-
-        ImGui.Spacing();
-        DrawCompactWarnings();
+            UiGui.SetTooltip("Support development on Ko-fi");
+        if (plugin.Configuration.UiCompactVisibleOnMainWindow)
+        {
+            NextGroup(Scale(42));
+            using (MaterialControls.Push(LootGoblinPresentation.Controls(22))) plugin.DrawCompactSelector();
+        }
+        if (plugin.Configuration.UiLanguageVisibleOnMainWindow)
+        { NextGroup(Scale(190)); plugin.DrawLanguageSelector(); }
+        NextGroup(UiGui.CheckboxWidth("Transparency")); plugin.DrawTransparencyToggle();
     }
 
     private void DrawCompactWarnings()
@@ -156,42 +230,51 @@ public class MainWindow : Window, IDisposable
 
         if (warnings.Count == 0)
         {
-            ImGui.TextColored(ColorGreen, "Ready");
+            var origin = ImGui.GetCursorScreenPos();
+            var draw = ImGui.GetWindowDrawList();
+            var diameter = Scale(plugin.Configuration.UiCompact ? 30 : 38);
+            draw.AddCircleFilled(origin + new Vector2(diameter * .5f), diameter * .5f, ImGui.GetColorU32(new Vector4(ColorGreen.X, ColorGreen.Y, ColorGreen.Z, .2f)), 32);
+            draw.AddCircleFilled(origin + new Vector2(diameter * .5f), diameter * .36f, ImGui.GetColorU32(ColorGreen), 32);
+            ImGui.Dummy(new Vector2(diameter, diameter)); ImGui.SameLine();
+            ImGui.BeginGroup();
+            using (UiText.Font(UiFontRole.Counter)) UiGui.TextColored(MaterialTheme.Current.Colors.OnSurface, "Ready");
+            UiGui.TextDisabled("Plugin loaded and ready.");
+            ImGui.EndGroup();
             return;
         }
 
-        ImGui.TextColored(ColorYellow, $"Attention: {string.Join(" | ", warnings)}");
+        UiGui.TextColored(ColorYellow, UiText.F($"Attention: {string.Join(" | ", warnings.Select(UiText.T))}"));
     }
 
     private void DrawStatusSection()
     {
-        if (!ImGui.CollapsingHeader("Status", ImGuiTreeNodeFlags.DefaultOpen))
+        if (!UiGui.CollapsingHeader("Status"))
             return;
 
         var enabled = plugin.Configuration.Enabled;
         var statusText = enabled ? "ENABLED" : "DISABLED";
         var statusColor = enabled ? ColorGreen : ColorRed;
 
-        ImGui.Text("Status: ");
+        UiGui.Text("Status: ");
         ImGui.SameLine();
-        ImGui.TextColored(statusColor, statusText);
+        UiGui.TextColored(statusColor, statusText);
 
         ImGui.SameLine();
-        ImGui.Text("  |  Bot State: ");
+        UiGui.Text("  |  Bot State: ");
         ImGui.SameLine();
         var navState = plugin.NavigationService.State;
         var navColor = navState == NavigationState.Error ? ColorRed :
                        navState == NavigationState.Idle ? ColorYellow : ColorCyan;
-        ImGui.TextColored(navColor, navState.ToString());
+        UiGui.TextColored(navColor, navState.ToString());
 
         var loggedIn = Plugin.ClientState.IsLoggedIn;
-        ImGui.Text("Logged In: ");
+        UiGui.Text("Logged In: ");
         ImGui.SameLine();
-        ImGui.TextColored(loggedIn ? ColorGreen : ColorRed, loggedIn ? "Yes" : "No");
+        UiGui.TextColored(loggedIn ? ColorGreen : ColorRed, loggedIn ? "Yes" : "No");
 
         if (!string.IsNullOrWhiteSpace(plugin.StateManager.WarningMessage))
         {
-            ImGui.TextColored(ColorRed, plugin.StateManager.WarningMessage);
+            UiGui.TextColored(ColorRed, plugin.StateManager.WarningMessage);
         }
 
         if (loggedIn)
@@ -202,14 +285,14 @@ public class MainWindow : Window, IDisposable
                 var playerName = plugin.Configuration.KrangleNames ? KrangleService.KrangleName(player.Name.TextValue) : player.Name.TextValue;
                 var serverName = plugin.Configuration.KrangleNames ? KrangleService.KrangleServer(player.HomeWorld.Value.Name.ToString()) : player.HomeWorld.Value.Name.ToString();
                 ImGui.SameLine();
-                ImGui.Text($"  |  {playerName} @ {serverName}");
+                UiGui.Text(UiText.F($"  |  {playerName} @ {serverName}"));
             }
         }
 
         var partyCount = Plugin.PartyList.Length;
-        ImGui.Text("Party: ");
+        UiGui.Text("Party: ");
         ImGui.SameLine();
-        ImGui.Text(partyCount > 0 ? $"{partyCount} members" : "Solo");
+        UiGui.Text(partyCount > 0 ? UiText.F("{0} members", partyCount) : "Solo");
 
         var foodStatus = plugin.FoodService.FoodStatus;
         if (!string.IsNullOrWhiteSpace(foodStatus))
@@ -227,9 +310,9 @@ public class MainWindow : Window, IDisposable
                             ? ColorRed
                             : ColorYellow;
 
-            ImGui.Text("Food: ");
+            UiGui.Text("Food: ");
             ImGui.SameLine();
-            ImGui.TextColored(foodColor, foodStatus);
+            UiGui.TextColored(foodColor, foodStatus);
         }
 
         // Summon Chocobo status
@@ -239,15 +322,15 @@ public class MainWindow : Window, IDisposable
             var greensCount = GameHelpers.GetInventoryItemCount(GameHelpers.GysahlGreensItemId);
             var mins = (int)(buddyTime / 60);
             var secs = (int)(buddyTime % 60);
-            var timerText = buddyTime > 0 ? $"{mins}m{secs:D2}s" : "Not summoned";
+            var timerText = buddyTime > 0 ? UiText.F("{0}m{1:D2}s", mins, secs) : "Not summoned";
             var timerColor = buddyTime > 900 ? ColorGreen : buddyTime > 0 ? ColorYellow : ColorGrey;
             var greensColor = greensCount > 0 ? ColorGreen : ColorRed;
 
-            ImGui.Text("Chocobo: ");
+            UiGui.Text("Chocobo: ");
             ImGui.SameLine();
-            ImGui.TextColored(timerColor, timerText);
+            UiGui.TextColored(timerColor, timerText);
             ImGui.SameLine();
-            ImGui.TextColored(greensColor, $"  |  Gysahl Greens: {greensCount}");
+            UiGui.TextColored(greensColor, UiText.F($"  |  Gysahl Greens: {greensCount}"));
         }
 
         DrawBossModDangerStatusLine();
@@ -264,42 +347,42 @@ public class MainWindow : Window, IDisposable
         var dangerColor = rotation.BossModDangerDetected ? ColorYellow : ColorGrey;
         var suppressionColor = suppressionActive ? ColorYellow : ColorGrey;
 
-        ImGui.Text("BossMod danger: ");
+        UiGui.Text("BossMod danger: ");
         ImGui.SameLine();
-        ImGui.TextColored(dangerColor, $"BMR active module: {(rotation.BmrHasActiveModule ? "yes" : "no")}{moduleName}");
+        UiGui.TextColored(dangerColor, UiText.F($"BMR active module: {UiText.T(rotation.BmrHasActiveModule ? "yes" : "no")}{moduleName}"));
         ImGui.SameLine();
-        ImGui.TextColored(dangerColor, $"  |  VBM forbidden zones: {rotation.VbmForbiddenZonesCount}");
+        UiGui.TextColored(dangerColor, UiText.F($"  |  VBM forbidden zones: {rotation.VbmForbiddenZonesCount}"));
         ImGui.SameLine();
-        ImGui.TextColored(suppressionColor, $"  |  Outdoor suppression: {(suppressionActive ? "on" : "off")}");
+        UiGui.TextColored(suppressionColor, UiText.F($"  |  Outdoor suppression: {UiText.T(suppressionActive ? "on" : "off")}"));
         if (!string.IsNullOrWhiteSpace(suppressionReason) && suppressionReason != "off")
         {
             ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, $"({suppressionReason})");
+            UiGui.TextColored(ColorGrey, UiText.F($"({suppressionReason})"));
         }
     }
 
     private void DrawMapInventorySection()
     {
-        if (ImGui.CollapsingHeader("Map Queue", ImGuiTreeNodeFlags.DefaultOpen))
+        if (UiGui.CollapsingHeader("Map Queue", ImGuiTreeNodeFlags.DefaultOpen, MaterialIcon.List))
         {
             var autoStartNextMap = plugin.Configuration.AutoStartNextMap;
-            if (ImGui.Checkbox("Auto Start next map", ref autoStartNextMap))
+            if (UiGui.Checkbox("Auto Start next map", ref autoStartNextMap))
             {
                 plugin.Configuration.AutoStartNextMap = autoStartNextMap;
                 plugin.Configuration.Save();
             }
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Automatically starts the next runnable selected map after completing one.");
+                UiGui.SetTooltip("Automatically starts the next runnable selected map after completing one.");
 
             ImGui.SameLine();
             var showAllKnownMapTypes = plugin.Configuration.ShowAllKnownMapTypes;
-            if (ImGui.Checkbox("Show all map types##MapQueueShowAllKnownMapTypes", ref showAllKnownMapTypes))
+            if (UiGui.Checkbox("Show all map types##MapQueueShowAllKnownMapTypes", ref showAllKnownMapTypes))
             {
                 plugin.Configuration.ShowAllKnownMapTypes = showAllKnownMapTypes;
                 plugin.Configuration.Save();
             }
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Shows runnable map rows even when none are currently in inventory or loaded saddlebags.");
+                UiGui.SetTooltip("Shows runnable map rows even when none are currently in inventory or loaded saddlebags.");
 
             ImGui.Spacing();
 
@@ -325,7 +408,7 @@ public class MainWindow : Window, IDisposable
                     var sourceText = plugin.Configuration.EnableSaddlebagMapRetrieval
                         ? "inventory or loaded saddlebags"
                         : "inventory";
-                    ImGui.TextColored(ColorGrey, $"  No treasure maps found in {sourceText}.");
+                    UiGui.TextColored(ColorGrey, UiText.F($"  No treasure maps found in {UiText.T(sourceText)}."));
                 }
                 else
                 {
@@ -334,7 +417,7 @@ public class MainWindow : Window, IDisposable
                     // Show warning if multiple map types detected
                     if (displayedMapSources.Count > 1)
                     {
-                        ImGui.TextColored(ColorGrey, "  Multiple map types detected - use checkboxes to select which to run");
+                        UiGui.TextColored(ColorGrey, "  Multiple map types detected - use checkboxes to select which to run");
                         ImGui.Spacing();
                     }
 
@@ -343,9 +426,30 @@ public class MainWindow : Window, IDisposable
                         .OrderBy(kvp => LootGoblin.Models.TreasureMapData.KnownMaps.TryGetValue(kvp.Key, out var i) ? i.MinLevel : 999)
                         .ToList();
 
-                    ImGui.TextColored(ColorGrey, "  Checked maps run. Use max for unlimited runs or a number for finite runs.");
+                    UiGui.TextColored(ColorGrey, "  Checked maps run. Use max for unlimited runs or a number for finite runs.");
                     ImGui.Spacing();
-
+                    var mapRoot = ImGui.GetID("");
+                    var rowHeight = Scale(plugin.Configuration.UiCompact ? 36 : 44);
+                    using var queueRows = new MaterialStyleScope();
+                    queueRows.Style(ImGuiStyleVar.CellPadding, new Vector2(ImGui.GetStyle().CellPadding.X, Scale(2)));
+                    var columnWidths = LootGoblinPresentation.QueueWidths(sortedMaps.Select(entry =>
+                        itemSheet?.GetRow(entry.Key).Name.ToString()
+                        ?? (TreasureMapData.KnownMaps.TryGetValue(entry.Key, out var info) ? info.Name : UiText.F("Unknown Map (ID: {0})", entry.Key))));
+                    if (ImGui.BeginTable("##LootGoblinMapQueue", 9, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.BordersInnerH
+                            | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollX | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable | ImGuiTableFlags.SizingFixedFit,
+                            new Vector2(0, Scale(38) + Math.Min(Scale(320), sortedMaps.Count * rowHeight) + ImGui.GetStyle().ScrollbarSize)))
+                    {
+                    ImGui.TableSetupScrollFreeze(0, 1);
+                    string[] columnLabels = ["Map", "Enabled", "Run count", "Inventory", "Saddlebag", "Retainer", "Gather", "Buy", "Max gil"];
+                    for (var column = 0; column < columnLabels.Length; column++)
+                    {
+                        ImGui.TableSetupColumn(columnLabels[column], ImGuiTableColumnFlags.WidthFixed, columnWidths[column]);
+                        UiGui.EnsureColumnMinimum(column, columnWidths[column]);
+                    }
+                    using (UiText.Font(UiFontRole.BodyStrong)) UiGui.TableHeadersRow(Scale(38));
+                    ImGuiP.PushOverrideID(mapRoot);
+                    try
+                    {
                     foreach (var kvp in sortedMaps)
                     {
                         var itemId = kvp.Key;
@@ -359,51 +463,60 @@ public class MainWindow : Window, IDisposable
                             itemName = mapInfo.Name;
                         }
                         if (string.IsNullOrEmpty(itemName))
-                            itemName = $"Unknown Map (ID: {itemId})";
+                            itemName = UiText.F("Unknown Map (ID: {0})", itemId);
                         
                         var desc = item?.Description.ToString() ?? "";
                         var (mapTier, mapLevel) = ParseMapTierAndLevel(desc);
-
+                        ImGui.TableNextRow(ImGuiTableRowFlags.None, rowHeight);
+                        ImGui.TableNextColumn();
+                        using (UiText.Font(UiFontRole.BodyStrong)) MaterialText.Text(itemName);
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.BeginTooltip();
+                            MaterialText.Text(itemName);
+                            if (mapTier > 0) MaterialText.Text(UiText.F("Tier {0}", mapTier));
+                            if (mapLevel > 0) MaterialText.Text(UiText.F("(Lvl {0})", mapLevel));
+                            if (!string.IsNullOrEmpty(desc)) MaterialText.TextWrapped(desc);
+                            ImGui.EndTooltip();
+                        }
+                        ImGui.TableNextColumn();
                         var isEnabled = plugin.Configuration.IsMapTypeEnabled(itemId);
-                        if (ImGui.Checkbox($"##map_{itemId}", ref isEnabled))
+                        if (UiGui.Checkbox($"##map_{itemId}", ref isEnabled))
                         {
                             plugin.Configuration.SetMapTypeEnabled(itemId, isEnabled, TreasureMapData.AllMapItemIds);
                             plugin.Configuration.Save();
                         }
-                        ImGui.SameLine();
+                        ImGui.TableNextColumn();
                         DrawMapRunCountEditor(itemId, isEnabled);
-                        ImGui.SameLine();
+                        ImGui.TableNextColumn(); MaterialText.Text(UiText.F("{0}", kvp.Value.Inventory));
+                        ImGui.TableNextColumn();
+                        var combinedSaddlebag = kvp.Value.Saddlebag + kvp.Value.PremiumSaddlebag;
+                        MaterialText.Text(UiText.F("{0}", combinedSaddlebag));
+                        if (ImGui.IsItemHovered())
+                            MaterialText.SetTooltip(UiText.F("Saddlebag includes regular ({0}) + premium ({1}) saddlebag counts.", kvp.Value.Saddlebag, kvp.Value.PremiumSaddlebag));
+                        ImGui.TableNextColumn(); MaterialText.Text(UiText.F("{0}", kvp.Value.Retainer));
+                        ImGui.TableNextColumn();
                         DrawMapGatherCheckbox(itemId, mapAllowanceStatus);
-                        ImGui.SameLine();
+                        ImGui.TableNextColumn();
                         var isMarketable = item is { } itemRow && itemRow.ItemSearchCategory.RowId != 0;
                         if (isMarketable)
                         {
-                            DrawMapPurchaseControls(itemId);
-                            ImGui.SameLine();
+                            DrawMapPurchaseControls(itemId, tableColumns: true);
                         }
-                        ImGui.Text($"{itemName} x{quantity}");
-                        ImGui.SameLine();
-                        var combinedSaddlebag = kvp.Value.Saddlebag + kvp.Value.PremiumSaddlebag;
-                        ImGui.TextColored(ColorGrey, $"  [Inv {kvp.Value.Inventory} | Saddlebag {combinedSaddlebag} | Retainer {kvp.Value.Retainer}]");
-                        if (ImGui.IsItemHovered())
-                            ImGui.SetTooltip($"Saddlebag includes regular ({kvp.Value.Saddlebag}) + premium ({kvp.Value.PremiumSaddlebag}) saddlebag counts.");
-                        if (mapTier > 0)
+                        else
                         {
-                            ImGui.SameLine();
-                            ImGui.TextColored(ColorCyan, $"  Tier {mapTier}");
+                            MaterialText.TextDisabled("—"); ImGui.TableNextColumn(); MaterialText.TextDisabled("—");
                         }
-                        if (mapLevel > 0)
-                        {
-                            ImGui.SameLine();
-                            ImGui.TextColored(ColorGrey, $"  (Lvl {mapLevel})");
-                        }
+                    }
+                    }
+                    finally { ImGui.PopID(); ImGui.EndTable(); }
                     }
                 }
 
                 ImGui.Spacing();
                 if (manualMapRefreshPending)
                     ImGui.BeginDisabled();
-                if (ImGui.Button("Refresh Maps"))
+                if (UiGui.Button("Refresh Maps", new Vector2(0, 0), MaterialIcon.Refresh))
                 {
                     StartManualMapRefresh();
                 }
@@ -412,26 +525,26 @@ public class MainWindow : Window, IDisposable
                 if (!string.IsNullOrWhiteSpace(manualMapRefreshStatus))
                 {
                     ImGui.SameLine();
-                    ImGui.TextColored(ColorGrey, manualMapRefreshStatus);
+                    UiGui.TextColored(ColorGrey, manualMapRefreshStatus);
                 }
                 
                 // Debug button to read decipher menu indices
                 if (plugin.Configuration.ShowDebugMapCompletion && cachedMaps.Count > 0)
                 {
                     ImGui.Spacing();
-                    if (ImGui.Button("[READ MAP INDICES]"))
+                    if (UiGui.Button("[READ MAP INDICES]"))
                     {
                         ReadMapIndicesFromDecipherMenu();
                     }
                     if (ImGui.IsItemHovered())
                     {
-                        ImGui.SetTooltip("Opens decipher menu and reads all map entries to show correct indices");
+                        UiGui.SetTooltip("Opens decipher menu and reads all map entries to show correct indices");
                     }
                 }
             }
             else
             {
-                ImGui.TextColored(ColorGrey, "  Log in to scan inventory.");
+                UiGui.TextColored(ColorGrey, "  Log in to scan inventory.");
             }
         }
     }
@@ -442,20 +555,20 @@ public class MainWindow : Window, IDisposable
         switch (header.Kind)
         {
             case MapAllowanceHeaderKind.Cooldown:
-                ImGui.TextColored(ColorYellow, $"  {header.PrimaryText}");
+                UiGui.TextColored(ColorYellow, UiText.F($"  {header.PrimaryText}"));
                 if (header.ShowLegend)
                 {
-                    ImGui.TextColored(ColorGrey, $"  {MapAllowanceHeaderPolicy.LegendLineOne}");
-                    ImGui.TextColored(ColorGrey, $"  {MapAllowanceHeaderPolicy.LegendLineTwo}");
+                    UiGui.TextColored(ColorGrey, UiText.F($"  {MapAllowanceHeaderPolicy.LegendLineOne}"));
+                    UiGui.TextColored(ColorGrey, UiText.F($"  {MapAllowanceHeaderPolicy.LegendLineTwo}"));
                 }
                 break;
 
             case MapAllowanceHeaderKind.Ready:
-                ImGui.TextColored(ColorGreen, $"  {header.PrimaryText}");
+                UiGui.TextColored(ColorGreen, UiText.F($"  {header.PrimaryText}"));
                 break;
 
             case MapAllowanceHeaderKind.Unavailable:
-                ImGui.TextColored(ColorGrey, $"  {header.PrimaryText}");
+                UiGui.TextColored(ColorGrey, UiText.F($"  {header.PrimaryText}"));
                 break;
         }
     }
@@ -517,19 +630,19 @@ public class MainWindow : Window, IDisposable
     {
         if (state.Icon != MapGatherIconKind.Seedling)
         {
-            ImGui.SetTooltip(state.Tooltip);
+            UiGui.SetTooltip(state.Tooltip);
             return;
         }
 
         ImGui.BeginTooltip();
-        ImGui.TextUnformatted(state.Tooltip);
-        ImGui.TextColored(ColorGrey, "Seedling: toggle missing-map gathering");
-        ImGui.TextColored(ColorGrey, "Blue X: unavailable through gathering");
-        ImGui.TextColored(ColorGrey, "Red X overlay: allowance cooldown");
+        UiGui.TextUnformatted(state.Tooltip);
+        UiGui.TextColored(ColorGrey, "Seedling: toggle missing-map gathering");
+        UiGui.TextColored(ColorGrey, "Blue X: unavailable through gathering");
+        UiGui.TextColored(ColorGrey, "Red X overlay: allowance cooldown");
         ImGui.EndTooltip();
     }
 
-    private void DrawMapPurchaseControls(uint itemId)
+    private void DrawMapPurchaseControls(uint itemId, bool tableColumns = false)
     {
         if (!plugin.EmptorIPC.IsAvailable)
         {
@@ -559,7 +672,8 @@ public class MainWindow : Window, IDisposable
                 2f);
 
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Emptor is unavailable. Open Marketboard settings for installation guidance.");
+                UiGui.SetTooltip("Emptor is unavailable. Open Marketboard settings for installation guidance.");
+            if (tableColumns) { ImGui.TableNextColumn(); MaterialText.TextDisabled("—"); }
             return;
         }
 
@@ -582,14 +696,14 @@ public class MainWindow : Window, IDisposable
         }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
-            ImGui.SetTooltip(canEnable
+            UiGui.SetTooltip(canEnable
                 ? "Cart: buy missing maps through Emptor after gathering is unavailable. A market trip may prepare up to three, capped by remaining runs."
                 : "Set a positive maximum gil price before enabling this cart.");
         }
 
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(90f);
-        if (ImGui.InputInt($"##purchase_cap_{itemId}", ref gilCap, 0, 0))
+        if (tableColumns) ImGui.TableNextColumn(); else ImGui.SameLine();
+        ImGui.SetNextItemWidth(Math.Min(90f * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.InputInt($"##purchase_cap_{itemId}", ref gilCap, 0, 0))
         {
             plugin.Configuration.SetMapPurchaseGilCap(itemId, gilCap);
             plugin.Configuration.Save();
@@ -602,13 +716,13 @@ public class MainWindow : Window, IDisposable
             snapshot.NqMinimumListing is { } priceHint)
         {
             ImGui.SameLine();
-            if (ImGui.SmallButton($"Use##purchase_hint_{itemId}"))
+            if (UiGui.SmallButton($"Use##purchase_hint_{itemId}"))
             {
                 plugin.Configuration.SetMapPurchaseGilCap(itemId, (int)priceHint);
                 plugin.Configuration.Save();
             }
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Copy this session's positive NQ minimum-listing hint into the ceiling. This does not enable the cart.");
+                UiGui.SetTooltip("Copy this session's positive NQ minimum-listing hint into the ceiling. This does not enable the cart.");
         }
     }
 
@@ -619,26 +733,26 @@ public class MainWindow : Window, IDisposable
         var hasSnapshot = emptor.TryGetPriceSnapshot(itemId, out var snapshot);
 
         ImGui.BeginTooltip();
-        ImGui.TextUnformatted("Maximum gil for one map. Zero disables purchasing for this map.");
+        UiGui.TextUnformatted("Maximum gil for one map. Zero disables purchasing for this map.");
         ImGui.Separator();
 
         if (hasSnapshot && snapshot.NqMinimumListing is > 0)
-            ImGui.TextUnformatted($"Emptor NQ minimum listing: {snapshot.NqMinimumListing:N0} gil");
+            UiGui.TextUnformatted(UiText.F($"Emptor NQ minimum listing: {snapshot.NqMinimumListing:N0} gil"));
         else
-            ImGui.TextUnformatted("Emptor NQ minimum listing: unavailable");
+            UiGui.TextUnformatted("Emptor NQ minimum listing: unavailable");
 
-        ImGui.TextUnformatted($"World: {(hasSnapshot && !string.IsNullOrWhiteSpace(snapshot.World) ? snapshot.World : "unavailable")}");
-        ImGui.TextUnformatted($"Location: {(hasSnapshot && !string.IsNullOrWhiteSpace(snapshot.Location) ? snapshot.Location : "unavailable")}");
-        ImGui.TextUnformatted($"Age: {(hasSnapshot && !string.IsNullOrWhiteSpace(snapshot.Age) ? snapshot.Age : "not reported")}");
-        ImGui.TextUnformatted($"Lookup scope: {EmptorIPC.GetScopeLabel(hasSnapshot ? snapshot.Scope : scope)}");
+        UiGui.TextUnformatted(UiText.F("World: {0}", hasSnapshot && !string.IsNullOrWhiteSpace(snapshot.World) ? snapshot.World : UiText.T("unavailable")));
+        UiGui.TextUnformatted(UiText.F("Location: {0}", hasSnapshot && !string.IsNullOrWhiteSpace(snapshot.Location) ? snapshot.Location : UiText.T("unavailable")));
+        UiGui.TextUnformatted(UiText.F("Age: {0}", hasSnapshot && !string.IsNullOrWhiteSpace(snapshot.Age) ? snapshot.Age : UiText.T("not reported")));
+        UiGui.TextUnformatted(UiText.F("Lookup scope: {0}", UiText.T(EmptorIPC.GetScopeLabel(hasSnapshot ? snapshot.Scope : scope))));
 
         var unavailableReason = hasSnapshot ? snapshot.Error : emptor.PriceStatusText;
         if (!string.IsNullOrWhiteSpace(unavailableReason) && (!hasSnapshot || !snapshot.HasPositiveHint))
-            ImGui.TextColored(ColorYellow, unavailableReason);
+            UiGui.TextColored(ColorYellow, unavailableReason);
 
         ImGui.Spacing();
-        ImGui.TextColored(ColorGrey, "Price hints live only for this Loot Goblin session; they are not saved to disk.");
-        ImGui.TextColored(ColorGrey, "Listings can change after lookup. Refresh is manual and rate-limited to five minutes.");
+        UiGui.TextColored(ColorGrey, "Price hints live only for this Loot Goblin session; they are not saved to disk.");
+        UiGui.TextColored(ColorGrey, "Listings can change after lookup. Refresh is manual and rate-limited to five minutes.");
         ImGui.EndTooltip();
     }
 
@@ -646,38 +760,38 @@ public class MainWindow : Window, IDisposable
     {
         var runCount = plugin.Configuration.GetMapRunCount(itemId);
 
-        ImGui.SetNextItemWidth(60f);
+        ImGui.SetNextItemWidth(Math.Min(60f * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
         if (isEnabled && runCount == Configuration.MapRunCountMax)
         {
             var maxText = "max";
             ImGui.BeginDisabled();
-            ImGui.InputText($"##map_count_{itemId}", ref maxText, 8);
+            UiGui.InputText($"##map_count_{itemId}", ref maxText, 8);
             ImGui.EndDisabled();
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                ImGui.SetTooltip("Runs this map type until no available maps remain.");
+                UiGui.SetTooltip("Runs this map type until no available maps remain.");
             return;
         }
 
         var editableCount = Math.Max(0, runCount);
-        if (ImGui.InputInt($"##map_count_{itemId}", ref editableCount))
+        if (UiGui.InputInt($"##map_count_{itemId}", ref editableCount))
         {
             plugin.Configuration.SetMapRunCount(itemId, editableCount);
             plugin.Configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("0 disables this map type. Positive numbers run that many resolved maps.");
+            UiGui.SetTooltip("0 disables this map type. Positive numbers run that many resolved maps.");
 
         runCount = plugin.Configuration.GetMapRunCount(itemId);
         if (runCount > 0 && runCount != Configuration.MapRunCountMax)
         {
             ImGui.SameLine();
-            if (ImGui.SmallButton($"Max##map_max_{itemId}"))
+            if (UiGui.SmallButton($"Max##map_max_{itemId}"))
             {
                 plugin.Configuration.SetMapRunCountToMax(itemId);
                 plugin.Configuration.Save();
             }
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Switch this map type back to unlimited runs.");
+                UiGui.SetTooltip("Switch this map type back to unlimited runs.");
         }
     }
 
@@ -829,7 +943,7 @@ public class MainWindow : Window, IDisposable
 
     private void DrawMapCompletionSection()
     {
-        if (ImGui.CollapsingHeader("Location Data"))
+        if (UiGui.CollapsingHeader("Location Data"))
         {
             var maps = TreasureMapData.KnownMaps.Values
                 .OrderBy(m => m.MinLevel)
@@ -840,28 +954,28 @@ public class MainWindow : Window, IDisposable
             var implemented = maps.Count(m => m.Status == ImplementationStatus.Implemented);
             var wip = maps.Count(m => m.Status == ImplementationStatus.WIP);
             var notStarted = maps.Count(m => m.Status == ImplementationStatus.NotStarted);
-            ImGui.Text($"  Maps: {maps.Count}  ");
+            UiGui.Text(UiText.F($"  Maps: {maps.Count}  "));
             ImGui.SameLine();
-            ImGui.TextColored(ColorGreen, $"Done: {implemented}");
+            UiGui.TextColored(ColorGreen, UiText.F($"Done: {implemented}"));
             ImGui.SameLine();
-            ImGui.TextColored(ColorYellow, $"  WIP: {wip}");
+            UiGui.TextColored(ColorYellow, UiText.F($"  WIP: {wip}"));
             ImGui.SameLine();
             if (notStarted > 0)
-                ImGui.TextColored(ColorGrey, $"  Not Started: {notStarted}");
+                UiGui.TextColored(ColorGrey, UiText.F($"  Not Started: {notStarted}"));
 
             // === Location Database Summary ===
             var db = plugin.MapLocationDatabase;
-            ImGui.Text($"  Locations: {db.TotalLocations} total  ");
+            UiGui.Text(UiText.F($"  Locations: {db.TotalLocations} total  "));
             ImGui.SameLine();
-            ImGui.TextColored(ColorGreen, $"Resolved: {db.ResolvedLocations}");
+            UiGui.TextColored(ColorGreen, UiText.F($"Resolved: {db.ResolvedLocations}"));
             ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, $"  Missing: {db.TotalLocations - db.ResolvedLocations}");
+            UiGui.TextColored(ColorGrey, UiText.F($"  Missing: {db.TotalLocations - db.ResolvedLocations}"));
 
-            ImGui.Text($"  Community: {db.CommunityEntries.Count}  ");
+            UiGui.Text(UiText.F($"  Community: {db.CommunityEntries.Count}  "));
             ImGui.SameLine();
-            ImGui.Text($"User: {db.UserEntries.Count}  ");
+            UiGui.Text(UiText.F($"User: {db.UserEntries.Count}  "));
             ImGui.SameLine();
-            ImGui.Text($"TreasureSpot: {db.TreasureSpotEntries.Count}");
+            UiGui.Text(UiText.F($"TreasureSpot: {db.TreasureSpotEntries.Count}"));
 
             // === Aetheryte Position Database Summary ===
             var aethDb = plugin.AetherytePositionDatabase;
@@ -870,29 +984,29 @@ public class MainWindow : Window, IDisposable
                 var totalUnlocked = aethDb.GetTotalUnlockedCount();
                 var recorded = aethDb.Count;
                 var missing = totalUnlocked - recorded;
-                ImGui.Text($"  Aetherytes: {recorded}/{totalUnlocked} positions stored  ");
+                UiGui.Text(UiText.F($"  Aetherytes: {recorded}/{totalUnlocked} positions stored  "));
                 if (missing > 0)
                 {
                     ImGui.SameLine();
-                    ImGui.TextColored(ColorYellow, $"({missing} missing)");
+                    UiGui.TextColored(ColorYellow, UiText.F($"({missing} missing)"));
                 }
                 else if (totalUnlocked > 0)
                 {
                     ImGui.SameLine();
-                    ImGui.TextColored(ColorGreen, "(all recorded)");
+                    UiGui.TextColored(ColorGreen, "(all recorded)");
                 }
             }
             else
             {
-                ImGui.Text($"  Aetherytes: {aethDb.Count} positions stored");
+                UiGui.Text(UiText.F($"  Aetherytes: {aethDb.Count} positions stored"));
             }
 
             var userOnly = db.UserOnlyResolved;
             if (userOnly > 0)
             {
-                ImGui.TextColored(ColorCyan, $"  ★ You have {userOnly} location(s) not in community DB - consider sharing!");
+                UiGui.TextColored(ColorCyan, UiText.F($"  ★ You have {userOnly} location(s) not in community DB - consider sharing!"));
                 ImGui.SameLine();
-                if (ImGui.SmallButton("Open Data Folder"))
+                if (UiGui.SmallButton("Open Data Folder"))
                 {
                     try
                     {
@@ -912,7 +1026,7 @@ public class MainWindow : Window, IDisposable
 
                 if (sm.State == BotState.CyclingAetherytes || sm.State == BotState.CyclingMapLocations)
                 {
-                    ImGui.TextColored(ColorCyan, $"  {sm.StateDetail}");
+                    UiGui.TextColored(ColorCyan, UiText.F($"  {sm.StateDetail}"));
 
                     // XYZ diff display during cycling
                     if (sm.State == BotState.CyclingMapLocations && sm.CurrentLocation != null)
@@ -921,10 +1035,10 @@ public class MainWindow : Window, IDisposable
                         var dx = playerPos.X - sm.CurrentLocation.X;
                         var dy = playerPos.Y - sm.CurrentLocation.Y;
                         var dz = playerPos.Z - sm.CurrentLocation.Z;
-                        ImGui.TextColored(ColorGrey, $"  Diff: X={dx:F1} Y={dy:F1} Z={dz:F1}  Dist={Math.Sqrt(dx*dx+dz*dz):F0}y");
+                        UiGui.TextColored(ColorGrey, UiText.F($"  Diff: X={dx:F1} Y={dy:F1} Z={dz:F1}  Dist={Math.Sqrt(dx*dx+dz*dz):F0}y"));
                     }
 
-                    if (ImGui.Button("Stop Cycling"))
+                    if (UiGui.Button("Stop Cycling"))
                     {
                         sm.Stop("main-window:stop-cycling");
                     }
@@ -935,14 +1049,14 @@ public class MainWindow : Window, IDisposable
                         ImGui.SameLine();
                         if (sm.CycleManualControl)
                         {
-                            if (ImGui.Button("Mark This Spot"))
+                            if (UiGui.Button("Mark This Spot"))
                             {
                                 sm.CycleMarkThisSpot();
                             }
                         }
                         else
                         {
-                            if (ImGui.Button("Take Control"))
+                            if (UiGui.Button("Take Control"))
                             {
                                 sm.CycleTakeControl();
                             }
@@ -957,38 +1071,38 @@ public class MainWindow : Window, IDisposable
                         if (isBusy)
                             ImGui.BeginDisabled();
 
-                        if (ImGui.Button("Cycle Missing Aetherytes"))
+                        if (UiGui.Button("Cycle Missing Aetherytes"))
                         {
                             sm.StartCyclingAetherytes();
                         }
                         ImGui.SameLine();
-                        if (ImGui.Button("Cycle Missing XYZ"))
+                        if (UiGui.Button("Cycle Missing XYZ"))
                         {
                             sm.StartCyclingMapLocations();
                         }
 
                         // Aetheryte management buttons
                         ImGui.Spacing();
-                        if (ImGui.Button("Reset All Aetherytes"))
+                        if (UiGui.Button("Reset All Aetherytes"))
                         {
                             if (ImGui.IsItemHovered())
-                                ImGui.SetTooltip("Clear user positions - restore community defaults");
+                                UiGui.SetTooltip("Clear user positions - restore community defaults");
                             // TODO: Add confirmation dialog
                             plugin.AetherytePositionDatabase.ClearAllPositions();
                         }
                         ImGui.SameLine();
-                        if (ImGui.Button("Fresh Scan"))
+                        if (UiGui.Button("Fresh Scan"))
                         {
                             if (ImGui.IsItemHovered())
-                                ImGui.SetTooltip("Clear ALL positions for fresh scanning (dev use)");
+                                UiGui.SetTooltip("Clear ALL positions for fresh scanning (dev use)");
                             // TODO: Add confirmation dialog
                             plugin.AetherytePositionDatabase.ClearAllPositionsForFreshScan();
                         }
                         ImGui.SameLine();
-                        if (ImGui.Button("Open Config Folder"))
+                        if (UiGui.Button("Open Config Folder"))
                         {
                             if (ImGui.IsItemHovered())
-                                ImGui.SetTooltip("Open the folder containing AetherytePositions.json for sharing");
+                                UiGui.SetTooltip("Open the folder containing AetherytePositions.json for sharing");
                             System.Diagnostics.Process.Start("explorer.exe", plugin.AetherytePositionDatabase.ConfigDirectory);
                         }
 
@@ -1004,11 +1118,11 @@ public class MainWindow : Window, IDisposable
             // === Download / Auto-Update Controls ===
             if (db.IsDownloading)
             {
-                ImGui.TextColored(ColorYellow, "  Downloading...");
+                UiGui.TextColored(ColorYellow, "  Downloading...");
             }
             else
             {
-                if (ImGui.Button("Download Updated Locs"))
+                if (UiGui.Button("Download Updated Locs"))
                 {
                     _ = plugin.DownloadCommunityLocationsForCurrentVersionAsync();
                 }
@@ -1017,7 +1131,7 @@ public class MainWindow : Window, IDisposable
                     ImGui.SameLine();
                     var dlColor = db.LastDownloadResult.StartsWith("OK") ? ColorGreen :
                                   db.LastDownloadResult.StartsWith("Error") ? ColorRed : ColorGrey;
-                    ImGui.TextColored(dlColor, db.LastDownloadResult);
+                    UiGui.TextColored(dlColor, db.LastDownloadResult);
                 }
             }
 
@@ -1027,7 +1141,7 @@ public class MainWindow : Window, IDisposable
             var grouped = maps.GroupBy(m => m.Expansion).ToList();
             foreach (var group in grouped)
             {
-                if (ImGui.TreeNode($"{group.Key} ({group.Count(m => m.Status == ImplementationStatus.Implemented)}/{group.Count()})##exp_{group.Key}"))
+                if (MaterialText.TreeNode($"{group.Key} ({group.Count(m => m.Status == ImplementationStatus.Implemented)}/{group.Count()})##exp_{group.Key}"))
                 {
                     foreach (var map in group)
                     {
@@ -1044,7 +1158,7 @@ public class MainWindow : Window, IDisposable
                             ImplementationStatus.WIP => "[WIP]",
                             _ => "[--]",
                         };
-                        ImGui.TextColored(statusColor, statusIcon);
+                        UiGui.TextColored(statusColor, statusIcon);
                         ImGui.SameLine();
 
                         // Name + instance name(s)
@@ -1056,7 +1170,7 @@ public class MainWindow : Window, IDisposable
                             else
                                 displayName += $" [{map.InstanceName}]";
                         }
-                        ImGui.Text(displayName);
+                        UiGui.Text(displayName);
                         ImGui.SameLine();
 
                         // Category tag
@@ -1076,17 +1190,17 @@ public class MainWindow : Window, IDisposable
                             MapCategory.AllTypesRandom => "[All 3 Types]",
                             _ => "[Outdoor]",
                         };
-                        ImGui.TextColored(catColor, catLabel);
+                        UiGui.TextColored(catColor, catLabel);
 
                         // Second line: Tier, Level, Territory
-                        ImGui.Text($"      {map.Tier} | Lvl {map.MinLevel}");
+                        UiGui.Text(UiText.F($"      {map.Tier} | Lvl {map.MinLevel}"));
                         if (map.DungeonTerritoryId > 0)
                         {
                             ImGui.SameLine();
                             if (map.SecondTerritoryId > 0)
-                                ImGui.TextColored(ColorGrey, $" | Territory {map.DungeonTerritoryId} / {map.SecondTerritoryId}");
+                                UiGui.TextColored(ColorGrey, UiText.F($" | Territory {map.DungeonTerritoryId} / {map.SecondTerritoryId}"));
                             else
-                                ImGui.TextColored(ColorGrey, $" | Territory {map.DungeonTerritoryId}");
+                                UiGui.TextColored(ColorGrey, UiText.F($" | Territory {map.DungeonTerritoryId}"));
                         }
                     }
                     ImGui.TreePop();
@@ -1094,7 +1208,7 @@ public class MainWindow : Window, IDisposable
             }
 
             // === Zone Location Stats ===
-            if (ImGui.TreeNode("Location Data by Zone##zonestats"))
+            if (MaterialText.TreeNode("Location Data by Zone##zonestats", display: UiText.T("Location Data by Zone")))
             {
                 var zoneStats = db.GetZoneStats();
                 foreach (var kvp in zoneStats.OrderBy(z => z.Key))
@@ -1104,11 +1218,11 @@ public class MainWindow : Window, IDisposable
                     var pct = total > 0 ? (int)(100.0 * resolved / total) : 0;
 
                     var zoneColor = pct >= 100 ? ColorGreen : pct > 0 ? ColorYellow : ColorGrey;
-                    ImGui.TextColored(zoneColor, $"  {zone}: {resolved}/{total} ({pct}%)");
+                    UiGui.TextColored(zoneColor, UiText.F($"  {zone}: {resolved}/{total} ({pct}%)"));
                     if (zoneUserOnly > 0)
                     {
                         ImGui.SameLine();
-                        ImGui.TextColored(ColorCyan, $" [+{zoneUserOnly} yours]");
+                        UiGui.TextColored(ColorCyan, UiText.F($" [+{zoneUserOnly} yours]"));
                     }
                 }
                 ImGui.TreePop();
@@ -1118,31 +1232,36 @@ public class MainWindow : Window, IDisposable
 
     private void DrawBotControlSection()
     {
-        if (ImGui.CollapsingHeader("Quick Actions", ImGuiTreeNodeFlags.DefaultOpen))
         {
+            ImGui.BeginGroup(); DrawCompactWarnings(); ImGui.EndGroup();
+            using var font = UiText.Font(UiFontRole.Action);
             var sm = plugin.StateManager;
             var loggedIn = Plugin.ClientState.IsLoggedIn;
-            const float buttonWidth = 110f;
+            var buttonWidth = Scale(110);
+            var buttonHeight = Scale(plugin.Configuration.UiCompact ? 40 : 52);
+            NextGroup(Math.Max(buttonWidth, UiGui.ButtonWidth("Start", MaterialIcon.Play)));
 
             var canStart = loggedIn && (sm.State == BotState.Idle || sm.State == BotState.Error);
             if (!canStart)
                 ImGui.BeginDisabled();
-            if (ImGui.Button("Start", new Vector2(buttonWidth, 0)))
+            ImGui.PushStyleColor(ImGuiCol.Button, MaterialTheme.Current.Colors.PrimaryContainer);
+            if (UiGui.Button("Start", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Play))
             {
                 plugin.SetBotEnabled(true, "main-window:start");
                 sm.Start();
             }
+            ImGui.PopStyleColor();
             if (!canStart)
                 ImGui.EndDisabled();
 
-            ImGui.SameLine();
+            NextGroup(Math.Max(buttonWidth, UiGui.ButtonWidth(sm.IsPaused ? "Resume" : "Pause", sm.IsPaused ? MaterialIcon.Play : MaterialIcon.Pause)));
 
             if (sm.IsPaused)
             {
                 var canResume = loggedIn;
                 if (!canResume)
                     ImGui.BeginDisabled();
-                if (ImGui.Button("Resume", new Vector2(buttonWidth, 0)))
+                if (UiGui.Button("Resume", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Play))
                     sm.Resume("main-window:resume");
                 if (!canResume)
                     ImGui.EndDisabled();
@@ -1152,18 +1271,18 @@ public class MainWindow : Window, IDisposable
                 var canPause = loggedIn && sm.State != BotState.Idle && sm.State != BotState.Error;
                 if (!canPause)
                     ImGui.BeginDisabled();
-                if (ImGui.Button("Pause", new Vector2(buttonWidth, 0)))
+                if (UiGui.Button("Pause", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Pause))
                     sm.Pause("main-window:pause");
                 if (!canPause)
                     ImGui.EndDisabled();
             }
 
-            ImGui.SameLine();
+            NextGroup(Math.Max(buttonWidth, UiGui.ButtonWidth("Stop", MaterialIcon.Stop)));
 
             var canStop = loggedIn && sm.State != BotState.Idle && sm.State != BotState.Error;
             if (!canStop)
                 ImGui.BeginDisabled();
-            if (ImGui.Button("Stop", new Vector2(buttonWidth, 0)))
+            if (UiGui.Button("Stop", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Stop))
             {
                 if (!sm.IsPaused)
                     plugin.SetBotEnabled(false, "main-window:stop");
@@ -1173,20 +1292,20 @@ public class MainWindow : Window, IDisposable
             if (!canStop)
                 ImGui.EndDisabled();
 
-            ImGui.Spacing();
-            if (ImGui.Button("Alexandrite", new Vector2(buttonWidth, 0)))
+            NextGroup(Math.Max(buttonWidth, UiGui.ButtonWidth("Alexandrite", MaterialIcon.Crystal)));
+            if (UiGui.Button("Alexandrite", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Crystal))
             {
                 plugin.AlexandriteMapWindow.IsOpen = !plugin.AlexandriteMapWindow.IsOpen;
             }
 
-            ImGui.SameLine();
-            if (ImGui.Button("Settings", new Vector2(buttonWidth, 0)))
+            NextGroup(Math.Max(buttonWidth, UiGui.ButtonWidth("Settings", MaterialIcon.Settings)));
+            if (UiGui.Button("Settings", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Settings))
             {
                 plugin.ToggleConfigUi();
             }
 
-            ImGui.SameLine();
-            if (ImGui.Button("Report Issue", new Vector2(buttonWidth, 0)))
+            NextGroup(Math.Max(buttonWidth, UiGui.ButtonWidth("Report Issue", MaterialIcon.Chat)));
+            if (UiGui.Button("Report Issue", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Chat))
             {
                 ReportIssue();
             }
@@ -1195,99 +1314,75 @@ public class MainWindow : Window, IDisposable
 
     private void DrawCurrentRunSection()
     {
-        if (ImGui.CollapsingHeader("Current Run", ImGuiTreeNodeFlags.DefaultOpen))
+        if (UiGui.CollapsingHeader("Current Run", ImGuiTreeNodeFlags.DefaultOpen, MaterialIcon.Target))
         {
             if (!Plugin.ClientState.IsLoggedIn)
             {
-                ImGui.TextColored(ColorGrey, "  Log in to view current run.");
+                UiGui.TextColored(ColorGrey, "  Log in to view current run.");
                 return;
             }
 
             var sm = plugin.StateManager;
-
-            ImGui.Text("  State: ");
-            ImGui.SameLine();
+            var valueColumn = Math.Max(LootGoblinPresentation.DetailColumn("  State: ", "  Map: ", "  Retainer: ", "  Zone: "),
+                ImGui.GetCursorPosX() + Scale(plugin.Configuration.UiCompact ? 148 : 176));
+            ImGui.Dummy(new Vector2(0, Scale(plugin.Configuration.UiCompact ? 4 : 8)));
+            using var rows = new MaterialStyleScope();
+            rows.Style(ImGuiStyleVar.ItemSpacing, new Vector2(ImGui.GetStyle().ItemSpacing.X,
+                Math.Max(ImGui.GetStyle().ItemSpacing.Y, Scale(plugin.Configuration.UiCompact ? 36 : 44) - ImGui.GetTextLineHeight())));
+            LootGoblinPresentation.DetailLabel("  Map: ", valueColumn);
+            if (sm.SelectedMapItemId > 0)
+            {
+                var item = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>()?.GetRow(sm.SelectedMapItemId);
+                var mapName = item?.Name.ToString() ?? UiText.F("ID {0}", sm.SelectedMapItemId);
+                UiGui.TextColored(ColorCyan, mapName);
+            }
+            else
+                UiGui.TextColored(ColorGrey, "(none)");
+            LootGoblinPresentation.DetailLabel("  Zone: ", valueColumn);
+            UiGui.TextColored(sm.CurrentLocation != null ? ColorCyan : ColorGrey, sm.CurrentLocation?.ZoneName ?? "(none)");
+            LootGoblinPresentation.DetailLabel("  State: ", valueColumn);
             var stateColor = sm.State == BotState.Error ? ColorRed :
                              sm.State == BotState.Idle ? ColorGrey :
                              sm.State == BotState.Completed ? ColorGreen : ColorCyan;
-            ImGui.TextColored(stateColor, sm.State.ToString());
+            UiGui.TextColored(stateColor, sm.State.ToString());
 
             if (sm.IsPaused)
             {
                 ImGui.SameLine();
-                ImGui.TextColored(ColorYellow, " [PAUSED]");
+                UiGui.TextColored(ColorYellow, " [PAUSED]");
             }
 
-            if (!string.IsNullOrEmpty(sm.StateDetail))
+            if (!string.IsNullOrEmpty(sm.StateDetail) && !string.Equals(sm.StateDetail, sm.State.ToString(), StringComparison.Ordinal))
             {
-                ImGui.Text("  ");
+                UiGui.Text("  ");
                 ImGui.SameLine();
-                ImGui.TextColored(ColorGrey, sm.StateDetail);
+                UiGui.TextColored(ColorGrey, sm.StateDetail);
             }
 
             if (sm.RetryCount > 0)
             {
-                ImGui.Text("  ");
+                UiGui.Text("  ");
                 ImGui.SameLine();
-                ImGui.TextColored(ColorYellow, $"Errors: {sm.RetryCount}");
-            }
-
-            if (sm.SelectedMapItemId > 0)
-            {
-                ImGui.Spacing();
-                var item = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>()?.GetRow(sm.SelectedMapItemId);
-                var mapName = item?.Name.ToString() ?? $"ID {sm.SelectedMapItemId}";
-                ImGui.Text("  Map: ");
-                ImGui.SameLine();
-                ImGui.TextColored(ColorCyan, mapName);
+                UiGui.TextColored(ColorYellow, UiText.F($"Errors: {sm.RetryCount}"));
             }
 
             var retainer = plugin.RetainerMapRetrievalService;
             if (retainer.IsRunning || !string.IsNullOrWhiteSpace(retainer.LastError))
             {
-                ImGui.Text("  Retainer: ");
-                ImGui.SameLine();
+                LootGoblinPresentation.DetailLabel("  Retainer: ", valueColumn);
                 var color = string.IsNullOrWhiteSpace(retainer.LastError) ? ColorCyan : ColorRed;
-                ImGui.TextColored(color, retainer.StatusText);
+                UiGui.TextColored(color, retainer.StatusText);
             }
-
-            // Location info
-            if (sm.CurrentLocation != null)
-            {
-                ImGui.Text("  Zone: ");
-                ImGui.SameLine();
-                ImGui.TextColored(ColorCyan, sm.CurrentLocation.ZoneName);
-            }
-
-            var nav = plugin.NavigationService;
-            ImGui.Text("  Nav: ");
-            ImGui.SameLine();
-            var navColor = nav.State == NavigationState.Error ? ColorRed :
-                           nav.State == NavigationState.Idle ? ColorGrey : ColorCyan;
-            ImGui.TextColored(navColor, nav.State.ToString());
-            if (!string.IsNullOrEmpty(nav.StateDetail))
-            {
-                ImGui.SameLine();
-                ImGui.TextColored(ColorGrey, $"  {nav.StateDetail}");
-            }
-
-            ImGui.Text("  ");
-            ImGui.SameLine();
-            ImGui.TextColored(nav.IsMounted() ? ColorGreen : ColorGrey, nav.IsMounted() ? "[Mounted]" : "[On Foot]");
-            ImGui.SameLine();
-            ImGui.TextColored(nav.IsFlying() ? ColorCyan : ColorGrey, nav.IsFlying() ? "[Flying]" : "[Grounded]");
-            ImGui.SameLine();
-            ImGui.TextColored(nav.IsInCombat() ? ColorRed : ColorGrey, nav.IsInCombat() ? "[In Combat]" : "[No Combat]");
         }
     }
 
     private void DrawNavigationSection()
     {
-        if (ImGui.CollapsingHeader("Navigation", ImGuiTreeNodeFlags.DefaultOpen))
+        if (UiGui.CollapsingHeader("Navigation", icon: MaterialIcon.Send))
         {
             if (!Plugin.ClientState.IsLoggedIn)
             {
-                ImGui.TextColored(ColorGrey, "  Log in to use navigation.");
+                UiGui.TextColored(ColorGrey, "  Log in to use navigation.");
                 return;
             }
 
@@ -1295,41 +1390,41 @@ public class MainWindow : Window, IDisposable
             var vnav = plugin.VNavIPC;
 
             // State display
-            ImGui.Text("  State: ");
+            UiGui.Text("  State: ");
             ImGui.SameLine();
             var stateColor = nav.State == NavigationState.Error ? ColorRed :
                              nav.State == NavigationState.Idle ? ColorGrey : ColorCyan;
-            ImGui.TextColored(stateColor, nav.State.ToString());
+            UiGui.TextColored(stateColor, nav.State.ToString());
             if (!string.IsNullOrEmpty(nav.StateDetail))
             {
                 ImGui.SameLine();
-                ImGui.TextColored(ColorGrey, $"  {nav.StateDetail}");
+                UiGui.TextColored(ColorGrey, UiText.F($"  {nav.StateDetail}"));
             }
 
             // Condition indicators
-            ImGui.Text("  ");
+            UiGui.Text("  ");
             ImGui.SameLine();
-            ImGui.TextColored(nav.IsMounted() ? ColorGreen : ColorGrey, nav.IsMounted() ? "[Mounted]" : "[On Foot]");
+            UiGui.TextColored(nav.IsMounted() ? ColorGreen : ColorGrey, nav.IsMounted() ? "[Mounted]" : "[On Foot]");
             ImGui.SameLine();
-            ImGui.TextColored(nav.IsFlying() ? ColorCyan : ColorGrey, nav.IsFlying() ? "[Flying]" : "[Grounded]");
+            UiGui.TextColored(nav.IsFlying() ? ColorCyan : ColorGrey, nav.IsFlying() ? "[Flying]" : "[Grounded]");
             ImGui.SameLine();
-            ImGui.TextColored(nav.IsInCombat() ? ColorRed : ColorGrey, nav.IsInCombat() ? "[In Combat]" : "[No Combat]");
+            UiGui.TextColored(nav.IsInCombat() ? ColorRed : ColorGrey, nav.IsInCombat() ? "[In Combat]" : "[No Combat]");
 
             if (!vnav.IsAvailable)
             {
                 ImGui.Spacing();
-                ImGui.TextColored(ColorRed, "  vnavmesh required for navigation.");
+                UiGui.TextColored(ColorRed, "  vnavmesh required for navigation.");
             }
         }
     }
 
     private void DrawPartySection()
     {
-        if (ImGui.CollapsingHeader("Party Status"))
+        if (UiGui.CollapsingHeader("Party Status", ImGuiTreeNodeFlags.DefaultOpen, MaterialIcon.Group))
         {
             if (!Plugin.ClientState.IsLoggedIn)
             {
-                ImGui.TextColored(ColorGrey, "  Log in to check party status.");
+                UiGui.TextColored(ColorGrey, "  Log in to check party status.");
                 return;
             }
 
@@ -1337,12 +1432,12 @@ public class MainWindow : Window, IDisposable
             party.UpdatePartyStatus();
 
             var memberCount = party.PartyMembers.Count;
-            ImGui.Text($"  Members: {memberCount}");
+            UiGui.Text(UiText.F($"  Members: {memberCount}"));
             if (memberCount > 1)
             {
                 ImGui.SameLine();
                 var mountedCount = party.PartyMembers.Count(m => m.IsMounted);
-                ImGui.TextColored(ColorGreen, $" ({mountedCount}/{memberCount} mounted)");
+                UiGui.TextColored(ColorGreen, UiText.F($" ({mountedCount}/{memberCount} mounted)"));
             }
 
             if (party.PartyMembers.Count > 1)
@@ -1354,14 +1449,14 @@ public class MainWindow : Window, IDisposable
                 foreach (var member in party.PartyMembers)
                 {
                     var krangled = plugin.Configuration.KrangleNames ? KrangleService.KrangleName(member.Name) : member.Name;
-                    ImGui.Text($"    {krangled}");
+                    UiGui.Text(UiText.F($"    {krangled}"));
                     ImGui.SameLine();
 
                     var dx = localPos.X - member.Position.X;
                     var dz = localPos.Z - member.Position.Z;
                     var xzDistance = Math.Sqrt(dx * dx + dz * dz);
                     var distText = member.IsInSameTerritory && member.HasPosition
-                        ? $"{xzDistance:F0}y XZ"
+                        ? UiText.F($"{xzDistance:F0}y XZ")
                         : "N/A";
                     var territoryText = member.TerritoryStatus switch
                     {
@@ -1378,114 +1473,119 @@ public class MainWindow : Window, IDisposable
                     };
                     var mountText = member.IsMounted ? "Mounted" : "Not Mounted";
                     var statusColor = member.IsLoaded && member.IsInSameTerritory ? ColorGreen : ColorGrey;
-                    ImGui.TextColored(
+                    UiGui.TextColored(
                         statusColor,
-                        $"[{mountText}] [{territoryText}, {loadText}, {positionText}] {distText}");
+                        UiText.F($"[{UiText.T(mountText)}] [{UiText.T(territoryText)}, {UiText.T(loadText)}, {UiText.T(positionText)}] {distText}"));
 
                     if (member.IsFlying)
                     {
                         ImGui.SameLine();
-                        ImGui.TextColored(ColorCyan, "[Flying]");
+                        UiGui.TextColored(ColorCyan, "[Flying]");
                     }
 
                     ImGui.SameLine();
                     var xyz = member.HasPosition
-                        ? $"({member.Position.X:F0}, {member.Position.Y:F0}, {member.Position.Z:F0})"
+                        ? UiText.F("({0:F0}, {1:F0}, {2:F0})", member.Position.X, member.Position.Y, member.Position.Z)
                         : "(No Position)";
-                    ImGui.TextColored(ColorGrey, xyz);
+                    UiGui.TextColored(ColorGrey, xyz);
                 }
             }
 
             ImGui.Spacing();
-            ImGui.Text("  Mount wait: ");
+            UiGui.Text("  Mount wait: ");
             ImGui.SameLine();
-            ImGui.TextColored(plugin.Configuration.WaitForParty ? ColorGreen : ColorGrey,
+            UiGui.TextColored(plugin.Configuration.WaitForParty ? ColorGreen : ColorGrey,
                 plugin.Configuration.WaitForParty ? "enabled" : "off");
             ImGui.SameLine();
-            ImGui.TextColored(plugin.Configuration.RequireAllMounted ? ColorGreen : ColorGrey,
+            UiGui.TextColored(plugin.Configuration.RequireAllMounted ? ColorGreen : ColorGrey,
                 plugin.Configuration.RequireAllMounted ? " | all mounted" : " | any mounted");
 
-            ImGui.Text("  Dismount wait: ");
+            UiGui.Text("  Dismount wait: ");
             ImGui.SameLine();
-            ImGui.TextColored(plugin.Configuration.PartyWaitBeforeDismount ? ColorGreen : ColorGrey,
+            UiGui.TextColored(plugin.Configuration.PartyWaitBeforeDismount ? ColorGreen : ColorGrey,
                 plugin.Configuration.PartyWaitBeforeDismount ? "enabled" : "off");
             if (plugin.Configuration.PartyWaitBeforeDismount &&
                 plugin.Configuration.PartyWaitBeforeDismountUseCountThreshold)
             {
                 ImGui.SameLine();
                 var requiredOthers = Math.Clamp(plugin.Configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);
-                ImGui.TextColored(ColorGrey, $" | wait for {requiredOthers} other player(s)");
+                UiGui.TextColored(ColorGrey, UiText.F($" | wait for {requiredOthers} other player(s)"));
             }
         }
     }
 
-private void DrawDependencySection()
+    private void DrawDependencySection()
     {
-        if (ImGui.CollapsingHeader("Dependencies"))
+        if (UiGui.CollapsingHeader("Dependencies", ImGuiTreeNodeFlags.DefaultOpen, MaterialIcon.Settings))
         {
             // Required
-            ImGui.Text("Required:");
+            UiGui.Text("Required:");
             ImGui.Spacing();
 
             DrawPluginStatus("  vnavmesh", plugin.VNavIPC.IsAvailable, true);
             DrawPluginStatus("  Lifestream", plugin.IsLifestreamAvailable, true);
-            DrawPluginStatus("  Map Flag Reader", plugin.MapFlagService.IsAvailable, false);
-            DrawPluginStatus("  TextAdvance", plugin.IsTextAdvanceAvailable, false);
             DrawPluginStatus("  ADS", plugin.IsAdsAvailable, plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver);
 
             if (!plugin.IsLifestreamAvailable)
             {
-                ImGui.TextColored(ColorRed, "  Lifestream missing. LootGoblin cannot issue /li travel without it.");
+                UiGui.TextColored(ColorRed, "  Lifestream missing. LootGoblin cannot issue /li travel without it.");
             }
 
             if (plugin.Configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
             {
-                ImGui.TextColored(ColorRed, "  ADS dungeon handoff is enabled. Install ADS or disable it in settings.");
+                UiGui.TextColored(ColorRed, "  ADS dungeon handoff is enabled. Install ADS or disable it in settings.");
             }
 
             ImGui.Spacing();
-            ImGui.Text("Optional (Retainer/Saddlebag Retrieval):");
-            ImGui.Spacing();
-
-            DrawPluginStatus("  xadb", plugin.IsXaDatabaseAvailable, false);
-            ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, "needed for retainer map lookup");
-            DrawPluginStatus("  xaslave", plugin.IsXaSlaveAvailable, false);
-            ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, "needed for assisted retainer/saddlebag retrieval");
-
-            ImGui.Spacing();
-            ImGui.Text("Optional (Map Gathering):");
-            ImGui.Spacing();
-
-            DrawPluginStatus("  GatherBuddy Reborn", plugin.GatherBuddyRebornService.IsAvailable, false);
-            ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, plugin.GatherBuddyRebornService.StatusText);
-
-            ImGui.Spacing();
-            ImGui.Text("Optional (Treasure Map Statistics):");
-            ImGui.Spacing();
-
-            DrawPluginStatus("  MapPartyAssist", plugin.IsMapPartyAssistAvailable, false);
-            ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, "by SaMo; used for treasure map statistics");
-
-            ImGui.Spacing();
-            ImGui.Text("Optional (Combat/Rotation):");
-            ImGui.Spacing();
-
-            foreach (var rp in plugin.RotationPluginIPC.RotationPlugins)
+            if (UiGui.CollapsingHeader("Integrations"))
             {
-                DrawPluginStatus($"  {rp.DisplayName}", rp.IsAvailable, false);
-                if (rp.IsAvailable && rp.HasTreasureMapSupport)
+                DrawPluginStatus("  Map Flag Reader", plugin.MapFlagService.IsAvailable, false);
+                DrawPluginStatus("  TextAdvance", plugin.IsTextAdvanceAvailable, false);
+                ImGui.Spacing();
+                UiGui.Text("Optional (Retainer/Saddlebag Retrieval):");
+                ImGui.Spacing();
+
+                DrawPluginStatus("  xadb", plugin.IsXaDatabaseAvailable, false);
+                ImGui.SameLine();
+                UiGui.TextColored(ColorGrey, "needed for retainer map lookup");
+                DrawPluginStatus("  xaslave", plugin.IsXaSlaveAvailable, false);
+                ImGui.SameLine();
+                UiGui.TextColored(ColorGrey, "needed for assisted retainer/saddlebag retrieval");
+
+                ImGui.Spacing();
+                UiGui.Text("Optional (Map Gathering):");
+                ImGui.Spacing();
+
+                DrawPluginStatus("  GatherBuddy Reborn", plugin.GatherBuddyRebornService.IsAvailable, false);
+                ImGui.SameLine();
+                UiGui.TextColored(ColorGrey, plugin.GatherBuddyRebornService.StatusText);
+
+                ImGui.Spacing();
+                UiGui.Text("Optional (Treasure Map Statistics):");
+                ImGui.Spacing();
+
+                DrawPluginStatus("  MapPartyAssist", plugin.IsMapPartyAssistAvailable, false);
+                ImGui.SameLine();
+                UiGui.TextColored(ColorGrey, "by SaMo; used for treasure map statistics");
+
+                ImGui.Spacing();
+                UiGui.Text("Optional (Combat/Rotation):");
+                ImGui.Spacing();
+
+                foreach (var rp in plugin.RotationPluginIPC.RotationPlugins)
                 {
-                    ImGui.SameLine();
-                    ImGui.TextColored(ColorGreen, " [Map AI]");
+                    DrawPluginStatus($"  {rp.DisplayName}", rp.IsAvailable, false);
+                    if (rp.IsAvailable && rp.HasTreasureMapSupport)
+                    {
+                        ImGui.SameLine();
+                        UiGui.TextColored(ColorGreen, " [Map AI]");
+                    }
                 }
+
+                ImGui.Spacing();
             }
 
-            ImGui.Spacing();
-            if (ImGui.Button("Refresh Dependencies"))
+            if (UiGui.Button("Refresh Dependencies"))
             {
                 plugin.VNavIPC.CheckAvailability();
                 plugin.MapFlagService.CheckAvailability();
@@ -1498,28 +1598,30 @@ private void DrawDependencySection()
 
     private void DrawPluginStatus(string label, bool available, bool required)
     {
-        ImGui.Text($"{label}: ");
+        var valueColumn = Math.Max(LootGoblinPresentation.DetailColumn("  vnavmesh: ", "  Lifestream: ", "  ADS: "),
+            LootGoblinPresentation.DetailColumn(UiText.F($"{label}: ")));
+        UiGui.Text(UiText.F($"{label}: "));
+        ImGui.SameLine(valueColumn);
+        var statusColor = available ? ColorGreen : required ? ColorRed : ColorYellow;
+        var origin = ImGui.GetCursorScreenPos();
+        ImGui.GetWindowDrawList().AddCircleFilled(origin + new Vector2(Scale(5), ImGui.GetTextLineHeight() * .5f),
+            Scale(5), ImGui.GetColorU32(statusColor), 24);
+        ImGui.Dummy(new Vector2(Scale(12), ImGui.GetTextLineHeight()));
         ImGui.SameLine();
-        if (available)
-        {
-            ImGui.TextColored(ColorGreen, "Available");
-        }
-        else
-        {
-            ImGui.TextColored(required ? ColorRed : ColorYellow, required ? "MISSING" : "Not found");
-        }
+        UiGui.TextColored(available ? MaterialTheme.Current.Colors.OnSurface : statusColor,
+            available ? "Available" : required ? "MISSING" : "Not found");
     }
 
     private void DrawCommandsSection()
     {
-        if (ImGui.CollapsingHeader("Commands"))
+        if (UiGui.CollapsingHeader("Commands", icon: MaterialIcon.Terminal))
         {
-            ImGui.Text("/lootgoblin or /lg");
-            ImGui.Text("  (no args) - Toggle this window");
-            ImGui.Text("  config    - Open settings");
-            ImGui.Text("  on        - Enable bot");
-            ImGui.Text("  off       - Disable bot");
-            ImGui.Text("  status    - Print current status");
+            UiGui.Text("/lootgoblin or /lg");
+            UiGui.Text("  (no args) - Toggle this window");
+            UiGui.Text("  config    - Open settings");
+            UiGui.Text("  on        - Enable bot");
+            UiGui.Text("  off       - Disable bot");
+            UiGui.Text("  status    - Print current status");
         }
     }
 
@@ -1718,16 +1820,16 @@ private void DrawDependencySection()
 
     private void DrawDebugLogSection()
     {
-        if (ImGui.CollapsingHeader("Debug Log", ImGuiTreeNodeFlags.DefaultOpen))
+        if (UiGui.CollapsingHeader("Debug Log", ImGuiTreeNodeFlags.DefaultOpen))
         {
             var logHeight = ImGui.GetContentRegionAvail().Y - 5;
             if (logHeight < 100) logHeight = 100;
 
-            if (ImGui.BeginChild("DebugLogScroll", new Vector2(0, logHeight), true))
+            if (ImGui.BeginChild("DebugLogScroll", new Vector2(0, logHeight), true, ImGuiWindowFlags.HorizontalScrollbar))
             {
                 foreach (var line in plugin.DebugLog)
                 {
-                    ImGui.TextWrapped(line);
+                    MaterialText.TextWrapped(line);
                 }
 
                 if (plugin.DebugLog.Count > 0)

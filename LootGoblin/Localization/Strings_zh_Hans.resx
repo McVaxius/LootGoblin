@@ -1,0 +1,1372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="({0:F0}, {1:F0}, {2:F0})" xml:space="preserve"><value>({0:F0}, {1:F0}, {2:F0})</value></data>
+  <data name="({0} missing)" xml:space="preserve"><value>（缺少{0}人）</value></data>
+  <data name="({0} per map)" xml:space="preserve"><value>（每张地图{0}）</value></data>
+  <data name="({0}/{1} mounted)" xml:space="preserve"><value>（骑乘{0}/{1}）</value></data>
+  <data name="(all recorded)" xml:space="preserve"><value>（全部已记录）</value></data>
+  <data name="(Lvl {0})" xml:space="preserve"><value>（等级{0}）</value></data>
+  <data name="(no args) - Toggle this window" xml:space="preserve"><value>（无参数）- 切换此窗口</value></data>
+  <data name="(No Position)" xml:space="preserve"><value>（无位置）</value></data>
+  <data name="(none)" xml:space="preserve"><value>（无）</value></data>
+  <data name="(Used for manual mounting)" xml:space="preserve"><value>（用于手动骑乘）</value></data>
+  <data name="[All 3 Types]" xml:space="preserve"><value>［全部3类］</value></data>
+  <data name="[Dungeon]" xml:space="preserve"><value>［副本］</value></data>
+  <data name="[Flying]" xml:space="preserve"><value>［飞行中］</value></data>
+  <data name="[Grounded]" xml:space="preserve"><value>［地面］</value></data>
+  <data name="[Guaranteed]" xml:space="preserve"><value>［必定］</value></data>
+  <data name="[In Combat]" xml:space="preserve"><value>［战斗中］</value></data>
+  <data name="[Map AI]" xml:space="preserve"><value>［地图AI］</value></data>
+  <data name="[Mounted]" xml:space="preserve"><value>［骑乘中］</value></data>
+  <data name="[No Combat]" xml:space="preserve"><value>［未战斗］</value></data>
+  <data name="[OK]" xml:space="preserve"><value>[正常]</value></data>
+  <data name="[On Foot]" xml:space="preserve"><value>［步行］</value></data>
+  <data name="[Outdoor]" xml:space="preserve"><value>［野外］</value></data>
+  <data name="[PAUSED]" xml:space="preserve"><value>［已暂停］</value></data>
+  <data name="[READ MAP INDICES]" xml:space="preserve"><value>［读取地图索引］</value></data>
+  <data name="[REDACTED]" xml:space="preserve"><value>［已隐藏］</value></data>
+  <data name="[Roulette]" xml:space="preserve"><value>［随机］</value></data>
+  <data name="[WIP]" xml:space="preserve"><value>［开发中］</value></data>
+  <data name="{0} | Lvl {1}" xml:space="preserve"><value>{0} | 等级{1}</value></data>
+  <data name="{0} done, {1} remaining" xml:space="preserve"><value>已完成{0}次，剩余{1}次</value></data>
+  <data name="{0} inventory + {1} active + {2} from Poetics" xml:space="preserve"><value>背包{0} + 已激活{1} + 诗学购买{2}</value></data>
+  <data name="{0}m{1:D2}s" xml:space="preserve"><value>{0}分{1:D2}秒</value></data>
+  <data name="|  Bot State:" xml:space="preserve"><value>|  机器人状态：</value></data>
+  <data name="|  Gysahl Greens: {0}" xml:space="preserve"><value>|  基萨尔野菜：{0}</value></data>
+  <data name="|  Outdoor suppression: {0}" xml:space="preserve"><value>|  野外抑制：{0}</value></data>
+  <data name="|  VBM forbidden zones: {0}" xml:space="preserve"><value>|  VBM禁区：{0}</value></data>
+  <data name="| all mounted" xml:space="preserve"><value>| 全员骑乘</value></data>
+  <data name="| any mounted" xml:space="preserve"><value>| 有人骑乘</value></data>
+  <data name="| Territory {0}" xml:space="preserve"><value>| 区域{0}</value></data>
+  <data name="| Territory {0} / {1}" xml:space="preserve"><value>| 区域{0} / {1}</value></data>
+  <data name="| wait for {0} other player(s)" xml:space="preserve"><value>| 等待其他{0}名玩家</value></data>
+  <data name="★ You have {0} location(s) not in community DB - consider sharing!" xml:space="preserve"><value>★ 有{0}个位置尚未收录到社区数据库，欢迎分享！</value></data>
+  <data name="♡ Ko-fi ♡" xml:space="preserve"><value>♡ Ko-fi ♡</value></data>
+  <data name="✓ MATCHES: {0} (ID: {1})" xml:space="preserve"><value>✓ 匹配：{0}（ID：{1}）</value></data>
+  <data name="0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing." xml:space="preserve"><value>0禁用修理。装备耐久低于此值时，LootGoblin会先请求ADS修理再继续。</value></data>
+  <data name="0 disables this map type. Positive numbers run that many resolved maps." xml:space="preserve"><value>0禁用此类地图。正数表示运行该数量的已解析地图。</value></data>
+  <data name="Active map:" xml:space="preserve"><value>已激活地图：</value></data>
+  <data name="Add Emptor's custom repository in Dalamud Settings, then install Emptor from the plugin installer." xml:space="preserve"><value>在Dalamud设置中添加Emptor仓库，然后从插件安装器安装Emptor。</value></data>
+  <data name="ADS" xml:space="preserve"><value>ADS</value></data>
+  <data name="ADS {0} repair test failed: {1}" xml:space="preserve"><value>ADS {0}修理测试失败：{1}</value></data>
+  <data name="ADS {0} repair test requested." xml:space="preserve"><value>已请求ADS {0}修理测试。</value></data>
+  <data name="ADS / BMR Adjustments" xml:space="preserve"><value>ADS / BMR调整</value></data>
+  <data name="ADS did not accept the repair request." xml:space="preserve"><value>ADS未接受修理请求。</value></data>
+  <data name="ADS dungeon handoff is enabled. Install ADS or disable it in settings." xml:space="preserve"><value>已启用副本交接给ADS。请安装ADS或在设置中禁用。</value></data>
+  <data name="ADS handoff runs /ads inside after confirmed duty entry. Completed-duty exit chooses a local delay, party departure, ADS delay or manual exit; chest and solver options are below." xml:space="preserve"><value>确认进入副本后发送/ads inside。完成后可选择本地延迟、小队离开、ADS延迟或手动退出；宝箱和解算选项在下方。</value></data>
+  <data name="ADS is not loaded; {0} repair test not started." xml:space="preserve"><value>ADS未加载，未开始{0}修理测试。</value></data>
+  <data name="ADS is not loaded. Install ADS or disable this setting." xml:space="preserve"><value>ADS未加载。请安装ADS或关闭此设置。</value></data>
+  <data name="ADS missing" xml:space="preserve"><value>缺少ADS</value></data>
+  <data name="ADS NPC no-inn repair can only start from a sanctuary." xml:space="preserve"><value>ADS不住旅馆的NPC修理只能在休息区开始。</value></data>
+  <data name="ADS reflection: {0}" xml:space="preserve"><value>ADS .NET反射：{0}</value></data>
+  <data name="ADS: exit after delay" xml:space="preserve"><value>ADS：延迟后退出</value></data>
+  <data name="Advanced" xml:space="preserve"><value>高级</value></data>
+  <data name="Aetherytes: {0} positions stored" xml:space="preserve"><value>以太之光：已保存{0}个位置</value></data>
+  <data name="Aetherytes: {0}/{1} positions stored" xml:space="preserve"><value>以太之光：已保存{0}/{1}个位置</value></data>
+  <data name="After a portal is accepted and duty entry is confirmed, LootGoblin sends /ads inside and waits for ADS to finish the dungeon instead of running its legacy dungeon solver." xml:space="preserve"><value>接受传送门并确认进入后，LootGoblin发送/ads inside，等待ADS完成副本，不使用旧解算器。</value></data>
+  <data name="After enabled local-region data centers are exhausted, try public OCE worlds. Requires data-center travel and defaults off." xml:space="preserve"><value>启用的本地区域数据中心均无结果后，尝试OCE公开世界。需要跨数据中心旅行，默认关闭。</value></data>
+  <data name="After the current data center is exhausted, visit public worlds on other data centers in the current region once per map search." xml:space="preserve"><value>当前数据中心搜索完毕后，每次地图搜索各访问一次同地区其他数据中心的公开世界。</value></data>
+  <data name="Age: {0}" xml:space="preserve"><value>距今：{0}</value></data>
+  <data name="Alexandrite" xml:space="preserve"><value>亚历山大变石</value></data>
+  <data name="Alexandrite Maps" xml:space="preserve"><value>亚历山大变石地图</value></data>
+  <data name="All Attackable Targets" xml:space="preserve"><value>全部可攻击目标</value></data>
+  <data name="All Targets When Solo" xml:space="preserve"><value>单人时全部目标</value></data>
+  <data name="All Targets When Solo in Duty" xml:space="preserve"><value>副本内单人时全部目标</value></data>
+  <data name="An Emptor price lookup is pending." xml:space="preserve"><value>Emptor价格查询正在进行。</value></data>
+  <data name="Applied through RSR IPC immediately before /rotation auto or /rotation manual command triggers." xml:space="preserve"><value>在/rotation auto或/rotation manual命令前通过RSR IPC立即应用。</value></data>
+  <data name="Applies to all party waits. In count-threshold mode, timeout does not lower the configured player count." xml:space="preserve"><value>适用于所有小队等待。人数阈值模式下，超时不会降低配置人数。</value></data>
+  <data name="Ate" xml:space="preserve"><value>已食用</value></data>
+  <data name="Attacker Stance" xml:space="preserve"><value>进攻姿态</value></data>
+  <data name="Attention: {0}" xml:space="preserve"><value>注意：{0}</value></data>
+  <data name="Auto Discard (/ays discard)" xml:space="preserve"><value>自动丢弃 (/ays discard)</value></data>
+  <data name="Auto Discard needs AutoRetainer with a configured discard list. When selected, it runs while Loot Goblin is enabled, during safe mounted windows. Factory default: off." xml:space="preserve"><value>自动丢弃需要已配置丢弃列表的AutoRetainer。Loot Goblin启用时在安全骑乘期间运行。默认关闭。</value></data>
+  <data name="Auto Loot Chest" xml:space="preserve"><value>自动拾取宝箱</value></data>
+  <data name="Auto Start next map" xml:space="preserve"><value>自动开始下一张地图</value></data>
+  <data name="Auto Sync FATE" xml:space="preserve"><value>危命任务自动同步等级</value></data>
+  <data name="Auto Teleport" xml:space="preserve"><value>自动传送</value></data>
+  <data name="Auto-summon chocobo companion using Gysahl Greens when timer is low. Will not summon in sanctuaries or duties." xml:space="preserve"><value>时间较少时用基萨尔野菜自动召唤搭档陆行鸟。休息区或副本内不召唤。</value></data>
+  <data name="Auto-update locations on login" xml:space="preserve"><value>登录时自动更新位置</value></data>
+  <data name="Automate your treasure map adventures." xml:space="preserve"><value>自动进行宝图探险。</value></data>
+  <data name="Automatically starts the next runnable selected map after completing one." xml:space="preserve"><value>完成一张后自动开始下一张已选且可运行的地图。</value></data>
+  <data name="Available" xml:space="preserve"><value>可用</value></data>
+  <data name="Blank disables map gathering." xml:space="preserve"><value>留空即禁用地图采集。</value></data>
+  <data name="Blank uses the player's current job at start." xml:space="preserve"><value>留空则使用开始时的当前职业。</value></data>
+  <data name="Blank/default city omits the city request field for Emptor v1-v3 compatibility. A selected city is sent only through Emptor API v4 or newer." xml:space="preserve"><value>留空或默认时省略城市字段以兼容Emptor v1–v3。选择的城市仅通过API v4以上发送。</value></data>
+  <data name="Blue" xml:space="preserve"><value>蓝色</value></data>
+  <data name="Blue X: unavailable through gathering" xml:space="preserve"><value>蓝色叉号：无法采集</value></data>
+  <data name="BMR active module: {0}{1}" xml:space="preserve"><value>BMR活动模块：{0}{1}</value></data>
+  <data name="BMR Disable Hunt Modules" xml:space="preserve"><value>禁用BMR狩猎模块</value></data>
+  <data name="BMR reduce activation range for outdoor areas" xml:space="preserve"><value>缩小室外BMR激活范围</value></data>
+  <data name="BossMod danger:" xml:space="preserve"><value>BossMod危险：</value></data>
+  <data name="Bot disabled" xml:space="preserve"><value>机器人已禁用</value></data>
+  <data name="Bot State" xml:space="preserve"><value>机器人状态</value></data>
+  <data name="Buy" xml:space="preserve"><value>购买</value></data>
+  <data name="Buys Mysterious Maps from Auriana in Revenant's Toll (75 Poetics each), then runs each map automatically." xml:space="preserve"><value>向丧灵钟的奥里亚娜购买神秘地图（每张75诗学），然后自动运行。</value></data>
+  <data name="by SaMo; used for treasure map statistics" xml:space="preserve"><value>由SaMo开发，用于宝图统计</value></data>
+  <data name="Cart: buy missing maps through Emptor after gathering is unavailable. A market trip may prepare up to three, capped by remaining runs." xml:space="preserve"><value>购物车：无法采集时通过Emptor购买缺失地图。一次市场旅行最多准备3张，并受剩余运行次数限制。</value></data>
+  <data name="Character command triggers saved." xml:space="preserve"><value>已保存角色命令触发器。</value></data>
+  <data name="Checked maps run. Use max for unlimited runs or a number for finite runs." xml:space="preserve"><value>运行已勾选地图。最大表示无限次，数字表示限定次数。</value></data>
+  <data name="Chest Open Timeout (s)" xml:space="preserve"><value>宝箱开启超时（秒）</value></data>
+  <data name="Chocobo:" xml:space="preserve"><value>陆行鸟：</value></data>
+  <data name="Choose a combat job, or keep Current job. Gathering needs GatherBuddyReborn, an unlocked gather job with a gearset, and a gatherable map enabled for gathering in Map Queue." xml:space="preserve"><value>选择战斗职业或保留当前职业。采集需要GatherBuddyReborn、已解锁并有装备套装的采集职业，以及队列中已启用采集的可采集地图。</value></data>
+  <data name="Chooses where Emptor travels for its marketboard. Ul'dah stores a blank key and keeps Emptor's default behavior." xml:space="preserve"><value>选择Emptor前往的市场城市。乌尔达哈保存空键并保留Emptor默认行为。</value></data>
+  <data name="Clear" xml:space="preserve"><value>清空</value></data>
+  <data name="Clear ALL positions for fresh scanning (dev use)" xml:space="preserve"><value>清空全部位置以重新扫描（开发用）</value></data>
+  <data name="Clear Food" xml:space="preserve"><value>清除食物</value></data>
+  <data name="Clear user positions - restore community defaults" xml:space="preserve"><value>清空用户位置，恢复社区默认值</value></data>
+  <data name="Color" xml:space="preserve"><value>颜色</value></data>
+  <data name="Combat job" xml:space="preserve"><value>战斗职业</value></data>
+  <data name="command trigger override changed" xml:space="preserve"><value>已更改命令触发器覆盖</value></data>
+  <data name="Command Triggers" xml:space="preserve"><value>命令触发器</value></data>
+  <data name="command triggers saved: {0}" xml:space="preserve"><value>命令触发器已保存：{0}</value></data>
+  <data name="Commands" xml:space="preserve"><value>命令</value></data>
+  <data name="Community: {0}" xml:space="preserve"><value>社区：{0}</value></data>
+  <data name="Compact mode" xml:space="preserve"><value>紧凑模式</value></data>
+  <data name="Companion Stance" xml:space="preserve"><value>搭档姿态</value></data>
+  <data name="Completed-duty exit" xml:space="preserve"><value>完成副本后退出</value></data>
+  <data name="config    - Open settings" xml:space="preserve"><value>config    - 打开设置</value></data>
+  <data name="Configure optional food, discard and combat automation here. Command Triggers run slash commands at Landing / Duty Entry and Finish; review them for the plugins you use." xml:space="preserve"><value>在此配置食物、丢弃与战斗自动化。命令触发器在着陆／进入副本和完成时执行命令，请按所用插件检查。</value></data>
+  <data name="Configured city '{0}' requires Emptor API v4 or newer; detected v{1}." xml:space="preserve"><value>城市'{0}'需要Emptor API v4以上；检测到v{1}。</value></data>
+  <data name="Continue if not all party members rejoin after" xml:space="preserve"><value>若全员仍未归队，在以下时间后继续</value></data>
+  <data name="Control login visibility and settings-window movement. Krangle Names obfuscates player and server names displayed by Loot Goblin." xml:space="preserve"><value>控制登录显示和设置窗口移动。Krangle Names会混淆Loot Goblin显示的玩家及服务器名称。</value></data>
+  <data name="Controls BossMod Reborn only. Default: off. Applies on Start and after each configured command batch, regardless of combat provider." xml:space="preserve"><value>仅控制BossMod Reborn，默认关闭。无论使用何种战斗提供程序，均在开始及每批配置命令后应用。</value></data>
+  <data name="Copy Emptor repo URL" xml:space="preserve"><value>复制Emptor仓库URL</value></data>
+  <data name="Copy this session's positive NQ minimum-listing hint into the ceiling. This does not enable the cart." xml:space="preserve"><value>将本次会话正数的普通品质最低挂单提示复制为上限，不会启用购物车。</value></data>
+  <data name="Current job" xml:space="preserve"><value>当前职业</value></data>
+  <data name="Current Run" xml:space="preserve"><value>当前运行</value></data>
+  <data name="Custom RGB" xml:space="preserve"><value>自定义RGB</value></data>
+  <data name="Cycle Missing Aetherytes" xml:space="preserve"><value>巡回未记录的以太之光</value></data>
+  <data name="Cycle Missing XYZ" xml:space="preserve"><value>巡回未记录的XYZ</value></data>
+  <data name="Debug Log" xml:space="preserve"><value>调试日志</value></data>
+  <data name="Debug Mode" xml:space="preserve"><value>调试模式</value></data>
+  <data name="Debug-only IPC test: ADS.StartRepair(&quot;{0}&quot;)." xml:space="preserve"><value>仅调试IPC测试：ADS.StartRepair("{0}").</value></data>
+  <data name="Defaults" xml:space="preserve"><value>默认值</value></data>
+  <data name="Defender Stance" xml:space="preserve"><value>防护姿态</value></data>
+  <data name="Dependencies" xml:space="preserve"><value>依赖</value></data>
+  <data name="Diff: X={0:F1} Y={1:F1} Z={2:F1}  Dist={3:F0}y" xml:space="preserve"><value>差值：X={0:F1} Y={1:F1} Z={2:F1}  距离={3:F0}y</value></data>
+  <data name="different territory" xml:space="preserve"><value>不同区域</value></data>
+  <data name="Disable Pandora's Box" xml:space="preserve"><value>禁用Pandora's Box</value></data>
+  <data name="Disable Pandora's Box through Dalamud." xml:space="preserve"><value>通过Dalamud禁用Pandora's Box。</value></data>
+  <data name="DISABLED" xml:space="preserve"><value>已禁用</value></data>
+  <data name="Dismount wait:" xml:space="preserve"><value>下骑等待：</value></data>
+  <data name="Do not use Tamamizu aetheryte" xml:space="preserve"><value>不使用碧玉水以太之光</value></data>
+  <data name="Done: {0}" xml:space="preserve"><value>完成：{0}</value></data>
+  <data name="Download Updated Locs" xml:space="preserve"><value>下载最新位置</value></data>
+  <data name="Downloading..." xml:space="preserve"><value>下载中...</value></data>
+  <data name="Dungeon/Loot" xml:space="preserve"><value>副本／战利品</value></data>
+  <data name="Duty-end delay (s)" xml:space="preserve"><value>副本结束延迟（秒）</value></data>
+  <data name="Editing character profile {0}." xml:space="preserve"><value>正在编辑角色档案{0}。</value></data>
+  <data name="Editing global command triggers." xml:space="preserve"><value>正在编辑全局命令触发器。</value></data>
+  <data name="Editing global command triggers. Log in to edit a character override." xml:space="preserve"><value>正在编辑全局命令触发器。请登录以编辑角色覆盖。</value></data>
+  <data name="Emptor API v5 or newer is required for price hints." xml:space="preserve"><value>价格提示需要Emptor API v5或更高版本。</value></data>
+  <data name="EMPTOR IS NOT INSTALLED OR LOADED" xml:space="preserve"><value>EMPTOR未安装或未加载</value></data>
+  <data name="Emptor is unavailable. Open Marketboard settings for installation guidance." xml:space="preserve"><value>Emptor不可用。打开市场设置查看安装说明。</value></data>
+  <data name="Emptor marketboard city" xml:space="preserve"><value>Emptor市场城市</value></data>
+  <data name="Emptor NQ minimum listing: {0:N0} gil" xml:space="preserve"><value>Emptor普通品质最低挂单：{0:N0}金币</value></data>
+  <data name="Emptor NQ minimum listing: unavailable" xml:space="preserve"><value>Emptor普通品质最低挂单：不可用</value></data>
+  <data name="Emptor v5+ supplies session-only NQ minimum-listing price hints for known marketable maps." xml:space="preserve"><value>Emptor v5以上提供已知可交易地图的普通品质最低挂单提示，仅用于当前会话。</value></data>
+  <data name="Enable a cart on a marketable map row and set a positive maximum gil price." xml:space="preserve"><value>在可交易地图行启用购物车，并设置正数金币价格上限。</value></data>
+  <data name="Enable State Logging" xml:space="preserve"><value>启用状态日志</value></data>
+  <data name="ENABLED" xml:space="preserve"><value>已启用</value></data>
+  <data name="Error" xml:space="preserve"><value>错误</value></data>
+  <data name="Errors: {0}" xml:space="preserve"><value>错误：{0}</value></data>
+  <data name="Extra delay before sending the map teleport command after the map target is resolved." xml:space="preserve"><value>解析地图目标后、发送地图传送命令前的额外延迟。</value></data>
+  <data name="Factory defaults: ADS handoff on; ADS exit after 20 seconds; Auto Loot Chest on; Gambler's Lure set to Solve EV (expected value)." xml:space="preserve"><value>默认：ADS交接开启、20秒后由ADS退出、自动拾取宝箱开启、Gambler's Lure按期望值解算。</value></data>
+  <data name="Factory defaults: Auto Teleport and Require vnavmesh on; Company Chocobo selected." xml:space="preserve"><value>默认：自动传送与要求vnavmesh开启，选择公司陆行鸟。</value></data>
+  <data name="Factory defaults: current combat job; gathering off. The controls below show your current selections." xml:space="preserve"><value>默认：当前战斗职业、采集关闭。下方控件显示当前选择。</value></data>
+  <data name="Factory defaults: show the main window on login and allow settings movement; name obfuscation off." xml:space="preserve"><value>默认：登录显示主窗口、允许移动设置窗口，名称混淆关闭。</value></data>
+  <data name="Factory defaults: state logging on; Debug Mode, map diagnostics and dedicated file logging off." xml:space="preserve"><value>默认：状态日志开启，调试模式、地图诊断及专用文件日志关闭。</value></data>
+  <data name="Failed" xml:space="preserve"><value>失败</value></data>
+  <data name="FC" xml:space="preserve"><value>FC</value></data>
+  <data name="Fetch maps from retainers" xml:space="preserve"><value>从雇员处取回地图</value></data>
+  <data name="Fetch maps from saddlebags" xml:space="preserve"><value>从陆行鸟鞍囊取回地图</value></data>
+  <data name="Finish" xml:space="preserve"><value>运行结束</value></data>
+  <data name="Follow" xml:space="preserve"><value>跟随</value></data>
+  <data name="Food" xml:space="preserve"><value>食物</value></data>
+  <data name="Food:" xml:space="preserve"><value>食物：</value></data>
+  <data name="For the next map search, start after the world where the previous search ended, wrapping to the beginning when needed." xml:space="preserve"><value>下次地图搜索从上次结束的世界之后开始，必要时回到开头。</value></data>
+  <data name="Free Stance" xml:space="preserve"><value>自由姿态</value></data>
+  <data name="Fresh Scan" xml:space="preserve"><value>重新扫描</value></data>
+  <data name="Gambler's Lure Solver" xml:space="preserve"><value>Gambler's Lure解算器</value></data>
+  <data name="Gather" xml:space="preserve"><value>采集</value></data>
+  <data name="Gather job (current character)" xml:space="preserve"><value>采集职业（当前角色）</value></data>
+  <data name="GatherBuddy Reborn" xml:space="preserve"><value>GatherBuddy Reborn</value></data>
+  <data name="Global command triggers saved." xml:space="preserve"><value>已保存全局命令触发器。</value></data>
+  <data name="Ground-only map diagnostics" xml:space="preserve"><value>仅地面地图诊断</value></data>
+  <data name="Healer Stance" xml:space="preserve"><value>治疗姿态</value></data>
+  <data name="HQ" xml:space="preserve"><value>HQ</value></data>
+  <data name="ID {0}" xml:space="preserve"><value>ID {0}</value></data>
+  <data name="Idle" xml:space="preserve"><value>空闲</value></data>
+  <data name="If selected food runs out, search inventory for a fallback food from the FrenRider priority list." xml:space="preserve"><value>所选食物耗尽后，按FrenRider优先列表在背包中寻找替代食物。</value></data>
+  <data name="In full-party proximity waits, timeout can allow guarded recovery when unresolved or out-of-territory members are the only blockers." xml:space="preserve"><value>等待全队靠近时，若唯一阻碍是位置未解析或区域外的成员，超时可允许受保护恢复。</value></data>
+  <data name="Include data center travel for purchasing maps" xml:space="preserve"><value>购买地图时包含跨数据中心旅行</value></data>
+  <data name="Include same-data-center server travel for purchasing maps" xml:space="preserve"><value>购买地图时包含同数据中心跨服旅行</value></data>
+  <data name="Include visiting OCE for maps once local data centers are exhausted" xml:space="preserve"><value>本地数据中心搜索完毕后前往OCE寻找地图</value></data>
+  <data name="Inn" xml:space="preserve"><value>旅馆</value></data>
+  <data name="Integrations" xml:space="preserve"><value>集成</value></data>
+  <data name="Interaction Range (y)" xml:space="preserve"><value>交互距离（y）</value></data>
+  <data name="Interface" xml:space="preserve"><value>界面</value></data>
+  <data name="inventory" xml:space="preserve"><value>背包</value></data>
+  <data name="inventory or loaded saddlebags" xml:space="preserve"><value>背包或已加载的陆行鸟鞍囊</value></data>
+  <data name="InventoryBuddy" xml:space="preserve"><value>InventoryBuddy</value></data>
+  <data name="Invite missing captured members immediately and every 30 seconds after returning. Checked continues with whoever rejoined after timeout; unchecked stops." xml:space="preserve"><value>返回后立即邀请缺失的已记录成员，之后每30秒邀请一次。勾选则超时后与已归队者继续，否则停止。</value></data>
+  <data name="Krangle Names" xml:space="preserve"><value>隐藏名称</value></data>
+  <data name="Landing / Duty Entry" xml:space="preserve"><value>着陆／进入副本</value></data>
+  <data name="Language" xml:space="preserve"><value>语言</value></data>
+  <data name="Level" xml:space="preserve"><value>等级</value></data>
+  <data name="Lifestream" xml:space="preserve"><value>Lifestream</value></data>
+  <data name="Lifestream is required for off-world searches. LootGoblin verifies arrival and returns to the starting world before restoring the party." xml:space="preserve"><value>跨世界搜索需要Lifestream。LootGoblin确认到达后，在恢复小队前返回起始世界。</value></data>
+  <data name="Lifestream missing" xml:space="preserve"><value>缺少Lifestream</value></data>
+  <data name="Lifestream missing. LootGoblin cannot issue /li travel without it." xml:space="preserve"><value>缺少Lifestream。LootGoblin无法发送/li旅行命令。</value></data>
+  <data name="Limsa Lominsa is the default. City selection requires Emptor v4+; blank Ul'dah remains compatible with v1-v3." xml:space="preserve"><value>默认利姆萨·罗敏萨。城市选择需要Emptor v4以上；留空的乌尔达哈兼容v1–v3。</value></data>
+  <data name="Listings can change after lookup. Refresh is manual and rate-limited to five minutes." xml:space="preserve"><value>查询后挂单可能变化。手动刷新，最多每五分钟一次。</value></data>
+  <data name="loaded" xml:space="preserve"><value>已加载</value></data>
+  <data name="Loading UI fonts..." xml:space="preserve"><value>正在加载界面字体...</value></data>
+  <data name="Location Data" xml:space="preserve"><value>位置数据</value></data>
+  <data name="Location Data by Zone" xml:space="preserve"><value>按区域的位置数据</value></data>
+  <data name="Location: {0}" xml:space="preserve"><value>位置：{0}</value></data>
+  <data name="Locations: {0} total" xml:space="preserve"><value>位置：共{0}个</value></data>
+  <data name="Log in to check party status." xml:space="preserve"><value>请登录以查看小队状态。</value></data>
+  <data name="Log in to scan inventory." xml:space="preserve"><value>请登录以扫描背包。</value></data>
+  <data name="Log in to see Poetics." xml:space="preserve"><value>请登录以查看诗学。</value></data>
+  <data name="Log in to use navigation." xml:space="preserve"><value>请登录以使用导航。</value></data>
+  <data name="Log in to view current run." xml:space="preserve"><value>请登录以查看当前运行。</value></data>
+  <data name="Logged In:" xml:space="preserve"><value>已登录：</value></data>
+  <data name="Lookup scope: {0}" xml:space="preserve"><value>查询范围：{0}</value></data>
+  <data name="Loot Goblin" xml:space="preserve"><value>Loot Goblin</value></data>
+  <data name="Loot Goblin Settings" xml:space="preserve"><value>Loot Goblin设置</value></data>
+  <data name="Loot Goblin: exit after delay" xml:space="preserve"><value>Loot Goblin：延迟后退出</value></data>
+  <data name="Loot Goblin: exit when all others have left" xml:space="preserve"><value>Loot Goblin：其他人全部退出后退出</value></data>
+  <data name="LootGoblin submits quantity-one orders and can prepare up to three maps per trip." xml:space="preserve"><value>LootGoblin每单提交数量为1，一次旅行可准备最多3张地图。</value></data>
+  <data name="Manual map refresh after saddlebag opened." xml:space="preserve"><value>打开鞍囊后手动刷新地图。</value></data>
+  <data name="Manual map refresh after saddlebag timeout." xml:space="preserve"><value>鞍囊超时后手动刷新地图。</value></data>
+  <data name="Manual map refresh completed after saddlebag retrieval was disabled." xml:space="preserve"><value>禁用鞍囊取回后，已完成手动地图刷新。</value></data>
+  <data name="Manual map refresh with saddlebag already open." xml:space="preserve"><value>鞍囊已打开时手动刷新地图。</value></data>
+  <data name="Manual map refresh without saddlebag retrieval." xml:space="preserve"><value>不取回鞍囊地图的手动刷新。</value></data>
+  <data name="Manual refresh is available in {0}." xml:space="preserve"><value>{0}后可手动刷新。</value></data>
+  <data name="Map" xml:space="preserve"><value>地图</value></data>
+  <data name="Map Diagnostics" xml:space="preserve"><value>地图诊断</value></data>
+  <data name="Map Flag Reader" xml:space="preserve"><value>地图标记读取器</value></data>
+  <data name="Map Queue" xml:space="preserve"><value>地图队列</value></data>
+  <data name="Map travel uses Lifestream for teleports and vnavmesh for movement. Choose an unlocked mount below for manual mounting." xml:space="preserve"><value>地图旅行使用Lifestream传送、vnavmesh移动。请在下方选择已解锁坐骑用于手动骑乘。</value></data>
+  <data name="Map:" xml:space="preserve"><value>地图：</value></data>
+  <data name="MapPartyAssist" xml:space="preserve"><value>MapPartyAssist</value></data>
+  <data name="Maps" xml:space="preserve"><value>地图</value></data>
+  <data name="Maps in inventory:" xml:space="preserve"><value>背包地图：</value></data>
+  <data name="Maps: {0}" xml:space="preserve"><value>地图：{0}</value></data>
+  <data name="Mark This Spot" xml:space="preserve"><value>记录此位置</value></data>
+  <data name="Marketboard" xml:space="preserve"><value>市场布告板</value></data>
+  <data name="Matching tabs are highlighted. Select a tab to view settings." xml:space="preserve"><value>匹配的选项卡会突出显示。选择选项卡查看设置。</value></data>
+  <data name="max" xml:space="preserve"><value>最大</value></data>
+  <data name="Max gil" xml:space="preserve"><value>金币上限</value></data>
+  <data name="Max map allowance wait (min)" xml:space="preserve"><value>地图获取资格最长等待（分钟）</value></data>
+  <data name="Maximum gil for one map. Zero disables purchasing for this map." xml:space="preserve"><value>每张地图金币上限。0禁用该地图购买。</value></data>
+  <data name="Maximum time to wait for the captured roster to rejoin. Allowed range is 30–3600 seconds; default is 300." xml:space="preserve"><value>等待已记录队员归队的最长时间。范围30–3600秒，默认300秒。</value></data>
+  <data name="Members: {0}" xml:space="preserve"><value>成员：{0}</value></data>
+  <data name="MISSING" xml:space="preserve"><value>未安装</value></data>
+  <data name="Missing: {0}" xml:space="preserve"><value>缺少：{0}</value></data>
+  <data name="Mount Selection" xml:space="preserve"><value>坐骑选择</value></data>
+  <data name="Mount wait:" xml:space="preserve"><value>骑乘等待：</value></data>
+  <data name="Mounted" xml:space="preserve"><value>已骑乘</value></data>
+  <data name="Movable Settings Window" xml:space="preserve"><value>允许移动设置窗口</value></data>
+  <data name="Multiple map types detected - use checkboxes to select which to run" xml:space="preserve"><value>检测到多类地图，请勾选要运行的地图</value></data>
+  <data name="N/A" xml:space="preserve"><value>不适用</value></data>
+  <data name="Nav Timeout (s)" xml:space="preserve"><value>导航超时（秒）</value></data>
+  <data name="Nav:" xml:space="preserve"><value>导航：</value></data>
+  <data name="Navigation" xml:space="preserve"><value>导航</value></data>
+  <data name="needed for assisted retainer/saddlebag retrieval" xml:space="preserve"><value>用于辅助取回雇员／鞍囊地图</value></data>
+  <data name="needed for retainer map lookup" xml:space="preserve"><value>用于查询雇员地图</value></data>
+  <data name="Next manual refresh: {0}" xml:space="preserve"><value>下次手动刷新：{0}</value></data>
+  <data name="Next retry/reassert in {0}s." xml:space="preserve"><value>在{0}s后重试/重新应用。</value></data>
+  <data name="No" xml:space="preserve"><value>否</value></data>
+  <data name="No automatic exit" xml:space="preserve"><value>不自动退出</value></data>
+  <data name="No food" xml:space="preserve"><value>无食物</value></data>
+  <data name="No food selected." xml:space="preserve"><value>未选择食物。</value></data>
+  <data name="No matching tabs." xml:space="preserve"><value>没有匹配的选项卡。</value></data>
+  <data name="No results." xml:space="preserve"><value>无结果。</value></data>
+  <data name="No treasure maps found in {0}." xml:space="preserve"><value>在{0}中未找到宝图。</value></data>
+  <data name="Not found" xml:space="preserve"><value>未找到</value></data>
+  <data name="not logged in" xml:space="preserve"><value>尚未登录</value></data>
+  <data name="Not Mounted" xml:space="preserve"><value>未骑乘</value></data>
+  <data name="Not Started: {0}" xml:space="preserve"><value>未开始：{0}</value></data>
+  <data name="Not summoned" xml:space="preserve"><value>未召唤</value></data>
+  <data name="NPC no inn" xml:space="preserve"><value>NPC（不去旅馆）</value></data>
+  <data name="NPC No Inn + No TP" xml:space="preserve"><value>NPC修理（无旅馆及传送）</value></data>
+  <data name="NPC no-inn" xml:space="preserve"><value>NPC修理（无旅馆）</value></data>
+  <data name="NPC no-inn/no-teleport" xml:space="preserve"><value>NPC（不去旅馆／不传送）</value></data>
+  <data name="npc-no-inn" xml:space="preserve"><value>npc-no-inn</value></data>
+  <data name="npc-no-teleport-no-inn" xml:space="preserve"><value>npc-no-teleport-no-inn</value></data>
+  <data name="NQ" xml:space="preserve"><value>NQ</value></data>
+  <data name="Number of other party members required for every party wait. Local player is not counted." xml:space="preserve"><value>每次小队等待所需的其他成员人数，不计本人。</value></data>
+  <data name="Observe only" xml:space="preserve"><value>仅观察</value></data>
+  <data name="Obstacle maps on" xml:space="preserve"><value>启用障碍地图</value></data>
+  <data name="off" xml:space="preserve"><value>关闭</value></data>
+  <data name="off       - Disable bot" xml:space="preserve"><value>off       - 禁用机器人</value></data>
+  <data name="OK" xml:space="preserve"><value>正常</value></data>
+  <data name="on        - Enable bot" xml:space="preserve"><value>on        - 启用机器人</value></data>
+  <data name="Open /xlplugins" xml:space="preserve"><value>打开/xlplugins</value></data>
+  <data name="Open /xlsettings" xml:space="preserve"><value>打开/xlsettings</value></data>
+  <data name="OPEN ADS LOOT OPTIONS" xml:space="preserve"><value>打开ADS战利品选项</value></data>
+  <data name="Open Config Folder" xml:space="preserve"><value>打开配置文件夹</value></data>
+  <data name="Open Data Folder" xml:space="preserve"><value>打开 DATA 文件夹</value></data>
+  <data name="Open Log Folder" xml:space="preserve"><value>打开日志文件夹</value></data>
+  <data name="Open the folder containing AetherytePositions.json for sharing" xml:space="preserve"><value>打开AetherytePositions.json所在文件夹以分享</value></data>
+  <data name="Opens decipher menu and reads all map entries to show correct indices" xml:space="preserve"><value>打开解读菜单并读取所有地图以显示正确索引</value></data>
+  <data name="Optional (Combat/Rotation):" xml:space="preserve"><value>可选（战斗／循环）：</value></data>
+  <data name="Optional (Map Gathering):" xml:space="preserve"><value>可选（地图采集）：</value></data>
+  <data name="Optional (Retainer/Saddlebag Retrieval):" xml:space="preserve"><value>可选（雇员／鞍囊回收）：</value></data>
+  <data name="Optional (Treasure Map Statistics):" xml:space="preserve"><value>可选（宝图统计）：</value></data>
+  <data name="Out of" xml:space="preserve"><value>耗尽：</value></data>
+  <data name="Overrides the general Wait for Party setting for thief-map underwater travel, remount recovery, and descent/dig waits." xml:space="preserve"><value>覆盖盗贼地图水下旅行、重新骑乘恢复及下降／挖掘等待的常规小队等待设置。</value></data>
+  <data name="Party" xml:space="preserve"><value>小队</value></data>
+  <data name="Party Status" xml:space="preserve"><value>小队状态</value></data>
+  <data name="Party Wait Timeout (s)" xml:space="preserve"><value>小队等待超时（秒）</value></data>
+  <data name="Party waits coordinate takeoff, remounting and arrival; thief-map underwater waits have their own switch. Player-count thresholds count other players, excluding you." xml:space="preserve"><value>小队等待协调起飞、重新骑乘和到达；盗贼地图水下等待有独立开关。人数阈值不计本人。</value></data>
+  <data name="party-list position" xml:space="preserve"><value>队伍列表位置</value></data>
+  <data name="Party:" xml:space="preserve"><value>小队：</value></data>
+  <data name="Pause" xml:space="preserve"><value>暂停</value></data>
+  <data name="Paused" xml:space="preserve"><value>已暂停</value></data>
+  <data name="Personal" xml:space="preserve"><value>个人</value></data>
+  <data name="Pink" xml:space="preserve"><value>粉色</value></data>
+  <data name="Players to wait for" xml:space="preserve"><value>等待玩家人数</value></data>
+  <data name="Plugin loaded and ready." xml:space="preserve"><value>插件已加载并就绪。</value></data>
+  <data name="Poetics:" xml:space="preserve"><value>诗学：</value></data>
+  <data name="position unresolved" xml:space="preserve"><value>位置未确定</value></data>
+  <data name="Previously Engaged Targets" xml:space="preserve"><value>已交战目标</value></data>
+  <data name="Price hints live only for this Loot Goblin session; they are not saved to disk." xml:space="preserve"><value>价格提示仅存在于本次Loot Goblin会话，不保存到磁盘。</value></data>
+  <data name="Purchase requirements" xml:space="preserve"><value>购买条件</value></data>
+  <data name="Queue one global refresh for all marketable known maps using the current travel scope." xml:space="preserve"><value>使用当前旅行范围，排队执行一次全部已知可交易地图的全局刷新。</value></data>
+  <data name="Ready" xml:space="preserve"><value>就绪</value></data>
+  <data name="Red X overlay: allowance cooldown" xml:space="preserve"><value>红色叉号：获取资格冷却中</value></data>
+  <data name="Refresh Dependencies" xml:space="preserve"><value>刷新依赖</value></data>
+  <data name="Refresh Emptor Prices" xml:space="preserve"><value>刷新Emptor价格</value></data>
+  <data name="Refresh Maps" xml:space="preserve"><value>刷新地图</value></data>
+  <data name="refreshed" xml:space="preserve"><value>已刷新</value></data>
+  <data name="refreshing..." xml:space="preserve"><value>正在刷新...</value></data>
+  <data name="Repair mode" xml:space="preserve"><value>修理模式</value></data>
+  <data name="Repair threshold %" xml:space="preserve"><value>修理阈值 %</value></data>
+  <data name="Repair uses ADS; a 0% threshold disables it. Factory defaults: 75%, NPC no inn." xml:space="preserve"><value>修理使用ADS，阈值0%禁用。默认75%、NPC不住旅馆。</value></data>
+  <data name="Report Issue" xml:space="preserve"><value>报告问题</value></data>
+  <data name="Require All Mounted" xml:space="preserve"><value>要求全员骑乘</value></data>
+  <data name="Require vnavmesh" xml:space="preserve"><value>要求vnavmesh</value></data>
+  <data name="Required:" xml:space="preserve"><value>必需：</value></data>
+  <data name="Reset All Aetherytes" xml:space="preserve"><value>重置全部以太之光</value></data>
+  <data name="Resolved: {0}" xml:space="preserve"><value>已确定：{0}</value></data>
+  <data name="Resume" xml:space="preserve"><value>继续</value></data>
+  <data name="Retainer" xml:space="preserve"><value>雇员</value></data>
+  <data name="Retainer:" xml:space="preserve"><value>雇员：</value></data>
+  <data name="Retainers need XA Database (XADB) and a reachable retainer bell. Saddlebag retrieval uses /saddlebag. Both retrieval options are on by factory default." xml:space="preserve"><value>雇员取回需要XA Database（XADB）和可到达的传唤铃。鞍囊取回使用/saddlebag，两项默认均开启。</value></data>
+  <data name="Return destination" xml:space="preserve"><value>返回位置</value></data>
+  <data name="Return when done" xml:space="preserve"><value>完成后返回</value></data>
+  <data name="Return when done optionally uses Lifestream once enabled map sources are exhausted. Factory default: off." xml:space="preserve"><value>启用的地图来源耗尽后，可选择用Lifestream返回。默认关闭。</value></data>
+  <data name="Rotate" xml:space="preserve"><value>轮换</value></data>
+  <data name="RSR hostile targeting" xml:space="preserve"><value>RSR敌对目标</value></data>
+  <data name="Run" xml:space="preserve"><value>运行</value></data>
+  <data name="Run count" xml:space="preserve"><value>运行计数</value></data>
+  <data name="Runnable:" xml:space="preserve"><value>可运行：</value></data>
+  <data name="Runs /levelsync on after joining a FATE and pauses coffer/portal recovery for joined-FATE handling. Turn off to ignore joined FATEs during map coffer flow." xml:space="preserve"><value>加入危命任务后执行/levelsync on，并暂停宝箱／传送门恢复以处理任务。关闭则在宝箱流程中忽略已加入的危命任务。</value></data>
+  <data name="Runs the selected Lifestream return only after no enabled inventory, saddlebag, or retainer maps remain." xml:space="preserve"><value>仅在背包、鞍囊和雇员处均无启用地图时执行所选Lifestream返回。</value></data>
+  <data name="Runs this map type until no available maps remain." xml:space="preserve"><value>运行该类地图，直到没有可用地图。</value></data>
+  <data name="Runs:" xml:space="preserve"><value>运行次数：</value></data>
+  <data name="Saddlebag" xml:space="preserve"><value>陆行鸟鞍囊</value></data>
+  <data name="Saddlebag includes regular ({0}) + premium ({1}) saddlebag counts." xml:space="preserve"><value>鞍囊包括普通（{0}）及高级（{1}）数量。</value></data>
+  <data name="same territory" xml:space="preserve"><value>同一区域</value></data>
+  <data name="Search" xml:space="preserve"><value>搜索</value></data>
+  <data name="Search for Food if Depleted" xml:space="preserve"><value>食物耗尽时寻找替代品</value></data>
+  <data name="Search settings" xml:space="preserve"><value>搜索设置</value></data>
+  <data name="seconds" xml:space="preserve"><value>秒</value></data>
+  <data name="Seedling: toggle missing-map gathering" xml:space="preserve"><value>幼苗：切换缺失地图采集</value></data>
+  <data name="Select {0}..." xml:space="preserve"><value>选择{0}...</value></data>
+  <data name="Selected: {0} [{1}] ({2})" xml:space="preserve"><value>已选择：{0} [{1}] ({2})</value></data>
+  <data name="SelectIconString" xml:space="preserve"><value>SelectIconString</value></data>
+  <data name="Self" xml:space="preserve"><value>自行修理</value></data>
+  <data name="Send /ads leave once after the configured delay." xml:space="preserve"><value>延迟结束后发送一次/ads leave。</value></data>
+  <data name="Set a positive maximum gil price before enabling this cart." xml:space="preserve"><value>启用购物车前请设置正数金币价格上限。</value></data>
+  <data name="Settings" xml:space="preserve"><value>设置</value></data>
+  <data name="Show all map types" xml:space="preserve"><value>显示全部地图类型</value></data>
+  <data name="Show Main Window on Login" xml:space="preserve"><value>登录时显示主窗口</value></data>
+  <data name="Shows Location Data diagnostics in the main window and enables map/aetheryte collection tools." xml:space="preserve"><value>在主窗口显示位置诊断并启用地图／以太之光数据收集工具。</value></data>
+  <data name="Shows runnable map rows even when none are currently in inventory or loaded saddlebags." xml:space="preserve"><value>即使背包或已加载鞍囊中没有，也显示可运行的地图行。</value></data>
+  <data name="Skip" xml:space="preserve"><value>跳过</value></data>
+  <data name="Skips Tamamizu when choosing the map teleport destination." xml:space="preserve"><value>选择地图传送目的地时跳过碧玉水。</value></data>
+  <data name="Solo" xml:space="preserve"><value>单人</value></data>
+  <data name="Solo Deep Dungeon Smart" xml:space="preserve"><value>单人深层迷宫智能选择</value></data>
+  <data name="Solve EV" xml:space="preserve"><value>按期望值解算</value></data>
+  <data name="Solve EV clicks only after it reads a reliable card/stage; otherwise it holds and retries. Skip keeps current skip/close behavior. Observe logs readable state only and never clicks." xml:space="preserve"><value>期望值模式仅可靠读取卡片／阶段后点击，否则等待重试。跳过保留原有跳过／关闭行为。观察只记录可读状态，绝不点击。</value></data>
+  <data name="Specify number of party to wait for" xml:space="preserve"><value>指定等待队员人数</value></data>
+  <data name="Start" xml:space="preserve"><value>启动</value></data>
+  <data name="Start on the last world that successfully sold a map, then try each remaining unvisited enabled world if it has no acceptable listing. This is the default." xml:space="preserve"><value>从上次成功购图世界开始，无合适挂单时尝试其余未访问的启用世界。这是默认模式。</value></data>
+  <data name="State:" xml:space="preserve"><value>状态：</value></data>
+  <data name="Status" xml:space="preserve"><value>状态</value></data>
+  <data name="status    - Print current status" xml:space="preserve"><value>status    - 输出当前状态</value></data>
+  <data name="Status:" xml:space="preserve"><value>状态：</value></data>
+  <data name="Sticky success" xml:space="preserve"><value>优先上次成功世界</value></data>
+  <data name="Stop" xml:space="preserve"><value>停止</value></data>
+  <data name="Stop Cycling" xml:space="preserve"><value>停止巡回</value></data>
+  <data name="Stop dungeon progression after completion and wait for a manual duty exit." xml:space="preserve"><value>完成后停止副本推进，等待手动退出。</value></data>
+  <data name="Summon Chocobo" xml:space="preserve"><value>召唤陆行鸟</value></data>
+  <data name="Support development on Ko-fi" xml:space="preserve"><value>在 Ko-fi 支持开发</value></data>
+  <data name="Switch this map type back to unlimited runs." xml:space="preserve"><value>将此类地图恢复为无限次运行。</value></data>
+  <data name="Take Control" xml:space="preserve"><value>接管控制</value></data>
+  <data name="Teal" xml:space="preserve"><value>青色</value></data>
+  <data name="territory unresolved" xml:space="preserve"><value>区域未确定</value></data>
+  <data name="Test ADS Repair Mode" xml:space="preserve"><value>测试ADS修理模式</value></data>
+  <data name="TextAdvance" xml:space="preserve"><value>TextAdvance</value></data>
+  <data name="The optional chocobo companion needs Gysahl Greens. Factory defaults: party and all-mounted waits on; companion summon off." xml:space="preserve"><value>可选陆行鸟搭档需要基萨尔野菜。默认：小队及全员骑乘等待开启，搭档召唤关闭。</value></data>
+  <data name="Tier {0}" xml:space="preserve"><value>品级{0}</value></data>
+  <data name="Time to wait before teleporting (s)" xml:space="preserve"><value>传送前等待（秒）</value></data>
+  <data name="Travel" xml:space="preserve"><value>旅行</value></data>
+  <data name="TreasureSpot: {0}" xml:space="preserve"><value>宝藏位置：{0}</value></data>
+  <data name="Try the current world first, then each remaining public world on the current data center once per map search." xml:space="preserve"><value>每次地图搜索先尝试当前世界，再各尝试一次当前数据中心其他公开世界。</value></data>
+  <data name="Type at least 2 characters to search." xml:space="preserve"><value>输入至少2个字符以搜索。</value></data>
+  <data name="UI fonts failed to load. See the plugin log." xml:space="preserve"><value>界面字体加载失败，请查看插件日志。</value></data>
+  <data name="unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="Unknown ({0})" xml:space="preserve"><value>未知（{0}）</value></data>
+  <data name="Unknown Map (ID: {0})" xml:space="preserve"><value>未知地图（ID：{0}）</value></data>
+  <data name="unloaded" xml:space="preserve"><value>未加载</value></data>
+  <data name="Use" xml:space="preserve"><value>使用</value></data>
+  <data name="Use a count of other party members instead of waiting for the entire party roster. Applies to takeoff, remount, landing, underwater, and next-map waits." xml:space="preserve"><value>等待指定数量的其他队员，而非全队。适用于起飞、重新骑乘、着陆、水下及下一张地图等待。</value></data>
+  <data name="Use ADS for dungeon phase" xml:space="preserve"><value>副本阶段使用ADS</value></data>
+  <data name="Use current-character command trigger override" xml:space="preserve"><value>使用当前角色命令触发器覆盖</value></data>
+  <data name="Use HQ food" xml:space="preserve"><value>使用HQ食物</value></data>
+  <data name="Use Loot Goblin's local Leave Duty flow after the configured delay." xml:space="preserve"><value>配置延迟后使用Loot Goblin本地退出副本流程。</value></data>
+  <data name="Use Loot Goblin's local Leave Duty flow once no other loaded party members remain in the duty territory." xml:space="preserve"><value>副本区域内无其他已加载队员时使用Loot Goblin本地退出流程。</value></data>
+  <data name="Use Map Queue in the main window to select maps and run counts. Retrieval below supplies enabled maps when inventory runs out." xml:space="preserve"><value>在主窗口地图队列选择地图与运行次数。背包地图用完后，下方取回功能补充已启用地图。</value></data>
+  <data name="Use these controls for diagnostics and troubleshooting. The snapshot button needs dedicated logging; Test ADS Repair Mode starts a repair using the mode selected in Run." xml:space="preserve"><value>诊断及排错控件。快照按钮需要专用日志；ADS修理测试会以运行页所选模式启动修理。</value></data>
+  <data name="User: {0}" xml:space="preserve"><value>用户：{0}</value></data>
+  <data name="vnavmesh" xml:space="preserve"><value>vnavmesh</value></data>
+  <data name="vnavmesh missing" xml:space="preserve"><value>缺少vnavmesh</value></data>
+  <data name="vnavmesh required for navigation." xml:space="preserve"><value>导航需要vnavmesh。</value></data>
+  <data name="Wait at the destination until party members are within 10 yalms before dismounting." xml:space="preserve"><value>在目的地等待队员进入10星码内再下骑。</value></data>
+  <data name="Wait for Party" xml:space="preserve"><value>等待小队</value></data>
+  <data name="Wait for party before dismounting" xml:space="preserve"><value>下骑前等待小队</value></data>
+  <data name="Wait for Party for thief maps / underwater" xml:space="preserve"><value>盗贼地图／水下等待小队</value></data>
+  <data name="Well Fed" xml:space="preserve"><value>进食效果</value></data>
+  <data name="When count threshold is off, takeoff and remount waits require every other party member mounted. Turn off to continue when any other same-zone party member is mounted." xml:space="preserve"><value>人数阈值关闭时，起飞和重新骑乘要求其他全员骑乘。关闭此项则同区域任一其他队员骑乘即可继续。</value></data>
+  <data name="When enabled, LootGoblin asks ADS to disable BMR hunt modules." xml:space="preserve"><value>启用后LootGoblin请求ADS禁用BMR狩猎模块。</value></data>
+  <data name="When enabled, LootGoblin asks ADS to set BMR MaxLoadDistance to {0:0}." xml:space="preserve"><value>启用后LootGoblin请求ADS将BMR MaxLoadDistance设为{0:0}。</value></data>
+  <data name="When enabled, the bot waits for party members before takeoff, remount recovery, and map travel handoffs." xml:space="preserve"><value>启用后在起飞、重新骑乘恢复和地图旅行交接前等待队员。</value></data>
+  <data name="When missing-map gathering is the only remaining action, wait this long for a map allowance before finishing the run." xml:space="preserve"><value>仅剩缺失地图采集时，在结束运行前等待地图获取资格达到此时长。</value></data>
+  <data name="When no enabled map is in inventory, LootGoblin can open /saddlebag and move one enabled map into inventory. Disable to ignore saddlebags entirely." xml:space="preserve"><value>背包无启用地图时，可打开/saddlebag转移一张地图。关闭则完全忽略鞍囊。</value></data>
+  <data name="When no enabled map is in inventory, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell." xml:space="preserve"><value>背包无启用地图时，查询XA Database中的雇员地图并尝试在传唤铃取回一张。</value></data>
+  <data name="While Loot Goblin is enabled, runs /ays discard every 30s during safe mounted windows. Defers in combat, loading or cutscenes. Requires AutoRetainer and a configured discard list." xml:space="preserve"><value>Loot Goblin启用时在安全骑乘期间每30秒执行/ays discard。战斗、加载或动画时推迟。需要AutoRetainer及配置的丢弃列表。</value></data>
+  <data name="WIP: {0}" xml:space="preserve"><value>开发中：{0}</value></data>
+  <data name="World: {0}" xml:space="preserve"><value>世界：{0}</value></data>
+  <data name="Write dedicated LootGoblin diagnostic log" xml:space="preserve"><value>写入LootGoblin专用诊断日志</value></data>
+  <data name="Write Snapshot Now" xml:space="preserve"><value>立即写入快照</value></data>
+  <data name="Writes high-signal events and state snapshots. Rotates at 20 MB and retains the newest 10 files." xml:space="preserve"><value>记录重要事件和状态快照。20MB轮换，保留最新10个文件。</value></data>
+  <data name="xadb" xml:space="preserve"><value>XADB</value></data>
+  <data name="xaslave" xml:space="preserve"><value>xaslave</value></data>
+  <data name="Yes" xml:space="preserve"><value>是</value></data>
+  <data name="Zone:" xml:space="preserve"><value>区域：</value></data>
+  <data name="Repairing" xml:space="preserve"><value>修理中</value></data>
+  <data name="StartPreflight" xml:space="preserve"><value>启动前检查</value></data>
+  <data name="SelectingMap" xml:space="preserve"><value>选择地图中</value></data>
+  <data name="OpeningMap" xml:space="preserve"><value>打开地图中</value></data>
+  <data name="DetectingLocation" xml:space="preserve"><value>检测位置中</value></data>
+  <data name="Teleporting" xml:space="preserve"><value>传送中</value></data>
+  <data name="Mounting" xml:space="preserve"><value>骑乘中</value></data>
+  <data name="WaitingForParty" xml:space="preserve"><value>等待小队</value></data>
+  <data name="Flying" xml:space="preserve"><value>飞行中</value></data>
+  <data name="OpeningChest" xml:space="preserve"><value>打开宝箱中</value></data>
+  <data name="InCombat" xml:space="preserve"><value>战斗中</value></data>
+  <data name="InDungeon" xml:space="preserve"><value>副本内</value></data>
+  <data name="DungeonCombat" xml:space="preserve"><value>副本战斗</value></data>
+  <data name="DungeonLooting" xml:space="preserve"><value>副本拾取</value></data>
+  <data name="DungeonProgressing" xml:space="preserve"><value>副本推进</value></data>
+  <data name="CyclingAetherytes" xml:space="preserve"><value>扫描以太之光</value></data>
+  <data name="CyclingMapLocations" xml:space="preserve"><value>扫描地图位置</value></data>
+  <data name="AlexandriteFarming" xml:space="preserve"><value>刷亚历山大变石</value></data>
+  <data name="GatheringMap" xml:space="preserve"><value>采集地图中</value></data>
+  <data name="WaitingForTeleport" xml:space="preserve"><value>等待传送</value></data>
+  <data name="WaitingForNavmesh" xml:space="preserve"><value>等待导航网格</value></data>
+  <data name="Arrived" xml:space="preserve"><value>已到达</value></data>
+  <data name="Completed" xml:space="preserve"><value>已完成</value></data>
+  <data name="{0} members" xml:space="preserve"><value>{0}名成员</value></data>
+  <data name="on" xml:space="preserve"><value>开启</value></data>
+  <data name="actor position" xml:space="preserve"><value>对象坐标</value></data>
+  <data name="not reported" xml:space="preserve"><value>未报告</value></data>
+  <data name="current world" xml:space="preserve"><value>当前服务器</value></data>
+  <data name="current data center" xml:space="preserve"><value>当前数据中心</value></data>
+  <data name="current region" xml:space="preserve"><value>当前地区</value></data>
+  <data name="reachable regions + Materia" xml:space="preserve"><value>可达地区 + Materia</value></data>
+  <data name="No food item resolved" xml:space="preserve"><value>无法确定食物物品</value></data>
+  <data name="Paused: {0}" xml:space="preserve"><value>已暂停：{0}</value></data>
+  <data name="Well Fed: {0:F0}s ({1} [{2}])" xml:space="preserve"><value>饱食：{0:F0}秒（{1} [{2}]）</value></data>
+  <data name="Need food (cooldown {0:F1}s)" xml:space="preserve"><value>需要食物（冷却{0:F1}秒）</value></data>
+  <data name="Ate {0} [{1}] ({2} left)" xml:space="preserve"><value>已食用{0} [{1}]（剩余{2}）</value></data>
+  <data name="Failed to eat {0} [{1}]" xml:space="preserve"><value>无法食用{0} [{1}]</value></data>
+  <data name="Out of {0} [{1}]" xml:space="preserve"><value>{0} [{1}]已用完</value></data>
+  <data name="Switched to {0} [{1}]" xml:space="preserve"><value>已切换为{0} [{1}]</value></data>
+  <data name="No food in inventory" xml:space="preserve"><value>背包中没有食物</value></data>
+  <data name="[+{0} yours]" xml:space="preserve"><value>[+{0} 属于你]</value></data>
+  <data name="{0:F0}y XZ" xml:space="preserve"><value>{0:F0}y XZ</value></data>
+  <data name="ADS reflection applied; no reassert pending." xml:space="preserve"><value>ADS 反射设置已应用，无需重新应用。</value></data>
+  <data name="ADS reflection applied; waiting for desired-state change or ADS reload." xml:space="preserve"><value>ADS 反射设置已应用，正在等待目标状态更改或 ADS 重新加载。</value></data>
+  <data name="ADS reflection hacks reset." xml:space="preserve"><value>ADS 特殊功能已重置。</value></data>
+  <data name="No ADS reflection hacks enabled." xml:space="preserve"><value>未启用 ADS 反射功能。</value></data>
+  <data name="vnavmesh not available." xml:space="preserve"><value>vnavmesh不可用。</value></data>
+  <data name="Not logged in." xml:space="preserve"><value>尚未登录。</value></data>
+  <data name="Cannot teleport while in combat." xml:space="preserve"><value>战斗中无法传送。</value></data>
+  <data name="Already between areas." xml:space="preserve"><value>已在切换区域。</value></data>
+  <data name="Lifestream not available." xml:space="preserve"><value>Lifestream不可用。</value></data>
+  <data name="Lifestream rejected {0}: {1}" xml:space="preserve"><value>Lifestream拒绝了{0}：{1}</value></data>
+  <data name="Navigation stopped." xml:space="preserve"><value>已停止导航。</value></data>
+  <data name="Mounting {0}..." xml:space="preserve"><value>正在骑乘{0}...</value></data>
+  <data name="Flying to {0}..." xml:space="preserve"><value>正在飞往{0}...</value></data>
+  <data name="Moving to {0}..." xml:space="preserve"><value>正在前往{0}...</value></data>
+  <data name="Flying to map flag..." xml:space="preserve"><value>正在飞往地图标记...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before flying to {0}..." xml:space="preserve"><value>等待vnavmesh完成导航网格后飞往{0}...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before moving to {0}..." xml:space="preserve"><value>等待vnavmesh完成导航网格后前往{0}...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before flying to map flag..." xml:space="preserve"><value>等待vnavmesh完成导航网格后飞往地图标记...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh..." xml:space="preserve"><value>等待vnavmesh完成导航网格...</value></data>
+  <data name="GatherBuddy Reborn not loaded." xml:space="preserve"><value>GatherBuddy Reborn尚未加载。</value></data>
+  <data name="GatherBuddy Reborn IPC version {0} is unsupported; version 2 is required." xml:space="preserve"><value>不支持GatherBuddy Reborn IPC版本{0}；需要版本2。</value></data>
+  <data name="Available." xml:space="preserve"><value>可用。</value></data>
+  <data name="GatherBuddy Reborn IPC unavailable: {0}" xml:space="preserve"><value>GatherBuddy Reborn IPC不可用：{0}</value></data>
+  <data name="Not checked." xml:space="preserve"><value>尚未检查。</value></data>
+  <data name="ADS reflection pending." xml:space="preserve"><value>等待应用ADS反射设置。</value></data>
+  <data name="Lifestream IPC is available." xml:space="preserve"><value>Lifestream IPC可用。</value></data>
+  <data name="Lifestream is not installed, loaded, or exposing supported IPC." xml:space="preserve"><value>Lifestream未安装、未加载或未提供支持的IPC。</value></data>
+  <data name="Lifestream IPC has not been checked." xml:space="preserve"><value>尚未检查Lifestream IPC。</value></data>
+  <data name="Emptor IPC has not been checked." xml:space="preserve"><value>尚未检查Emptor IPC。</value></data>
+  <data name="Using built-in city choices until Emptor v4 city IPC is available." xml:space="preserve"><value>在Emptor v4城市IPC可用前使用内置城市列表。</value></data>
+  <data name="Price hints have not been requested." xml:space="preserve"><value>尚未请求价格参考。</value></data>
+  <data name="Paused: logged out" xml:space="preserve"><value>已暂停：已退出登录</value></data>
+  <data name="Paused: player unavailable" xml:space="preserve"><value>已暂停：角色不可用</value></data>
+  <data name="Paused: dead" xml:space="preserve"><value>已暂停：战斗不能</value></data>
+  <data name="Paused: casting" xml:space="preserve"><value>已暂停：正在咏唱</value></data>
+  <data name="Paused: in combat" xml:space="preserve"><value>已暂停：战斗中</value></data>
+  <data name="Paused: between areas" xml:space="preserve"><value>已暂停：正在切换区域</value></data>
+  <data name="Paused: busy or in cutscene" xml:space="preserve"><value>已暂停：忙碌或剧情动画中</value></data>
+  <data name="Idle." xml:space="preserve"><value>空闲。</value></data>
+  <data name="XA Database unavailable." xml:space="preserve"><value>XA Database不可用。</value></data>
+  <data name="Moving to retainer bell for {0}..." xml:space="preserve"><value>正在前往雇员铃获取{0}...</value></data>
+  <data name="No nearby retainer bell found. Traveling to Revenant's Toll..." xml:space="preserve"><value>附近没有雇员铃。正在前往丧灵钟...</value></data>
+  <data name="Timed out closing retainer UI. Still visible: {0}." xml:space="preserve"><value>关闭雇员界面超时。仍显示：{0}。</value></data>
+  <data name="Timed out during {0}." xml:space="preserve"><value>{0}期间超时。</value></data>
+  <data name="Timed out traveling to Revenant's Toll retainer bell." xml:space="preserve"><value>前往丧灵钟雇员铃超时。</value></data>
+  <data name="Traveling to retainer bell..." xml:space="preserve"><value>正在前往雇员铃...</value></data>
+  <data name="Waiting for Revenant's Toll arrival..." xml:space="preserve"><value>等待抵达丧灵钟...</value></data>
+  <data name="Waiting for player before moving to Revenant's Toll bell approach..." xml:space="preserve"><value>等待角色就绪后接近丧灵钟雇员铃...</value></data>
+  <data name="Moving to Revenant's Toll retainer bell approach..." xml:space="preserve"><value>正在接近丧灵钟雇员铃...</value></data>
+  <data name="Arrived. Waiting for retainer bell object..." xml:space="preserve"><value>已抵达。等待雇员铃对象...</value></data>
+  <data name="Moving to Revenant's Toll retainer bell..." xml:space="preserve"><value>正在前往丧灵钟雇员铃...</value></data>
+  <data name="Waiting for player before moving to retainer bell..." xml:space="preserve"><value>等待角色就绪后前往雇员铃...</value></data>
+  <data name="Traveling to Revenant's Toll retainer bell..." xml:space="preserve"><value>正在前往丧灵钟雇员铃...</value></data>
+  <data name="Moving to Revenant's Toll bell approach... ({0:F1}y)" xml:space="preserve"><value>正在接近丧灵钟雇员铃... ({0:F1}y)</value></data>
+  <data name="At bell approach. Waiting for Summoning Bell object..." xml:space="preserve"><value>已靠近雇员铃。等待传唤铃对象...</value></data>
+  <data name="Moving to retainer bell... ({0:F1}y)" xml:space="preserve"><value>正在前往雇员铃... ({0:F1}y)</value></data>
+  <data name="Opening retainer bell..." xml:space="preserve"><value>正在打开雇员铃...</value></data>
+  <data name="Selecting retainer..." xml:space="preserve"><value>正在选择雇员...</value></data>
+  <data name="Retainer bell disappeared before interaction." xml:space="preserve"><value>交互前雇员铃已消失。</value></data>
+  <data name="Waiting for retainer list..." xml:space="preserve"><value>等待雇员列表...</value></data>
+  <data name="Waiting for retainer menu..." xml:space="preserve"><value>等待雇员菜单...</value></data>
+  <data name="Retainer list is visible but target retainer '{0}' was not found by confirmed name. Visible retainers/text: {1}." xml:space="preserve"><value>雇员列表已显示，但无法通过确认的名字找到目标雇员'{0}'。可见雇员／文本：{1}。</value></data>
+  <data name="Opening retainer inventory..." xml:space="preserve"><value>正在打开雇员背包...</value></data>
+  <data name="Waiting to select retainer {0}..." xml:space="preserve"><value>等待选择雇员{0}...</value></data>
+  <data name="Retrieving {0}..." xml:space="preserve"><value>正在取出{0}...</value></data>
+  <data name="Waiting for retainer inventory menu..." xml:space="preserve"><value>等待雇员背包菜单...</value></data>
+  <data name="No retainer map target." xml:space="preserve"><value>没有目标雇员地图。</value></data>
+  <data name="Retrieved {0}. Closing retainer..." xml:space="preserve"><value>已取出{0}。正在关闭雇员...</value></data>
+  <data name="Waiting for active retainer inventory..." xml:space="preserve"><value>等待当前雇员背包...</value></data>
+  <data name="Could not plan retainer map retrieval from {0}: {1}" xml:space="preserve"><value>无法规划从{0}取出雇员地图：{1}</value></data>
+  <data name="Could not move retainer map from {0}: {1}" xml:space="preserve"><value>无法从{0}移动雇员地图：{1}</value></data>
+  <data name="Waiting for {0} retrieval..." xml:space="preserve"><value>等待取出{0}...</value></data>
+  <data name="Retainer map retrieved." xml:space="preserve"><value>已取出雇员地图。</value></data>
+  <data name="Closing retainer UI... ({0})" xml:space="preserve"><value>正在关闭雇员界面... ({0})</value></data>
+  <data name="Retainer map retrieval disabled." xml:space="preserve"><value>已禁用取出雇员地图。</value></data>
+  <data name="No enabled maps configured for retainer lookup." xml:space="preserve"><value>没有启用供雇员查询的地图。</value></data>
+  <data name="No enabled current-character retainer map found in XA Database." xml:space="preserve"><value>XA Database中未找到当前角色雇员持有的已启用地图。</value></data>
+  <data name="XA Database scoped current-character item search failed." xml:space="preserve"><value>XA Database当前角色范围物品搜索失败。</value></data>
+  <data name="No enabled maps found on current-character retainers in XA Database." xml:space="preserve"><value>XA Database中未找到当前角色雇员持有的已启用地图。</value></data>
+  <data name="XA Database not ready." xml:space="preserve"><value>XA Database尚未就绪。</value></data>
+  <data name="Closing retainer UI..." xml:space="preserve"><value>正在关闭雇员界面...</value></data>
+  <data name="Retainer UI closed; map open allowed." xml:space="preserve"><value>雇员界面已关闭；可以打开地图。</value></data>
+  <data name="Item sheet unavailable." xml:space="preserve"><value>物品数据表不可用。</value></data>
+  <data name="XA Database readiness IPC failed: {0}" xml:space="preserve"><value>XA Database就绪状态IPC失败：{0}</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson IPC returned empty response." xml:space="preserve"><value>XA Database SearchCurrentCharacterItemsJson IPC返回空响应。</value></data>
+  <data name="XA Database scoped current-character item search returned ready=false." xml:space="preserve"><value>XA Database当前角色范围物品搜索返回ready=false。</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson IPC failed: {0}" xml:space="preserve"><value>XA Database SearchCurrentCharacterItemsJson IPC失败：{0}</value></data>
+  <data name="XA Database Refresh IPC failed: {0}" xml:space="preserve"><value>XA Database Refresh IPC失败：{0}</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson returned invalid JSON: {0}" xml:space="preserve"><value>XA Database SearchCurrentCharacterItemsJson返回无效JSON：{0}</value></data>
+  <data name="Emptor API v{0} is available." xml:space="preserve"><value>Emptor API v{0}可用。</value></data>
+  <data name="Emptor API v{0} is incompatible; v1 or newer is required." xml:space="preserve"><value>Emptor API v{0}不兼容；需要v1或更高版本。</value></data>
+  <data name="Emptor is not installed, loaded, or exposing supported v1 IPC." xml:space="preserve"><value>Emptor未安装、未加载或未提供支持的v1 IPC。</value></data>
+  <data name="Manual Emptor price refresh queued." xml:space="preserve"><value>Emptor手动价格刷新已排队。</value></data>
+  <data name="Manual price refresh is deferred until login." xml:space="preserve"><value>手动价格刷新已推迟到登录后。</value></data>
+  <data name="Price hints unavailable: Emptor v5+ is required; detected v{0}." xml:space="preserve"><value>价格参考不可用：需要Emptor v5+；检测到v{0}。</value></data>
+  <data name="Price hints unavailable: Emptor v5 price IPC is not loaded." xml:space="preserve"><value>价格参考不可用：Emptor v5价格IPC尚未加载。</value></data>
+  <data name="Initial Emptor price lookup is deferred until login." xml:space="preserve"><value>初次Emptor价格查询已推迟到登录后。</value></data>
+  <data name="Loaded {0} city choices from Emptor v{1}." xml:space="preserve"><value>已从Emptor v{1}加载{0}个城市选项。</value></data>
+  <data name="Price hints unavailable: no marketable known maps were found." xml:space="preserve"><value>价格参考不可用：未找到已知的可交易地图。</value></data>
+  <data name="Requesting {0} Emptor price hint(s) for {1}..." xml:space="preserve"><value>正在请求{1}的{0}条Emptor价格参考...</value></data>
+  <data name="Price hints unavailable: Emptor lookup failed ({0})." xml:space="preserve"><value>价格参考不可用：Emptor查询失败 ({0})。</value></data>
+  <data name="Emptor price follow-up failed for {0} map(s): {1}" xml:space="preserve"><value>{0}张地图的Emptor价格后续查询失败：{1}</value></data>
+  <data name="Price hints unavailable: {0}" xml:space="preserve"><value>价格参考不可用：{0}</value></data>
+  <data name="Emptor price lookup pending for {0} map(s); one follow-up is scheduled." xml:space="preserve"><value>{0}张地图的Emptor价格查询仍在等待；已安排一次后续查询。</value></data>
+  <data name="Price hints unavailable: malformed Emptor response ({0})." xml:space="preserve"><value>价格参考不可用：Emptor响应格式错误 ({0})。</value></data>
+  <data name="Loaded {0} Emptor price hint(s) for {1}." xml:space="preserve"><value>已加载{1}的{0}条Emptor价格参考。</value></data>
+  <data name="Loaded {0} Emptor price hint(s) for {1}; {2} unavailable." xml:space="preserve"><value>已加载{1}的{0}条Emptor价格参考；{2}条不可用。</value></data>
+  <data name="Using built-in city choices because Emptor v4 city IPC is unavailable." xml:space="preserve"><value>Emptor v4城市IPC不可用，因此使用内置城市列表。</value></data>
+  <data name="Using built-in city choices because Emptor city IPC is unavailable." xml:space="preserve"><value>Emptor城市IPC不可用，因此使用内置城市列表。</value></data>
+  <data name="Using built-in city choices because Emptor.GetCities returned invalid data: {0}" xml:space="preserve"><value>Emptor.GetCities返回无效数据，因此使用内置城市列表：{0}</value></data>
+  <data name="Emptor price lookup failed: {0}" xml:space="preserve"><value>Emptor价格查询失败：{0}</value></data>
+  <data name="Emptor price follow-up failed: {0}" xml:space="preserve"><value>Emptor价格后续查询失败：{0}</value></data>
+  <data name="Malformed Emptor price response: {0}" xml:space="preserve"><value>Emptor价格响应格式错误：{0}</value></data>
+  <data name="Emptor price lookup is pending." xml:space="preserve"><value>Emptor价格查询仍在等待。</value></data>
+  <data name="Emptor price lookup was still pending after the required follow-up." xml:space="preserve"><value>执行所需后续查询后，Emptor价格查询仍在等待。</value></data>
+  <data name="Emptor returned no price data for this item." xml:space="preserve"><value>Emptor未返回此物品的价格数据。</value></data>
+  <data name="Emptor returned no price levels for this item." xml:space="preserve"><value>Emptor未返回此物品的价格层级。</value></data>
+  <data name="Emptor returned no {0} price level." xml:space="preserve"><value>Emptor未返回{0}的价格层级。</value></data>
+  <data name="No NQ listings were returned for this scope." xml:space="preserve"><value>此范围内未返回NQ商品。</value></data>
+  <data name="No positive NQ minimum listing was returned for this scope." xml:space="preserve"><value>此范围内未返回大于零的NQ最低售价。</value></data>
+  <data name="The NQ minimum listing exceeds Loot Goblin's maximum ceiling." xml:space="preserve"><value>NQ最低售价超过Loot Goblin的最高上限。</value></data>
+  <data name="Lost connection - not logged in." xml:space="preserve"><value>连接已断开 - 尚未登录。</value></data>
+  <data name="Timeout in state {0} after {1}s." xml:space="preserve"><value>状态{0}在{1}秒后超时。</value></data>
+  <data name="Holding teleport while {0} ({1:F0}s)..." xml:space="preserve"><value>{0}期间暂缓传送 ({1:F0}秒)...</value></data>
+  <data name="Outdoor map flow paused while {0} ({1:F0}s)..." xml:space="preserve"><value>{0}期间暂停野外地图流程 ({1:F0}秒)...</value></data>
+  <data name="Joined FATE {0} active - landing/dismounting before level sync..." xml:space="preserve"><value>参与的危命任务{0}进行中 - 等级同步前正在着陆／下坐骑...</value></data>
+  <data name="Teleport blocked by combat - retrying..." xml:space="preserve"><value>战斗阻止传送 - 正在重试...</value></data>
+  <data name="Restarting after accepted party teleport offer..." xml:space="preserve"><value>接受队伍传送邀请后正在重新开始...</value></data>
+  <data name="Cannot start LootGoblin from Main Menu. Log in first." xml:space="preserve"><value>无法从主菜单启动LootGoblin。请先登录。</value></data>
+  <data name="Start preflight: cleared map flag, attempted dismount, waiting 1s..." xml:space="preserve"><value>启动前检查：已清除地图标记、尝试下坐骑，等待1秒...</value></data>
+  <data name="Start preflight: waiting {0:0.0}s before start flow..." xml:space="preserve"><value>启动前检查：开始流程前等待{0:0.0}秒...</value></data>
+  <data name="Alexandrite: closing purchase UI ({0})..." xml:space="preserve"><value>亚历山大变石：正在关闭购买界面 ({0})...</value></data>
+  <data name="Alexandrite: waiting to open Mysterious Map ({0})..." xml:space="preserve"><value>亚历山大变石：等待打开神秘地图 ({0})...</value></data>
+  <data name="Map duty active outside treasure dungeon - recovering coffer/portal..." xml:space="preserve"><value>宝藏副本外地图任务仍有效 - 正在恢复宝箱／传送门流程...</value></data>
+  <data name="ADS handoff active - waiting for dungeon to finish..." xml:space="preserve"><value>ADS接管中 - 等待副本结束...</value></data>
+  <data name="Starting in dungeon - looking for chests within 80y..." xml:space="preserve"><value>从副本内开始 - 正在寻找80y内的宝箱...</value></data>
+  <data name="Repairing gear before starting map run..." xml:space="preserve"><value>开始地图前正在修理装备...</value></data>
+  <data name="Alexandrite: selecting purchased Mysterious Map..." xml:space="preserve"><value>亚历山大变石：正在选择已购买的神秘地图...</value></data>
+  <data name="Selecting one-shot {0}..." xml:space="preserve"><value>正在选择单次执行的{0}...</value></data>
+  <data name="Starting map run - refreshing saddlebag maps..." xml:space="preserve"><value>开始地图流程 - 正在刷新陆行鸟鞍囊地图...</value></data>
+  <data name="Dismounting before combat job switch to {0}..." xml:space="preserve"><value>切换到战斗职业{0}前正在下坐骑...</value></data>
+  <data name="Waiting to switch to combat job: {0}" xml:space="preserve"><value>等待切换战斗职业：{0}</value></data>
+  <data name="FATE/combat cleared - resuming chest recovery..." xml:space="preserve"><value>危命任务／战斗中断已解除 - 正在恢复宝箱流程...</value></data>
+  <data name="FATE/combat cleared - returning to known coffer..." xml:space="preserve"><value>危命任务／战斗中断已解除 - 正在返回已知宝箱...</value></data>
+  <data name="FATE/combat cleared - looking for treasure coffer..." xml:space="preserve"><value>危命任务／战斗中断已解除 - 正在寻找宝箱...</value></data>
+  <data name="FATE/combat cleared - landing at map target..." xml:space="preserve"><value>危命任务／战斗中断已解除 - 正在地图目标处着陆...</value></data>
+  <data name="FATE/combat cleared - teleporting back to map zone..." xml:space="preserve"><value>危命任务／战斗中断已解除 - 正在传送回地图区域...</value></data>
+  <data name="FATE/combat cleared - flying to active map target..." xml:space="preserve"><value>危命任务／战斗中断已解除 - 正在飞往当前地图目标...</value></data>
+  <data name="FATE/combat cleared - remounting for active map target..." xml:space="preserve"><value>危命任务／战斗中断已解除 - 正在重新骑乘前往当前地图目标...</value></data>
+  <data name="Accepted party teleport - waiting for loading to finish..." xml:space="preserve"><value>已接受队伍传送 - 等待加载完成...</value></data>
+  <data name="Accepted party teleport - waiting for arrival to settle..." xml:space="preserve"><value>已接受队伍传送 - 等待抵达状态稳定...</value></data>
+  <data name="Accepted party teleport - waiting for teleport handoff..." xml:space="preserve"><value>已接受队伍传送 - 等待传送流程交接...</value></data>
+  <data name="Accepted party teleport - waiting for player to become available..." xml:space="preserve"><value>已接受队伍传送 - 等待角色可用...</value></data>
+  <data name="Could not switch to configured combat job: {0}" xml:space="preserve"><value>无法切换到配置的战斗职业：{0}</value></data>
+  <data name="Waiting for combat job switch to {0}..." xml:space="preserve"><value>等待切换到战斗职业{0}...</value></data>
+  <data name="Stopped by user ({0})." xml:space="preserve"><value>用户已停止 ({0})。</value></data>
+  <data name="Full reset by user ({0})." xml:space="preserve"><value>用户已完全重置 ({0})。</value></data>
+  <data name="Recovering active map target for {0}..." xml:space="preserve"><value>正在恢复{0}的当前地图目标...</value></data>
+  <data name="Opening active key-item map '{0}'... ({1:F0}/{2:F0}s)" xml:space="preserve"><value>正在打开当前任务道具地图'{0}'... ({1:F0}/{2:F0}秒)</value></data>
+  <data name="Ignoring stale completed active key item for {0}..." xml:space="preserve"><value>正在忽略{0}已完成但仍残留的任务道具...</value></data>
+  <data name="Recovered active map target from {0}; teleporting to {1}..." xml:space="preserve"><value>已从{0}恢复当前地图目标；正在传送至{1}...</value></data>
+  <data name="Skipping market purchase for map {0}: {1}" xml:space="preserve"><value>跳过地图{0}的市场购买：{1}</value></data>
+  <data name="Skipping market purchase for map {0}: configured city '{1}' requires Emptor API v4 or newer; detected v{2}." xml:space="preserve"><value>跳过地图{0}的市场购买：配置城市'{1}'需要Emptor API v4或更高版本；检测到v{2}。</value></data>
+  <data name="Skipping market purchase for map {0}: current world is unavailable." xml:space="preserve"><value>跳过地图{0}的市场购买：当前服务器不可用。</value></data>
+  <data name="Skipping market purchase for map {0}: no eligible public worlds were found." xml:space="preserve"><value>跳过地图{0}的市场购买：未找到符合条件的公开服务器。</value></data>
+  <data name="Lifestream is required for off-world map purchasing: {0}" xml:space="preserve"><value>跨服务器购买地图需要Lifestream：{0}</value></data>
+  <data name="No unlocked World Visit city aetheryte was available (Ul'dah, Gridania, or Limsa Lominsa)." xml:space="preserve"><value>没有已解锁的跨界传送城市以太之光（乌尔达哈、格里达尼亚或利姆萨·罗敏萨）。</value></data>
+  <data name="Waiting to arrive at the World Visit city aetheryte..." xml:space="preserve"><value>等待抵达跨界传送城市以太之光...</value></data>
+  <data name="Timed out teleporting the party to a World Visit city aetheryte." xml:space="preserve"><value>队伍传送到跨界传送城市以太之光超时。</value></data>
+  <data name="Party cannot be safely disbanded for world travel: {0}" xml:space="preserve"><value>无法为跨服务器旅行安全解散队伍：{0}</value></data>
+  <data name="Could not issue the party disband command." xml:space="preserve"><value>无法发送解散队伍命令。</value></data>
+  <data name="Party disband could not be verified; off-world purchasing was not started." xml:space="preserve"><value>无法确认队伍已解散；未开始跨服务器购买。</value></data>
+  <data name="Lifestream could not start travel to {0}." xml:space="preserve"><value>Lifestream无法开始前往{0}。</value></data>
+  <data name="Arrived on {0}; waiting for world travel to settle..." xml:space="preserve"><value>已抵达{0}；等待跨服务器旅行状态稳定...</value></data>
+  <data name="Timed out traveling to {0}." xml:space="preserve"><value>前往{0}超时。</value></data>
+  <data name="Purchase settings for {0} are no longer valid." xml:space="preserve"><value>{0}的购买设置已失效。</value></data>
+  <data name="Emptor returned unknown order state '{0}'." xml:space="preserve"><value>Emptor返回未知订单状态'{0}'。</value></data>
+  <data name="Emptor order {0} is {1}..." xml:space="preserve"><value>Emptor订单{0}状态：{1}...</value></data>
+  <data name="Emptor terminal order data was lost." xml:space="preserve"><value>Emptor订单结束数据已丢失。</value></data>
+  <data name="Waiting to verify {0} in inventory..." xml:space="preserve"><value>等待确认背包中的{0}...</value></data>
+  <data name="Emptor purchase failed operationally: {0}." xml:space="preserve"><value>Emptor购买操作失败：{0}。</value></data>
+  <data name="Emptor purchase failed operationally: {0}. {1}" xml:space="preserve"><value>Emptor购买操作失败：{0}。{1}</value></data>
+  <data name="Waiting to open saddlebag for map batching: {0}" xml:space="preserve"><value>等待打开鞍囊以批量准备地图：{0}</value></data>
+  <data name="Waiting for saddlebag UI during map batching: {0}" xml:space="preserve"><value>批量准备地图时等待鞍囊界面：{0}</value></data>
+  <data name="Waiting for stable saddlebag UI during map batching: {0}" xml:space="preserve"><value>批量准备地图时等待鞍囊界面稳定：{0}</value></data>
+  <data name="Waiting to store the purchased map: {0}" xml:space="preserve"><value>等待存放已购买的地图：{0}</value></data>
+  <data name="Restoring party: {0} captured member(s) still missing..." xml:space="preserve"><value>正在恢复队伍：仍有{0}名已记录成员未加入...</value></data>
+  <data name="Waiting to open saddlebag: {0}" xml:space="preserve"><value>等待打开鞍囊：{0}</value></data>
+  <data name="Waiting for saddlebag UI: {0}" xml:space="preserve"><value>等待鞍囊界面：{0}</value></data>
+  <data name="Waiting for saddlebag UI for {0}..." xml:space="preserve"><value>等待{0}的鞍囊界面...</value></data>
+  <data name="Waiting for stable saddlebag UI: {0}" xml:space="preserve"><value>等待鞍囊界面稳定：{0}</value></data>
+  <data name="Waiting for saddlebag UI to stabilize for {0}..." xml:space="preserve"><value>等待{0}的鞍囊界面稳定...</value></data>
+  <data name="Waiting for loaded saddlebag source for {0}..." xml:space="preserve"><value>等待加载{0}的鞍囊来源...</value></data>
+  <data name="Waiting to move saddlebag map: {0}" xml:space="preserve"><value>等待移动鞍囊地图：{0}</value></data>
+  <data name="Retrieved {0} from saddlebag. Rechecking inventory..." xml:space="preserve"><value>已从鞍囊取出{0}。正在重新检查背包...</value></data>
+  <data name="Waiting for {0} saddlebag move confirmation..." xml:space="preserve"><value>等待确认{0}的鞍囊移动...</value></data>
+  <data name="Could not retrieve {0} from saddlebag: {1}" xml:space="preserve"><value>无法从鞍囊取出{0}：{1}</value></data>
+  <data name="Waiting to refresh saddlebags: player unavailable..." xml:space="preserve"><value>等待刷新鞍囊：角色不可用...</value></data>
+  <data name="Opening saddlebag to refresh map sources..." xml:space="preserve"><value>正在打开鞍囊以刷新地图来源...</value></data>
+  <data name="Waiting for saddlebag map refresh..." xml:space="preserve"><value>等待鞍囊地图刷新...</value></data>
+  <data name="Saddlebag map refresh complete." xml:space="preserve"><value>鞍囊地图刷新完成。</value></data>
+  <data name="Retainer map retrieved. Rechecking inventory..." xml:space="preserve"><value>已取出雇员地图。正在重新检查背包...</value></data>
+  <data name="Could not retrieve retainer map: {0}" xml:space="preserve"><value>无法取出雇员地图：{0}</value></data>
+  <data name="Waiting to gather {0}: {1}" xml:space="preserve"><value>等待采集{0}：{1}</value></data>
+  <data name="Cannot gather {0}: {1}." xml:space="preserve"><value>无法采集{0}：{1}。</value></data>
+  <data name="Skipping map gathering for {0}: {1}" xml:space="preserve"><value>跳过{0}的地图采集：{1}</value></data>
+  <data name="Cannot gather {0}: {1}" xml:space="preserve"><value>无法采集{0}：{1}</value></data>
+  <data name="Gathering {0}..." xml:space="preserve"><value>正在采集{0}...</value></data>
+  <data name="Gathering missing {0}..." xml:space="preserve"><value>正在采集缺少的{0}...</value></data>
+  <data name="Waiting for gather job switch to {0}; current job {1}..." xml:space="preserve"><value>等待切换到采集职业{0}；当前职业{1}...</value></data>
+  <data name="Waiting to switch to gather job: {0}" xml:space="preserve"><value>等待切换采集职业：{0}</value></data>
+  <data name="Waiting for gather job to settle before starting GatherBuddy Reborn for {0}..." xml:space="preserve"><value>为{0}启动GatherBuddy Reborn前等待采集职业状态稳定...</value></data>
+  <data name="Waiting to start GatherBuddy Reborn: {0}" xml:space="preserve"><value>等待启动GatherBuddy Reborn：{0}</value></data>
+  <data name="Gathering {0}: {1}" xml:space="preserve"><value>正在采集{0}：{1}</value></data>
+  <data name="Closing gathering window for {0}..." xml:space="preserve"><value>正在关闭{0}的采集窗口...</value></data>
+  <data name="Waiting to switch back after gathering: {0}" xml:space="preserve"><value>等待采集后切回职业：{0}</value></data>
+  <data name="Gathered {0}, but could not switch back to combat job: {1}" xml:space="preserve"><value>已采集{0}，但无法切回战斗职业：{1}</value></data>
+  <data name="player unavailable" xml:space="preserve"><value>角色不可用</value></data>
+  <data name="casting" xml:space="preserve"><value>正在咏唱</value></data>
+  <data name="loading" xml:space="preserve"><value>加载中</value></data>
+  <data name="occupied" xml:space="preserve"><value>忙碌中</value></data>
+  <data name="in combat" xml:space="preserve"><value>战斗中</value></data>
+  <data name="in combat during joined FATE {0}" xml:space="preserve"><value>参与的危命任务{0}中正在战斗</value></data>
+  <data name="map target" xml:space="preserve"><value>地图目标</value></data>
+  <data name="coffer" xml:space="preserve"><value>宝箱</value></data>
+  <data name="displaced coffer" xml:space="preserve"><value>位置偏移的宝箱</value></data>
+  <data name="captured coffer" xml:space="preserve"><value>已记录的宝箱</value></data>
+  <data name="missing coffer flag" xml:space="preserve"><value>缺失宝箱的标记</value></data>
+  <data name="combat recovery flag" xml:space="preserve"><value>战斗恢复标记</value></data>
+  <data name="coffer flag fallback" xml:space="preserve"><value>宝箱标记回退</value></data>
+  <data name="portal flag fallback" xml:space="preserve"><value>传送门标记回退</value></data>
+  <data name="Gathered {0}; starting one-shot map run..." xml:space="preserve"><value>已采集{0}；开始单次地图流程...</value></data>
+  <data name="Gathered {0}." xml:space="preserve"><value>已采集{0}。</value></data>
+  <data name="Gathered {0}; rechecking maps..." xml:space="preserve"><value>已采集{0}；正在重新检查地图...</value></data>
+  <data name="Could not gather {0}: {1}" xml:space="preserve"><value>无法采集{0}：{1}</value></data>
+  <data name="Nudging forward after repeated vnav path failures..." xml:space="preserve"><value>多次vnav寻路失败后正在向前微移...</value></data>
+  <data name="Nudging forward after repeated vnav path failures... ({0:F1}s)" xml:space="preserve"><value>多次vnav寻路失败后正在向前微移... ({0:F1}秒)</value></data>
+  <data name="Coffer was too far to open - re-approaching..." xml:space="preserve"><value>宝箱距离太远无法打开 - 正在重新接近...</value></data>
+  <data name="Portal was too far - waiting for targetable portal..." xml:space="preserve"><value>传送门距离太远 - 等待可选中的传送门...</value></data>
+  <data name="Portal was too far - approaching targetable portal..." xml:space="preserve"><value>传送门距离太远 - 正在接近可选中的传送门...</value></data>
+  <data name="Portal was too far - ground-approaching closer..." xml:space="preserve"><value>传送门距离太远 - 正在从地面接近...</value></data>
+  <data name="Flying to current map flag after vnav flyto failure..." xml:space="preserve"><value>vnav flyto失败后正在飞往当前地图标记...</value></data>
+  <data name="Reissuing explicit XYZ after vnav flyto failure..." xml:space="preserve"><value>vnav flyto失败后正在重新发送明确XYZ坐标...</value></data>
+  <data name="vnav flyto failed and no current map flag or explicit XYZ target is available." xml:space="preserve"><value>vnav flyto失败，且没有当前地图标记或明确XYZ目标。</value></data>
+  <data name="Recovering {0}: re-pathing ({1:F1}y)..." xml:space="preserve"><value>正在恢复{0}：重新寻路 ({1:F1}y)...</value></data>
+  <data name="{0}: stuck {1} - teleporting to nearest aetheryte..." xml:space="preserve"><value>{0}：在{1}处卡住 - 正在传送至最近的以太之光...</value></data>
+  <data name="Landing by /mount toggle... ({0:F0}s)" xml:space="preserve"><value>通过切换/mount着陆... ({0:F0}秒)</value></data>
+  <data name="Waiting for treasure coffer after dig... ({0:F1}s)" xml:space="preserve"><value>掘地后等待宝箱... ({0:F1}秒)</value></data>
+  <data name="Looking for treasure coffer to interact..." xml:space="preserve"><value>正在寻找可交互的宝箱...</value></data>
+  <data name="Porta Praetoria takeoff nudge waiting for map target..." xml:space="preserve"><value>Porta Praetoria起飞微移等待地图目标...</value></data>
+  <data name="Porta Praetoria takeoff nudge waiting for mounted player readiness..." xml:space="preserve"><value>Porta Praetoria起飞微移等待骑乘角色就绪...</value></data>
+  <data name="Porta Praetoria takeoff nudge toward {0} ({1:F1}s)..." xml:space="preserve"><value>Porta Praetoria起飞微移前往{0} ({1:F1}秒)...</value></data>
+  <data name="Porta Praetoria takeoff nudge complete; preparing vnav flight..." xml:space="preserve"><value>Porta Praetoria起飞微移完成；正在准备vnav飞行...</value></data>
+  <data name="Thief-map water travel: remounting before far target..." xml:space="preserve"><value>盗贼地图水上移动：前往远处目标前重新骑乘...</value></data>
+  <data name="Thief-map water recovery: remounting before travel..." xml:space="preserve"><value>盗贼地图水上恢复：移动前重新骑乘...</value></data>
+  <data name="Holding Lochs thief-map dive entry... (entry {0:F1}y, target {1:F1}y)" xml:space="preserve"><value>保持Lochs盗贼地图潜水入口...（入口{0:F1}y，目标{1:F1}y）</value></data>
+  <data name="Waiting for Lochs thief-map dive recovery... (entry {0:F1}y, target {1:F1}y)" xml:space="preserve"><value>等待Lochs盗贼地图潜水恢复...（入口{0:F1}y，目标{1:F1}y）</value></data>
+  <data name="Descending for underwater thief-map trigger..." xml:space="preserve"><value>正在下降以触发水下盗贼地图...</value></data>
+  <data name="Moving to surfaced thief-map flag X/Z... ({0:F1}y)" xml:space="preserve"><value>正在前往水面盗贼地图标记X/Z... ({0:F1}y)</value></data>
+  <data name="Waiting for mount state before thief-map dig... ({0:F1}y XZ)" xml:space="preserve"><value>盗贼地图掘地前等待坐骑状态... ({0:F1}y XZ)</value></data>
+  <data name="Descending for non-diving thief-map landing... ({0:F1}y XZ)" xml:space="preserve"><value>正在下降以完成非潜水盗贼地图着陆... ({0:F1}y XZ)</value></data>
+  <data name="Waiting for thief-map landing to settle... (Y change {0:F1}y)" xml:space="preserve"><value>等待盗贼地图着陆稳定...（Y变化{0:F1}y）</value></data>
+  <data name="Confirming thief-map landing settle... ({0:F1}/{1:F1}s)" xml:space="preserve"><value>正在确认盗贼地图着陆稳定... ({0:F1}/{1:F1}秒)</value></data>
+  <data name="Waiting for safe non-diving thief-map landing before retry dig..." xml:space="preserve"><value>等待盗贼地图安全着陆且不潜水后重试挖掘...</value></data>
+  <data name="Thief-map recovery: returning to landing before dig..." xml:space="preserve"><value>盗贼地图恢复：挖掘前返回着陆点...</value></data>
+  <data name="Waiting after underwater XYZ dig retry" xml:space="preserve"><value>水下XYZ挖掘重试后等待</value></data>
+  <data name="Waiting before underwater XYZ dig retry" xml:space="preserve"><value>水下XYZ挖掘重试前等待</value></data>
+  <data name="Underwater XYZ dig retry {0}/{1}..." xml:space="preserve"><value>水下XYZ挖掘重试 {0}/{1}...</value></data>
+  <data name="Waiting for underwater thief-map player position..." xml:space="preserve"><value>等待水下盗贼地图的玩家位置...</value></data>
+  <data name="Waiting for underwater thief-map flag target..." xml:space="preserve"><value>等待水下盗贼地图的标记目标...</value></data>
+  <data name="Swimming to underwater flag X/Z... ({0:F1}y)" xml:space="preserve"><value>游向水下标记X/Z... ({0:F1}y)</value></data>
+  <data name="Holding underwater thief-map trigger..." xml:space="preserve"><value>维持水下盗贼地图触发条件...</value></data>
+  <data name="Resetting camera before interacting with &apos;{0}&apos;..." xml:space="preserve"><value>与“{0}”交互前重置镜头...</value></data>
+  <data name="Waiting briefly for camera reset before interacting with &apos;{0}&apos;..." xml:space="preserve"><value>与“{0}”交互前短暂等待镜头重置...</value></data>
+  <data name="In combat - waiting to return to coffer XYZ ({0:F1}y)..." xml:space="preserve"><value>战斗中 - 等待返回宝箱XYZ ({0:F1}y)...</value></data>
+  <data name="Returning to captured coffer XYZ ({0:F1}y)..." xml:space="preserve"><value>返回已记录的宝箱XYZ ({0:F1}y)...</value></data>
+  <data name="Waiting for player during {0} flag fallback..." xml:space="preserve"><value>{0}标记备用移动时等待玩家...</value></data>
+  <data name="In combat - pausing {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>战斗中 - 暂停{0}标记备用移动 ({1:F1}y)...</value></data>
+  <data name="Mounting for {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>为{0}标记备用移动骑乘 ({1:F1}y)...</value></data>
+  <data name="Flying to {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>飞向{0}备用标记 ({1:F1}y)...</value></data>
+  <data name="Dismounting near &apos;{0}&apos; for ground approach ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>在“{0}”附近下坐骑以地面接近 ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Ground-approaching nearby coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>从地面接近附近宝箱“{0}” ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Ground approach failed for &apos;{0}&apos; ({1:F1}y) - preparing mounted recovery..." xml:space="preserve"><value>地面接近“{0}”失败 ({1:F1}y) - 准备骑乘恢复...</value></data>
+  <data name="Ground-approaching nearby coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y, {3:F0}s)..." xml:space="preserve"><value>从地面接近附近宝箱“{0}” ({1:F1}y, Y {2:F1}y, {3:F0}s)...</value></data>
+  <data name="Waiting for combat to end before coffer recovery ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>恢复宝箱前等待战斗结束 ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Mounting before coffer recovery ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>恢复宝箱前骑乘 ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Dismounting near &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>在“{0}”附近下坐骑 ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Landing at &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>在“{0}”处着陆 ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Waiting to interact with &apos;{0}&apos; ({1})..." xml:space="preserve"><value>等待与“{0}”交互 ({1})...</value></data>
+  <data name="Interacting with &apos;{0}&apos; after recovery ({1:F1}y)..." xml:space="preserve"><value>恢复后与“{0}”交互 ({1:F1}y)...</value></data>
+  <data name="Flying to displaced coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>飞向移位的宝箱“{0}” ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Waiting for coffer to become targetable ({0:F1}y)..." xml:space="preserve"><value>等待宝箱可选中 ({0:F1}y)...</value></data>
+  <data name="In combat - waiting to recover missing coffer ({0:F1}y from flag)..." xml:space="preserve"><value>战斗中 - 等待恢复消失的宝箱 (距标记{0:F1}y)...</value></data>
+  <data name="In combat - waiting to recover missing coffer..." xml:space="preserve"><value>战斗中 - 等待恢复消失的宝箱...</value></data>
+  <data name="Mounting to return to flag and recover coffer ({0:F1}y XZ)..." xml:space="preserve"><value>骑乘以返回标记并恢复宝箱 ({0:F1}y XZ)...</value></data>
+  <data name="({0:F0}s, moved {1:F1}y)..." xml:space="preserve"><value>（{0:F0}秒，移动{1:F1}y）...</value></data>
+  <data name="[{0}] Flying to {1} ({2}) XYZ: {3}" xml:space="preserve"><value>［{0}］飞往{1}（{2}）XYZ：{3}</value></data>
+  <data name="[Ground] Location {0}/{1}: {2} ({3:F0}y)" xml:space="preserve"><value>［地面］位置{0}/{1}：{2}（{3:F0}y）</value></data>
+  <data name="[Ground] Teleporting to {0}..." xml:space="preserve"><value>［地面］传送至{0}...</value></data>
+  <data name="[Underwater {0}] Flying to {1} XYZ: {2}" xml:space="preserve"><value>［水下{0}］前往{1}，XYZ：{2}</value></data>
+  <data name="{0} Durability {1}%/{2}%." xml:space="preserve"><value>{0} 耐久度{1}%/{2}%。</value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s" xml:space="preserve"><value>{0} {1:F1}秒后重试ADS修理</value></data>
+  <data name="{0}/{1} mounted, {2:F0}s elapsed)..." xml:space="preserve"><value>{0}/{1}已骑乘，经过{2:F0}秒）...</value></data>
+  <data name="ADS handoff pending - waiting for ownership... ({0:F0}s, {1}/{2})" xml:space="preserve"><value>ADS交接中，等待接管（{0:F0}秒，{1}/{2}）...</value></data>
+  <data name="ADS handoff pending - waiting for ownership... ({0:F0}s, status unavailable)" xml:space="preserve"><value>ADS交接中，等待接管（{0:F0}秒，状态不可用）...</value></data>
+  <data name="ADS leave requested - waiting for duty exit..." xml:space="preserve"><value>ADS已请求退出，等待离开副本...</value></data>
+  <data name="ADS leave requested - waiting for duty exit... ({0:F0}s, {1})" xml:space="preserve"><value>ADS已请求退出，等待离开副本 ({0:F0}s, {1})...</value></data>
+  <data name="ADS ownership was seen - waiting for readable status... ({0:F0}s)" xml:space="preserve"><value>已检测ADS接管，等待可读状态（{0:F0}秒）...</value></data>
+  <data name="ADS owns the duty - waiting for completion... ({0:F0}s, {1})" xml:space="preserve"><value>ADS正在控制副本，等待完成（{0:F0}秒，{1}）...</value></data>
+  <data name="ADS released ownership - stopping ADS and leaving duty..." xml:space="preserve"><value>ADS已释放控制，停止ADS并退出副本...</value></data>
+  <data name="ADS repair requested ({0}) - waiting for ADS status... ({1:F0}s)" xml:space="preserve"><value>已请求ADS修理（{0}），等待状态（{1:F0}秒）...</value></data>
+  <data name="ADS repair requested ({0}) - waiting for utility start... ({1:F0}s)" xml:space="preserve"><value>已请求ADS修理（{0}），等待工具启动（{1:F0}秒）...</value></data>
+  <data name="ADS repair requested ({0}); durability {1}% below threshold {2}%..." xml:space="preserve"><value>ADS修理（{0}），耐久度{1}%低于阈值{2}%...</value></data>
+  <data name="ADS repair running ({0})... ({1:F0}s, {2})" xml:space="preserve"><value>ADS修理中（{0}）...（{1:F0}秒，{2}）</value></data>
+  <data name="Alexandrite {0}/{1}: Confirming map purchase..." xml:space="preserve"><value>亚历山大变石{0}/{1}：确认地图购买...</value></data>
+  <data name="Alexandrite {0}/{1}: Dismounting at Auriana..." xml:space="preserve"><value>亚历山大变石{0}/{1}：在奥里亚娜处下坐骑...</value></data>
+  <data name="Alexandrite {0}/{1}: Mounting for Auriana..." xml:space="preserve"><value>亚历山大变石{0}/{1}：骑乘前往奥里亚娜...</value></data>
+  <data name="Alexandrite {0}/{1}: Returning to Revenant's Toll..." xml:space="preserve"><value>亚历山大变石{0}/{1}：返回丧灵钟...</value></data>
+  <data name="Alexandrite {0}/{1}: Riding to Auriana..." xml:space="preserve"><value>亚历山大变石{0}/{1}：骑乘前往奥里亚娜...</value></data>
+  <data name="Alexandrite {0}/{1}: Talking to Auriana..." xml:space="preserve"><value>亚历山大变石{0}/{1}：与奥里亚娜交谈...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for area load..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待区域加载...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for arrival settle..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待抵达稳定...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for cast lock..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待施法锁定解除...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for Mor Dhona..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待摩杜纳...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for mount..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待坐骑...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player position..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待玩家位置...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player readiness..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待玩家就绪...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待玩家...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for purchase confirmation..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待购买确认...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for purchased map..." xml:space="preserve"><value>亚历山大变石{0}/{1}：等待已购买地图...</value></data>
+  <data name="All party members mounted!" xml:space="preserve"><value>所有队员已骑乘！</value></data>
+  <data name="Approaching '{0}' ({1:F1}y away)..." xml:space="preserve"><value>接近“{0}”（{1:F1}y）...</value></data>
+  <data name="Approaching captured portal XYZ {0} ({1:F1}y)..." xml:space="preserve"><value>接近记录的传送门坐标{0}（{1:F1}y）...</value></data>
+  <data name="Approaching portal XYZ {0} ({1:F1}y)..." xml:space="preserve"><value>接近传送门XYZ {0}（{1:F1}y）...</value></data>
+  <data name="Approaching+interacting '{0}' ({1:F1}y, attempt #{2})..." xml:space="preserve"><value>接近并交互“{0}”（{1:F1}y，第{2}次）...</value></data>
+  <data name="At captured portal XYZ - waiting for targetable portal... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>已到记录的传送门坐标，等待可选中（{0:F0}/{1:F0}秒）...</value></data>
+  <data name="Combat detected, waiting aborted." xml:space="preserve"><value>已检测战斗，取消等待。</value></data>
+  <data name="Combat ended - waiting for despawn... ({0:F1}/2.0s)" xml:space="preserve"><value>战斗结束，等待消失（{0:F1}/2.0秒）...</value></data>
+  <data name="Combat ended - waiting to retry dig... ({0:F1}/3.0s)" xml:space="preserve"><value>战斗结束，等待重试挖掘（{0:F1}/3.0秒）...</value></data>
+  <data name="Confirming dungeon entry..." xml:space="preserve"><value>确认副本进入...</value></data>
+  <data name="Cycling aetherytes ({0}/{1}): {2}" xml:space="preserve"><value>巡回以太之光（{0}/{1}）：{2}</value></data>
+  <data name="danger detected outside outdoor flow" xml:space="preserve"><value>在室外流程之外检测到危险</value></data>
+  <data name="Descent mode... (Y change: {0:F1}y, {1:F0}s)" xml:space="preserve"><value>下降模式（Y变化{0:F1}y，{1:F0}秒）...</value></data>
+  <data name="Dismounting at '{0}' ({1:F1}y)..." xml:space="preserve"><value>在“{0}”下坐骑（{1:F1}y）...</value></data>
+  <data name="Dismounting for portal close nudge ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>下坐骑以微调接近传送门（{0:F1}y，Y {1:F1}y）...</value></data>
+  <data name="Dismounting for portal ground approach ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>下坐骑以从地面接近传送门（{0:F1}y，Y {1:F1}y）...</value></data>
+  <data name="Door opened - settling before walk-through..." xml:space="preserve"><value>门已打开，通行前等待稳定...</value></data>
+  <data name="Door transition ready - settling briefly..." xml:space="preserve"><value>门区域切换就绪，稍候稳定...</value></data>
+  <data name="Duty completed - {0} exit in {1:F0}s..." xml:space="preserve"><value>副本完成，{1:F0}秒后通过{0}退出...</value></data>
+  <data name="Duty completed - party exit grace period ({0:F0}s)..." xml:space="preserve"><value>副本完成，小队退出宽限期（{0:F0}秒）...</value></data>
+  <data name="Duty completed - preparing configured exit..." xml:space="preserve"><value>副本完成，准备配置的退出方式...</value></data>
+  <data name="Duty completed - waiting for {0} other party member(s) to leave..." xml:space="preserve"><value>副本完成，等待其他{0}名队员退出...</value></data>
+  <data name="Duty completed - waiting for combat to end before exit..." xml:space="preserve"><value>副本完成，退出前等待战斗结束...</value></data>
+  <data name="Duty completed - waiting for manual exit..." xml:space="preserve"><value>副本完成，等待手动退出...</value></data>
+  <data name="Duty completed - waiting for party status..." xml:space="preserve"><value>副本完成，等待小队状态...</value></data>
+  <data name="Duty exit requested - waiting to leave duty..." xml:space="preserve"><value>已请求退出，等待离开副本...</value></data>
+  <data name="Fallback descent... ({0:F0}s)" xml:space="preserve"><value>备用下降（{0:F0}秒）...</value></data>
+  <data name="Floor {0} - scanning for objects... ({1:F0}s)" xml:space="preserve"><value>第{0}层，搜索对象（{1:F0}秒）...</value></data>
+  <data name="Gear durability {0}% below {1}% - teleporting to {2} for ADS repair..." xml:space="preserve"><value>耐久度{0}%低于{1}%，前往{2}进行ADS修理...</value></data>
+  <data name="Ground-approaching portal ({0:F1}y, XZ {1:F1}y, Y {2:F1}y, {3:F0}s)..." xml:space="preserve"><value>从地面接近传送门（{0:F1}y，XZ {1:F1}y，Y {2:F1}y，{3:F0}秒）...</value></data>
+  <data name="Ground-approaching portal ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>从地面接近传送门（{0:F1}y，Y {1:F1}y）...</value></data>
+  <data name="Ground-nudging closer to portal ({0:F1}y, XZ {1:F1}y)..." xml:space="preserve"><value>从地面微调接近传送门（{0:F1}y，XZ {1:F1}y）...</value></data>
+  <data name="In combat - waiting ({0:F1}y from '{1}')..." xml:space="preserve"><value>战斗中，等待（距“{1}”{0:F1}y）...</value></data>
+  <data name="In combat - waiting before portal ground approach ({0:F1}y)..." xml:space="preserve"><value>战斗中，等待从地面接近传送门（{0:F1}y）...</value></data>
+  <data name="In combat - waiting to recover chest ({0:F1}y XZ from flag)..." xml:space="preserve"><value>战斗中，等待恢复宝箱（距标记{0:F1}y XZ）...</value></data>
+  <data name="In combat - waiting to recover chest..." xml:space="preserve"><value>战斗中，等待恢复宝箱...</value></data>
+  <data name="In combat on floor {0} - BMR handling..." xml:space="preserve"><value>第{0}层战斗中，由BMR处理...</value></data>
+  <data name="In combat on floor {0} - waiting..." xml:space="preserve"><value>第{0}层战斗中，等待...</value></data>
+  <data name="Interacting with '{0}' - waiting for portal..." xml:space="preserve"><value>与“{0}”交互，等待传送门...</value></data>
+  <data name="Interacting with '{0}' ({1:F1}y, attempt #{2})..." xml:space="preserve"><value>与“{0}”交互（{1:F1}y，第{2}次）...</value></data>
+  <data name="Interacting with portal ({0:F1}y)..." xml:space="preserve"><value>与传送门交互（{0:F1}y）...</value></data>
+  <data name="Joined FATE {0} active - holding chest recovery during {1} ({2:F0}s)..." xml:space="preserve"><value>已加入危命任务{0}，在{1}期间暂停宝箱恢复（{2:F0}秒）...</value></data>
+  <data name="Joined FATE {0} active - holding portal recovery during {1} ({2:F0}s)..." xml:space="preserve"><value>已加入危命任务{0}，在{1}期间暂停传送门恢复（{2:F0}秒）...</value></data>
+  <data name="joined FATE {0} combat automation active" xml:space="preserve"><value>已加入危命任务{0}的战斗自动化开启</value></data>
+  <data name="Joined FATE cleared - settling before chest/portal recovery..." xml:space="preserve"><value>危命任务结束，恢复宝箱／传送门前等待稳定...</value></data>
+  <data name="Landing at portal ({0:F1}y)..." xml:space="preserve"><value>在传送门处着陆（{0:F1}y）...</value></data>
+  <data name="Lifestream rejected repair teleport to {0}: {1}. Retrying ({2})..." xml:space="preserve"><value>Lifestream拒绝修理传送至{0}：{1}。重试（{2}）...</value></data>
+  <data name="Loading dungeon room..." xml:space="preserve"><value>正在加载副本房间...</value></data>
+  <data name="Loading..." xml:space="preserve"><value>加载中...</value></data>
+  <data name="Location {0}/{1}: {2} ({3:F0}s)" xml:space="preserve"><value>位置{0}/{1}：{2}（{3:F0}秒）</value></data>
+  <data name="Looking for door/progression on floor {0}... ({1:F0}s)" xml:space="preserve"><value>第{0}层搜索门／前进路线（{1:F0}秒）...</value></data>
+  <data name="MANUAL CONTROL - Location {0}/{1}: {2}" xml:space="preserve"><value>手动控制，位置{0}/{1}：{2}</value></data>
+  <data name="Map duty active in territory {0} - continuing portal interaction..." xml:space="preserve"><value>区域{0}地图任务进行中，继续传送门交互...</value></data>
+  <data name="Map duty active in territory {0} - recovering coffer/portal..." xml:space="preserve"><value>区域{0}地图任务进行中，恢复宝箱／传送门...</value></data>
+  <data name="Map duty active in territory {0} - waiting for duty to clear..." xml:space="preserve"><value>区域{0}地图任务进行中，等待结束...</value></data>
+  <data name="Map duty active in territory {0} - waiting for treasure dungeon territory..." xml:space="preserve"><value>区域{0}地图任务进行中，等待宝物副本区域...</value></data>
+  <data name="Mounting (attempt {0}/5)..." xml:space="preserve"><value>骑乘（第{0}/5次）...</value></data>
+  <data name="Mounting before portal fly approach..." xml:space="preserve"><value>飞往传送门前骑乘...</value></data>
+  <data name="Mounting to return to flag after combat ({0:F1}y XZ)..." xml:space="preserve"><value>战斗后返回标记前骑乘（{0:F1}y XZ）...</value></data>
+  <data name="Moving forward to trigger area shift... ({0:F0}/10s)" xml:space="preserve"><value>前进以触发区域切换（{0:F0}/10秒）...</value></data>
+  <data name="Navigating through door transition ({0:F1}y)..." xml:space="preserve"><value>通过门区域切换（{0:F1}y）...</value></data>
+  <data name="Navigating to '{0}' ({1:F1}y, {2:F0}s)..." xml:space="preserve"><value>导航至“{0}”（{1:F1}y，{2:F0}秒）...</value></data>
+  <data name="Navigating to dungeon start ({0:F1}y)..." xml:space="preserve"><value>导航至副本起点（{0:F1}y）...</value></data>
+  <data name="No nearby repair NPC for ADS {0}; continuing map flow." xml:space="preserve"><value>ADS {0}附近无修理NPC，继续地图流程。</value></data>
+  <data name="Normal dismount... ({0:F0}s)" xml:space="preserve"><value>正常下坐骑（{0:F0}秒）...</value></data>
+  <data name="Observing Higher/Lower puzzle..." xml:space="preserve"><value>观察大小谜题...</value></data>
+  <data name="Opening Duty Finder to leave duty..." xml:space="preserve"><value>打开任务搜索器以退出...</value></data>
+  <data name="Party snapshot unavailable." xml:space="preserve"><value>小队快照不可用。</value></data>
+  <data name="Playing Higher/Lower stage {0}: {1}..." xml:space="preserve"><value>大小谜题第{0}阶段：{1}...</value></data>
+  <data name="Portal accepted - loading treasure dungeon territory from {0}..." xml:space="preserve"><value>已接受传送门，从{0}加载宝物副本区域...</value></data>
+  <data name="Portal accepted - waiting for loading to finish..." xml:space="preserve"><value>已接受传送门，等待加载完成...</value></data>
+  <data name="Portal accepted - waiting for treasure dungeon territory..." xml:space="preserve"><value>已接受传送门，等待宝物副本区域...</value></data>
+  <data name="Portal close nudge waiting for local player..." xml:space="preserve"><value>传送门微移等待本地玩家...</value></data>
+  <data name="Portal ground approach failed ({0:F1}y) - preparing mounted recovery..." xml:space="preserve"><value>传送门地面接近失败（{0:F1}y），准备骑乘恢复...</value></data>
+  <data name="Portal still active - continuing portal interaction..." xml:space="preserve"><value>传送门仍有效，继续交互...</value></data>
+  <data name="Preparing to mount ({0}s)..." xml:space="preserve"><value>准备骑乘（{0}秒）...</value></data>
+  <data name="Pushing through door transition ({0:F0}s)..." xml:space="preserve"><value>前进通过门区域切换（{0:F0}秒）...</value></data>
+  <data name="Recovering missing coffer (retry {0}/{1})..." xml:space="preserve"><value>恢复缺失宝箱（重试{0}/{1}）...</value></data>
+  <data name="Recovering missing coffer near flag ({0:F1}y XZ, retry {1}/{2})..." xml:space="preserve"><value>在标记附近恢复缺失宝箱（{0:F1}y XZ，重试{1}/{2}）...</value></data>
+  <data name="Reopening Higher/Lower puzzle (attempt {0})..." xml:space="preserve"><value>重新打开大小谜题（第{0}次）...</value></data>
+  <data name="restored: {0}" xml:space="preserve"><value>已恢复：{0}</value></data>
+  <data name="Retrying dig after combat ({0:F1}y XZ from flag)..." xml:space="preserve"><value>战斗后重试挖掘（距标记{0:F1}y XZ）...</value></data>
+  <data name="Retrying dig for missing coffer ({0}/{1})..." xml:space="preserve"><value>为缺失宝箱重试挖掘（{0}/{1}）...</value></data>
+  <data name="Retrying in {0:F1}s" xml:space="preserve"><value>{0:F1}秒后重试</value></data>
+  <data name="Returning to flag after combat ({0:F1}y XZ)..." xml:space="preserve"><value>战斗后返回标记（{0:F1}y XZ）...</value></data>
+  <data name="Returning to flag to recover coffer ({0:F1}y XZ)..." xml:space="preserve"><value>返回标记以恢复宝箱（{0:F1}y XZ）...</value></data>
+  <data name="Running Loot Goblin Leave Duty sequence..." xml:space="preserve"><value>执行Loot Goblin副本退出流程...</value></data>
+  <data name="Searching for portal... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>搜索传送门（{0:F0}/{1:F0}秒）...</value></data>
+  <data name="Still trying to land by /mount toggle... ({0:F0}s)" xml:space="preserve"><value>继续尝试通过/mount着陆（{0:F0}秒）...</value></data>
+  <data name="Teleporting to {0} for ADS repair..." xml:space="preserve"><value>传送至{0}进行ADS修理...</value></data>
+  <data name="Teleporting to {0} for ADS repair... ({1:F0}s)" xml:space="preserve"><value>传送至{0}进行ADS修理 ({1:F0}s)...</value></data>
+  <data name="Teleporting to {0}..." xml:space="preserve"><value>传送至{0}...</value></data>
+  <data name="Teleporting... ({0:F0}s)" xml:space="preserve"><value>传送中（{0:F0}秒）...</value></data>
+  <data name="Teleporting... settling ({0:F0}s)" xml:space="preserve"><value>传送中，等待稳定（{0:F0}秒）...</value></data>
+  <data name="Teleporting... waiting for area load ({0:F0}s)" xml:space="preserve"><value>传送中，等待区域加载（{0:F0}秒）...</value></data>
+  <data name="Teleporting... waiting for cast lock to clear ({0:F0}s)" xml:space="preserve"><value>传送中，等待施法锁定解除（{0:F0}秒）...</value></data>
+  <data name="Teleporting... waiting for player after load ({0:F0}s)" xml:space="preserve"><value>传送中，等待加载后的玩家（{0:F0}秒）...</value></data>
+  <data name="Teleporting... waiting for target territory ({0:F0}s)" xml:space="preserve"><value>传送中，等待目标区域（{0:F0}秒）...</value></data>
+  <data name="Thief-map remount: waiting for party to mount ({0}/{1} required mounted others, {2:F0}s elapsed)..." xml:space="preserve"><value>盗贼地图重新骑乘，等待小队骑乘（所需其他队员{0}/{1}，{2:F0}秒）...</value></data>
+  <data name="Thief-map remount: waiting for party zone load ({0}/{1} mounted, {2:F0}s elapsed{3})..." xml:space="preserve"><value>盗贼地图重新骑乘，等待小队区域加载（{0}/{1}已骑乘，{2:F0}秒{3}）...</value></data>
+  <data name="Timeout waiting for mounts after {0}s." xml:space="preserve"><value>等待坐骑{0}秒后超时。</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff seam..." xml:space="preserve"><value>检测到宝物副本区域{0}，等待安全ADS交接点...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff seam... ({1})" xml:space="preserve"><value>检测到宝物副本区域{0}，等待安全ADS交接点 ({1})...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff settle..." xml:space="preserve"><value>检测到宝物副本区域{0}，等待ADS交接稳定...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for loading to finish before ADS handoff..." xml:space="preserve"><value>检测到宝物副本区域{0}，ADS交接前等待加载完成...</value></data>
+  <data name="Trying Higher/Lower callback attempt {0}..." xml:space="preserve"><value>大小谜题回调第{0}次...</value></data>
+  <data name="Waiting {0:F1}s before repair teleport {1} to {2}..." xml:space="preserve"><value>修理传送{1}前往{2}前等待{0:F1}秒...</value></data>
+  <data name="Waiting before teleporting... ({0:F0}s / {1}s)" xml:space="preserve"><value>传送前等待（{0:F0}秒／{1}秒）...</value></data>
+  <data name="Waiting for all {0} members to mount..." xml:space="preserve"><value>等待全部{0}名成员骑乘...</value></data>
+  <data name="Waiting for captured portal approach... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>等待接近记录的传送门（{0:F0}/{1:F0}秒）...</value></data>
+  <data name="Waiting for character ready (dungeon start)..." xml:space="preserve"><value>等待副本开始时角色就绪...</value></data>
+  <data name="Waiting for chest after combat dig... ({0:F1}/5.0s)" xml:space="preserve"><value>战斗后挖掘等待宝箱（{0:F1}/5.0秒）...</value></data>
+  <data name="Waiting for chest after combat... ({0:F1}/5.0s)" xml:space="preserve"><value>战斗后等待宝箱（{0:F1}/5.0秒）...</value></data>
+  <data name="Waiting for chest to reappear... ({0:F1}/5.0s)" xml:space="preserve"><value>等待宝箱重现（{0:F1}/5.0秒）...</value></data>
+  <data name="Waiting for coffer after dig... ({0:F1}/{1:F1}s)" xml:space="preserve"><value>挖掘后等待宝箱（{0:F1}/{1:F1}秒）...</value></data>
+  <data name="Waiting for combat to end before portal fly approach..." xml:space="preserve"><value>飞往传送门前等待战斗结束...</value></data>
+  <data name="Waiting for door cutscene/loading to clear..." xml:space="preserve"><value>等待门动画／加载结束...</value></data>
+  <data name="Waiting for door transition cutscene/loading to clear..." xml:space="preserve"><value>等待门区域切换动画／加载结束...</value></data>
+  <data name="Waiting for dungeon objects to activate ({0:F0}/30s)..." xml:space="preserve"><value>等待副本对象激活（{0:F0}/30秒）...</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen," xml:space="preserve"><value>等待完整小队快照（已见其他玩家{0}/{1}，</value></data>
+  <data name="Waiting for Higher/Lower puzzle after exhausting callback attempts..." xml:space="preserve"><value>回调尝试耗尽后等待大小谜题...</value></data>
+  <data name="Waiting for Higher/Lower puzzle UI ({0})..." xml:space="preserve"><value>等待大小谜题界面（{0}）...</value></data>
+  <data name="Waiting for Higher/Lower puzzle UI to settle (attempt {0})..." xml:space="preserve"><value>等待大小谜题界面稳定（第{0}次）...</value></data>
+  <data name="Waiting for Higher/Lower solver UI to settle..." xml:space="preserve"><value>等待大小谜题解算器界面稳定...</value></data>
+  <data name="Waiting for Higher/Lower UI to change after solver callback..." xml:space="preserve"><value>解算器回调后等待大小谜题界面变化...</value></data>
+  <data name="Waiting for map location... ({0:F0}s / {1}s)" xml:space="preserve"><value>等待地图位置（{0:F0}秒／{1}秒）...</value></data>
+  <data name="Waiting for party snapshot ({0:F0}s elapsed, expecting {1} other players)..." xml:space="preserve"><value>等待小队快照（经过{0:F0}秒，预计其他玩家{1}人）...</value></data>
+  <data name="Waiting for party snapshot before next map..." xml:space="preserve"><value>下一张地图前等待小队快照...</value></data>
+  <data name="Waiting for party to load after dungeon ({0}/{1} in zone; missing: {2})..." xml:space="preserve"><value>副本后等待小队加载（区域内{0}/{1}，缺少：{2}）...</value></data>
+  <data name="Waiting for party to load after dungeon ({0}/{1} required other players in zone)..." xml:space="preserve"><value>副本后等待小队加载（所需其他玩家{0}/{1}在区域内）...</value></data>
+  <data name="Waiting for party to mount ({0}/{1} required mounted others, {2:F0}s elapsed)..." xml:space="preserve"><value>等待小队骑乘（所需其他队员{0}/{1}，经过{2:F0}秒）...</value></data>
+  <data name="Waiting for party zone load ({0}/{1} mounted, {2:F0}s elapsed{3})..." xml:space="preserve"><value>等待小队区域加载（{0}/{1}已骑乘，经过{2:F0}秒{3}）...</value></data>
+  <data name="Waiting for player before coffer interaction..." xml:space="preserve"><value>宝箱交互前等待玩家...</value></data>
+  <data name="Waiting for player before portal ground approach..." xml:space="preserve"><value>从地面接近传送门前等待玩家...</value></data>
+  <data name="Waiting for player to be available..." xml:space="preserve"><value>等待玩家可用...</value></data>
+  <data name="Waiting for progression objects to activate ({0:F0}/30s)..." xml:space="preserve"><value>等待前进对象激活（{0:F0}/30秒）...</value></data>
+  <data name="Waiting for reliable Higher/Lower solver snapshot..." xml:space="preserve"><value>等待可靠的大小谜题快照...</value></data>
+  <data name="Waiting for repair teleport settle proof at {0}" xml:space="preserve"><value>等待确认修理传送至{0}的稳定抵达</value></data>
+  <data name="Waiting for targetable High/Low world objects..." xml:space="preserve"><value>等待可选中的大小谜题世界对象...</value></data>
+  <data name="Waiting for targetable Higher/Lower world object for {0}..." xml:space="preserve"><value>等待{0}的可选中大小谜题对象...</value></data>
+  <data name="Waiting to interact with portal ({0})..." xml:space="preserve"><value>等待与传送门交互（{0}）...</value></data>
+  <data name="Waiting to retry Higher/Lower world interaction for {0}..." xml:space="preserve"><value>等待为{0}重试大小谜题世界交互...</value></data>
+  <data name="Waiting to retry portal after close nudge ({0})..." xml:space="preserve"><value>微调靠近后等待重试传送门（{0}）...</value></data>
+  <data name="Walking through opened door ({0:F1}y)..." xml:space="preserve"><value>步行通过已打开的门（{0:F1}y）...</value></data>
+  <data name="Treasure coffer recovery failed after dig. Manual intervention required." xml:space="preserve"><value>挖掘后宝箱恢复失败。需要手动操作。</value></data>
+  <data name="Opening {0}..." xml:space="preserve"><value>正在打开{0}...</value></data>
+  <data name="[Alexandrite] Expected {0} in inventory for normal map handoff, but it was not found." xml:space="preserve"><value>[亚历山大变石] 正常地图交接需要物品栏中的{0}，但未找到。</value></data>
+  <data name="Map opened, reading location..." xml:space="preserve"><value>地图已打开，正在读取位置...</value></data>
+  <data name="In zone but aetheryte closer ({0:F0}y vs {1:F0}y) - teleporting..." xml:space="preserve"><value>已在区域内，但以太之光更近 ({0:F0}y 对 {1:F0}y) - 传送中...</value></data>
+  <data name="Already diving near thief-map target - swimming to flag..." xml:space="preserve"><value>已在盗贼地图目标附近潜水 - 游向标记...</value></data>
+  <data name="Retrying map opening..." xml:space="preserve"><value>重试打开地图...</value></data>
+  <data name="Map opening failed - map count didn&apos;t decrease" xml:space="preserve"><value>打开地图失败 - 地图数量未减少</value></data>
+  <data name="No aetheryte ID for teleport." xml:space="preserve"><value>没有用于传送的以太之光ID。</value></data>
+  <data name="Teleport to {0} failed: {1}" xml:space="preserve"><value>传送至{0}失败：{1}</value></data>
+  <data name="No target territory after teleport." xml:space="preserve"><value>传送后没有目标区域。</value></data>
+  <data name="Wrong territory after teleport: {0} (expected {1})." xml:space="preserve"><value>传送后区域错误：{0} (预期{1})。</value></data>
+  <data name="Arrived! Mounting up..." xml:space="preserve"><value>已到达！正在骑乘...</value></data>
+  <data name="Thief-map remount: waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>盗贼地图重新骑乘：等待队伍 (所需其他骑乘成员{0}/{1})...</value></data>
+  <data name="Joined-FATE recovery mounted - flying to location..." xml:space="preserve"><value>已参与FATE恢复并骑乘 - 飞往目标位置...</value></data>
+  <data name="Recovery teleport complete - party mount wait satisfied! Flying to location..." xml:space="preserve"><value>恢复传送完成 - 队伍骑乘条件已满足！飞往目标位置...</value></data>
+  <data name="Party mount wait satisfied! Flying to location..." xml:space="preserve"><value>队伍骑乘条件已满足！飞往目标位置...</value></data>
+  <data name="Recovery teleport complete - waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>恢复传送完成 - 等待队伍骑乘 (所需其他骑乘成员{0}/{1})...</value></data>
+  <data name="Waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>等待队伍骑乘 (所需其他骑乘成员{0}/{1})...</value></data>
+  <data name="Mounted! Flying to location..." xml:space="preserve"><value>已骑乘！飞往目标位置...</value></data>
+  <data name="Thief-map water remount recovery failed after 5 attempts. Manual intervention required." xml:space="preserve"><value>盗贼地图水中重新骑乘恢复在5次尝试后失败。需要手动操作。</value></data>
+  <data name="Mount failed - please restart" xml:space="preserve"><value>骑乘失败 - 请重新开始</value></data>
+  <data name="Joined-FATE recovery - flying to location..." xml:space="preserve"><value>已参与FATE恢复 - 飞往目标位置...</value></data>
+  <data name="Joined-FATE recovery - remounting for map target..." xml:space="preserve"><value>已参与FATE恢复 - 为地图目标重新骑乘...</value></data>
+  <data name="Wait for party disabled - flying to location..." xml:space="preserve"><value>队伍等待已禁用 - 飞往目标位置...</value></data>
+  <data name="Required party members mounted! Flying..." xml:space="preserve"><value>所需队伍成员已骑乘！飞行中...</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen, " xml:space="preserve"><value>等待完整队伍信息 (已看到其他玩家{0}/{1}，</value></data>
+  <data name="No location data for navigation." xml:space="preserve"><value>没有用于导航的位置数据。</value></data>
+  <data name="No location data for underwater navigation." xml:space="preserve"><value>没有用于水下导航的位置数据。</value></data>
+  <data name="Navigation error: {0}" xml:space="preserve"><value>导航错误：{0}</value></data>
+  <data name="No location data for underwater chest navigation." xml:space="preserve"><value>没有用于水下宝箱导航的位置数据。</value></data>
+  <data name="Combat recovery: landing at map target..." xml:space="preserve"><value>战斗恢复：在地图目标处着陆...</value></data>
+  <data name="Outdoor map complete - skipping portal search..." xml:space="preserve"><value>野外地图完成 - 跳过传送门搜索...</value></data>
+  <data name="Searching for portal..." xml:space="preserve"><value>正在搜索传送门...</value></data>
+  <data name="Recovered overworld treasure coffer - opening chest..." xml:space="preserve"><value>已恢复野外宝箱 - 打开宝箱...</value></data>
+  <data name="Resuming chest interaction loop..." xml:space="preserve"><value>恢复宝箱交互循环...</value></data>
+  <data name="Portal found - searching for portal..." xml:space="preserve"><value>已发现传送门 - 搜索传送门...</value></data>
+  <data name="Dungeon complete (reached floor {0})" xml:space="preserve"><value>迷宫完成 (到达第{0}层)</value></data>
+  <data name="Combat detected on floor {0}..." xml:space="preserve"><value>在第{0}层检测到战斗...</value></data>
+  <data name="Looting floor {0} (sweep then progression)..." xml:space="preserve"><value>收集第{0}层战利品 (搜索后继续前进)...</value></data>
+  <data name="Found {0} chest object(s) on floor {1}..." xml:space="preserve"><value>第{1}层发现{0}个宝箱对象...</value></data>
+  <data name="Found {0} progression object(s) on floor {1}..." xml:space="preserve"><value>第{1}层发现{0}个前进对象...</value></data>
+  <data name="Dungeon complete (wiped on floor {0})" xml:space="preserve"><value>迷宫结束 (在第{0}层全灭)</value></data>
+  <data name="Returning to chest after combat on floor {0}..." xml:space="preserve"><value>第{0}层战斗后返回宝箱...</value></data>
+  <data name="Looting after combat on floor {0}..." xml:space="preserve"><value>第{0}层战斗后收集战利品...</value></data>
+  <data name="No loot after combat - continuing dungeon on floor {0}..." xml:space="preserve"><value>战斗后无战利品 - 继续第{0}层迷宫...</value></data>
+  <data name="Combat ended - scanning floor {0}..." xml:space="preserve"><value>战斗结束 - 搜索第{0}层...</value></data>
+  <data name="Finding doors on floor {0}..." xml:space="preserve"><value>正在寻找第{0}层的门...</value></data>
+  <data name="All objectives cleared - heading to exit" xml:space="preserve"><value>全部目标已完成 - 前往出口</value></data>
+  <data name="Entering floor {0}..." xml:space="preserve"><value>进入第{0}层...</value></data>
+  <data name="Dungeon complete (floor {0})" xml:space="preserve"><value>迷宫完成 (第{0}层)</value></data>
+  <data name="Combat on floor {0}..." xml:space="preserve"><value>第{0}层战斗中...</value></data>
+  <data name="More loot found on floor {0}..." xml:space="preserve"><value>在第{0}层发现更多战利品...</value></data>
+  <data name="Rescanning floor {0}..." xml:space="preserve"><value>重新搜索第{0}层...</value></data>
+  <data name="Still in dungeon - cannot start next map. Manual intervention required." xml:space="preserve"><value>仍在迷宫内 - 无法开始下一张地图。需要手动操作。</value></data>
+  <data name="Auto-starting next map..." xml:space="preserve"><value>自动开始下一张地图...</value></data>
+  <data name="Auto-starting next retainer map..." xml:space="preserve"><value>自动开始下一张雇员地图...</value></data>
+  <data name="Purchasing the next configured map through Emptor..." xml:space="preserve"><value>通过Emptor购买下一张已配置地图...</value></data>
+  <data name="Run complete." xml:space="preserve"><value>运行完成。</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is still active. Retrying the map instead of marking it complete." xml:space="preserve"><value>宝图任务物品“{0}”仍处于活动状态。重试地图而不标记完成。</value></data>
+  <data name="Entering dungeon instance..." xml:space="preserve"><value>进入迷宫副本...</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but ADS is not loaded." xml:space="preserve"><value>装备耐久度{0}%低于修理阈值{1}%，但ADS未加载。</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but player position is unavailable for ADS repair recovery." xml:space="preserve"><value>装备耐久度{0}%低于修理阈值{1}%，但ADS修理恢复所需的玩家位置不可用。</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but no unlocked aetheryte was found in current territory {2} for ADS NPC no-inn repair." xml:space="preserve"><value>装备耐久度{0}%低于修理阈值{1}%，但当前区域{2}中没有ADS无旅馆NPC修理可用的已解锁以太之光。</value></data>
+  <data name="Waiting for repair teleport settle proof at {0} " xml:space="preserve"><value>等待{0}处修理传送稳定的确认 </value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s " xml:space="preserve"><value>{0} 将在{1:F1}s后重试ADS修理 </value></data>
+  <data name="Could not read equipped gear durability before ADS repair retry." xml:space="preserve"><value>ADS修理重试前无法读取装备耐久度。</value></data>
+  <data name="ADS unloaded before repair retry. {0}" xml:space="preserve"><value>修理重试前ADS已卸载。{0}</value></data>
+  <data name="ADS repair finished, but equipped gear durability could not be read." xml:space="preserve"><value>ADS修理已结束，但无法读取装备耐久度。</value></data>
+  <data name="{0} Could not read equipped gear durability." xml:space="preserve"><value>{0} 无法读取装备耐久度。</value></data>
+  <data name="{0} {1} ADS is not loaded." xml:space="preserve"><value>{0} {1} ADS未加载。</value></data>
+  <data name="{0} Durability {1}%/{2}%. " xml:space="preserve"><value>{0} 耐久度{1}%/{2}%。</value></data>
+  <data name="Retrying in {0:F1}s " xml:space="preserve"><value>{0:F1}s后重试 </value></data>
+  <data name="ADS owns the duty - waiting for completion..." xml:space="preserve"><value>ADS管理任务中 - 等待完成...</value></data>
+  <data name="[Warning] {0}" xml:space="preserve"><value>[警告] {0}</value></data>
+  <data name="[Dungeon] === Object Scan (floor {0}, {1} objects) ===" xml:space="preserve"><value>[迷宫] === 对象扫描 (第{0}层，{1}个对象) ===</value></data>
+  <data name="Error #{0} (recovered): {1}" xml:space="preserve"><value>错误#{0} (已恢复)：{1}</value></data>
+  <data name="Error #{0}: recovering overworld portal search..." xml:space="preserve"><value>错误#{0}：恢复野外传送门搜索...</value></data>
+  <data name="Error #{0}: recovering overworld coffer/portal..." xml:space="preserve"><value>错误#{0}：恢复野外宝箱/传送门...</value></data>
+  <data name="Error #{0}: {1}" xml:space="preserve"><value>错误#{0}：{1}</value></data>
+  <data name="Cycling aetherytes (0/{0})..." xml:space="preserve"><value>以太之光巡回中 (0/{0})...</value></data>
+  <data name="Aetheryte cycling complete!" xml:space="preserve"><value>以太之光巡回完成！</value></data>
+  <data name="Map location cycling complete!" xml:space="preserve"><value>地图位置巡回完成！</value></data>
+  <data name="Location {0}/{1}: {2}" xml:space="preserve"><value>位置{0}/{1}：{2}</value></data>
+  <data name="[CycleMapLocs] No location set" xml:space="preserve"><value>[CycleMapLocs] 未设置位置</value></data>
+  <data name="Alexandrite run 1/{0}: Starting..." xml:space="preserve"><value>亚历山大变石运行1/{0}：开始中...</value></data>
+  <data name="Alexandrite farming complete!" xml:space="preserve"><value>亚历山大变石收集完成！</value></data>
+  <data name="[Alexandrite] Lifestream is not loaded; cannot return to Revenant&apos;s Toll." xml:space="preserve"><value>[亚历山大变石] Lifestream未加载；无法返回丧灵钟。</value></data>
+  <data name="[Alexandrite] Cannot return to Revenant&apos;s Toll while in combat." xml:space="preserve"><value>[亚历山大变石] 战斗中无法返回丧灵钟。</value></data>
+  <data name="[Alexandrite] Failed to send /li rev." xml:space="preserve"><value>[亚历山大变石] 发送/li rev失败。</value></data>
+  <data name="[Alexandrite] /li rev return to Mor Dhona timed out" xml:space="preserve"><value>[亚历山大变石] /li rev返回摩杜纳超时</value></data>
+  <data name="[Alexandrite] Mount before Auriana approach timed out" xml:space="preserve"><value>[亚历山大变石] 接近奥里亚娜前骑乘超时</value></data>
+  <data name="[Alexandrite] Mounted approach to Auriana timed out" xml:space="preserve"><value>[亚历山大变石] 骑乘接近奥里亚娜超时</value></data>
+  <data name="[Alexandrite] Auriana NPC not found. {0}" xml:space="preserve"><value>[亚历山大变石] 未找到NPC奥里亚娜。{0}</value></data>
+  <data name="[Alexandrite] SelectIconString dialog not appearing. {0}" xml:space="preserve"><value>[亚历山大变石] SelectIconString对话框未出现。{0}</value></data>
+  <data name="[Alexandrite] Purchase confirmation/map wait timed out. {0}" xml:space="preserve"><value>[亚历山大变石] 购买确认/地图等待超时。{0}</value></data>
+  <data name="[Alexandrite] Expected Mysterious Map in inventory for normal map handoff, but it was not found. {0}" xml:space="preserve"><value>[亚历山大变石] 正常地图交接需要物品栏中的神秘地图，但未找到。{0}</value></data>
+  <data name="Alexandrite: starting normal Mysterious Map flow..." xml:space="preserve"><value>亚历山大变石：开始正常神秘地图流程...</value></data>
+  <data name="Alexandrite run {0}/{1}: Starting..." xml:space="preserve"><value>亚历山大变石运行{0}/{1}：开始中...</value></data>
+  <data name="current job unavailable" xml:space="preserve"><value>当前职业不可用</value></data>
+  <data name="no job snapshot captured" xml:space="preserve"><value>未记录职业</value></data>
+  <data name="no job configured" xml:space="preserve"><value>未配置职业</value></data>
+  <data name="gearset module unavailable" xml:space="preserve"><value>装备套装模块不可用</value></data>
+  <data name="Already on {0}." xml:space="preserve"><value>已是{0}。</value></data>
+  <data name="Found {0} gearset {1}." xml:space="preserve"><value>找到{0}装备套装{1}。</value></data>
+  <data name="No gearset exists for configured job {0}." xml:space="preserve"><value>已配置职业{0}没有装备套装。</value></data>
+  <data name="Could not inspect gearsets: {0}" xml:space="preserve"><value>无法检查装备套装：{0}</value></data>
+  <data name="Gearset {0} is no longer valid." xml:space="preserve"><value>装备套装{0}已失效。</value></data>
+  <data name="EquipGearset({0}) failed with result {1}." xml:space="preserve"><value>EquipGearset({0})失败，结果为{1}。</value></data>
+  <data name="Switching to {0} gearset {1}." xml:space="preserve"><value>切换至{0}装备套装{1}。</value></data>
+  <data name="Job switch failed: {0}" xml:space="preserve"><value>职业切换失败：{0}</value></data>
+  <data name="Party roster is unavailable while loading or logged out." xml:space="preserve"><value>加载中或未登录时队伍名单不可用。</value></data>
+  <data name="Local player is unavailable." xml:space="preserve"><value>本地玩家不可用。</value></data>
+  <data name="Player is solo; no party roster needs restoration." xml:space="preserve"><value>玩家单人；无需恢复队伍名单。</value></data>
+  <data name="Alliance rosters are not supported for market-board travel." xml:space="preserve"><value>市场移动不支持团队名单。</value></data>
+  <data name="Party leader identity is unavailable." xml:space="preserve"><value>队长身份不可用。</value></data>
+  <data name="Party member slot {0} is unavailable." xml:space="preserve"><value>队伍成员栏位{0}不可用。</value></data>
+  <data name="Party member slot {0} has incomplete name, Content ID, or home-world identity." xml:space="preserve"><value>队伍成员栏位{0}的名称、Content ID或所属服务器身份不完整。</value></data>
+  <data name="Local player was not found in the native party roster." xml:space="preserve"><value>原生队伍名单中未找到本地玩家。</value></data>
+  <data name="Local player is not the party leader." xml:space="preserve"><value>本地玩家不是队长。</value></data>
+  <data name="Captured {0} complete native party identities." xml:space="preserve"><value>已记录{0}个完整原生队伍身份。</value></data>
+  <data name="Captured party roster is restored." xml:space="preserve"><value>已恢复记录的队伍名单。</value></data>
+  <data name="Waiting for {0} captured party member(s)." xml:space="preserve"><value>等待{0}名已记录队伍成员。</value></data>
+  <data name="Timed out switching to configured combat job {0}." xml:space="preserve"><value>切换至已配置战斗职业{0}超时。</value></data>
+  <data name="Could not switch to gather job: {0}" xml:space="preserve"><value>无法切换至采集职业：{0}</value></data>
+  <data name="unavailable (0)" xml:space="preserve"><value>不可用 (0)</value></data>
+  <data name="{0}h {1:D2}m" xml:space="preserve"><value>{0}小时{1:D2}分</value></data>
+  <data name="{0}m" xml:space="preserve"><value>{0}分</value></data>
+  <data name="Map allowance cooldown: {0}" xml:space="preserve"><value>地图采集许可冷却：{0}</value></data>
+  <data name="Map allowance: {0}" xml:space="preserve"><value>地图采集许可：{0}</value></data>
+  <data name="Map allowance: waiting for /timers data" xml:space="preserve"><value>地图采集许可：等待/timers数据</value></data>
+  <data name="[map can be gathered]" xml:space="preserve"><value>[地图可采集]</value></data>
+  <data name="Seedling: toggle missing-map gathering | Blue X: unavailable through gathering" xml:space="preserve"><value>幼苗：切换缺失地图采集 | 蓝色X：无法采集</value></data>
+  <data name="Map allowance locked for {0}." xml:space="preserve"><value>地图采集许可锁定{0}。</value></data>
+  <data name="Waiting for map allowance ({0} remaining)." xml:space="preserve"><value>等待地图采集许可 (剩余{0})。</value></data>
+  <data name="Map allowance for {0} is locked for {1}, longer than the {2}m wait limit." xml:space="preserve"><value>{0}的地图采集许可锁定{1}，超过{2}分钟等待上限。</value></data>
+  <data name="Map allowance status unavailable: {0}" xml:space="preserve"><value>地图采集许可状态不可用：{0}</value></data>
+  <data name="This map is unknown to LootGoblin and cannot be gathered." xml:space="preserve"><value>LootGoblin未识别此地图，无法采集。</value></data>
+  <data name="This map is unavailable through gathering." xml:space="preserve"><value>此地图无法通过采集获取。</value></data>
+  <data name="Configure Settings -&gt; Run -&gt; Gather Job to gather missing maps." xml:space="preserve"><value>要采集缺失地图，请配置设置 -&gt; 运行 -&gt; 采集职业。</value></data>
+  <data name="Gathering enabled." xml:space="preserve"><value>采集已启用。</value></data>
+  <data name="Gathering disabled." xml:space="preserve"><value>采集已禁用。</value></data>
+  <data name="{0} Map allowance status is unavailable." xml:space="preserve"><value>{0} 地图采集许可状态不可用。</value></data>
+  <data name="{0} Click the seedling to change the missing-map gather selection while allowance is ready." xml:space="preserve"><value>{0} 许可可用时点击幼苗可更改缺失地图采集选择。</value></data>
+  <data name="{0} Allowance cooldown: {1} remaining. Selection is saved for the next allowance." xml:space="preserve"><value>{0} 许可冷却：剩余{1}。选择已保存以供下次许可使用。</value></data>
+  <data name="PlayerNull" xml:space="preserve"><value>玩家不可用</value></data>
+  <data name="OccupiedInCutSceneEvent" xml:space="preserve"><value>过场事件中</value></data>
+  <data name="Occupied33" xml:space="preserve"><value>忙碌 (33)</value></data>
+  <data name="WatchingCutscene" xml:space="preserve"><value>观看过场中</value></data>
+  <data name="OccupiedInQuestEvent" xml:space="preserve"><value>任务事件中</value></data>
+  <data name="Occupied39" xml:space="preserve"><value>忙碌 (39)</value></data>
+  <data name="BetweenAreas" xml:space="preserve"><value>区域切换中</value></data>
+  <data name="BetweenAreas51" xml:space="preserve"><value>区域切换中 (51)</value></data>
+  <data name="Unknown" xml:space="preserve"><value>未知</value></data>
+  <data name="PlayHigher" xml:space="preserve"><value>选择更大</value></data>
+  <data name="PlayLower" xml:space="preserve"><value>选择更小</value></data>
+  <data name="CashOut" xml:space="preserve"><value>领取奖励</value></data>
+  <data name="SolveExpectedValue" xml:space="preserve"><value>按期望值解题</value></data>
+  <data name="ObserveOnly" xml:space="preserve"><value>仅观察</value></data>
+  <data name="PlayerCasting" xml:space="preserve"><value>玩家咏唱中</value></data>
+  <data name="; not loaded in same zone: {0}" xml:space="preserve"><value>；未加载到同一区域：{0}</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen, {2}/{3} mounted, {4:F0}s elapsed)..." xml:space="preserve"><value>等待完整队伍信息 (已看到其他玩家{0}/{1}，骑乘{2}/{3}，已过{4:F0}s)...</value></data>
+  <data name="Thief-map remount: waiting for party zone load ({0}/{1} loaded in same zone; missing: {2})..." xml:space="preserve"><value>盗贼地图重新骑乘：等待队伍区域加载 (同一区域已加载{0}/{1}；缺少：{2})...</value></data>
+  <data name="Waiting for valid party snapshot before map content (expecting {0} other players)..." xml:space="preserve"><value>地图内容前等待有效队伍信息 (预期{0}名其他玩家)...</value></data>
+  <data name="Waiting for valid party snapshot before map content..." xml:space="preserve"><value>地图内容前等待有效队伍信息...</value></data>
+  <data name="Party wait timeout reached; waiting for at least one resolved same-territory party member..." xml:space="preserve"><value>队伍等待已超时；等待至少一名已确认的同区域队友...</value></data>
+  <data name="Waiting for party ({0}/{1} nearby within {2:F0}y, need {3} before map content{4})..." xml:space="preserve"><value>等待队伍 ({2:F0}y内{0}/{1}，地图内容前需要{3}人{4})...</value></data>
+  <data name=", {0} same-territory far" xml:space="preserve"><value>，同区域较远{0}人</value></data>
+  <data name=", {0} unresolved" xml:space="preserve"><value>，未确认{0}人</value></data>
+  <data name=", {0} out-of-territory" xml:space="preserve"><value>，其他区域{0}人</value></data>
+  <data name=", guarded recovery active" xml:space="preserve"><value>，受保护恢复已启用</value></data>
+  <data name="Waiting for party before takeoff ({0}/{1} required mounted others)..." xml:space="preserve"><value>起飞前等待队伍 (所需其他骑乘成员{0}/{1})...</value></data>
+  <data name="{0} {1}/{2}... ({3:F1}s)" xml:space="preserve"><value>{0} {1}/{2}... ({3:F1}s)</value></data>
+  <data name="Waiting after underwater XYZ dig retry {0}/{1}... ({2:F1}s)" xml:space="preserve"><value>水下XYZ挖掘重试{0}/{1}后等待... ({2:F1}s)</value></data>
+  <data name="Waiting before underwater XYZ dig retry {0}/{1}... ({2:F1}s)" xml:space="preserve"><value>水下XYZ挖掘重试{0}/{1}前等待... ({2:F1}s)</value></data>
+  <data name="Waiting for repair teleport settle proof at {0} ({1:F0}s, moved {2:F1}y)..." xml:space="preserve"><value>等待{0}处修理传送稳定确认 ({1:F0}s，移动{2:F1}y)...</value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s ({2}/{3})..." xml:space="preserve"><value>{0} 将在{1:F1}s后重试ADS修理 ({2}/{3})...</value></data>
+  <data name="{0} Durability {1}%/{2}%. Retrying in {3:F1}s ({4}/{5})..." xml:space="preserve"><value>{0} 耐久度{1}%/{2}%。{3:F1}s后重试 ({4}/{5})...</value></data>
+  <data name="ADS unavailable; reflection hacks pending." xml:space="preserve"><value>ADS不可用；反射调整等待应用。</value></data>
+  <data name="ADS unavailable/pending: {0}." xml:space="preserve"><value>ADS不可用/等待中：{0}。</value></data>
+  <data name="ADS returned false" xml:space="preserve"><value>ADS返回false</value></data>
+  <data name="range ({0})" xml:space="preserve"><value>范围 ({0})</value></data>
+  <data name="range reset ({0})" xml:space="preserve"><value>范围重置 ({0})</value></data>
+  <data name="hunts ({0})" xml:space="preserve"><value>狩猎 ({0})</value></data>
+  <data name="hunts reset ({0})" xml:space="preserve"><value>狩猎重置 ({0})</value></data>
+  <data name="No ADS utility status." xml:space="preserve"><value>没有ADS工具状态。</value></data>
+  <data name="status unavailable" xml:space="preserve"><value>状态不可用</value></data>
+  <data name="utility status unavailable" xml:space="preserve"><value>工具状态不可用</value></data>
+  <data name="failure: {0}" xml:space="preserve"><value>失败：{0}</value></data>
+  <data name="status: {0}" xml:space="preserve"><value>状态：{0}</value></data>
+  <data name="last success: {0}" xml:space="preserve"><value>上次成功：{0}</value></data>
+  <data name="ADS repair stopped before durability reached threshold; ADS {0}." xml:space="preserve"><value>ADS修理在耐久度达到阈值前停止；ADS {0}。</value></data>
+  <data name="ADS repair failed." xml:space="preserve"><value>ADS修理失败。</value></data>
+  <data name="ADS unloaded during repair recovery; cannot start ADS repair." xml:space="preserve"><value>修理恢复时ADS已卸载；无法开始ADS修理。</value></data>
+  <data name="Lifestream is not loaded; cannot teleport to aetheryte for ADS NPC no-inn repair." xml:space="preserve"><value>Lifestream未加载；无法传送至以太之光进行ADS无旅馆NPC修理。</value></data>
+  <data name="Cannot teleport to aetheryte for ADS NPC no-inn repair while in combat." xml:space="preserve"><value>战斗中无法传送至以太之光进行ADS无旅馆NPC修理。</value></data>
+  <data name="Player position is unavailable while resolving ADS repair recovery aetheryte." xml:space="preserve"><value>解析ADS修理恢复以太之光时玩家位置不可用。</value></data>
+  <data name="Could not teleport to {0} for ADS repair: {1}" xml:space="preserve"><value>无法传送至{0}进行ADS修理：{1}</value></data>
+  <data name="Teleport to {0} for ADS repair failed: {1}" xml:space="preserve"><value>传送至{0}进行ADS修理失败：{1}</value></data>
+  <data name="Lifestream rejected ADS repair teleport to {0} (ID {1}) after {2} command attempt(s): {3}" xml:space="preserve"><value>Lifestream在{2}次命令尝试后拒绝ADS修理传送至{0} (ID {1})：{3}</value></data>
+  <data name="InventoryManager is null" xml:space="preserve"><value>InventoryManager为null</value></data>
+  <data name="Selected map was not found in loaded saddlebags. Open saddlebags once this session and retry." xml:space="preserve"><value>已加载陆行鸟鞍囊中未找到所选地图。请在本次会话中打开一次鞍囊后重试。</value></data>
+  <data name="No empty inventory slot is available for saddlebag retrieval." xml:space="preserve"><value>没有从鞍囊取出物品所需的空物品栏位。</value></data>
+  <data name="Selected {0}[{1}] -&gt; {2}[{3}]" xml:space="preserve"><value>已选择 {0}[{1}] -&gt; {2}[{3}]</value></data>
+  <data name="Purchased map was not found in normal inventory." xml:space="preserve"><value>正常物品栏中未找到购买的地图。</value></data>
+  <data name="Expected one purchased map in {0}[{1}], found quantity {2}." xml:space="preserve"><value>预期{0}[{1}]中有一张购买的地图，发现数量{2}。</value></data>
+  <data name="No empty loaded saddlebag slot is available." xml:space="preserve"><value>没有可用的已加载鞍囊空栏位。</value></data>
+  <data name="Expected exactly one purchased map in normal inventory before storage, found {0}." xml:space="preserve"><value>保管前预期正常物品栏中恰有一张购买的地图，发现{0}张。</value></data>
+  <data name="Selected {0}[{1}] -&gt; {2}[{3}] (inventory={4}, saddlebag={5})" xml:space="preserve"><value>已选择 {0}[{1}] -&gt; {2}[{3}] (物品栏={4}，鞍囊={5})</value></data>
+  <data name="Source slot changed before move. Expected {0} x{1} in {2}[{3}]." xml:space="preserve"><value>移动前来源栏位已改变。预期{2}[{3}]中有{0} x{1}。</value></data>
+  <data name="Destination slot changed before move. {0}[{1}] is no longer empty." xml:space="preserve"><value>移动前目标栏位已改变。{0}[{1}]已不为空。</value></data>
+  <data name="Map counts changed before move. Expected inventory/saddlebag {0}/{1}, found {2}/{3}." xml:space="preserve"><value>移动前地图数量已改变。预期物品栏/鞍囊{0}/{1}，发现{2}/{3}。</value></data>
+  <data name="Move issued for map {0}: {1}[{2}] -&gt; {3}[{4}]" xml:space="preserve"><value>已发出地图{0}移动：{1}[{2}] -&gt; {3}[{4}]</value></data>
+  <data name="Waiting for exact move confirmation: source={0}, destination={1} x{2}, inventory/saddlebag={3}/{4}, expected=0 and {5} x{6}, {7}/{8}." xml:space="preserve"><value>等待精确移动确认：来源={0}，目标={1} x{2}，物品栏/鞍囊={3}/{4}，预期=0和{5} x{6}，{7}/{8}。</value></data>
+  <data name="Confirmed {0} moved to {1}[{2}]; inventory {3}-&gt;{4}, saddlebag {5}-&gt;{6}." xml:space="preserve"><value>已确认{0}移至{1}[{2}]；物品栏{3}-&gt;{4}，鞍囊{5}-&gt;{6}。</value></data>
+  <data name="Source container {0} is not loaded." xml:space="preserve"><value>来源容器{0}未加载。</value></data>
+  <data name="Destination container {0} is not loaded." xml:space="preserve"><value>目标容器{0}未加载。</value></data>
+  <data name="Source slot {0} is out of range for {1}." xml:space="preserve"><value>来源栏位{0}超出{1}范围。</value></data>
+  <data name="Destination slot {0} is out of range for {1}." xml:space="preserve"><value>目标栏位{0}超出{1}范围。</value></data>
+  <data name="Source slot changed before move. Expected {0} in {1}[{2}]." xml:space="preserve"><value>移动前来源栏位已改变。预期{1}[{2}]中有{0}。</value></data>
+  <data name="Moved map {0} from {1}[{2}] to {3}[{4}]" xml:space="preserve"><value>地图{0}已从{1}[{2}]移至{3}[{4}]</value></data>
+  <data name="Retainer inventory containers are not loaded: {0}." xml:space="preserve"><value>雇员物品栏容器未加载：{0}。</value></data>
+  <data name="Selected map {0} was not found in loaded retainer inventory. Scanned {1} ({2} slots, matched quantity {3})." xml:space="preserve"><value>已加载雇员物品栏中未找到所选地图{0}。扫描{1} ({2}个栏位，匹配数量{3})。</value></data>
+  <data name="No empty player inventory slot is available for retainer retrieval." xml:space="preserve"><value>没有从雇员取出物品所需的玩家空物品栏位。</value></data>
+  <data name="Selected retainer map move {0}[{1}] -&gt; {2}[{3}]" xml:space="preserve"><value>已选择雇员地图移动 {0}[{1}] -&gt; {2}[{3}]</value></data>
+  <data name="Source retainer container {0} is not loaded." xml:space="preserve"><value>雇员来源容器{0}未加载。</value></data>
+  <data name="Moved retainer map {0} from {1}[{2}] to {3}[{4}]" xml:space="preserve"><value>雇员地图{0}已从{1}[{2}]移至{3}[{4}]</value></data>
+  <data name="A planned inventory slot is unavailable." xml:space="preserve"><value>计划中的物品栏位不可用。</value></data>
+  <data name="GatherBuddy Reborn gathering one {0}." xml:space="preserve"><value>GatherBuddy Reborn正在采集一张{0}。</value></data>
+  <data name="GatherBuddy Reborn start failed: {0}" xml:space="preserve"><value>GatherBuddy Reborn启动失败：{0}</value></data>
+  <data name="GatherBuddy Reborn one-shot target is not active." xml:space="preserve"><value>GatherBuddy Reborn单次目标未激活。</value></data>
+  <data name="GatherBuddy Reborn does not expose gatherable item {0} ({1})." xml:space="preserve"><value>GatherBuddy Reborn未公开可采集物品{0} ({1})。</value></data>
+  <data name="GatherBuddy Reborn already reports {0:N0} total {1}; cannot request one more." xml:space="preserve"><value>GatherBuddy Reborn已报告总计{0:N0}个{1}；无法再请求一个。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList type not found." xml:space="preserve"><value>未找到GatherBuddy Reborn的AutoGatherList类型。</value></data>
+  <data name="Could not create GatherBuddy Reborn auto-gather list." xml:space="preserve"><value>无法创建GatherBuddy Reborn自动采集列表。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList.Add method not found." xml:space="preserve"><value>未找到GatherBuddy Reborn的AutoGatherList.Add方法。</value></data>
+  <data name="GatherBuddy Reborn did not add {0} to the auto-gather list." xml:space="preserve"><value>GatherBuddy Reborn未将{0}加入自动采集列表。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager.AddList method not found." xml:space="preserve"><value>未找到GatherBuddy Reborn的AutoGatherListsManager.AddList方法。</value></data>
+  <data name="Created GatherBuddy Reborn one-shot list for {0}." xml:space="preserve"><value>已为{0}创建GatherBuddy Reborn单次列表。</value></data>
+  <data name="Suppressed {0} enabled GatherBuddy Reborn list(s) for LootGoblin one-shot." xml:space="preserve"><value>已为LootGoblin单次任务停用{0}个已启用GatherBuddy Reborn列表。</value></data>
+  <data name="GatherBuddy Reborn one-shot exclusivity failed; enabled non-LootGoblin lists: {0}." xml:space="preserve"><value>GatherBuddy Reborn单次排他控制失败；已启用的非LootGoblin列表：{0}。</value></data>
+  <data name="GatherBuddy Reborn active target mismatch; expected item={0} quantity={1}; active={2}." xml:space="preserve"><value>GatherBuddy Reborn活动目标不符；预期物品={0} 数量={1}；活动={2}。</value></data>
+  <data name="GatherBuddy Reborn active target verified; item={0}; quantity={1}; suppressedLists={2}." xml:space="preserve"><value>GatherBuddy Reborn活动目标已验证；物品={0}；数量={1}；停用列表={2}。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager.SetActiveItems method not found." xml:space="preserve"><value>未找到GatherBuddy Reborn的AutoGatherListsManager.SetActiveItems方法。</value></data>
+  <data name="GatherBuddy Reborn active items rebuilt." xml:space="preserve"><value>GatherBuddy Reborn活动物品已重建。</value></data>
+  <data name="GatherBuddy Reborn loaded, but plugin instance reflection failed." xml:space="preserve"><value>GatherBuddy Reborn已加载，但插件实例反射失败。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager reflection failed." xml:space="preserve"><value>GatherBuddy Reborn的AutoGatherListsManager反射失败。</value></data>
+  <data name="GatherBuddy Reborn gatherable count method not found." xml:space="preserve"><value>未找到GatherBuddy Reborn采集数量方法。</value></data>
+  <data name="GatherBuddy Reborn count read by {0}." xml:space="preserve"><value>通过{0}读取GatherBuddy Reborn数量。</value></data>
+  <data name="GatherBuddy Reborn gatherable count failed: {0}" xml:space="preserve"><value>GatherBuddy Reborn采集数量获取失败：{0}</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList.SetPreferredLocation method not found." xml:space="preserve"><value>未找到GatherBuddy Reborn的AutoGatherList.SetPreferredLocation方法。</value></data>
+  <data name="GatherBuddy Reborn preferred location set." xml:space="preserve"><value>GatherBuddy Reborn偏好位置已设置。</value></data>
+  <data name="GatherBuddy Reborn active item list not found." xml:space="preserve"><value>未找到GatherBuddy Reborn活动物品列表。</value></data>
+  <data name="GatherBuddy Reborn active item entry could not be read: {0}." xml:space="preserve"><value>无法读取GatherBuddy Reborn活动物品条目：{0}。</value></data>
+  <data name="GatherBuddy Reborn active item list read." xml:space="preserve"><value>GatherBuddy Reborn活动物品列表已读取。</value></data>
+  <data name="Log in before refreshing Emptor price hints." xml:space="preserve"><value>刷新Emptor参考价格前请登录。</value></data>
+  <data name="An Emptor price refresh is already pending." xml:space="preserve"><value>Emptor价格刷新已在等待中。</value></data>
+  <data name="Manual price refresh is available in {0}." xml:space="preserve"><value>手动价格刷新将在{0}后可用。</value></data>
+  <data name="The map item ID and maximum gil must both be positive." xml:space="preserve"><value>地图物品ID和最大金币数都必须为正数。</value></data>
+  <data name="Emptor API v4 or newer is required for the configured marketboard city; detected v{0}. Select Ul&apos;dah (Emptor default) to keep using Emptor v1-v3." xml:space="preserve"><value>配置的市场城市需要Emptor API v4或更新；检测到v{0}。选择乌尔达哈 (Emptor默认) 可继续使用Emptor v1-v3。</value></data>
+  <data name="Emptor order submission failed: {0}" xml:space="preserve"><value>Emptor订单提交失败：{0}</value></data>
+  <data name="No LootGoblin-owned Emptor order ID is active." xml:space="preserve"><value>没有活动的LootGoblin所属Emptor订单ID。</value></data>
+  <data name="Emptor returned a different order ID ({0})." xml:space="preserve"><value>Emptor返回了不同的订单ID ({0})。</value></data>
+  <data name="Emptor order polling failed: {0}" xml:space="preserve"><value>Emptor订单查询失败：{0}</value></data>
+  <data name="Emptor did not accept cancellation for LootGoblin order {0}." xml:space="preserve"><value>Emptor未接受取消LootGoblin订单{0}。</value></data>
+  <data name="Could not cancel LootGoblin Emptor order {0}: {1}" xml:space="preserve"><value>无法取消LootGoblin Emptor订单{0}：{1}</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is active, but no AgentMap flag, TreasureSpot capture, or cached target was available after {1:F0}s. Manual intervention required." xml:space="preserve"><value>地图任务物品“{0}”已激活，但{1:F0}s后仍没有AgentMap标记、TreasureSpot记录或缓存目标。需要手动操作。</value></data>
+  <data name="Active map target recovered from {0}, but no aetheryte is available for {1}. Manual intervention required." xml:space="preserve"><value>已从{0}恢复活动地图目标，但{1}没有可用以太之光。需要手动操作。</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s); continuing with secured stock." xml:space="preserve"><value>已准备计划中的{1}张{2}地图中的{0}张；使用已获取库存继续。</value></data>
+  <data name="Market batch warning: {0} Continuing with {1} secured {2} map(s)." xml:space="preserve"><value>市场批次警告：{0} 使用已获取的{1}张{2}地图继续。</value></data>
+  <data name="{0} Manual world return and party restoration may be required." xml:space="preserve"><value>{0} 可能需要手动返回服务器并恢复队伍。</value></data>
+  <data name="Party restoration timed out; continuing without: {0}." xml:space="preserve"><value>队伍恢复超时；不带以下成员继续：{0}。</value></data>
+  <data name="Party restoration timed out; stopped with missing members: {0}." xml:space="preserve"><value>队伍恢复超时；因缺少成员而停止：{0}。</value></data>
+  <data name="Cannot gather a map from Main Menu. Log in first." xml:space="preserve"><value>无法在主菜单采集地图。请先登录。</value></data>
+  <data name="Cannot gather a map while LootGoblin is busy ({0})." xml:space="preserve"><value>LootGoblin忙碌时无法采集地图 ({0})。</value></data>
+  <data name="Gather job not configured." xml:space="preserve"><value>未配置采集职业。</value></data>
+  <data name="No gatherable map configured." xml:space="preserve"><value>未配置可采集地图。</value></data>
+  <data name="in duty" xml:space="preserve"><value>任务中</value></data>
+  <data name="Treasure coffer was expected after /dig but could not be resolved after {0:F0}s and {1}/{2} dig retries. Manual intervention required." xml:space="preserve"><value>/dig后应出现宝箱，但{0:F0}s和{1}/{2}次挖掘重试后仍无法确认。需要手动操作。</value></data>
+  <data name="Expected {0} in inventory for one-shot map run, but it was not found." xml:space="preserve"><value>单次地图运行需要物品栏中的{0}，但未找到。</value></data>
+  <data name="No unlocked aetheryte was found in current territory {0} for ADS NPC no-inn repair retry." xml:space="preserve"><value>当前区域{0}没有ADS无旅馆NPC修理重试可用的已解锁以太之光。</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is active after error &apos;{1}&apos;, but no AgentMap flag, TreasureSpot capture, or cached target is available. Manual intervention required." xml:space="preserve"><value>错误“{1}”后地图任务物品“{0}”仍已激活，但没有AgentMap标记、TreasureSpot记录或缓存目标。需要手动操作。</value></data>
+  <data name="Map gathering timed out after {0}s." xml:space="preserve"><value>地图采集在{0}s后超时。</value></data>
+  <data name="Searching {0} for {1}..." xml:space="preserve"><value>在{0}搜索{1}...</value></data>
+  <data name="Preparing party for travel to {0}..." xml:space="preserve"><value>为前往{0}准备队伍...</value></data>
+  <data name="Teleporting the party to {0} before world travel..." xml:space="preserve"><value>跨服务器移动前将队伍传送至{0}...</value></data>
+  <data name="Disbanding party before world travel..." xml:space="preserve"><value>跨服务器移动前解散队伍...</value></data>
+  <data name="Traveling to {0} for {1}..." xml:space="preserve"><value>为{1}前往{0}...</value></data>
+  <data name="Emptor is searching for {0}..." xml:space="preserve"><value>Emptor正在搜索{0}...</value></data>
+  <data name="Emptor order finished ({0}); waiting for market-board cleanup..." xml:space="preserve"><value>Emptor订单结束 ({0})；等待市场清理...</value></data>
+  <data name="Buying map {0} of {1}: {2}..." xml:space="preserve"><value>购买地图{0}/{1}：{2}...</value></data>
+  <data name="Opening saddlebag to store {0} before the next order..." xml:space="preserve"><value>打开鞍囊以在下次订单前保管{0}...</value></data>
+  <data name="Waiting for saddlebag UI to stabilize before storing {0}..." xml:space="preserve"><value>保管{0}前等待鞍囊界面稳定...</value></data>
+  <data name="Waiting for InventoryBuddy before storing {0}..." xml:space="preserve"><value>保管{0}前等待InventoryBuddy...</value></data>
+  <data name="Reopening saddlebag to store {0}..." xml:space="preserve"><value>重新打开鞍囊以保管{0}...</value></data>
+  <data name="Could not plan safe saddlebag storage: {0}" xml:space="preserve"><value>无法计划安全鞍囊保管：{0}</value></data>
+  <data name="Moving {0} into the saddlebag..." xml:space="preserve"><value>将{0}移入鞍囊...</value></data>
+  <data name="The inventory-to-saddlebag move plan was lost." xml:space="preserve"><value>物品栏到鞍囊的移动计划已丢失。</value></data>
+  <data name="InventoryBuddy closed before the planned saddlebag move." xml:space="preserve"><value>计划的鞍囊移动前InventoryBuddy已关闭。</value></data>
+  <data name="The guarded saddlebag move was not issued: {0}" xml:space="preserve"><value>受保护鞍囊移动未发出：{0}</value></data>
+  <data name="Confirming {0} moved into the saddlebag..." xml:space="preserve"><value>确认{0}已移入鞍囊...</value></data>
+  <data name="The inventory-to-saddlebag confirmation plan was lost." xml:space="preserve"><value>物品栏到鞍囊的确认计划已丢失。</value></data>
+  <data name="InventoryBuddy closed before move confirmation: {0}" xml:space="preserve"><value>移动确认前InventoryBuddy已关闭：{0}</value></data>
+  <data name="Timed out {0} after {1:F0} seconds." xml:space="preserve"><value>{0}在{1:F0}秒后超时。</value></data>
+  <data name="Cannot decipher a batch map because key item &apos;{0}&apos; is already occupied." xml:space="preserve"><value>任务物品“{0}”已占用，无法解读批次地图。</value></data>
+  <data name="Cannot decipher {0} because it is no longer in normal inventory." xml:space="preserve"><value>{0}已不在正常物品栏中，无法解读。</value></data>
+  <data name="Deciphering {0} into the key-item slot before the next order..." xml:space="preserve"><value>下次订单前解读{0}至任务物品栏位...</value></data>
+  <data name="Could not confirm {0} in the key-item slot within {1:F0} seconds." xml:space="preserve"><value>无法在{1:F0}秒内确认任务物品栏中的{0}。</value></data>
+  <data name="Stopping the owned Emptor order and waiting for market-board cleanup..." xml:space="preserve"><value>停止所拥有的Emptor订单并等待市场清理...</value></data>
+  <data name="Returning to {0} before restoring the party..." xml:space="preserve"><value>恢复队伍前返回{0}...</value></data>
+  <data name="Could not return to {0}: {1}" xml:space="preserve"><value>无法返回{0}：{1}</value></data>
+  <data name="Timed out returning to {0}. Party invites were not sent from the wrong world." xml:space="preserve"><value>返回{0}超时。未从错误服务器发送队伍邀请。</value></data>
+  <data name="Party restoration was blocked because the player is not on the captured starting world." xml:space="preserve"><value>玩家不在记录的起始服务器上，队伍恢复已阻止。</value></data>
+  <data name="Restoring the captured party roster..." xml:space="preserve"><value>恢复已记录队伍名单...</value></data>
+  <data name="Party restoration stopped because the player left the captured starting world." xml:space="preserve"><value>玩家已离开记录的起始服务器，队伍恢复已停止。</value></data>
+  <data name="Switching to gather job for {0}..." xml:space="preserve"><value>为{0}切换至采集职业...</value></data>
+  <data name="No map gather target is active." xml:space="preserve"><value>没有活动的地图采集目标。</value></data>
+  <data name="Gather job was cleared while gathering." xml:space="preserve"><value>采集中采集职业设置已清除。</value></data>
+  <data name="Starting GatherBuddy Reborn for {0}..." xml:space="preserve"><value>为{0}启动GatherBuddy Reborn...</value></data>
+  <data name="Current job changed before GatherBuddy start; currentJob={0}; expectedJob={1}." xml:space="preserve"><value>GatherBuddy启动前当前职业已改变；当前职业={0}；预期职业={1}。</value></data>
+  <data name="Waiting for GatherBuddy Reborn to gather {0}..." xml:space="preserve"><value>等待GatherBuddy Reborn采集{0}...</value></data>
+  <data name="GatherBuddy Reborn auto-gather stopped before {0} was obtained." xml:space="preserve"><value>获取{0}前GatherBuddy Reborn自动采集已停止。</value></data>
+  <data name="Gathering window closed for {0}; switching back..." xml:space="preserve"><value>{0}采集窗口已关闭；切换回原职业...</value></data>
+  <data name="Thief-map remount recovered - flying to location..." xml:space="preserve"><value>盗贼地图重新骑乘已恢复 - 飞往目标位置...</value></data>
+  <data name="Wait for party disabled - flying to thief-map location..." xml:space="preserve"><value>队伍等待已禁用 - 飞往盗贼地图位置...</value></data>
+  <data name="Required party members mounted - flying to thief-map location..." xml:space="preserve"><value>所需队伍成员已骑乘 - 飞往盗贼地图位置...</value></data>
+  <data name="Could not start ADS repair ({0}) at {1}% durability." xml:space="preserve"><value>无法在{1}%耐久度下开始ADS修理 ({0})。</value></data>
+  <data name="ADS repair recovery timed out after {0:F0}s while teleporting to {1} (ID {2})." xml:space="preserve"><value>传送至{1} (ID {2})时ADS修理恢复在{0:F0}s后超时。</value></data>
+  <data name="Wrong territory during ADS repair recovery: {0} (expected {1})." xml:space="preserve"><value>ADS修理恢复时区域错误：{0} (预期{1})。</value></data>
+  <data name="opening InventoryBuddy" xml:space="preserve"><value>打开InventoryBuddy</value></data>
+  <data name="waiting for InventoryBuddy" xml:space="preserve"><value>等待InventoryBuddy</value></data>
+  <data name="waiting for stable InventoryBuddy" xml:space="preserve"><value>等待InventoryBuddy稳定</value></data>
+  <data name="moving the purchased map into the saddlebag" xml:space="preserve"><value>将购买的地图移入鞍囊</value></data>
+  <data name="confirming the saddlebag move" xml:space="preserve"><value>确认鞍囊移动</value></data>
+  <data name="SwitchingToGatherJob" xml:space="preserve"><value>切换至采集职业</value></data>
+  <data name="StartingGatherBuddy" xml:space="preserve"><value>启动GatherBuddy</value></data>
+  <data name="WaitingForMap" xml:space="preserve"><value>等待地图</value></data>
+  <data name="ClosingGatherWindow" xml:space="preserve"><value>关闭采集窗口</value></data>
+  <data name="SwitchingBack" xml:space="preserve"><value>切换回原职业</value></data>
+  <data name="An additional batch step failed: {0}" xml:space="preserve"><value>另一个批次步骤失败：{0}</value></data>
+  <data name="{0} Market batch warning: {1} Continuing with {2} secured {3} map(s)." xml:space="preserve"><value>{0} 市场批次警告：{1} 使用已获取的{2}张{3}地图继续。</value></data>
+  <data name="{0} timed out while gathering {1}; targetMap={2} ({3}); currentJob={4}; expectedJob={5}; GatherBuddy={6}." xml:space="preserve"><value>采集{1}时{0}超时；目标地图={2} ({3})；当前职业={4}；预期职业={5}；GatherBuddy={6}。</value></data>
+  <data name="{0} timed out while gathering {1}; targetMap={2} ({3}); currentJob={4}; expectedJob={5}; GatherBuddy={6}; closeGate={7}; closeAttempts={8}; cancelIssued={9}." xml:space="preserve"><value>采集{1}时{0}超时；目标地图={2} ({3})；当前职业={4}；预期职业={5}；GatherBuddy={6}；关闭条件={7}；关闭尝试={8}；已发出取消={9}。</value></data>
+  <data name="Emptor API v5 or newer is required for price hints; detected v{0}." xml:space="preserve"><value>参考价格需要Emptor API v5或更新；检测到v{0}。</value></data>
+  <data name="Emptor API v5 price IPC is unavailable." xml:space="preserve"><value>Emptor API v5价格IPC不可用。</value></data>
+  <data name="Emptor rejected the order ({0})." xml:space="preserve"><value>Emptor拒绝了订单 ({0})。</value></data>
+  <data name="unknown state" xml:space="preserve"><value>未知状态</value></data>
+  <data name="Indeterminate without a verified inventory map" xml:space="preserve"><value>未确认物品栏中的地图，状态不确定</value></data>
+  <data name="FATE/combat cleared - resuming portal after {0}..." xml:space="preserve"><value>FATE/战斗结束 - 在{0}后恢复传送门...</value></data>
+  <data name="FATE/combat cleared - resuming captured portal after {0}..." xml:space="preserve"><value>FATE/战斗结束 - 在{0}后恢复已记录传送门...</value></data>
+  <data name="No acceptable {0} listing remained on any enabled world." xml:space="preserve"><value>所有已启用服务器都没有可接受的{0}挂单。</value></data>
+  <data name="{0} appeared in inventory before an Emptor order was submitted." xml:space="preserve"><value>Emptor订单提交前{0}已出现在物品栏中。</value></data>
+  <data name="Prepared {0} {1} map(s); the configured remaining run count no longer allows another order." xml:space="preserve"><value>已准备{0}张{1}地图；配置的剩余运行次数不允许再次下单。</value></data>
+  <data name="Purchased and verified one {0} on {1}." xml:space="preserve"><value>已在{1}购买并验证一张{0}。</value></data>
+  <data name="Emptor reported Indeterminate, but {0} is present in inventory; no order will be resubmitted." xml:space="preserve"><value>Emptor报告Indeterminate，但{0}已在物品栏中；不会重新下单。</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s). {3}" xml:space="preserve"><value>已准备计划中的{1}张{2}地图中的{0}张。{3}</value></data>
+  <data name="No safe storage slot remained for another map order." xml:space="preserve"><value>没有下一次地图订单所需的安全保管栏位。</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s)." xml:space="preserve"><value>已准备计划中的{1}张{2}地图中的{0}张。</value></data>
+  <data name="Normal inventory still contains {0} {1} map(s), so another quantity-one order was not submitted." xml:space="preserve"><value>正常物品栏中仍有{0}张{1}地图，因此未再次提交数量为一的订单。</value></data>
+  <data name="Opening saddlebag for {0}..." xml:space="preserve"><value>为{0}打开鞍囊...</value></data>
+  <data name="{0} timed out for {1}." xml:space="preserve"><value>{1}的{0}超时。</value></data>
+  <data name="Reopening saddlebag for {0}..." xml:space="preserve"><value>为{0}重新打开鞍囊...</value></data>
+  <data name="Moving {0} from saddlebag..." xml:space="preserve"><value>从鞍囊移出{0}...</value></data>
+  <data name="No saddlebag move plan." xml:space="preserve"><value>没有鞍囊移动计划。</value></data>
+  <data name="InventoryBuddy hidden before saddlebag move." xml:space="preserve"><value>鞍囊移动前InventoryBuddy已隐藏。</value></data>
+  <data name="Confirming {0} moved from saddlebag..." xml:space="preserve"><value>确认{0}已从鞍囊移出...</value></data>
+  <data name="Saddlebag visible; refreshed loaded map sources." xml:space="preserve"><value>鞍囊可见；已刷新加载的地图来源。</value></data>
+  <data name="Saddlebag did not open before timeout; refreshed currently loaded map sources." xml:space="preserve"><value>鞍囊未在超时前打开；已刷新当前加载的地图来源。</value></data>
+  <data name="ADS repair timed out after {0:F0}s." xml:space="preserve"><value>ADS修理在{0:F0}s后超时。</value></data>
+  <data name="Lowest durability {0}%, threshold {1}%, ADS mode {2}, ADS {3}, retry count {4}/{5}, territory {6}." xml:space="preserve"><value>最低耐久度 {0}%，阈值 {1}%，ADS 模式 {2}，ADS {3}，重试次数 {4}/{5}，区域 {6}。</value></data>
+  <data name="Opening" xml:space="preserve"><value>正在打开</value></data>
+  <data name="WaitingForAddon" xml:space="preserve"><value>等待界面</value></data>
+  <data name="WaitingStable" xml:space="preserve"><value>等待界面稳定</value></data>
+  <data name="Moving" xml:space="preserve"><value>正在移动</value></data>
+  <data name="Confirming" xml:space="preserve"><value>正在确认</value></data>
+  <data name="map allowance timer not loaded" xml:space="preserve"><value>地图获取计时器尚未加载</value></data>
+  <data name="map allowance detail not loaded" xml:space="preserve"><value>地图获取详情尚未加载</value></data>
+  <data name="map allowance detail not recognized" xml:space="preserve"><value>无法识别地图获取详情</value></data>
+  <data name="No unlocked aetheryte was found in current territory {0} for ADS NPC no-inn repair retry. Last Lifestream error: {1}" xml:space="preserve"><value>当前区域 {0} 中没有已开放的以太之光可用于重试 ADS 的非旅馆 NPC 修理。最后的 Lifestream 错误：{1}</value></data>
+  <data name="{0} Lowest durability {1}%, threshold {2}%, ADS mode {3}, ADS {4}, retry count {5}/{6}, territory {7}." xml:space="preserve"><value>{0} 最低耐久度 {1}%，阈值 {2}%，ADS 模式 {3}，ADS {4}，重试次数 {5}/{6}，区域 {7}。</value></data>
+  <data name="{0} Lowest durability {1}%, threshold {2}%, ADS mode {3}, ADS {4}, retry count {5}/{6}, territory {7}. ADS is not loaded." xml:space="preserve"><value>{0} 最低耐久度 {1}%，阈值 {2}%，ADS 模式 {3}，ADS {4}，重试次数 {5}/{6}，区域 {7}。 ADS 未加载。</value></data>
+  <data name="addons={0}; conditions=Gathering:{1}, ExecutingGatheringAction:{2}" xml:space="preserve"><value>界面={0}；状态=Gathering:{1}, ExecutingGatheringAction:{2}</value></data>
+  <data name="Window appearance" xml:space="preserve"><value>窗口外观</value></data>
+  <data name="Compact visible on main window" xml:space="preserve"><value>在主窗口显示紧凑模式开关</value></data>
+  <data name="Language visible on main window" xml:space="preserve"><value>在主窗口显示语言选择</value></data>
+  <data name="Transparency" xml:space="preserve"><value>透明度</value></data>
+  <data name="Opacity (%)" xml:space="preserve"><value>不透明度 (%)</value></data>
+  <data name="Auto-fade when unfocused" xml:space="preserve"><value>失去焦点后自动淡化</value></data>
+  <data name="Unfocused opacity (%)" xml:space="preserve"><value>未聚焦时的不透明度 (%)</value></data>
+  <data name="Unfocused delay (seconds)" xml:space="preserve"><value>失去焦点后的等待时间 (秒)</value></data>
+</root>

@@ -1,0 +1,1372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="({0:F0}, {1:F0}, {2:F0})" xml:space="preserve"><value>({0:F0}, {1:F0}, {2:F0})</value></data>
+  <data name="({0} missing)" xml:space="preserve"><value>(faltam {0})</value></data>
+  <data name="({0} per map)" xml:space="preserve"><value>({0} por mapa)</value></data>
+  <data name="({0}/{1} mounted)" xml:space="preserve"><value>({0}/{1} montados)</value></data>
+  <data name="(all recorded)" xml:space="preserve"><value>(todos registrados)</value></data>
+  <data name="(Lvl {0})" xml:space="preserve"><value>(Nv. {0})</value></data>
+  <data name="(no args) - Toggle this window" xml:space="preserve"><value>(sem argumentos) - Alternar esta janela</value></data>
+  <data name="(No Position)" xml:space="preserve"><value>(Sem posição)</value></data>
+  <data name="(none)" xml:space="preserve"><value>(nenhum)</value></data>
+  <data name="(Used for manual mounting)" xml:space="preserve"><value>(Usado para montar manualmente)</value></data>
+  <data name="[All 3 Types]" xml:space="preserve"><value>[Todos os 3 tipos]</value></data>
+  <data name="[Dungeon]" xml:space="preserve"><value>[Masmorra]</value></data>
+  <data name="[Flying]" xml:space="preserve"><value>[Voando]</value></data>
+  <data name="[Grounded]" xml:space="preserve"><value>[No chão]</value></data>
+  <data name="[Guaranteed]" xml:space="preserve"><value>[Garantido]</value></data>
+  <data name="[In Combat]" xml:space="preserve"><value>[Em combate]</value></data>
+  <data name="[Map AI]" xml:space="preserve"><value>[IA de mapas]</value></data>
+  <data name="[Mounted]" xml:space="preserve"><value>[Montado]</value></data>
+  <data name="[No Combat]" xml:space="preserve"><value>[Fora de combate]</value></data>
+  <data name="[OK]" xml:space="preserve"><value>[OK]</value></data>
+  <data name="[On Foot]" xml:space="preserve"><value>[A pé]</value></data>
+  <data name="[Outdoor]" xml:space="preserve"><value>[Área externa]</value></data>
+  <data name="[PAUSED]" xml:space="preserve"><value>[PAUSADO]</value></data>
+  <data name="[READ MAP INDICES]" xml:space="preserve"><value>[LER ÍNDICES DOS MAPAS]</value></data>
+  <data name="[REDACTED]" xml:space="preserve"><value>[OCULTADO]</value></data>
+  <data name="[Roulette]" xml:space="preserve"><value>[Roleta]</value></data>
+  <data name="[WIP]" xml:space="preserve"><value>[EM DESENVOLVIMENTO]</value></data>
+  <data name="{0} | Lvl {1}" xml:space="preserve"><value>{0} | Nv. {1}</value></data>
+  <data name="{0} done, {1} remaining" xml:space="preserve"><value>{0} concluídos, {1} restantes</value></data>
+  <data name="{0} inventory + {1} active + {2} from Poetics" xml:space="preserve"><value>{0} no inventário + {1} ativo + {2} de Poetics</value></data>
+  <data name="{0}m{1:D2}s" xml:space="preserve"><value>{0}min{1:D2}s</value></data>
+  <data name="|  Bot State:" xml:space="preserve"><value>|  Estado do bot:</value></data>
+  <data name="|  Gysahl Greens: {0}" xml:space="preserve"><value>|  Gysahl Greens: {0}</value></data>
+  <data name="|  Outdoor suppression: {0}" xml:space="preserve"><value>|  Supressão externa: {0}</value></data>
+  <data name="|  VBM forbidden zones: {0}" xml:space="preserve"><value>|  Áreas proibidas do VBM: {0}</value></data>
+  <data name="| all mounted" xml:space="preserve"><value>| todos montados</value></data>
+  <data name="| any mounted" xml:space="preserve"><value>| algum montado</value></data>
+  <data name="| Territory {0}" xml:space="preserve"><value>| Território {0}</value></data>
+  <data name="| Territory {0} / {1}" xml:space="preserve"><value>| Território {0} / {1}</value></data>
+  <data name="| wait for {0} other player(s)" xml:space="preserve"><value>| esperar {0} outro(s) jogador(es)</value></data>
+  <data name="★ You have {0} location(s) not in community DB - consider sharing!" xml:space="preserve"><value>★ Você tem {0} local(is) fora do banco comunitário - considere compartilhar!</value></data>
+  <data name="♡ Ko-fi ♡" xml:space="preserve"><value>♡ Ko-fi ♡</value></data>
+  <data name="✓ MATCHES: {0} (ID: {1})" xml:space="preserve"><value>✓ CORRESPONDÊNCIAS: {0} (ID: {1})</value></data>
+  <data name="0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing." xml:space="preserve"><value>0 desativa reparos. Quando a durabilidade do equipamento fica abaixo deste valor, LootGoblin pede ao ADS para reparar antes de continuar.</value></data>
+  <data name="0 disables this map type. Positive numbers run that many resolved maps." xml:space="preserve"><value>0 desativa este tipo de mapa. Números positivos executam essa quantidade de mapas resolvidos.</value></data>
+  <data name="Active map:" xml:space="preserve"><value>Mapa ativo:</value></data>
+  <data name="Add Emptor&apos;s custom repository in Dalamud Settings, then install Emptor from the plugin installer." xml:space="preserve"><value>Adicione o repositório personalizado do Emptor nas configurações do Dalamud e instale Emptor pelo instalador de plugins.</value></data>
+  <data name="ADS" xml:space="preserve"><value>ADS</value></data>
+  <data name="ADS {0} repair test failed: {1}" xml:space="preserve"><value>Teste de reparo ADS {0} falhou: {1}</value></data>
+  <data name="ADS {0} repair test requested." xml:space="preserve"><value>Teste de reparo ADS {0} solicitado.</value></data>
+  <data name="ADS / BMR Adjustments" xml:space="preserve"><value>Ajustes ADS / BMR</value></data>
+  <data name="ADS did not accept the repair request." xml:space="preserve"><value>ADS não aceitou o pedido de reparo.</value></data>
+  <data name="ADS dungeon handoff is enabled. Install ADS or disable it in settings." xml:space="preserve"><value>A transferência da masmorra para ADS está ativada. Instale ADS ou desative nas configurações.</value></data>
+  <data name="ADS handoff runs /ads inside after confirmed duty entry. Completed-duty exit chooses a local delay, party departure, ADS delay or manual exit; chest and solver options are below." xml:space="preserve"><value>A transferência ao ADS executa /ads inside após confirmar a entrada. Ao concluir, a saída usa atraso local, saída do grupo, atraso ADS ou saída manual; opções de baús e soluções abaixo.</value></data>
+  <data name="ADS is not loaded; {0} repair test not started." xml:space="preserve"><value>ADS não está carregado; teste de reparo {0} não iniciado.</value></data>
+  <data name="ADS is not loaded. Install ADS or disable this setting." xml:space="preserve"><value>ADS não está carregado. Instale ADS ou desative esta configuração.</value></data>
+  <data name="ADS missing" xml:space="preserve"><value>ADS ausente</value></data>
+  <data name="ADS NPC no-inn repair can only start from a sanctuary." xml:space="preserve"><value>O reparo ADS com NPC sem estalagem só pode começar em um santuário.</value></data>
+  <data name="ADS reflection: {0}" xml:space="preserve"><value>Reflexão ADS: {0}</value></data>
+  <data name="ADS: exit after delay" xml:space="preserve"><value>ADS: sair após atraso</value></data>
+  <data name="Advanced" xml:space="preserve"><value>Avançado</value></data>
+  <data name="Aetherytes: {0} positions stored" xml:space="preserve"><value>Aetherytes: {0} posições salvas</value></data>
+  <data name="Aetherytes: {0}/{1} positions stored" xml:space="preserve"><value>Aetherytes: {0}/{1} posições salvas</value></data>
+  <data name="After a portal is accepted and duty entry is confirmed, LootGoblin sends /ads inside and waits for ADS to finish the dungeon instead of running its legacy dungeon solver." xml:space="preserve"><value>Após aceitar o portal e confirmar a entrada, LootGoblin envia /ads inside e espera ADS concluir a masmorra, em vez de usar sua solução antiga.</value></data>
+  <data name="After enabled local-region data centers are exhausted, try public OCE worlds. Requires data-center travel and defaults off." xml:space="preserve"><value>Após esgotar os data centers locais ativados, tenta mundos públicos OCE. Requer viagem entre data centers; padrão desativado.</value></data>
+  <data name="After the current data center is exhausted, visit public worlds on other data centers in the current region once per map search." xml:space="preserve"><value>Após esgotar o data center atual, visita mundos públicos de outros data centers da região uma vez por busca de mapa.</value></data>
+  <data name="Age: {0}" xml:space="preserve"><value>Idade: {0}</value></data>
+  <data name="Alexandrite" xml:space="preserve"><value>Alexandrite</value></data>
+  <data name="Alexandrite Maps" xml:space="preserve"><value>Mapas de Alexandrite</value></data>
+  <data name="All Attackable Targets" xml:space="preserve"><value>Todos os alvos atacáveis</value></data>
+  <data name="All Targets When Solo" xml:space="preserve"><value>Todos os alvos quando solo</value></data>
+  <data name="All Targets When Solo in Duty" xml:space="preserve"><value>Todos os alvos quando solo em instância</value></data>
+  <data name="An Emptor price lookup is pending." xml:space="preserve"><value>Uma consulta de preços Emptor está pendente.</value></data>
+  <data name="Applied through RSR IPC immediately before /rotation auto or /rotation manual command triggers." xml:space="preserve"><value>Aplicado via RSR IPC imediatamente antes dos comandos /rotation auto ou /rotation manual.</value></data>
+  <data name="Applies to all party waits. In count-threshold mode, timeout does not lower the configured player count." xml:space="preserve"><value>Vale para todas as esperas do grupo. No modo por quantidade, o tempo limite não reduz o número configurado.</value></data>
+  <data name="Ate" xml:space="preserve"><value>Comeu</value></data>
+  <data name="Attacker Stance" xml:space="preserve"><value>Postura atacante</value></data>
+  <data name="Attention: {0}" xml:space="preserve"><value>Atenção: {0}</value></data>
+  <data name="Auto Discard (/ays discard)" xml:space="preserve"><value>Descarte automático (/ays discard)</value></data>
+  <data name="Auto Discard needs AutoRetainer with a configured discard list. When selected, it runs while Loot Goblin is enabled, during safe mounted windows. Factory default: off." xml:space="preserve"><value>O descarte automático requer AutoRetainer com uma lista de descarte. Quando selecionado, funciona com Loot Goblin ativo em momentos seguros na montaria. Padrão desativado.</value></data>
+  <data name="Auto Loot Chest" xml:space="preserve"><value>Saquear baús automaticamente</value></data>
+  <data name="Auto Start next map" xml:space="preserve"><value>Iniciar próximo mapa automaticamente</value></data>
+  <data name="Auto Sync FATE" xml:space="preserve"><value>Sincronizar FATE automaticamente</value></data>
+  <data name="Auto Teleport" xml:space="preserve"><value>Teleporte automático</value></data>
+  <data name="Auto-summon chocobo companion using Gysahl Greens when timer is low. Will not summon in sanctuaries or duties." xml:space="preserve"><value>Invoca o chocobo com Gysahl Greens quando o tempo está baixo. Não invoca em santuários ou instâncias.</value></data>
+  <data name="Auto-update locations on login" xml:space="preserve"><value>Atualizar locais ao entrar</value></data>
+  <data name="Automate your treasure map adventures." xml:space="preserve"><value>Automatize suas aventuras com mapas do tesouro.</value></data>
+  <data name="Automatically starts the next runnable selected map after completing one." xml:space="preserve"><value>Inicia automaticamente o próximo mapa selecionado executável após concluir um mapa.</value></data>
+  <data name="Available" xml:space="preserve"><value>Disponível</value></data>
+  <data name="Blank disables map gathering." xml:space="preserve"><value>Vazio desativa a coleta de mapas.</value></data>
+  <data name="Blank uses the player&apos;s current job at start." xml:space="preserve"><value>Vazio usa o job atual do jogador ao iniciar.</value></data>
+  <data name="Blank/default city omits the city request field for Emptor v1-v3 compatibility. A selected city is sent only through Emptor API v4 or newer." xml:space="preserve"><value>Cidade vazia/padrão omite o campo da cidade para compatibilidade com Emptor v1-v3. A cidade selecionada só é enviada por Emptor API v4 ou superior.</value></data>
+  <data name="Blue" xml:space="preserve"><value>Azul</value></data>
+  <data name="Blue X: unavailable through gathering" xml:space="preserve"><value>X azul: indisponível por coleta</value></data>
+  <data name="BMR active module: {0}{1}" xml:space="preserve"><value>Módulo BMR ativo: {0}{1}</value></data>
+  <data name="BMR Disable Hunt Modules" xml:space="preserve"><value>BMR desativar módulos de caça</value></data>
+  <data name="BMR reduce activation range for outdoor areas" xml:space="preserve"><value>BMR reduzir alcance de ativação externo</value></data>
+  <data name="BossMod danger:" xml:space="preserve"><value>Perigo BossMod:</value></data>
+  <data name="Bot disabled" xml:space="preserve"><value>Bot desativado</value></data>
+  <data name="Bot State" xml:space="preserve"><value>Estado do bot</value></data>
+  <data name="Buy" xml:space="preserve"><value>Comprar</value></data>
+  <data name="Buys Mysterious Maps from Auriana in Revenant&apos;s Toll (75 Poetics each), then runs each map automatically." xml:space="preserve"><value>Compra Mysterious Maps de Auriana em Revenant&apos;s Toll (75 Poetics cada) e executa cada mapa automaticamente.</value></data>
+  <data name="by SaMo; used for treasure map statistics" xml:space="preserve"><value>por SaMo; usado em estatísticas de mapas do tesouro</value></data>
+  <data name="Cart: buy missing maps through Emptor after gathering is unavailable. A market trip may prepare up to three, capped by remaining runs." xml:space="preserve"><value>Carrinho: compra mapas faltantes pelo Emptor quando a coleta está indisponível. Cada viagem prepara até três mapas, limitado pelas execuções restantes.</value></data>
+  <data name="Character command triggers saved." xml:space="preserve"><value>Comandos de gatilho do personagem salvos.</value></data>
+  <data name="Checked maps run. Use max for unlimited runs or a number for finite runs." xml:space="preserve"><value>Executa os mapas marcados. Use max para execuções ilimitadas ou um número para limitá-las.</value></data>
+  <data name="Chest Open Timeout (s)" xml:space="preserve"><value>Tempo limite de abertura do baú (s)</value></data>
+  <data name="Chocobo:" xml:space="preserve"><value>Chocobo:</value></data>
+  <data name="Choose a combat job, or keep Current job. Gathering needs GatherBuddyReborn, an unlocked gather job with a gearset, and a gatherable map enabled for gathering in Map Queue." xml:space="preserve"><value>Escolha um job de combate ou mantenha o atual. Coleta requer GatherBuddyReborn, job de coleta liberado com gearset e um mapa coletável ativado na fila.</value></data>
+  <data name="Chooses where Emptor travels for its marketboard. Ul&apos;dah stores a blank key and keeps Emptor&apos;s default behavior." xml:space="preserve"><value>Escolhe onde Emptor vai ao mercado. Ul&apos;dah salva uma chave vazia e mantém o comportamento padrão do Emptor.</value></data>
+  <data name="Clear" xml:space="preserve"><value>Limpar</value></data>
+  <data name="Clear ALL positions for fresh scanning (dev use)" xml:space="preserve"><value>Limpar TODAS as posições para nova varredura (desenvolvimento)</value></data>
+  <data name="Clear Food" xml:space="preserve"><value>Limpar comida</value></data>
+  <data name="Clear user positions - restore community defaults" xml:space="preserve"><value>Limpar posições pessoais - restaurar padrões comunitários</value></data>
+  <data name="Color" xml:space="preserve"><value>Cor</value></data>
+  <data name="Combat job" xml:space="preserve"><value>Job de combate</value></data>
+  <data name="command trigger override changed" xml:space="preserve"><value>substituição de gatilhos alterada</value></data>
+  <data name="Command Triggers" xml:space="preserve"><value>Comandos de gatilho</value></data>
+  <data name="command triggers saved: {0}" xml:space="preserve"><value>comandos de gatilho salvos: {0}</value></data>
+  <data name="Commands" xml:space="preserve"><value>Comandos</value></data>
+  <data name="Community: {0}" xml:space="preserve"><value>Comunidade: {0}</value></data>
+  <data name="Compact mode" xml:space="preserve"><value>Modo compacto</value></data>
+  <data name="Companion Stance" xml:space="preserve"><value>Postura do companheiro</value></data>
+  <data name="Completed-duty exit" xml:space="preserve"><value>Saída após concluir</value></data>
+  <data name="config    - Open settings" xml:space="preserve"><value>config    - Abrir configurações</value></data>
+  <data name="Configure optional food, discard and combat automation here. Command Triggers run slash commands at Landing / Duty Entry and Finish; review them for the plugins you use." xml:space="preserve"><value>Configure comida, descarte e combate opcionais aqui. Os gatilhos executam comandos de barra ao pousar / entrar e ao finalizar; revise para seus plugins.</value></data>
+  <data name="Configured city &apos;{0}&apos; requires Emptor API v4 or newer; detected v{1}." xml:space="preserve"><value>A cidade &apos;{0}&apos; requer Emptor API v4 ou superior; detectado v{1}.</value></data>
+  <data name="Continue if not all party members rejoin after" xml:space="preserve"><value>Continuar se o grupo não voltar inteiro após</value></data>
+  <data name="Control login visibility and settings-window movement. Krangle Names obfuscates player and server names displayed by Loot Goblin." xml:space="preserve"><value>Controle a visibilidade ao entrar e o movimento da janela. Krangle Names oculta nomes de jogadores e servidores exibidos pelo Loot Goblin.</value></data>
+  <data name="Controls BossMod Reborn only. Default: off. Applies on Start and after each configured command batch, regardless of combat provider." xml:space="preserve"><value>Controla apenas BossMod Reborn. Padrão desativado. Aplica ao iniciar e após cada lote de comandos, independentemente do provedor de combate.</value></data>
+  <data name="Copy Emptor repo URL" xml:space="preserve"><value>Copiar URL do repositório Emptor</value></data>
+  <data name="Copy this session&apos;s positive NQ minimum-listing hint into the ceiling. This does not enable the cart." xml:space="preserve"><value>Copia a sugestão positiva de menor preço NQ desta sessão para o teto. Isso não ativa o carrinho.</value></data>
+  <data name="Current job" xml:space="preserve"><value>Job atual</value></data>
+  <data name="Current Run" xml:space="preserve"><value>Execução atual</value></data>
+  <data name="Custom RGB" xml:space="preserve"><value>RGB personalizado</value></data>
+  <data name="Cycle Missing Aetherytes" xml:space="preserve"><value>Percorrer aetherytes faltantes</value></data>
+  <data name="Cycle Missing XYZ" xml:space="preserve"><value>Percorrer XYZ faltantes</value></data>
+  <data name="Debug Log" xml:space="preserve"><value>Log de depuração</value></data>
+  <data name="Debug Mode" xml:space="preserve"><value>Modo de depuração</value></data>
+  <data name="Debug-only IPC test: ADS.StartRepair(&quot;{0}&quot;)." xml:space="preserve"><value>Teste IPC só para depuração: ADS.StartRepair(&quot;{0}&quot;).</value></data>
+  <data name="Defaults" xml:space="preserve"><value>Padrões</value></data>
+  <data name="Defender Stance" xml:space="preserve"><value>Postura defensora</value></data>
+  <data name="Dependencies" xml:space="preserve"><value>Dependências</value></data>
+  <data name="Diff: X={0:F1} Y={1:F1} Z={2:F1}  Dist={3:F0}y" xml:space="preserve"><value>Diferença: X={0:F1} Y={1:F1} Z={2:F1}  Distância={3:F0}y</value></data>
+  <data name="different territory" xml:space="preserve"><value>território diferente</value></data>
+  <data name="Disable Pandora&apos;s Box" xml:space="preserve"><value>Desativar Pandora&apos;s Box</value></data>
+  <data name="Disable Pandora&apos;s Box through Dalamud." xml:space="preserve"><value>Desativa Pandora&apos;s Box pelo Dalamud.</value></data>
+  <data name="DISABLED" xml:space="preserve"><value>DESATIVADO</value></data>
+  <data name="Dismount wait:" xml:space="preserve"><value>Espera para desmontar:</value></data>
+  <data name="Do not use Tamamizu aetheryte" xml:space="preserve"><value>Não usar aetheryte Tamamizu</value></data>
+  <data name="Done: {0}" xml:space="preserve"><value>Concluído: {0}</value></data>
+  <data name="Download Updated Locs" xml:space="preserve"><value>Baixar locais atualizados</value></data>
+  <data name="Downloading..." xml:space="preserve"><value>Baixando...</value></data>
+  <data name="Dungeon/Loot" xml:space="preserve"><value>Masmorra/Saque</value></data>
+  <data name="Duty-end delay (s)" xml:space="preserve"><value>Atraso ao concluir instância (s)</value></data>
+  <data name="Editing character profile {0}." xml:space="preserve"><value>Editando perfil do personagem {0}.</value></data>
+  <data name="Editing global command triggers." xml:space="preserve"><value>Editando comandos de gatilho globais.</value></data>
+  <data name="Editing global command triggers. Log in to edit a character override." xml:space="preserve"><value>Editando gatilhos globais. Entre para editar a substituição do personagem.</value></data>
+  <data name="Emptor API v5 or newer is required for price hints." xml:space="preserve"><value>Sugestões de preço requerem Emptor API v5 ou superior.</value></data>
+  <data name="EMPTOR IS NOT INSTALLED OR LOADED" xml:space="preserve"><value>EMPTOR NÃO ESTÁ INSTALADO OU CARREGADO</value></data>
+  <data name="Emptor is unavailable. Open Marketboard settings for installation guidance." xml:space="preserve"><value>Emptor indisponível. Abra as configurações do mercado para instruções de instalação.</value></data>
+  <data name="Emptor marketboard city" xml:space="preserve"><value>Cidade do mercado Emptor</value></data>
+  <data name="Emptor NQ minimum listing: {0:N0} gil" xml:space="preserve"><value>Menor preço NQ Emptor: {0:N0} gil</value></data>
+  <data name="Emptor NQ minimum listing: unavailable" xml:space="preserve"><value>Menor preço NQ Emptor: indisponível</value></data>
+  <data name="Emptor v5+ supplies session-only NQ minimum-listing price hints for known marketable maps." xml:space="preserve"><value>Emptor v5+ fornece sugestões de menor preço NQ só nesta sessão para mapas conhecidos negociáveis.</value></data>
+  <data name="Enable a cart on a marketable map row and set a positive maximum gil price." xml:space="preserve"><value>Ative o carrinho na linha de um mapa negociável e defina um máximo positivo em gil.</value></data>
+  <data name="Enable State Logging" xml:space="preserve"><value>Ativar log de estados</value></data>
+  <data name="ENABLED" xml:space="preserve"><value>ATIVADO</value></data>
+  <data name="Error" xml:space="preserve"><value>Erro</value></data>
+  <data name="Errors: {0}" xml:space="preserve"><value>Erros: {0}</value></data>
+  <data name="Extra delay before sending the map teleport command after the map target is resolved." xml:space="preserve"><value>Atraso extra antes do comando de teleporte após resolver o alvo do mapa.</value></data>
+  <data name="Factory defaults: ADS handoff on; ADS exit after 20 seconds; Auto Loot Chest on; Gambler&apos;s Lure set to Solve EV (expected value)." xml:space="preserve"><value>Padrões: transferência ADS ativada; saída ADS após 20 segundos; saque automático ativado; Gambler&apos;s Lure em Resolver EV (valor esperado).</value></data>
+  <data name="Factory defaults: Auto Teleport and Require vnavmesh on; Company Chocobo selected." xml:space="preserve"><value>Padrões: teleporte automático e exigência de vnavmesh ativados; Company Chocobo selecionado.</value></data>
+  <data name="Factory defaults: current combat job; gathering off. The controls below show your current selections." xml:space="preserve"><value>Padrões: job de combate atual; coleta desativada. Os controles abaixo mostram suas escolhas atuais.</value></data>
+  <data name="Factory defaults: show the main window on login and allow settings movement; name obfuscation off." xml:space="preserve"><value>Padrões: mostrar janela principal ao entrar e permitir mover configurações; nomes ocultos desativados.</value></data>
+  <data name="Factory defaults: state logging on; Debug Mode, map diagnostics and dedicated file logging off." xml:space="preserve"><value>Padrões: log de estados ativado; depuração, diagnóstico de mapas e log dedicado desativados.</value></data>
+  <data name="Failed" xml:space="preserve"><value>Falhou</value></data>
+  <data name="FC" xml:space="preserve"><value>FC</value></data>
+  <data name="Fetch maps from retainers" xml:space="preserve"><value>Buscar mapas com retainers</value></data>
+  <data name="Fetch maps from saddlebags" xml:space="preserve"><value>Buscar mapas nos alforjes</value></data>
+  <data name="Finish" xml:space="preserve"><value>Finalizar</value></data>
+  <data name="Follow" xml:space="preserve"><value>Seguir</value></data>
+  <data name="Food" xml:space="preserve"><value>Comida</value></data>
+  <data name="Food:" xml:space="preserve"><value>Comida:</value></data>
+  <data name="For the next map search, start after the world where the previous search ended, wrapping to the beginning when needed." xml:space="preserve"><value>Na próxima busca, começa após o mundo onde a busca anterior terminou, voltando ao início se necessário.</value></data>
+  <data name="Free Stance" xml:space="preserve"><value>Postura livre</value></data>
+  <data name="Fresh Scan" xml:space="preserve"><value>Nova varredura</value></data>
+  <data name="Gambler&apos;s Lure Solver" xml:space="preserve"><value>Solução de Gambler&apos;s Lure</value></data>
+  <data name="Gather" xml:space="preserve"><value>Coletar</value></data>
+  <data name="Gather job (current character)" xml:space="preserve"><value>Job de coleta (personagem atual)</value></data>
+  <data name="GatherBuddy Reborn" xml:space="preserve"><value>GatherBuddy Reborn</value></data>
+  <data name="Global command triggers saved." xml:space="preserve"><value>Comandos de gatilho globais salvos.</value></data>
+  <data name="Ground-only map diagnostics" xml:space="preserve"><value>Diagnóstico de mapas só no chão</value></data>
+  <data name="Healer Stance" xml:space="preserve"><value>Postura curadora</value></data>
+  <data name="HQ" xml:space="preserve"><value>HQ</value></data>
+  <data name="ID {0}" xml:space="preserve"><value>ID {0}</value></data>
+  <data name="Idle" xml:space="preserve"><value>Ocioso</value></data>
+  <data name="If selected food runs out, search inventory for a fallback food from the FrenRider priority list." xml:space="preserve"><value>Se a comida selecionada acabar, busca no inventário uma alternativa da lista de prioridades FrenRider.</value></data>
+  <data name="In full-party proximity waits, timeout can allow guarded recovery when unresolved or out-of-territory members are the only blockers." xml:space="preserve"><value>Ao esperar o grupo inteiro por proximidade, o tempo limite pode permitir recuperação segura quando só faltam membros sem posição ou em outro território.</value></data>
+  <data name="Include data center travel for purchasing maps" xml:space="preserve"><value>Permitir viagem entre data centers para comprar mapas</value></data>
+  <data name="Include same-data-center server travel for purchasing maps" xml:space="preserve"><value>Permitir viagem entre mundos do mesmo data center para comprar mapas</value></data>
+  <data name="Include visiting OCE for maps once local data centers are exhausted" xml:space="preserve"><value>Visitar OCE para mapas após esgotar data centers locais</value></data>
+  <data name="Inn" xml:space="preserve"><value>Estalagem</value></data>
+  <data name="Integrations" xml:space="preserve"><value>Integrações</value></data>
+  <data name="Interaction Range (y)" xml:space="preserve"><value>Alcance de interação (y)</value></data>
+  <data name="Interface" xml:space="preserve"><value>Interface</value></data>
+  <data name="inventory" xml:space="preserve"><value>inventário</value></data>
+  <data name="inventory or loaded saddlebags" xml:space="preserve"><value>inventário ou alforjes carregados</value></data>
+  <data name="InventoryBuddy" xml:space="preserve"><value>InventoryBuddy</value></data>
+  <data name="Invite missing captured members immediately and every 30 seconds after returning. Checked continues with whoever rejoined after timeout; unchecked stops." xml:space="preserve"><value>Convide membros faltantes imediatamente e a cada 30 segundos após voltar. Marcado continua com quem voltou após o limite; desmarcado para.</value></data>
+  <data name="Krangle Names" xml:space="preserve"><value>Ocultar nomes</value></data>
+  <data name="Landing / Duty Entry" xml:space="preserve"><value>Pouso / Entrada</value></data>
+  <data name="Language" xml:space="preserve"><value>Idioma</value></data>
+  <data name="Level" xml:space="preserve"><value>Nível</value></data>
+  <data name="Lifestream" xml:space="preserve"><value>Lifestream</value></data>
+  <data name="Lifestream is required for off-world searches. LootGoblin verifies arrival and returns to the starting world before restoring the party." xml:space="preserve"><value>Buscas fora do mundo requerem Lifestream. LootGoblin confirma a chegada e volta ao mundo inicial antes de restaurar o grupo.</value></data>
+  <data name="Lifestream missing" xml:space="preserve"><value>Lifestream ausente</value></data>
+  <data name="Lifestream missing. LootGoblin cannot issue /li travel without it." xml:space="preserve"><value>Lifestream ausente. LootGoblin não pode enviar /li travel sem ele.</value></data>
+  <data name="Limsa Lominsa is the default. City selection requires Emptor v4+; blank Ul&apos;dah remains compatible with v1-v3." xml:space="preserve"><value>Limsa Lominsa é o padrão. Selecionar cidade requer Emptor v4+; Ul&apos;dah vazio é compatível com v1-v3.</value></data>
+  <data name="Listings can change after lookup. Refresh is manual and rate-limited to five minutes." xml:space="preserve"><value>Preços podem mudar após consultar. Atualização manual limitada a cinco minutos.</value></data>
+  <data name="loaded" xml:space="preserve"><value>carregado</value></data>
+  <data name="Loading UI fonts..." xml:space="preserve"><value>Carregando fontes da interface...</value></data>
+  <data name="Location Data" xml:space="preserve"><value>Dados de localização</value></data>
+  <data name="Location Data by Zone" xml:space="preserve"><value>Localizações por área</value></data>
+  <data name="Location: {0}" xml:space="preserve"><value>Localização: {0}</value></data>
+  <data name="Locations: {0} total" xml:space="preserve"><value>Localizações: {0} no total</value></data>
+  <data name="Log in to check party status." xml:space="preserve"><value>Entre para conferir o grupo.</value></data>
+  <data name="Log in to scan inventory." xml:space="preserve"><value>Entre para verificar o inventário.</value></data>
+  <data name="Log in to see Poetics." xml:space="preserve"><value>Entre para ver Poetics.</value></data>
+  <data name="Log in to use navigation." xml:space="preserve"><value>Entre para usar a navegação.</value></data>
+  <data name="Log in to view current run." xml:space="preserve"><value>Entre para ver a execução atual.</value></data>
+  <data name="Logged In:" xml:space="preserve"><value>Conectado:</value></data>
+  <data name="Lookup scope: {0}" xml:space="preserve"><value>Escopo da consulta: {0}</value></data>
+  <data name="Loot Goblin" xml:space="preserve"><value>Loot Goblin</value></data>
+  <data name="Loot Goblin Settings" xml:space="preserve"><value>Configurações Loot Goblin</value></data>
+  <data name="Loot Goblin: exit after delay" xml:space="preserve"><value>Loot Goblin: sair após atraso</value></data>
+  <data name="Loot Goblin: exit when all others have left" xml:space="preserve"><value>Loot Goblin: sair quando os outros saírem</value></data>
+  <data name="LootGoblin submits quantity-one orders and can prepare up to three maps per trip." xml:space="preserve"><value>LootGoblin envia pedidos de uma unidade e prepara até três mapas por viagem.</value></data>
+  <data name="Manual map refresh after saddlebag opened." xml:space="preserve"><value>Atualização manual de mapas após abrir os alforjes.</value></data>
+  <data name="Manual map refresh after saddlebag timeout." xml:space="preserve"><value>Atualização manual de mapas após limite dos alforjes.</value></data>
+  <data name="Manual map refresh completed after saddlebag retrieval was disabled." xml:space="preserve"><value>Atualização manual concluída após desativar retirada dos alforjes.</value></data>
+  <data name="Manual map refresh with saddlebag already open." xml:space="preserve"><value>Atualização manual com alforjes já abertos.</value></data>
+  <data name="Manual map refresh without saddlebag retrieval." xml:space="preserve"><value>Atualização manual sem retirada dos alforjes.</value></data>
+  <data name="Manual refresh is available in {0}." xml:space="preserve"><value>Atualização manual disponível em {0}.</value></data>
+  <data name="Map" xml:space="preserve"><value>Mapa</value></data>
+  <data name="Map Diagnostics" xml:space="preserve"><value>Diagnóstico de mapas</value></data>
+  <data name="Map Flag Reader" xml:space="preserve"><value>Map Flag Reader</value></data>
+  <data name="Map Queue" xml:space="preserve"><value>Fila de mapas</value></data>
+  <data name="Map travel uses Lifestream for teleports and vnavmesh for movement. Choose an unlocked mount below for manual mounting." xml:space="preserve"><value>A viagem usa Lifestream para teleportes e vnavmesh para movimento. Escolha uma montaria liberada abaixo para montar manualmente.</value></data>
+  <data name="Map:" xml:space="preserve"><value>Mapa:</value></data>
+  <data name="MapPartyAssist" xml:space="preserve"><value>MapPartyAssist</value></data>
+  <data name="Maps" xml:space="preserve"><value>Mapas</value></data>
+  <data name="Maps in inventory:" xml:space="preserve"><value>Mapas no inventário:</value></data>
+  <data name="Maps: {0}" xml:space="preserve"><value>Mapas: {0}</value></data>
+  <data name="Mark This Spot" xml:space="preserve"><value>Marcar este local</value></data>
+  <data name="Marketboard" xml:space="preserve"><value>Mercado</value></data>
+  <data name="Matching tabs are highlighted. Select a tab to view settings." xml:space="preserve"><value>Abas correspondentes são destacadas. Selecione uma para ver as configurações.</value></data>
+  <data name="max" xml:space="preserve"><value>máx</value></data>
+  <data name="Max gil" xml:space="preserve"><value>Gil máximo</value></data>
+  <data name="Max map allowance wait (min)" xml:space="preserve"><value>Espera máxima de permissão (min)</value></data>
+  <data name="Maximum gil for one map. Zero disables purchasing for this map." xml:space="preserve"><value>Gil máximo por mapa. Zero desativa a compra deste mapa.</value></data>
+  <data name="Maximum time to wait for the captured roster to rejoin. Allowed range is 30–3600 seconds; default is 300." xml:space="preserve"><value>Espera máxima para o grupo capturado voltar. Faixa 30–3600 segundos; padrão 300.</value></data>
+  <data name="Members: {0}" xml:space="preserve"><value>Membros: {0}</value></data>
+  <data name="MISSING" xml:space="preserve"><value>AUSENTE</value></data>
+  <data name="Missing: {0}" xml:space="preserve"><value>Faltando: {0}</value></data>
+  <data name="Mount Selection" xml:space="preserve"><value>Escolha da montaria</value></data>
+  <data name="Mount wait:" xml:space="preserve"><value>Espera por montaria:</value></data>
+  <data name="Mounted" xml:space="preserve"><value>Montado</value></data>
+  <data name="Movable Settings Window" xml:space="preserve"><value>Janela de configurações móvel</value></data>
+  <data name="Multiple map types detected - use checkboxes to select which to run" xml:space="preserve"><value>Vários tipos de mapa detectados - marque quais executar</value></data>
+  <data name="N/A" xml:space="preserve"><value>Não se aplica</value></data>
+  <data name="Nav Timeout (s)" xml:space="preserve"><value>Tempo limite de navegação (s)</value></data>
+  <data name="Nav:" xml:space="preserve"><value>Navegação:</value></data>
+  <data name="Navigation" xml:space="preserve"><value>Navegação</value></data>
+  <data name="needed for assisted retainer/saddlebag retrieval" xml:space="preserve"><value>necessário para retirada assistida de retainers/alforjes</value></data>
+  <data name="needed for retainer map lookup" xml:space="preserve"><value>necessário para buscar mapas de retainers</value></data>
+  <data name="Next manual refresh: {0}" xml:space="preserve"><value>Próxima atualização manual: {0}</value></data>
+  <data name="Next retry/reassert in {0}s." xml:space="preserve"><value>Nova tentativa/reaplicação em {0}s.</value></data>
+  <data name="No" xml:space="preserve"><value>Não</value></data>
+  <data name="No automatic exit" xml:space="preserve"><value>Sem saída automática</value></data>
+  <data name="No food" xml:space="preserve"><value>Sem comida</value></data>
+  <data name="No food selected." xml:space="preserve"><value>Nenhuma comida selecionada.</value></data>
+  <data name="No matching tabs." xml:space="preserve"><value>Nenhuma aba correspondente.</value></data>
+  <data name="No results." xml:space="preserve"><value>Nenhum resultado.</value></data>
+  <data name="No treasure maps found in {0}." xml:space="preserve"><value>Nenhum mapa do tesouro encontrado em {0}.</value></data>
+  <data name="Not found" xml:space="preserve"><value>Não encontrado</value></data>
+  <data name="not logged in" xml:space="preserve"><value>não conectado</value></data>
+  <data name="Not Mounted" xml:space="preserve"><value>Sem montaria</value></data>
+  <data name="Not Started: {0}" xml:space="preserve"><value>Não iniciado: {0}</value></data>
+  <data name="Not summoned" xml:space="preserve"><value>Não invocado</value></data>
+  <data name="NPC no inn" xml:space="preserve"><value>NPC sem estalagem</value></data>
+  <data name="NPC No Inn + No TP" xml:space="preserve"><value>NPC sem estalagem + sem teleporte</value></data>
+  <data name="NPC no-inn" xml:space="preserve"><value>NPC sem estalagem</value></data>
+  <data name="NPC no-inn/no-teleport" xml:space="preserve"><value>NPC sem estalagem/sem teleporte</value></data>
+  <data name="npc-no-inn" xml:space="preserve"><value>npc-no-inn</value></data>
+  <data name="npc-no-teleport-no-inn" xml:space="preserve"><value>npc-no-teleport-no-inn</value></data>
+  <data name="NQ" xml:space="preserve"><value>NQ</value></data>
+  <data name="Number of other party members required for every party wait. Local player is not counted." xml:space="preserve"><value>Número de outros membros necessário em cada espera. O jogador local não é contado.</value></data>
+  <data name="Observe only" xml:space="preserve"><value>Só observar</value></data>
+  <data name="Obstacle maps on" xml:space="preserve"><value>Mapas de obstáculos ativados</value></data>
+  <data name="off" xml:space="preserve"><value>desativado</value></data>
+  <data name="off       - Disable bot" xml:space="preserve"><value>off       - Desativar bot</value></data>
+  <data name="OK" xml:space="preserve"><value>OK</value></data>
+  <data name="on        - Enable bot" xml:space="preserve"><value>on        - Ativar bot</value></data>
+  <data name="Open /xlplugins" xml:space="preserve"><value>Abrir /xlplugins</value></data>
+  <data name="Open /xlsettings" xml:space="preserve"><value>Abrir /xlsettings</value></data>
+  <data name="OPEN ADS LOOT OPTIONS" xml:space="preserve"><value>ABRIR OPÇÕES DE SAQUE ADS</value></data>
+  <data name="Open Config Folder" xml:space="preserve"><value>Abrir pasta de configurações</value></data>
+  <data name="Open Data Folder" xml:space="preserve"><value>Abrir pasta de dados</value></data>
+  <data name="Open Log Folder" xml:space="preserve"><value>Abrir pasta de logs</value></data>
+  <data name="Open the folder containing AetherytePositions.json for sharing" xml:space="preserve"><value>Abrir pasta com AetherytePositions.json para compartilhar</value></data>
+  <data name="Opens decipher menu and reads all map entries to show correct indices" xml:space="preserve"><value>Abre o menu de decifrar e lê todos os mapas para mostrar índices corretos</value></data>
+  <data name="Optional (Combat/Rotation):" xml:space="preserve"><value>Opcional (Combate/Rotação):</value></data>
+  <data name="Optional (Map Gathering):" xml:space="preserve"><value>Opcional (Coleta de mapas):</value></data>
+  <data name="Optional (Retainer/Saddlebag Retrieval):" xml:space="preserve"><value>Opcional (Retirada de retainers/alforjes):</value></data>
+  <data name="Optional (Treasure Map Statistics):" xml:space="preserve"><value>Opcional (Estatísticas de tesouros):</value></data>
+  <data name="Out of" xml:space="preserve"><value>Sem</value></data>
+  <data name="Overrides the general Wait for Party setting for thief-map underwater travel, remount recovery, and descent/dig waits." xml:space="preserve"><value>Substitui a espera geral do grupo em mapas de ladrão subaquáticos, recuperação de montaria e espera para descer/cavar.</value></data>
+  <data name="Party" xml:space="preserve"><value>Grupo</value></data>
+  <data name="Party Status" xml:space="preserve"><value>Estado do grupo</value></data>
+  <data name="Party Wait Timeout (s)" xml:space="preserve"><value>Tempo limite do grupo (s)</value></data>
+  <data name="Party waits coordinate takeoff, remounting and arrival; thief-map underwater waits have their own switch. Player-count thresholds count other players, excluding you." xml:space="preserve"><value>Esperas coordenam decolagem, remontagem e chegada; mapas de ladrão subaquáticos têm opção própria. Limites contam outros jogadores, sem você.</value></data>
+  <data name="party-list position" xml:space="preserve"><value>posição na lista do grupo</value></data>
+  <data name="Party:" xml:space="preserve"><value>Grupo:</value></data>
+  <data name="Pause" xml:space="preserve"><value>Pausar</value></data>
+  <data name="Paused" xml:space="preserve"><value>Pausado</value></data>
+  <data name="Personal" xml:space="preserve"><value>Pessoal</value></data>
+  <data name="Pink" xml:space="preserve"><value>Rosa</value></data>
+  <data name="Players to wait for" xml:space="preserve"><value>Jogadores para esperar</value></data>
+  <data name="Plugin loaded and ready." xml:space="preserve"><value>Plugin carregado e pronto.</value></data>
+  <data name="Poetics:" xml:space="preserve"><value>Poetics:</value></data>
+  <data name="position unresolved" xml:space="preserve"><value>posição não resolvida</value></data>
+  <data name="Previously Engaged Targets" xml:space="preserve"><value>Alvos já enfrentados</value></data>
+  <data name="Price hints live only for this Loot Goblin session; they are not saved to disk." xml:space="preserve"><value>Sugestões de preço só nesta sessão Loot Goblin; não são salvas em disco.</value></data>
+  <data name="Purchase requirements" xml:space="preserve"><value>Requisitos de compra</value></data>
+  <data name="Queue one global refresh for all marketable known maps using the current travel scope." xml:space="preserve"><value>Enfileira uma atualização global dos mapas conhecidos negociáveis no escopo de viagem atual.</value></data>
+  <data name="Ready" xml:space="preserve"><value>Pronto</value></data>
+  <data name="Red X overlay: allowance cooldown" xml:space="preserve"><value>X vermelho: recarga da permissão</value></data>
+  <data name="Refresh Dependencies" xml:space="preserve"><value>Atualizar dependências</value></data>
+  <data name="Refresh Emptor Prices" xml:space="preserve"><value>Atualizar preços Emptor</value></data>
+  <data name="Refresh Maps" xml:space="preserve"><value>Atualizar mapas</value></data>
+  <data name="refreshed" xml:space="preserve"><value>atualizado</value></data>
+  <data name="refreshing..." xml:space="preserve"><value>atualizando...</value></data>
+  <data name="Repair mode" xml:space="preserve"><value>Modo de reparo</value></data>
+  <data name="Repair threshold %" xml:space="preserve"><value>Limite de reparo %</value></data>
+  <data name="Repair uses ADS; a 0% threshold disables it. Factory defaults: 75%, NPC no inn." xml:space="preserve"><value>Reparos usam ADS; limite 0% desativa. Padrões: 75%, NPC sem estalagem.</value></data>
+  <data name="Report Issue" xml:space="preserve"><value>Relatar problema</value></data>
+  <data name="Require All Mounted" xml:space="preserve"><value>Exigir todos montados</value></data>
+  <data name="Require vnavmesh" xml:space="preserve"><value>Exigir vnavmesh</value></data>
+  <data name="Required:" xml:space="preserve"><value>Obrigatório:</value></data>
+  <data name="Reset All Aetherytes" xml:space="preserve"><value>Redefinir todos os aetherytes</value></data>
+  <data name="Resolved: {0}" xml:space="preserve"><value>Resolvido: {0}</value></data>
+  <data name="Resume" xml:space="preserve"><value>Retomar</value></data>
+  <data name="Retainer" xml:space="preserve"><value>Retainer</value></data>
+  <data name="Retainer:" xml:space="preserve"><value>Retainer:</value></data>
+  <data name="Retainers need XA Database (XADB) and a reachable retainer bell. Saddlebag retrieval uses /saddlebag. Both retrieval options are on by factory default." xml:space="preserve"><value>Retainers requerem XA Database (XADB) e um sino acessível. Alforjes usam /saddlebag. Ambas as retiradas são ativadas por padrão.</value></data>
+  <data name="Return destination" xml:space="preserve"><value>Destino de retorno</value></data>
+  <data name="Return when done" xml:space="preserve"><value>Voltar ao terminar</value></data>
+  <data name="Return when done optionally uses Lifestream once enabled map sources are exhausted. Factory default: off." xml:space="preserve"><value>Voltar ao terminar pode usar Lifestream quando as fontes de mapas ativas se esgotam. Padrão desativado.</value></data>
+  <data name="Rotate" xml:space="preserve"><value>Alternar</value></data>
+  <data name="RSR hostile targeting" xml:space="preserve"><value>Seleção de inimigos RSR</value></data>
+  <data name="Run" xml:space="preserve"><value>Executar</value></data>
+  <data name="Run count" xml:space="preserve"><value>Execuções</value></data>
+  <data name="Runnable:" xml:space="preserve"><value>Executável:</value></data>
+  <data name="Runs /levelsync on after joining a FATE and pauses coffer/portal recovery for joined-FATE handling. Turn off to ignore joined FATEs during map coffer flow." xml:space="preserve"><value>Executa /levelsync on após entrar em FATE e pausa recuperação de baú/portal para tratá-lo. Desative para ignorar FATEs durante o fluxo de mapas.</value></data>
+  <data name="Runs the selected Lifestream return only after no enabled inventory, saddlebag, or retainer maps remain." xml:space="preserve"><value>Executa o retorno Lifestream selecionado só quando não restam mapas ativos no inventário, alforjes ou retainers.</value></data>
+  <data name="Runs this map type until no available maps remain." xml:space="preserve"><value>Executa este tipo até acabarem os mapas disponíveis.</value></data>
+  <data name="Runs:" xml:space="preserve"><value>Execuções:</value></data>
+  <data name="Saddlebag" xml:space="preserve"><value>Alforje</value></data>
+  <data name="Saddlebag includes regular ({0}) + premium ({1}) saddlebag counts." xml:space="preserve"><value>Alforjes incluem normal ({0}) + premium ({1}).</value></data>
+  <data name="same territory" xml:space="preserve"><value>mesmo território</value></data>
+  <data name="Search" xml:space="preserve"><value>Buscar</value></data>
+  <data name="Search for Food if Depleted" xml:space="preserve"><value>Buscar comida quando acabar</value></data>
+  <data name="Search settings" xml:space="preserve"><value>Buscar configurações</value></data>
+  <data name="seconds" xml:space="preserve"><value>segundos</value></data>
+  <data name="Seedling: toggle missing-map gathering" xml:space="preserve"><value>Broto: alternar coleta de mapas faltantes</value></data>
+  <data name="Select {0}..." xml:space="preserve"><value>Selecionar {0}...</value></data>
+  <data name="Selected: {0} [{1}] ({2})" xml:space="preserve"><value>Selecionado: {0} [{1}] ({2})</value></data>
+  <data name="SelectIconString" xml:space="preserve"><value>SelectIconString</value></data>
+  <data name="Self" xml:space="preserve"><value>Próprio</value></data>
+  <data name="Send /ads leave once after the configured delay." xml:space="preserve"><value>Envia /ads leave uma vez após o atraso definido.</value></data>
+  <data name="Set a positive maximum gil price before enabling this cart." xml:space="preserve"><value>Defina um máximo positivo em gil antes de ativar este carrinho.</value></data>
+  <data name="Settings" xml:space="preserve"><value>Configurações</value></data>
+  <data name="Show all map types" xml:space="preserve"><value>Mostrar todos os tipos de mapa</value></data>
+  <data name="Show Main Window on Login" xml:space="preserve"><value>Mostrar janela principal ao entrar</value></data>
+  <data name="Shows Location Data diagnostics in the main window and enables map/aetheryte collection tools." xml:space="preserve"><value>Mostra diagnóstico de localizações na janela principal e ativa ferramentas de coleta de mapas/aetherytes.</value></data>
+  <data name="Shows runnable map rows even when none are currently in inventory or loaded saddlebags." xml:space="preserve"><value>Mostra mapas executáveis mesmo sem unidades no inventário ou alforjes carregados.</value></data>
+  <data name="Skip" xml:space="preserve"><value>Pular</value></data>
+  <data name="Skips Tamamizu when choosing the map teleport destination." xml:space="preserve"><value>Ignora Tamamizu ao escolher o destino do mapa.</value></data>
+  <data name="Solo" xml:space="preserve"><value>Solo</value></data>
+  <data name="Solo Deep Dungeon Smart" xml:space="preserve"><value>Deep Dungeon solo inteligente</value></data>
+  <data name="Solve EV" xml:space="preserve"><value>Resolver EV</value></data>
+  <data name="Solve EV clicks only after it reads a reliable card/stage; otherwise it holds and retries. Skip keeps current skip/close behavior. Observe logs readable state only and never clicks." xml:space="preserve"><value>Resolver EV só clica após ler carta/etapa confiável; senão espera e tenta de novo. Pular mantém pular/fechar. Observar só registra o estado legível, sem cliques.</value></data>
+  <data name="Specify number of party to wait for" xml:space="preserve"><value>Definir quantidade do grupo a esperar</value></data>
+  <data name="Start" xml:space="preserve"><value>Iniciar</value></data>
+  <data name="Start on the last world that successfully sold a map, then try each remaining unvisited enabled world if it has no acceptable listing. This is the default." xml:space="preserve"><value>Começa no último mundo que vendeu um mapa; se não houver oferta aceitável, tenta os demais mundos ativos não visitados. Este é o padrão.</value></data>
+  <data name="State:" xml:space="preserve"><value>Estado:</value></data>
+  <data name="Status" xml:space="preserve"><value>Estado</value></data>
+  <data name="status    - Print current status" xml:space="preserve"><value>status    - Mostrar estado atual</value></data>
+  <data name="Status:" xml:space="preserve"><value>Estado:</value></data>
+  <data name="Sticky success" xml:space="preserve"><value>Manter sucesso</value></data>
+  <data name="Stop" xml:space="preserve"><value>Parar</value></data>
+  <data name="Stop Cycling" xml:space="preserve"><value>Parar ciclo</value></data>
+  <data name="Stop dungeon progression after completion and wait for a manual duty exit." xml:space="preserve"><value>Para a progressão da masmorra após concluir e espera saída manual.</value></data>
+  <data name="Summon Chocobo" xml:space="preserve"><value>Invocar Chocobo</value></data>
+  <data name="Support development on Ko-fi" xml:space="preserve"><value>Apoiar desenvolvimento no Ko-fi</value></data>
+  <data name="Switch this map type back to unlimited runs." xml:space="preserve"><value>Volta este tipo de mapa para execuções ilimitadas.</value></data>
+  <data name="Take Control" xml:space="preserve"><value>Assumir controle</value></data>
+  <data name="Teal" xml:space="preserve"><value>Verde-azulado</value></data>
+  <data name="territory unresolved" xml:space="preserve"><value>território não resolvido</value></data>
+  <data name="Test ADS Repair Mode" xml:space="preserve"><value>Testar modo de reparo ADS</value></data>
+  <data name="TextAdvance" xml:space="preserve"><value>TextAdvance</value></data>
+  <data name="The optional chocobo companion needs Gysahl Greens. Factory defaults: party and all-mounted waits on; companion summon off." xml:space="preserve"><value>O chocobo opcional requer Gysahl Greens. Padrões: esperar grupo e todos montados ativados; invocação desativada.</value></data>
+  <data name="Tier {0}" xml:space="preserve"><value>Grau {0}</value></data>
+  <data name="Time to wait before teleporting (s)" xml:space="preserve"><value>Espera antes do teleporte (s)</value></data>
+  <data name="Travel" xml:space="preserve"><value>Viagem</value></data>
+  <data name="TreasureSpot: {0}" xml:space="preserve"><value>TreasureSpot: {0}</value></data>
+  <data name="Try the current world first, then each remaining public world on the current data center once per map search." xml:space="preserve"><value>Tenta o mundo atual primeiro, depois cada mundo público restante do mesmo data center uma vez por busca.</value></data>
+  <data name="Type at least 2 characters to search." xml:space="preserve"><value>Digite pelo menos 2 caracteres para buscar.</value></data>
+  <data name="UI fonts failed to load. See the plugin log." xml:space="preserve"><value>Falha ao carregar fontes. Veja o log do plugin.</value></data>
+  <data name="unavailable" xml:space="preserve"><value>indisponível</value></data>
+  <data name="Unknown ({0})" xml:space="preserve"><value>Desconhecido ({0})</value></data>
+  <data name="Unknown Map (ID: {0})" xml:space="preserve"><value>Mapa desconhecido (ID: {0})</value></data>
+  <data name="unloaded" xml:space="preserve"><value>não carregado</value></data>
+  <data name="Use" xml:space="preserve"><value>Usar</value></data>
+  <data name="Use a count of other party members instead of waiting for the entire party roster. Applies to takeoff, remount, landing, underwater, and next-map waits." xml:space="preserve"><value>Usa quantidade de outros membros em vez de esperar todo o grupo. Vale para decolagem, remontagem, pouso, água e próximo mapa.</value></data>
+  <data name="Use ADS for dungeon phase" xml:space="preserve"><value>Usar ADS na fase de masmorra</value></data>
+  <data name="Use current-character command trigger override" xml:space="preserve"><value>Usar gatilhos específicos do personagem atual</value></data>
+  <data name="Use HQ food" xml:space="preserve"><value>Usar comida HQ</value></data>
+  <data name="Use Loot Goblin&apos;s local Leave Duty flow after the configured delay." xml:space="preserve"><value>Usa a saída local de Loot Goblin após o atraso definido.</value></data>
+  <data name="Use Loot Goblin&apos;s local Leave Duty flow once no other loaded party members remain in the duty territory." xml:space="preserve"><value>Usa a saída local de Loot Goblin quando nenhum outro membro carregado fica no território da instância.</value></data>
+  <data name="Use Map Queue in the main window to select maps and run counts. Retrieval below supplies enabled maps when inventory runs out." xml:space="preserve"><value>Use a fila da janela principal para escolher mapas e execuções. A retirada abaixo fornece mapas ativos quando o inventário acaba.</value></data>
+  <data name="Use these controls for diagnostics and troubleshooting. The snapshot button needs dedicated logging; Test ADS Repair Mode starts a repair using the mode selected in Run." xml:space="preserve"><value>Use estes controles para diagnóstico. Captura requer log dedicado; Testar modo ADS inicia reparo no modo selecionado em Executar.</value></data>
+  <data name="User: {0}" xml:space="preserve"><value>Usuário: {0}</value></data>
+  <data name="vnavmesh" xml:space="preserve"><value>vnavmesh</value></data>
+  <data name="vnavmesh missing" xml:space="preserve"><value>vnavmesh ausente</value></data>
+  <data name="vnavmesh required for navigation." xml:space="preserve"><value>Navegação requer vnavmesh.</value></data>
+  <data name="Wait at the destination until party members are within 10 yalms before dismounting." xml:space="preserve"><value>Espere no destino até o grupo estar a 10 yalms antes de desmontar.</value></data>
+  <data name="Wait for Party" xml:space="preserve"><value>Esperar grupo</value></data>
+  <data name="Wait for party before dismounting" xml:space="preserve"><value>Esperar grupo antes de desmontar</value></data>
+  <data name="Wait for Party for thief maps / underwater" xml:space="preserve"><value>Esperar grupo em mapas de ladrão / água</value></data>
+  <data name="Well Fed" xml:space="preserve"><value>Bem alimentado</value></data>
+  <data name="When count threshold is off, takeoff and remount waits require every other party member mounted. Turn off to continue when any other same-zone party member is mounted." xml:space="preserve"><value>Sem limite por quantidade, decolagem e remontagem esperam todos os outros montados. Desative para continuar com qualquer outro membro montado na mesma área.</value></data>
+  <data name="When enabled, LootGoblin asks ADS to disable BMR hunt modules." xml:space="preserve"><value>Quando ativado, LootGoblin pede ao ADS para desativar módulos de caça BMR.</value></data>
+  <data name="When enabled, LootGoblin asks ADS to set BMR MaxLoadDistance to {0:0}." xml:space="preserve"><value>Quando ativado, LootGoblin pede ao ADS para definir BMR MaxLoadDistance como {0:0}.</value></data>
+  <data name="When enabled, the bot waits for party members before takeoff, remount recovery, and map travel handoffs." xml:space="preserve"><value>Quando ativado, o bot espera o grupo antes de decolar, remontar e transferir a viagem do mapa.</value></data>
+  <data name="When missing-map gathering is the only remaining action, wait this long for a map allowance before finishing the run." xml:space="preserve"><value>Quando só resta coletar mapas faltantes, espere esta duração pela permissão antes de finalizar.</value></data>
+  <data name="When no enabled map is in inventory, LootGoblin can open /saddlebag and move one enabled map into inventory. Disable to ignore saddlebags entirely." xml:space="preserve"><value>Sem mapas ativos no inventário, LootGoblin pode abrir /saddlebag e mover um mapa ativo. Desative para ignorar alforjes.</value></data>
+  <data name="When no enabled map is in inventory, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell." xml:space="preserve"><value>Sem mapa ativo no inventário, LootGoblin consulta XA Database e tenta retirar um mapa do retainer no sino.</value></data>
+  <data name="While Loot Goblin is enabled, runs /ays discard every 30s during safe mounted windows. Defers in combat, loading or cutscenes. Requires AutoRetainer and a configured discard list." xml:space="preserve"><value>Com Loot Goblin ativo, executa /ays discard a cada 30s em montaria segura. Adia em combate, carregamento ou cenas. Requer AutoRetainer e lista de descarte.</value></data>
+  <data name="WIP: {0}" xml:space="preserve"><value>Em desenvolvimento: {0}</value></data>
+  <data name="World: {0}" xml:space="preserve"><value>Mundo: {0}</value></data>
+  <data name="Write dedicated LootGoblin diagnostic log" xml:space="preserve"><value>Gravar log de diagnóstico LootGoblin</value></data>
+  <data name="Write Snapshot Now" xml:space="preserve"><value>Gravar captura agora</value></data>
+  <data name="Writes high-signal events and state snapshots. Rotates at 20 MB and retains the newest 10 files." xml:space="preserve"><value>Grava eventos relevantes e capturas de estado. Rotaciona em 20 MB e mantém os 10 arquivos mais recentes.</value></data>
+  <data name="xadb" xml:space="preserve"><value>xadb</value></data>
+  <data name="xaslave" xml:space="preserve"><value>xaslave</value></data>
+  <data name="Yes" xml:space="preserve"><value>Sim</value></data>
+  <data name="Zone:" xml:space="preserve"><value>Área:</value></data>
+  <data name="Repairing" xml:space="preserve"><value>Reparando</value></data>
+  <data name="StartPreflight" xml:space="preserve"><value>Verificação inicial</value></data>
+  <data name="SelectingMap" xml:space="preserve"><value>Selecionando mapa</value></data>
+  <data name="OpeningMap" xml:space="preserve"><value>Abrindo mapa</value></data>
+  <data name="DetectingLocation" xml:space="preserve"><value>Detectando localização</value></data>
+  <data name="Teleporting" xml:space="preserve"><value>Teleportando</value></data>
+  <data name="Mounting" xml:space="preserve"><value>Montando</value></data>
+  <data name="WaitingForParty" xml:space="preserve"><value>Esperando grupo</value></data>
+  <data name="Flying" xml:space="preserve"><value>Voando</value></data>
+  <data name="OpeningChest" xml:space="preserve"><value>Abrindo baú</value></data>
+  <data name="InCombat" xml:space="preserve"><value>Em combate</value></data>
+  <data name="InDungeon" xml:space="preserve"><value>Na masmorra</value></data>
+  <data name="DungeonCombat" xml:space="preserve"><value>Combate na masmorra</value></data>
+  <data name="DungeonLooting" xml:space="preserve"><value>Saque na masmorra</value></data>
+  <data name="DungeonProgressing" xml:space="preserve"><value>Avançando na masmorra</value></data>
+  <data name="CyclingAetherytes" xml:space="preserve"><value>Percorrendo aetherytes</value></data>
+  <data name="CyclingMapLocations" xml:space="preserve"><value>Percorrendo locais de mapas</value></data>
+  <data name="AlexandriteFarming" xml:space="preserve"><value>Coletando Alexandrite</value></data>
+  <data name="GatheringMap" xml:space="preserve"><value>Coletando mapa</value></data>
+  <data name="WaitingForTeleport" xml:space="preserve"><value>Esperando teleporte</value></data>
+  <data name="WaitingForNavmesh" xml:space="preserve"><value>Esperando navmesh</value></data>
+  <data name="Arrived" xml:space="preserve"><value>Chegou</value></data>
+  <data name="Completed" xml:space="preserve"><value>Concluído</value></data>
+  <data name="{0} members" xml:space="preserve"><value>{0} membros</value></data>
+  <data name="on" xml:space="preserve"><value>ativado</value></data>
+  <data name="actor position" xml:space="preserve"><value>posição do ator</value></data>
+  <data name="not reported" xml:space="preserve"><value>não informado</value></data>
+  <data name="current world" xml:space="preserve"><value>mundo atual</value></data>
+  <data name="current data center" xml:space="preserve"><value>data center atual</value></data>
+  <data name="current region" xml:space="preserve"><value>região atual</value></data>
+  <data name="reachable regions + Materia" xml:space="preserve"><value>regiões acessíveis + Materia</value></data>
+  <data name="No food item resolved" xml:space="preserve"><value>Nenhum alimento resolvido</value></data>
+  <data name="Paused: {0}" xml:space="preserve"><value>Pausado: {0}</value></data>
+  <data name="Well Fed: {0:F0}s ({1} [{2}])" xml:space="preserve"><value>Bem alimentado: {0:F0}s ({1} [{2}])</value></data>
+  <data name="Need food (cooldown {0:F1}s)" xml:space="preserve"><value>Precisa de comida (recarga {0:F1}s)</value></data>
+  <data name="Ate {0} [{1}] ({2} left)" xml:space="preserve"><value>Comeu {0} [{1}] ({2} restantes)</value></data>
+  <data name="Failed to eat {0} [{1}]" xml:space="preserve"><value>Falha ao comer {0} [{1}]</value></data>
+  <data name="Out of {0} [{1}]" xml:space="preserve"><value>Sem {0} [{1}]</value></data>
+  <data name="Switched to {0} [{1}]" xml:space="preserve"><value>Mudou para {0} [{1}]</value></data>
+  <data name="No food in inventory" xml:space="preserve"><value>Sem comida no inventário</value></data>
+  <data name="[+{0} yours]" xml:space="preserve"><value>[+{0} seus]</value></data>
+  <data name="{0:F0}y XZ" xml:space="preserve"><value>{0:F0}y XZ</value></data>
+  <data name="ADS reflection applied; no reassert pending." xml:space="preserve"><value>Reflexão ADS aplicada; nenhuma reaplicação pendente.</value></data>
+  <data name="ADS reflection applied; waiting for desired-state change or ADS reload." xml:space="preserve"><value>Reflexão ADS aplicada; esperando mudança desejada ou recarga ADS.</value></data>
+  <data name="ADS reflection hacks reset." xml:space="preserve"><value>Ajustes de reflexão ADS redefinidos.</value></data>
+  <data name="No ADS reflection hacks enabled." xml:space="preserve"><value>Nenhum ajuste de reflexão ADS ativado.</value></data>
+  <data name="vnavmesh not available." xml:space="preserve"><value>vnavmesh indisponível.</value></data>
+  <data name="Not logged in." xml:space="preserve"><value>Não conectado.</value></data>
+  <data name="Cannot teleport while in combat." xml:space="preserve"><value>Não pode teleportar em combate.</value></data>
+  <data name="Already between areas." xml:space="preserve"><value>Já entre áreas.</value></data>
+  <data name="Lifestream not available." xml:space="preserve"><value>Lifestream indisponível.</value></data>
+  <data name="Lifestream rejected {0}: {1}" xml:space="preserve"><value>Lifestream rejeitou {0}: {1}</value></data>
+  <data name="Navigation stopped." xml:space="preserve"><value>Navegação parada.</value></data>
+  <data name="Mounting {0}..." xml:space="preserve"><value>Montando {0}...</value></data>
+  <data name="Flying to {0}..." xml:space="preserve"><value>Voando para {0}...</value></data>
+  <data name="Moving to {0}..." xml:space="preserve"><value>Movendo para {0}...</value></data>
+  <data name="Flying to map flag..." xml:space="preserve"><value>Voando para a marca do mapa...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before flying to {0}..." xml:space="preserve"><value>Esperando vnavmesh concluir a malha antes de voar para {0}...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before moving to {0}..." xml:space="preserve"><value>Esperando vnavmesh concluir a malha antes de mover para {0}...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before flying to map flag..." xml:space="preserve"><value>Esperando vnavmesh concluir a malha antes de voar à marca do mapa...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh..." xml:space="preserve"><value>Esperando vnavmesh concluir a malha...</value></data>
+  <data name="GatherBuddy Reborn not loaded." xml:space="preserve"><value>GatherBuddy Reborn não carregado.</value></data>
+  <data name="GatherBuddy Reborn IPC version {0} is unsupported; version 2 is required." xml:space="preserve"><value>GatherBuddy Reborn IPC v{0} sem suporte; requer v2.</value></data>
+  <data name="Available." xml:space="preserve"><value>Disponível.</value></data>
+  <data name="GatherBuddy Reborn IPC unavailable: {0}" xml:space="preserve"><value>GatherBuddy Reborn IPC indisponível: {0}</value></data>
+  <data name="Not checked." xml:space="preserve"><value>Não verificado.</value></data>
+  <data name="ADS reflection pending." xml:space="preserve"><value>Reflexão ADS pendente.</value></data>
+  <data name="Lifestream IPC is available." xml:space="preserve"><value>Lifestream IPC disponível.</value></data>
+  <data name="Lifestream is not installed, loaded, or exposing supported IPC." xml:space="preserve"><value>Lifestream não instalado, carregado ou sem IPC compatível.</value></data>
+  <data name="Lifestream IPC has not been checked." xml:space="preserve"><value>Lifestream IPC não verificado.</value></data>
+  <data name="Emptor IPC has not been checked." xml:space="preserve"><value>Emptor IPC não verificado.</value></data>
+  <data name="Using built-in city choices until Emptor v4 city IPC is available." xml:space="preserve"><value>Usando cidades internas até Emptor v4 city IPC estar disponível.</value></data>
+  <data name="Price hints have not been requested." xml:space="preserve"><value>Sugestões de preço não solicitadas.</value></data>
+  <data name="Paused: logged out" xml:space="preserve"><value>Pausado: desconectado</value></data>
+  <data name="Paused: player unavailable" xml:space="preserve"><value>Pausado: jogador indisponível</value></data>
+  <data name="Paused: dead" xml:space="preserve"><value>Pausado: morto</value></data>
+  <data name="Paused: casting" xml:space="preserve"><value>Pausado: conjurando</value></data>
+  <data name="Paused: in combat" xml:space="preserve"><value>Pausado: em combate</value></data>
+  <data name="Paused: between areas" xml:space="preserve"><value>Pausado: entre áreas</value></data>
+  <data name="Paused: busy or in cutscene" xml:space="preserve"><value>Pausado: ocupado ou em cena</value></data>
+  <data name="Idle." xml:space="preserve"><value>Ocioso.</value></data>
+  <data name="XA Database unavailable." xml:space="preserve"><value>XA Database indisponível.</value></data>
+  <data name="Moving to retainer bell for {0}..." xml:space="preserve"><value>Movendo ao sino do retainer para {0}...</value></data>
+  <data name="No nearby retainer bell found. Traveling to Revenant&apos;s Toll..." xml:space="preserve"><value>Nenhum sino de retainer próximo. Viajando para Revenant&apos;s Toll...</value></data>
+  <data name="Timed out closing retainer UI. Still visible: {0}." xml:space="preserve"><value>Limite ao fechar interface do retainer. Ainda visível: {0}.</value></data>
+  <data name="Timed out during {0}." xml:space="preserve"><value>Tempo limite durante {0}.</value></data>
+  <data name="Timed out traveling to Revenant&apos;s Toll retainer bell." xml:space="preserve"><value>Limite ao viajar ao sino de Revenant&apos;s Toll.</value></data>
+  <data name="Traveling to retainer bell..." xml:space="preserve"><value>Viajando ao sino do retainer...</value></data>
+  <data name="Waiting for Revenant&apos;s Toll arrival..." xml:space="preserve"><value>Esperando chegada a Revenant&apos;s Toll...</value></data>
+  <data name="Waiting for player before moving to Revenant&apos;s Toll bell approach..." xml:space="preserve"><value>Esperando jogador antes de aproximar do sino de Revenant&apos;s Toll...</value></data>
+  <data name="Moving to Revenant&apos;s Toll retainer bell approach..." xml:space="preserve"><value>Aproximando do sino de Revenant&apos;s Toll...</value></data>
+  <data name="Arrived. Waiting for retainer bell object..." xml:space="preserve"><value>Chegou. Esperando objeto do sino...</value></data>
+  <data name="Moving to Revenant&apos;s Toll retainer bell..." xml:space="preserve"><value>Movendo ao sino de Revenant&apos;s Toll...</value></data>
+  <data name="Waiting for player before moving to retainer bell..." xml:space="preserve"><value>Esperando jogador antes de mover ao sino...</value></data>
+  <data name="Traveling to Revenant&apos;s Toll retainer bell..." xml:space="preserve"><value>Viajando ao sino de Revenant&apos;s Toll...</value></data>
+  <data name="Moving to Revenant&apos;s Toll bell approach... ({0:F1}y)" xml:space="preserve"><value>Aproximando do sino de Revenant&apos;s Toll... ({0:F1}y)</value></data>
+  <data name="At bell approach. Waiting for Summoning Bell object..." xml:space="preserve"><value>Na aproximação. Esperando objeto Summoning Bell...</value></data>
+  <data name="Moving to retainer bell... ({0:F1}y)" xml:space="preserve"><value>Movendo ao sino do retainer... ({0:F1}y)</value></data>
+  <data name="Opening retainer bell..." xml:space="preserve"><value>Abrindo sino do retainer...</value></data>
+  <data name="Selecting retainer..." xml:space="preserve"><value>Selecionando retainer...</value></data>
+  <data name="Retainer bell disappeared before interaction." xml:space="preserve"><value>Sino desapareceu antes da interação.</value></data>
+  <data name="Waiting for retainer list..." xml:space="preserve"><value>Esperando lista de retainers...</value></data>
+  <data name="Waiting for retainer menu..." xml:space="preserve"><value>Esperando menu do retainer...</value></data>
+  <data name="Retainer list is visible but target retainer &apos;{0}&apos; was not found by confirmed name. Visible retainers/text: {1}." xml:space="preserve"><value>Lista visível, mas retainer &apos;{0}&apos; não encontrado pelo nome confirmado. Retainers/texto visível: {1}.</value></data>
+  <data name="Opening retainer inventory..." xml:space="preserve"><value>Abrindo inventário do retainer...</value></data>
+  <data name="Waiting to select retainer {0}..." xml:space="preserve"><value>Esperando selecionar retainer {0}...</value></data>
+  <data name="Retrieving {0}..." xml:space="preserve"><value>Retirando {0}...</value></data>
+  <data name="Waiting for retainer inventory menu..." xml:space="preserve"><value>Esperando menu do inventário do retainer...</value></data>
+  <data name="No retainer map target." xml:space="preserve"><value>Sem alvo de mapa do retainer.</value></data>
+  <data name="Retrieved {0}. Closing retainer..." xml:space="preserve"><value>Retirou {0}. Fechando retainer...</value></data>
+  <data name="Waiting for active retainer inventory..." xml:space="preserve"><value>Esperando inventário ativo do retainer...</value></data>
+  <data name="Could not plan retainer map retrieval from {0}: {1}" xml:space="preserve"><value>Não foi possível planejar retirada de mapa de {0}: {1}</value></data>
+  <data name="Could not move retainer map from {0}: {1}" xml:space="preserve"><value>Não foi possível mover mapa do retainer {0}: {1}</value></data>
+  <data name="Waiting for {0} retrieval..." xml:space="preserve"><value>Esperando retirada de {0}...</value></data>
+  <data name="Retainer map retrieved." xml:space="preserve"><value>Mapa do retainer retirado.</value></data>
+  <data name="Closing retainer UI... ({0})" xml:space="preserve"><value>Fechando interface do retainer... ({0})</value></data>
+  <data name="Retainer map retrieval disabled." xml:space="preserve"><value>Retirada de mapas do retainer desativada.</value></data>
+  <data name="No enabled maps configured for retainer lookup." xml:space="preserve"><value>Nenhum mapa ativo configurado para busca em retainers.</value></data>
+  <data name="No enabled current-character retainer map found in XA Database." xml:space="preserve"><value>Nenhum mapa ativo de retainer do personagem atual no XA Database.</value></data>
+  <data name="XA Database scoped current-character item search failed." xml:space="preserve"><value>Busca de itens do personagem atual no XA Database falhou.</value></data>
+  <data name="No enabled maps found on current-character retainers in XA Database." xml:space="preserve"><value>Nenhum mapa ativo nos retainers do personagem atual no XA Database.</value></data>
+  <data name="XA Database not ready." xml:space="preserve"><value>XA Database não pronto.</value></data>
+  <data name="Closing retainer UI..." xml:space="preserve"><value>Fechando interface do retainer...</value></data>
+  <data name="Retainer UI closed; map open allowed." xml:space="preserve"><value>Interface fechada; abertura do mapa permitida.</value></data>
+  <data name="Item sheet unavailable." xml:space="preserve"><value>Tabela de itens indisponível.</value></data>
+  <data name="XA Database readiness IPC failed: {0}" xml:space="preserve"><value>XA Database IPC de prontidão falhou: {0}</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson IPC returned empty response." xml:space="preserve"><value>XA Database SearchCurrentCharacterItemsJson IPC retornou resposta vazia.</value></data>
+  <data name="XA Database scoped current-character item search returned ready=false." xml:space="preserve"><value>Busca de itens do personagem atual no XA Database retornou ready=false.</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson IPC failed: {0}" xml:space="preserve"><value>XA Database SearchCurrentCharacterItemsJson IPC falhou: {0}</value></data>
+  <data name="XA Database Refresh IPC failed: {0}" xml:space="preserve"><value>XA Database Refresh IPC falhou: {0}</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson returned invalid JSON: {0}" xml:space="preserve"><value>XA Database SearchCurrentCharacterItemsJson retornou JSON inválido: {0}</value></data>
+  <data name="Emptor API v{0} is available." xml:space="preserve"><value>Emptor API v{0} disponível.</value></data>
+  <data name="Emptor API v{0} is incompatible; v1 or newer is required." xml:space="preserve"><value>Emptor API v{0} incompatível; requer v1 ou superior.</value></data>
+  <data name="Emptor is not installed, loaded, or exposing supported v1 IPC." xml:space="preserve"><value>Emptor não instalado, carregado ou sem IPC v1 compatível.</value></data>
+  <data name="Manual Emptor price refresh queued." xml:space="preserve"><value>Atualização manual de preços Emptor enfileirada.</value></data>
+  <data name="Manual price refresh is deferred until login." xml:space="preserve"><value>Atualização manual adiada até entrar.</value></data>
+  <data name="Price hints unavailable: Emptor v5+ is required; detected v{0}." xml:space="preserve"><value>Sem sugestões: requer Emptor v5+; detectado v{0}.</value></data>
+  <data name="Price hints unavailable: Emptor v5 price IPC is not loaded." xml:space="preserve"><value>Sem sugestões: Emptor v5 price IPC não carregado.</value></data>
+  <data name="Initial Emptor price lookup is deferred until login." xml:space="preserve"><value>Consulta inicial de preços Emptor adiada até entrar.</value></data>
+  <data name="Loaded {0} city choices from Emptor v{1}." xml:space="preserve"><value>Carregou {0} cidades de Emptor v{1}.</value></data>
+  <data name="Price hints unavailable: no marketable known maps were found." xml:space="preserve"><value>Sem sugestões: nenhum mapa conhecido negociável encontrado.</value></data>
+  <data name="Requesting {0} Emptor price hint(s) for {1}..." xml:space="preserve"><value>Solicitando {0} sugestão(ões) Emptor para {1}...</value></data>
+  <data name="Price hints unavailable: Emptor lookup failed ({0})." xml:space="preserve"><value>Sem sugestões: consulta Emptor falhou ({0}).</value></data>
+  <data name="Emptor price follow-up failed for {0} map(s): {1}" xml:space="preserve"><value>Consulta complementar Emptor falhou para {0} mapa(s): {1}</value></data>
+  <data name="Price hints unavailable: {0}" xml:space="preserve"><value>Sugestões indisponíveis: {0}</value></data>
+  <data name="Emptor price lookup pending for {0} map(s); one follow-up is scheduled." xml:space="preserve"><value>Consulta Emptor pendente para {0} mapa(s); uma consulta complementar agendada.</value></data>
+  <data name="Price hints unavailable: malformed Emptor response ({0})." xml:space="preserve"><value>Sem sugestões: resposta Emptor malformada ({0}).</value></data>
+  <data name="Loaded {0} Emptor price hint(s) for {1}." xml:space="preserve"><value>Carregou {0} sugestão(ões) Emptor para {1}.</value></data>
+  <data name="Loaded {0} Emptor price hint(s) for {1}; {2} unavailable." xml:space="preserve"><value>Carregou {0} sugestão(ões) Emptor para {1}; {2} indisponíveis.</value></data>
+  <data name="Using built-in city choices because Emptor v4 city IPC is unavailable." xml:space="preserve"><value>Usando cidades internas porque Emptor v4 city IPC está indisponível.</value></data>
+  <data name="Using built-in city choices because Emptor city IPC is unavailable." xml:space="preserve"><value>Usando cidades internas porque Emptor city IPC está indisponível.</value></data>
+  <data name="Using built-in city choices because Emptor.GetCities returned invalid data: {0}" xml:space="preserve"><value>Usando cidades internas porque Emptor.GetCities retornou dados inválidos: {0}</value></data>
+  <data name="Emptor price lookup failed: {0}" xml:space="preserve"><value>Consulta de preços Emptor falhou: {0}</value></data>
+  <data name="Emptor price follow-up failed: {0}" xml:space="preserve"><value>Consulta complementar Emptor falhou: {0}</value></data>
+  <data name="Malformed Emptor price response: {0}" xml:space="preserve"><value>Resposta de preços Emptor malformada: {0}</value></data>
+  <data name="Emptor price lookup is pending." xml:space="preserve"><value>Consulta de preços Emptor pendente.</value></data>
+  <data name="Emptor price lookup was still pending after the required follow-up." xml:space="preserve"><value>Consulta Emptor ainda pendente após o complemento necessário.</value></data>
+  <data name="Emptor returned no price data for this item." xml:space="preserve"><value>Emptor não retornou preços deste item.</value></data>
+  <data name="Emptor returned no price levels for this item." xml:space="preserve"><value>Emptor não retornou níveis de preço deste item.</value></data>
+  <data name="Emptor returned no {0} price level." xml:space="preserve"><value>Emptor não retornou nível de preço {0}.</value></data>
+  <data name="No NQ listings were returned for this scope." xml:space="preserve"><value>Nenhuma oferta NQ retornada neste escopo.</value></data>
+  <data name="No positive NQ minimum listing was returned for this scope." xml:space="preserve"><value>Nenhum menor preço NQ positivo neste escopo.</value></data>
+  <data name="The NQ minimum listing exceeds Loot Goblin&apos;s maximum ceiling." xml:space="preserve"><value>Menor preço NQ excede o teto do Loot Goblin.</value></data>
+  <data name="Lost connection - not logged in." xml:space="preserve"><value>Conexão perdida - desconectado.</value></data>
+  <data name="Timeout in state {0} after {1}s." xml:space="preserve"><value>Limite no estado {0} após {1}s.</value></data>
+  <data name="Holding teleport while {0} ({1:F0}s)..." xml:space="preserve"><value>Segurando teleporte enquanto {0} ({1:F0}s)...</value></data>
+  <data name="Outdoor map flow paused while {0} ({1:F0}s)..." xml:space="preserve"><value>Fluxo externo pausado enquanto {0} ({1:F0}s)...</value></data>
+  <data name="Joined FATE {0} active - landing/dismounting before level sync..." xml:space="preserve"><value>FATE {0} ativo - pousando/desmontando antes de sincronizar nível...</value></data>
+  <data name="Teleport blocked by combat - retrying..." xml:space="preserve"><value>Combate bloqueia teleporte - tentando novamente...</value></data>
+  <data name="Restarting after accepted party teleport offer..." xml:space="preserve"><value>Reiniciando após aceitar teleporte do grupo...</value></data>
+  <data name="Cannot start LootGoblin from Main Menu. Log in first." xml:space="preserve"><value>Não pode iniciar LootGoblin no menu principal. Entre primeiro.</value></data>
+  <data name="Start preflight: cleared map flag, attempted dismount, waiting 1s..." xml:space="preserve"><value>Verificação inicial: marca limpa, tentou desmontar, esperando 1s...</value></data>
+  <data name="Start preflight: waiting {0:0.0}s before start flow..." xml:space="preserve"><value>Verificação inicial: esperando {0:0.0}s antes de iniciar...</value></data>
+  <data name="Alexandrite: closing purchase UI ({0})..." xml:space="preserve"><value>Alexandrite: fechando interface de compra ({0})...</value></data>
+  <data name="Alexandrite: waiting to open Mysterious Map ({0})..." xml:space="preserve"><value>Alexandrite: esperando abrir Mysterious Map ({0})...</value></data>
+  <data name="Map duty active outside treasure dungeon - recovering coffer/portal..." xml:space="preserve"><value>Instância de mapa fora da masmorra do tesouro - recuperando baú/portal...</value></data>
+  <data name="ADS handoff active - waiting for dungeon to finish..." xml:space="preserve"><value>Transferência ADS ativa - esperando masmorra terminar...</value></data>
+  <data name="Starting in dungeon - looking for chests within 80y..." xml:space="preserve"><value>Iniciando na masmorra - buscando baús em 80y...</value></data>
+  <data name="Repairing gear before starting map run..." xml:space="preserve"><value>Reparando equipamento antes do mapa...</value></data>
+  <data name="Alexandrite: selecting purchased Mysterious Map..." xml:space="preserve"><value>Alexandrite: selecionando Mysterious Map comprado...</value></data>
+  <data name="Selecting one-shot {0}..." xml:space="preserve"><value>Selecionando {0} para execução única...</value></data>
+  <data name="Starting map run - refreshing saddlebag maps..." xml:space="preserve"><value>Iniciando mapa - atualizando mapas dos alforjes...</value></data>
+  <data name="Dismounting before combat job switch to {0}..." xml:space="preserve"><value>Desmontando antes de trocar job para {0}...</value></data>
+  <data name="Waiting to switch to combat job: {0}" xml:space="preserve"><value>Esperando troca de job de combate: {0}</value></data>
+  <data name="FATE/combat cleared - resuming chest recovery..." xml:space="preserve"><value>FATE/combate terminou - retomando recuperação do baú...</value></data>
+  <data name="FATE/combat cleared - returning to known coffer..." xml:space="preserve"><value>FATE/combate terminou - voltando ao baú conhecido...</value></data>
+  <data name="FATE/combat cleared - looking for treasure coffer..." xml:space="preserve"><value>FATE/combate terminou - buscando baú do tesouro...</value></data>
+  <data name="FATE/combat cleared - landing at map target..." xml:space="preserve"><value>FATE/combate terminou - pousando no alvo do mapa...</value></data>
+  <data name="FATE/combat cleared - teleporting back to map zone..." xml:space="preserve"><value>FATE/combate terminou - teleportando à área do mapa...</value></data>
+  <data name="FATE/combat cleared - flying to active map target..." xml:space="preserve"><value>FATE/combate terminou - voando ao alvo ativo do mapa...</value></data>
+  <data name="FATE/combat cleared - remounting for active map target..." xml:space="preserve"><value>FATE/combate terminou - remontando para o alvo ativo...</value></data>
+  <data name="Accepted party teleport - waiting for loading to finish..." xml:space="preserve"><value>Teleporte do grupo aceito - esperando carregar...</value></data>
+  <data name="Accepted party teleport - waiting for arrival to settle..." xml:space="preserve"><value>Teleporte do grupo aceito - esperando chegada estabilizar...</value></data>
+  <data name="Accepted party teleport - waiting for teleport handoff..." xml:space="preserve"><value>Teleporte do grupo aceito - esperando transferência...</value></data>
+  <data name="Accepted party teleport - waiting for player to become available..." xml:space="preserve"><value>Teleporte do grupo aceito - esperando jogador disponível...</value></data>
+  <data name="Could not switch to configured combat job: {0}" xml:space="preserve"><value>Não foi possível trocar ao job de combate configurado: {0}</value></data>
+  <data name="Waiting for combat job switch to {0}..." xml:space="preserve"><value>Esperando troca de job para {0}...</value></data>
+  <data name="Stopped by user ({0})." xml:space="preserve"><value>Parado pelo usuário ({0}).</value></data>
+  <data name="Full reset by user ({0})." xml:space="preserve"><value>Redefinição completa pelo usuário ({0}).</value></data>
+  <data name="Recovering active map target for {0}..." xml:space="preserve"><value>Recuperando alvo ativo para {0}...</value></data>
+  <data name="Opening active key-item map &apos;{0}&apos;... ({1:F0}/{2:F0}s)" xml:space="preserve"><value>Abrindo mapa ativo de item-chave &apos;{0}&apos;... ({1:F0}/{2:F0}s)</value></data>
+  <data name="Ignoring stale completed active key item for {0}..." xml:space="preserve"><value>Ignorando item-chave ativo antigo concluído de {0}...</value></data>
+  <data name="Recovered active map target from {0}; teleporting to {1}..." xml:space="preserve"><value>Alvo recuperado de {0}; teleportando para {1}...</value></data>
+  <data name="Skipping market purchase for map {0}: {1}" xml:space="preserve"><value>Pulando compra do mapa {0}: {1}</value></data>
+  <data name="Skipping market purchase for map {0}: configured city &apos;{1}&apos; requires Emptor API v4 or newer; detected v{2}." xml:space="preserve"><value>Pulando compra de {0}: cidade &apos;{1}&apos; requer Emptor API v4 ou superior; detectado v{2}.</value></data>
+  <data name="Skipping market purchase for map {0}: current world is unavailable." xml:space="preserve"><value>Pulando compra de {0}: mundo atual indisponível.</value></data>
+  <data name="Skipping market purchase for map {0}: no eligible public worlds were found." xml:space="preserve"><value>Pulando compra de {0}: nenhum mundo público elegível.</value></data>
+  <data name="Lifestream is required for off-world map purchasing: {0}" xml:space="preserve"><value>Compras fora do mundo requerem Lifestream: {0}</value></data>
+  <data name="No unlocked World Visit city aetheryte was available (Ul&apos;dah, Gridania, or Limsa Lominsa)." xml:space="preserve"><value>Nenhum aetheryte liberado de World Visit disponível (Ul&apos;dah, Gridania ou Limsa Lominsa).</value></data>
+  <data name="Waiting to arrive at the World Visit city aetheryte..." xml:space="preserve"><value>Esperando chegar ao aetheryte World Visit...</value></data>
+  <data name="Timed out teleporting the party to a World Visit city aetheryte." xml:space="preserve"><value>Limite ao teleportar o grupo ao aetheryte World Visit.</value></data>
+  <data name="Party cannot be safely disbanded for world travel: {0}" xml:space="preserve"><value>Não pode desfazer grupo com segurança para viajar: {0}</value></data>
+  <data name="Could not issue the party disband command." xml:space="preserve"><value>Não foi possível enviar comando de desfazer grupo.</value></data>
+  <data name="Party disband could not be verified; off-world purchasing was not started." xml:space="preserve"><value>Não confirmou grupo desfeito; compra fora do mundo não iniciada.</value></data>
+  <data name="Lifestream could not start travel to {0}." xml:space="preserve"><value>Lifestream não iniciou viagem para {0}.</value></data>
+  <data name="Arrived on {0}; waiting for world travel to settle..." xml:space="preserve"><value>Chegou em {0}; esperando viagem estabilizar...</value></data>
+  <data name="Timed out traveling to {0}." xml:space="preserve"><value>Limite ao viajar para {0}.</value></data>
+  <data name="Purchase settings for {0} are no longer valid." xml:space="preserve"><value>Configurações de compra de {0} não são mais válidas.</value></data>
+  <data name="Emptor returned unknown order state &apos;{0}&apos;." xml:space="preserve"><value>Emptor retornou estado de pedido desconhecido &apos;{0}&apos;.</value></data>
+  <data name="Emptor order {0} is {1}..." xml:space="preserve"><value>Pedido Emptor {0} está {1}...</value></data>
+  <data name="Emptor terminal order data was lost." xml:space="preserve"><value>Dados finais do pedido Emptor perdidos.</value></data>
+  <data name="Waiting to verify {0} in inventory..." xml:space="preserve"><value>Esperando confirmar {0} no inventário...</value></data>
+  <data name="Emptor purchase failed operationally: {0}." xml:space="preserve"><value>Compra Emptor falhou operacionalmente: {0}.</value></data>
+  <data name="Emptor purchase failed operationally: {0}. {1}" xml:space="preserve"><value>Compra Emptor falhou operacionalmente: {0}. {1}</value></data>
+  <data name="Waiting to open saddlebag for map batching: {0}" xml:space="preserve"><value>Esperando abrir alforjes para lote de mapas: {0}</value></data>
+  <data name="Waiting for saddlebag UI during map batching: {0}" xml:space="preserve"><value>Esperando interface dos alforjes no lote: {0}</value></data>
+  <data name="Waiting for stable saddlebag UI during map batching: {0}" xml:space="preserve"><value>Esperando alforjes estabilizarem no lote: {0}</value></data>
+  <data name="Waiting to store the purchased map: {0}" xml:space="preserve"><value>Esperando guardar mapa comprado: {0}</value></data>
+  <data name="Restoring party: {0} captured member(s) still missing..." xml:space="preserve"><value>Restaurando grupo: {0} membro(s) capturado(s) ainda faltando...</value></data>
+  <data name="Waiting to open saddlebag: {0}" xml:space="preserve"><value>Esperando abrir alforjes: {0}</value></data>
+  <data name="Waiting for saddlebag UI: {0}" xml:space="preserve"><value>Esperando interface dos alforjes: {0}</value></data>
+  <data name="Waiting for saddlebag UI for {0}..." xml:space="preserve"><value>Esperando alforjes para {0}...</value></data>
+  <data name="Waiting for stable saddlebag UI: {0}" xml:space="preserve"><value>Esperando alforjes estáveis: {0}</value></data>
+  <data name="Waiting for saddlebag UI to stabilize for {0}..." xml:space="preserve"><value>Esperando alforjes estabilizar para {0}...</value></data>
+  <data name="Waiting for loaded saddlebag source for {0}..." xml:space="preserve"><value>Esperando fonte dos alforjes carregada para {0}...</value></data>
+  <data name="Waiting to move saddlebag map: {0}" xml:space="preserve"><value>Esperando mover mapa dos alforjes: {0}</value></data>
+  <data name="Retrieved {0} from saddlebag. Rechecking inventory..." xml:space="preserve"><value>Retirou {0} dos alforjes. Rechecando inventário...</value></data>
+  <data name="Waiting for {0} saddlebag move confirmation..." xml:space="preserve"><value>Esperando confirmar movimento de {0} dos alforjes...</value></data>
+  <data name="Could not retrieve {0} from saddlebag: {1}" xml:space="preserve"><value>Não retirou {0} dos alforjes: {1}</value></data>
+  <data name="Waiting to refresh saddlebags: player unavailable..." xml:space="preserve"><value>Esperando atualizar alforjes: jogador indisponível...</value></data>
+  <data name="Opening saddlebag to refresh map sources..." xml:space="preserve"><value>Abrindo alforjes para atualizar fontes de mapas...</value></data>
+  <data name="Waiting for saddlebag map refresh..." xml:space="preserve"><value>Esperando atualização dos mapas dos alforjes...</value></data>
+  <data name="Saddlebag map refresh complete." xml:space="preserve"><value>Mapas dos alforjes atualizados.</value></data>
+  <data name="Retainer map retrieved. Rechecking inventory..." xml:space="preserve"><value>Mapa do retainer retirado. Rechecando inventário...</value></data>
+  <data name="Could not retrieve retainer map: {0}" xml:space="preserve"><value>Não retirou mapa do retainer: {0}</value></data>
+  <data name="Waiting to gather {0}: {1}" xml:space="preserve"><value>Esperando coletar {0}: {1}</value></data>
+  <data name="Cannot gather {0}: {1}." xml:space="preserve"><value>Não pode coletar {0}: {1}.</value></data>
+  <data name="Skipping map gathering for {0}: {1}" xml:space="preserve"><value>Pulando coleta de {0}: {1}</value></data>
+  <data name="Cannot gather {0}: {1}" xml:space="preserve"><value>Não pode coletar {0}: {1}</value></data>
+  <data name="Gathering {0}..." xml:space="preserve"><value>Coletando {0}...</value></data>
+  <data name="Gathering missing {0}..." xml:space="preserve"><value>Coletando {0} faltante...</value></data>
+  <data name="Waiting for gather job switch to {0}; current job {1}..." xml:space="preserve"><value>Esperando trocar coleta para {0}; job atual {1}...</value></data>
+  <data name="Waiting to switch to gather job: {0}" xml:space="preserve"><value>Esperando troca de job de coleta: {0}</value></data>
+  <data name="Waiting for gather job to settle before starting GatherBuddy Reborn for {0}..." xml:space="preserve"><value>Esperando job de coleta estabilizar antes de iniciar GatherBuddy Reborn para {0}...</value></data>
+  <data name="Waiting to start GatherBuddy Reborn: {0}" xml:space="preserve"><value>Esperando iniciar GatherBuddy Reborn: {0}</value></data>
+  <data name="Gathering {0}: {1}" xml:space="preserve"><value>Coletando {0}: {1}</value></data>
+  <data name="Closing gathering window for {0}..." xml:space="preserve"><value>Fechando janela de coleta de {0}...</value></data>
+  <data name="Waiting to switch back after gathering: {0}" xml:space="preserve"><value>Esperando voltar ao job após coleta: {0}</value></data>
+  <data name="Gathered {0}, but could not switch back to combat job: {1}" xml:space="preserve"><value>Coletou {0}, mas não voltou ao job de combate: {1}</value></data>
+  <data name="player unavailable" xml:space="preserve"><value>jogador indisponível</value></data>
+  <data name="casting" xml:space="preserve"><value>conjurando</value></data>
+  <data name="loading" xml:space="preserve"><value>carregando</value></data>
+  <data name="occupied" xml:space="preserve"><value>ocupado</value></data>
+  <data name="in combat" xml:space="preserve"><value>em combate</value></data>
+  <data name="in combat during joined FATE {0}" xml:space="preserve"><value>em combate no FATE {0}</value></data>
+  <data name="map target" xml:space="preserve"><value>alvo do mapa</value></data>
+  <data name="coffer" xml:space="preserve"><value>baú</value></data>
+  <data name="displaced coffer" xml:space="preserve"><value>baú deslocado</value></data>
+  <data name="captured coffer" xml:space="preserve"><value>baú capturado</value></data>
+  <data name="missing coffer flag" xml:space="preserve"><value>marca do baú ausente</value></data>
+  <data name="combat recovery flag" xml:space="preserve"><value>marca de recuperação de combate</value></data>
+  <data name="coffer flag fallback" xml:space="preserve"><value>alternativa da marca do baú</value></data>
+  <data name="portal flag fallback" xml:space="preserve"><value>alternativa da marca do portal</value></data>
+  <data name="Gathered {0}; starting one-shot map run..." xml:space="preserve"><value>Coletou {0}; iniciando execução única...</value></data>
+  <data name="Gathered {0}." xml:space="preserve"><value>Coletou {0}.</value></data>
+  <data name="Gathered {0}; rechecking maps..." xml:space="preserve"><value>Coletou {0}; rechecando mapas...</value></data>
+  <data name="Could not gather {0}: {1}" xml:space="preserve"><value>Não coletou {0}: {1}</value></data>
+  <data name="Nudging forward after repeated vnav path failures..." xml:space="preserve"><value>Avançando após falhas repetidas de rota vnav...</value></data>
+  <data name="Nudging forward after repeated vnav path failures... ({0:F1}s)" xml:space="preserve"><value>Avançando após falhas repetidas de rota vnav... ({0:F1}s)</value></data>
+  <data name="Coffer was too far to open - re-approaching..." xml:space="preserve"><value>Baú longe demais para abrir - aproximando novamente...</value></data>
+  <data name="Portal was too far - waiting for targetable portal..." xml:space="preserve"><value>Portal longe demais - esperando portal selecionável...</value></data>
+  <data name="Portal was too far - approaching targetable portal..." xml:space="preserve"><value>Portal longe demais - aproximando do selecionável...</value></data>
+  <data name="Portal was too far - ground-approaching closer..." xml:space="preserve"><value>Portal longe demais - aproximando pelo chão...</value></data>
+  <data name="Flying to current map flag after vnav flyto failure..." xml:space="preserve"><value>Voando à marca atual após falha de vnav flyto...</value></data>
+  <data name="Reissuing explicit XYZ after vnav flyto failure..." xml:space="preserve"><value>Reenviando XYZ explícito após falha de vnav flyto...</value></data>
+  <data name="vnav flyto failed and no current map flag or explicit XYZ target is available." xml:space="preserve"><value>vnav flyto falhou; sem marca atual nem alvo XYZ explícito.</value></data>
+  <data name="Recovering {0}: re-pathing ({1:F1}y)..." xml:space="preserve"><value>Recuperando {0}: recalculando rota ({1:F1}y)...</value></data>
+  <data name="{0}: stuck {1} - teleporting to nearest aetheryte..." xml:space="preserve"><value>{0}: preso {1} - teleportando ao aetheryte mais próximo...</value></data>
+  <data name="Landing by /mount toggle... ({0:F0}s)" xml:space="preserve"><value>Pousando com /mount... ({0:F0}s)</value></data>
+  <data name="Waiting for treasure coffer after dig... ({0:F1}s)" xml:space="preserve"><value>Esperando baú após cavar... ({0:F1}s)</value></data>
+  <data name="Looking for treasure coffer to interact..." xml:space="preserve"><value>Buscando baú do tesouro para interagir...</value></data>
+  <data name="Porta Praetoria takeoff nudge waiting for map target..." xml:space="preserve"><value>Impulso de decolagem Porta Praetoria esperando alvo do mapa...</value></data>
+  <data name="Porta Praetoria takeoff nudge waiting for mounted player readiness..." xml:space="preserve"><value>Impulso Porta Praetoria esperando jogador montado pronto...</value></data>
+  <data name="Porta Praetoria takeoff nudge toward {0} ({1:F1}s)..." xml:space="preserve"><value>Impulso Porta Praetoria para {0} ({1:F1}s)...</value></data>
+  <data name="Porta Praetoria takeoff nudge complete; preparing vnav flight..." xml:space="preserve"><value>Impulso Porta Praetoria concluído; preparando voo vnav...</value></data>
+  <data name="Thief-map water travel: remounting before far target..." xml:space="preserve"><value>Viagem aquática de mapa de ladrão: remontando antes de alvo distante...</value></data>
+  <data name="Thief-map water recovery: remounting before travel..." xml:space="preserve"><value>Recuperação aquática de mapa de ladrão: remontando antes de viajar...</value></data>
+  <data name="Holding Lochs thief-map dive entry... (entry {0:F1}y, target {1:F1}y)" xml:space="preserve"><value>Segurando entrada de mergulho Lochs... (entrada {0:F1}y, alvo {1:F1}y)</value></data>
+  <data name="Waiting for Lochs thief-map dive recovery... (entry {0:F1}y, target {1:F1}y)" xml:space="preserve"><value>Esperando recuperação de mergulho Lochs... (entrada {0:F1}y, alvo {1:F1}y)</value></data>
+  <data name="Descending for underwater thief-map trigger..." xml:space="preserve"><value>Descendo para ativação subaquática do mapa de ladrão...</value></data>
+  <data name="Moving to surfaced thief-map flag X/Z... ({0:F1}y)" xml:space="preserve"><value>Movendo à marca X/Z de mapa de ladrão na superfície... ({0:F1}y)</value></data>
+  <data name="Waiting for mount state before thief-map dig... ({0:F1}y XZ)" xml:space="preserve"><value>Esperando estado da montaria antes de cavar mapa de ladrão... ({0:F1}y XZ)</value></data>
+  <data name="Descending for non-diving thief-map landing... ({0:F1}y XZ)" xml:space="preserve"><value>Descendo para pouso sem mergulho do mapa de ladrão... ({0:F1}y XZ)</value></data>
+  <data name="Waiting for thief-map landing to settle... (Y change {0:F1}y)" xml:space="preserve"><value>Esperando pouso do mapa de ladrão estabilizar... (variação Y {0:F1}y)</value></data>
+  <data name="Confirming thief-map landing settle... ({0:F1}/{1:F1}s)" xml:space="preserve"><value>Confirmando pouso do mapa de ladrão... ({0:F1}/{1:F1}s)</value></data>
+  <data name="Waiting for safe non-diving thief-map landing before retry dig..." xml:space="preserve"><value>Esperando pouso seguro sem mergulho antes de cavar novamente...</value></data>
+  <data name="Thief-map recovery: returning to landing before dig..." xml:space="preserve"><value>Recuperação do mapa de ladrão: voltando ao pouso antes de cavar...</value></data>
+  <data name="Waiting after underwater XYZ dig retry" xml:space="preserve"><value>Esperando após tentativa de cavar XYZ subaquático</value></data>
+  <data name="Waiting before underwater XYZ dig retry" xml:space="preserve"><value>Esperando antes de cavar XYZ subaquático</value></data>
+  <data name="Underwater XYZ dig retry {0}/{1}..." xml:space="preserve"><value>Tentativa de cavar XYZ subaquático {0}/{1}...</value></data>
+  <data name="Waiting for underwater thief-map player position..." xml:space="preserve"><value>Esperando posição do jogador no mapa de ladrão subaquático...</value></data>
+  <data name="Waiting for underwater thief-map flag target..." xml:space="preserve"><value>Esperando marca do mapa de ladrão subaquático...</value></data>
+  <data name="Swimming to underwater flag X/Z... ({0:F1}y)" xml:space="preserve"><value>Nadando à marca subaquática X/Z... ({0:F1}y)</value></data>
+  <data name="Holding underwater thief-map trigger..." xml:space="preserve"><value>Segurando ativação do mapa de ladrão subaquático...</value></data>
+  <data name="Resetting camera before interacting with &apos;{0}&apos;..." xml:space="preserve"><value>Redefinindo câmera antes de interagir com &apos;{0}&apos;...</value></data>
+  <data name="Waiting briefly for camera reset before interacting with &apos;{0}&apos;..." xml:space="preserve"><value>Esperando breve reset da câmera antes de &apos;{0}&apos;...</value></data>
+  <data name="In combat - waiting to return to coffer XYZ ({0:F1}y)..." xml:space="preserve"><value>Em combate - esperando voltar ao baú XYZ ({0:F1}y)...</value></data>
+  <data name="Returning to captured coffer XYZ ({0:F1}y)..." xml:space="preserve"><value>Voltando ao baú XYZ capturado ({0:F1}y)...</value></data>
+  <data name="Waiting for player during {0} flag fallback..." xml:space="preserve"><value>Esperando jogador na alternativa da marca {0}...</value></data>
+  <data name="In combat - pausing {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>Em combate - pausando alternativa da marca {0} ({1:F1}y)...</value></data>
+  <data name="Mounting for {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>Montando para alternativa da marca {0} ({1:F1}y)...</value></data>
+  <data name="Flying to {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>Voando à alternativa da marca {0} ({1:F1}y)...</value></data>
+  <data name="Dismounting near &apos;{0}&apos; for ground approach ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>Desmontando perto de &apos;{0}&apos; para aproximação pelo chão ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Ground-approaching nearby coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>Aproximando pelo chão do baú &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Ground approach failed for &apos;{0}&apos; ({1:F1}y) - preparing mounted recovery..." xml:space="preserve"><value>Aproximação a &apos;{0}&apos; falhou ({1:F1}y) - preparando recuperação montada...</value></data>
+  <data name="Ground-approaching nearby coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y, {3:F0}s)..." xml:space="preserve"><value>Aproximando pelo chão do baú &apos;{0}&apos; ({1:F1}y, Y {2:F1}y, {3:F0}s)...</value></data>
+  <data name="Waiting for combat to end before coffer recovery ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>Esperando combate acabar antes de recuperar baú ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Mounting before coffer recovery ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>Montando antes de recuperar baú ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Dismounting near &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>Desmontando perto de &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Landing at &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>Pousando em &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Waiting to interact with &apos;{0}&apos; ({1})..." xml:space="preserve"><value>Esperando interagir com &apos;{0}&apos; ({1})...</value></data>
+  <data name="Interacting with &apos;{0}&apos; after recovery ({1:F1}y)..." xml:space="preserve"><value>Interagindo com &apos;{0}&apos; após recuperação ({1:F1}y)...</value></data>
+  <data name="Flying to displaced coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>Voando ao baú deslocado &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Waiting for coffer to become targetable ({0:F1}y)..." xml:space="preserve"><value>Esperando baú selecionável ({0:F1}y)...</value></data>
+  <data name="In combat - waiting to recover missing coffer ({0:F1}y from flag)..." xml:space="preserve"><value>Em combate - esperando recuperar baú ausente ({0:F1}y da marca)...</value></data>
+  <data name="In combat - waiting to recover missing coffer..." xml:space="preserve"><value>Em combate - esperando recuperar baú ausente...</value></data>
+  <data name="Mounting to return to flag and recover coffer ({0:F1}y XZ)..." xml:space="preserve"><value>Montando para voltar à marca e recuperar baú ({0:F1}y XZ)...</value></data>
+  <data name="({0:F0}s, moved {1:F1}y)..." xml:space="preserve"><value>({0:F0}s, moveu {1:F1}y)...</value></data>
+  <data name="[{0}] Flying to {1} ({2}) XYZ: {3}" xml:space="preserve"><value>[{0}] Voando para {1} ({2}) XYZ: {3}</value></data>
+  <data name="[Ground] Location {0}/{1}: {2} ({3:F0}y)" xml:space="preserve"><value>[Chão] Localização {0}/{1}: {2} ({3:F0}y)</value></data>
+  <data name="[Ground] Teleporting to {0}..." xml:space="preserve"><value>[Chão] Teleportando para {0}...</value></data>
+  <data name="[Underwater {0}] Flying to {1} XYZ: {2}" xml:space="preserve"><value>[Subaquático {0}] Voando para {1} XYZ: {2}</value></data>
+  <data name="{0} Durability {1}%/{2}%." xml:space="preserve"><value>{0} Durabilidade {1}%/{2}%.</value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s" xml:space="preserve"><value>{0} Nova tentativa de reparo ADS em {1:F1}s</value></data>
+  <data name="{0}/{1} mounted, {2:F0}s elapsed)..." xml:space="preserve"><value>{0}/{1} montados, {2:F0}s decorridos)...</value></data>
+  <data name="ADS handoff pending - waiting for ownership... ({0:F0}s, {1}/{2})" xml:space="preserve"><value>Transferência ADS pendente - esperando controle... ({0:F0}s, {1}/{2})</value></data>
+  <data name="ADS handoff pending - waiting for ownership... ({0:F0}s, status unavailable)" xml:space="preserve"><value>Transferência ADS pendente - esperando controle... ({0:F0}s, estado indisponível)</value></data>
+  <data name="ADS leave requested - waiting for duty exit..." xml:space="preserve"><value>Saída ADS solicitada - esperando sair da instância...</value></data>
+  <data name="ADS leave requested - waiting for duty exit... ({0:F0}s, {1})" xml:space="preserve"><value>Saída ADS solicitada - esperando sair... ({0:F0}s, {1})</value></data>
+  <data name="ADS ownership was seen - waiting for readable status... ({0:F0}s)" xml:space="preserve"><value>Controle ADS visto - esperando estado legível... ({0:F0}s)</value></data>
+  <data name="ADS owns the duty - waiting for completion... ({0:F0}s, {1})" xml:space="preserve"><value>ADS controla a instância - esperando concluir... ({0:F0}s, {1})</value></data>
+  <data name="ADS released ownership - stopping ADS and leaving duty..." xml:space="preserve"><value>ADS liberou controle - parando ADS e saindo...</value></data>
+  <data name="ADS repair requested ({0}) - waiting for ADS status... ({1:F0}s)" xml:space="preserve"><value>Reparo ADS solicitado ({0}) - esperando estado... ({1:F0}s)</value></data>
+  <data name="ADS repair requested ({0}) - waiting for utility start... ({1:F0}s)" xml:space="preserve"><value>Reparo ADS solicitado ({0}) - esperando utilitário iniciar... ({1:F0}s)</value></data>
+  <data name="ADS repair requested ({0}); durability {1}% below threshold {2}%..." xml:space="preserve"><value>Reparo ADS solicitado ({0}); durabilidade {1}% abaixo de {2}%...</value></data>
+  <data name="ADS repair running ({0})... ({1:F0}s, {2})" xml:space="preserve"><value>Reparo ADS em execução ({0})... ({1:F0}s, {2})</value></data>
+  <data name="Alexandrite {0}/{1}: Confirming map purchase..." xml:space="preserve"><value>Alexandrite {0}/{1}: Confirmando compra...</value></data>
+  <data name="Alexandrite {0}/{1}: Dismounting at Auriana..." xml:space="preserve"><value>Alexandrite {0}/{1}: Desmontando em Auriana...</value></data>
+  <data name="Alexandrite {0}/{1}: Mounting for Auriana..." xml:space="preserve"><value>Alexandrite {0}/{1}: Montando para Auriana...</value></data>
+  <data name="Alexandrite {0}/{1}: Returning to Revenant&apos;s Toll..." xml:space="preserve"><value>Alexandrite {0}/{1}: Voltando a Revenant&apos;s Toll...</value></data>
+  <data name="Alexandrite {0}/{1}: Riding to Auriana..." xml:space="preserve"><value>Alexandrite {0}/{1}: Indo montado até Auriana...</value></data>
+  <data name="Alexandrite {0}/{1}: Talking to Auriana..." xml:space="preserve"><value>Alexandrite {0}/{1}: Falando com Auriana...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for area load..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando carregar área...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for arrival settle..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando chegada estabilizar...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for cast lock..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando bloqueio de conjuração...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for Mor Dhona..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando Mor Dhona...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for mount..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando montaria...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player position..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando posição do jogador...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player readiness..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando jogador pronto...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando jogador...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for purchase confirmation..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando confirmação de compra...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for purchased map..." xml:space="preserve"><value>Alexandrite {0}/{1}: Esperando mapa comprado...</value></data>
+  <data name="All party members mounted!" xml:space="preserve"><value>Todo o grupo montado!</value></data>
+  <data name="Approaching &apos;{0}&apos; ({1:F1}y away)..." xml:space="preserve"><value>Aproximando de &apos;{0}&apos; ({1:F1}y)...</value></data>
+  <data name="Approaching captured portal XYZ {0} ({1:F1}y)..." xml:space="preserve"><value>Aproximando do portal XYZ capturado {0} ({1:F1}y)...</value></data>
+  <data name="Approaching portal XYZ {0} ({1:F1}y)..." xml:space="preserve"><value>Aproximando do portal XYZ {0} ({1:F1}y)...</value></data>
+  <data name="Approaching+interacting &apos;{0}&apos; ({1:F1}y, attempt #{2})..." xml:space="preserve"><value>Aproximando+interagindo com &apos;{0}&apos; ({1:F1}y, tentativa #{2})...</value></data>
+  <data name="At captured portal XYZ - waiting for targetable portal... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>No portal XYZ capturado - esperando portal selecionável... ({0:F0}/{1:F0}s)</value></data>
+  <data name="Combat detected, waiting aborted." xml:space="preserve"><value>Combate detectado, espera cancelada.</value></data>
+  <data name="Combat ended - waiting for despawn... ({0:F1}/2.0s)" xml:space="preserve"><value>Combate terminou - esperando desaparecer... ({0:F1}/2.0s)</value></data>
+  <data name="Combat ended - waiting to retry dig... ({0:F1}/3.0s)" xml:space="preserve"><value>Combate terminou - esperando cavar novamente... ({0:F1}/3.0s)</value></data>
+  <data name="Confirming dungeon entry..." xml:space="preserve"><value>Confirmando entrada na masmorra...</value></data>
+  <data name="Cycling aetherytes ({0}/{1}): {2}" xml:space="preserve"><value>Percorrendo aetherytes ({0}/{1}): {2}</value></data>
+  <data name="danger detected outside outdoor flow" xml:space="preserve"><value>perigo detectado fora do fluxo externo</value></data>
+  <data name="Descent mode... (Y change: {0:F1}y, {1:F0}s)" xml:space="preserve"><value>Modo de descida... (variação Y: {0:F1}y, {1:F0}s)</value></data>
+  <data name="Dismounting at &apos;{0}&apos; ({1:F1}y)..." xml:space="preserve"><value>Desmontando em &apos;{0}&apos; ({1:F1}y)...</value></data>
+  <data name="Dismounting for portal close nudge ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>Desmontando para impulso perto do portal ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Dismounting for portal ground approach ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>Desmontando para aproximação pelo chão ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Door opened - settling before walk-through..." xml:space="preserve"><value>Porta aberta - estabilizando antes de atravessar...</value></data>
+  <data name="Door transition ready - settling briefly..." xml:space="preserve"><value>Transição da porta pronta - estabilizando brevemente...</value></data>
+  <data name="Duty completed - {0} exit in {1:F0}s..." xml:space="preserve"><value>Instância concluída - saída {0} em {1:F0}s...</value></data>
+  <data name="Duty completed - party exit grace period ({0:F0}s)..." xml:space="preserve"><value>Instância concluída - período de saída do grupo ({0:F0}s)...</value></data>
+  <data name="Duty completed - preparing configured exit..." xml:space="preserve"><value>Instância concluída - preparando saída definida...</value></data>
+  <data name="Duty completed - waiting for {0} other party member(s) to leave..." xml:space="preserve"><value>Instância concluída - esperando {0} outro(s) membro(s) sair...</value></data>
+  <data name="Duty completed - waiting for combat to end before exit..." xml:space="preserve"><value>Instância concluída - esperando fim do combate para sair...</value></data>
+  <data name="Duty completed - waiting for manual exit..." xml:space="preserve"><value>Instância concluída - esperando saída manual...</value></data>
+  <data name="Duty completed - waiting for party status..." xml:space="preserve"><value>Instância concluída - esperando estado do grupo...</value></data>
+  <data name="Duty exit requested - waiting to leave duty..." xml:space="preserve"><value>Saída solicitada - esperando sair da instância...</value></data>
+  <data name="Fallback descent... ({0:F0}s)" xml:space="preserve"><value>Descida alternativa... ({0:F0}s)</value></data>
+  <data name="Floor {0} - scanning for objects... ({1:F0}s)" xml:space="preserve"><value>Andar {0} - verificando objetos... ({1:F0}s)</value></data>
+  <data name="Gear durability {0}% below {1}% - teleporting to {2} for ADS repair..." xml:space="preserve"><value>Durabilidade {0}% abaixo de {1}% - teleportando a {2} para reparo ADS...</value></data>
+  <data name="Ground-approaching portal ({0:F1}y, XZ {1:F1}y, Y {2:F1}y, {3:F0}s)..." xml:space="preserve"><value>Aproximando do portal pelo chão ({0:F1}y, XZ {1:F1}y, Y {2:F1}y, {3:F0}s)...</value></data>
+  <data name="Ground-approaching portal ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>Aproximando do portal pelo chão ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Ground-nudging closer to portal ({0:F1}y, XZ {1:F1}y)..." xml:space="preserve"><value>Avançando pelo chão perto do portal ({0:F1}y, XZ {1:F1}y)...</value></data>
+  <data name="In combat - waiting ({0:F1}y from &apos;{1}&apos;)..." xml:space="preserve"><value>Em combate - esperando ({0:F1}y de &apos;{1}&apos;)...</value></data>
+  <data name="In combat - waiting before portal ground approach ({0:F1}y)..." xml:space="preserve"><value>Em combate - esperando antes de aproximar do portal ({0:F1}y)...</value></data>
+  <data name="In combat - waiting to recover chest ({0:F1}y XZ from flag)..." xml:space="preserve"><value>Em combate - esperando recuperar baú ({0:F1}y XZ da marca)...</value></data>
+  <data name="In combat - waiting to recover chest..." xml:space="preserve"><value>Em combate - esperando recuperar baú...</value></data>
+  <data name="In combat on floor {0} - BMR handling..." xml:space="preserve"><value>Combate no andar {0} - BMR controlando...</value></data>
+  <data name="In combat on floor {0} - waiting..." xml:space="preserve"><value>Combate no andar {0} - esperando...</value></data>
+  <data name="Interacting with &apos;{0}&apos; - waiting for portal..." xml:space="preserve"><value>Interagindo com &apos;{0}&apos; - esperando portal...</value></data>
+  <data name="Interacting with &apos;{0}&apos; ({1:F1}y, attempt #{2})..." xml:space="preserve"><value>Interagindo com &apos;{0}&apos; ({1:F1}y, tentativa #{2})...</value></data>
+  <data name="Interacting with portal ({0:F1}y)..." xml:space="preserve"><value>Interagindo com portal ({0:F1}y)...</value></data>
+  <data name="Joined FATE {0} active - holding chest recovery during {1} ({2:F0}s)..." xml:space="preserve"><value>FATE {0} ativo - segurando recuperação do baú durante {1} ({2:F0}s)...</value></data>
+  <data name="Joined FATE {0} active - holding portal recovery during {1} ({2:F0}s)..." xml:space="preserve"><value>FATE {0} ativo - segurando recuperação do portal durante {1} ({2:F0}s)...</value></data>
+  <data name="joined FATE {0} combat automation active" xml:space="preserve"><value>automação de combate do FATE {0} ativa</value></data>
+  <data name="Joined FATE cleared - settling before chest/portal recovery..." xml:space="preserve"><value>FATE terminou - estabilizando antes de recuperar baú/portal...</value></data>
+  <data name="Landing at portal ({0:F1}y)..." xml:space="preserve"><value>Pousando no portal ({0:F1}y)...</value></data>
+  <data name="Lifestream rejected repair teleport to {0}: {1}. Retrying ({2})..." xml:space="preserve"><value>Lifestream rejeitou teleporte de reparo a {0}: {1}. Tentando ({2})...</value></data>
+  <data name="Loading dungeon room..." xml:space="preserve"><value>Carregando sala da masmorra...</value></data>
+  <data name="Loading..." xml:space="preserve"><value>Carregando...</value></data>
+  <data name="Location {0}/{1}: {2} ({3:F0}s)" xml:space="preserve"><value>Localização {0}/{1}: {2} ({3:F0}s)</value></data>
+  <data name="Looking for door/progression on floor {0}... ({1:F0}s)" xml:space="preserve"><value>Buscando porta/progressão no andar {0}... ({1:F0}s)</value></data>
+  <data name="MANUAL CONTROL - Location {0}/{1}: {2}" xml:space="preserve"><value>CONTROLE MANUAL - Localização {0}/{1}: {2}</value></data>
+  <data name="Map duty active in territory {0} - continuing portal interaction..." xml:space="preserve"><value>Instância de mapa em {0} - continuando interação com portal...</value></data>
+  <data name="Map duty active in territory {0} - recovering coffer/portal..." xml:space="preserve"><value>Instância de mapa em {0} - recuperando baú/portal...</value></data>
+  <data name="Map duty active in territory {0} - waiting for duty to clear..." xml:space="preserve"><value>Instância de mapa em {0} - esperando encerrar...</value></data>
+  <data name="Map duty active in territory {0} - waiting for treasure dungeon territory..." xml:space="preserve"><value>Instância de mapa em {0} - esperando masmorra do tesouro...</value></data>
+  <data name="Mounting (attempt {0}/5)..." xml:space="preserve"><value>Montando (tentativa {0}/5)...</value></data>
+  <data name="Mounting before portal fly approach..." xml:space="preserve"><value>Montando antes de voar ao portal...</value></data>
+  <data name="Mounting to return to flag after combat ({0:F1}y XZ)..." xml:space="preserve"><value>Montando para voltar à marca após combate ({0:F1}y XZ)...</value></data>
+  <data name="Moving forward to trigger area shift... ({0:F0}/10s)" xml:space="preserve"><value>Avançando para ativar mudança de área... ({0:F0}/10s)</value></data>
+  <data name="Navigating through door transition ({0:F1}y)..." xml:space="preserve"><value>Navegando pela transição da porta ({0:F1}y)...</value></data>
+  <data name="Navigating to &apos;{0}&apos; ({1:F1}y, {2:F0}s)..." xml:space="preserve"><value>Navegando para &apos;{0}&apos; ({1:F1}y, {2:F0}s)...</value></data>
+  <data name="Navigating to dungeon start ({0:F1}y)..." xml:space="preserve"><value>Navegando ao início da masmorra ({0:F1}y)...</value></data>
+  <data name="No nearby repair NPC for ADS {0}; continuing map flow." xml:space="preserve"><value>Sem NPC de reparo próximo para ADS {0}; continuando mapa.</value></data>
+  <data name="Normal dismount... ({0:F0}s)" xml:space="preserve"><value>Desmontagem normal... ({0:F0}s)</value></data>
+  <data name="Observing Higher/Lower puzzle..." xml:space="preserve"><value>Observando quebra-cabeça Higher/Lower...</value></data>
+  <data name="Opening Duty Finder to leave duty..." xml:space="preserve"><value>Abrindo Duty Finder para sair...</value></data>
+  <data name="Party snapshot unavailable." xml:space="preserve"><value>Captura do grupo indisponível.</value></data>
+  <data name="Playing Higher/Lower stage {0}: {1}..." xml:space="preserve"><value>Jogando Higher/Lower etapa {0}: {1}...</value></data>
+  <data name="Portal accepted - loading treasure dungeon territory from {0}..." xml:space="preserve"><value>Portal aceito - carregando masmorra do tesouro de {0}...</value></data>
+  <data name="Portal accepted - waiting for loading to finish..." xml:space="preserve"><value>Portal aceito - esperando carregar...</value></data>
+  <data name="Portal accepted - waiting for treasure dungeon territory..." xml:space="preserve"><value>Portal aceito - esperando território da masmorra...</value></data>
+  <data name="Portal close nudge waiting for local player..." xml:space="preserve"><value>Impulso perto do portal esperando jogador...</value></data>
+  <data name="Portal ground approach failed ({0:F1}y) - preparing mounted recovery..." xml:space="preserve"><value>Aproximação ao portal falhou ({0:F1}y) - preparando recuperação montada...</value></data>
+  <data name="Portal still active - continuing portal interaction..." xml:space="preserve"><value>Portal ainda ativo - continuando interação...</value></data>
+  <data name="Preparing to mount ({0}s)..." xml:space="preserve"><value>Preparando montaria ({0}s)...</value></data>
+  <data name="Pushing through door transition ({0:F0}s)..." xml:space="preserve"><value>Atravessando transição da porta ({0:F0}s)...</value></data>
+  <data name="Recovering missing coffer (retry {0}/{1})..." xml:space="preserve"><value>Recuperando baú ausente (tentativa {0}/{1})...</value></data>
+  <data name="Recovering missing coffer near flag ({0:F1}y XZ, retry {1}/{2})..." xml:space="preserve"><value>Recuperando baú ausente perto da marca ({0:F1}y XZ, tentativa {1}/{2})...</value></data>
+  <data name="Reopening Higher/Lower puzzle (attempt {0})..." xml:space="preserve"><value>Reabrindo Higher/Lower (tentativa {0})...</value></data>
+  <data name="restored: {0}" xml:space="preserve"><value>restaurado: {0}</value></data>
+  <data name="Retrying dig after combat ({0:F1}y XZ from flag)..." xml:space="preserve"><value>Cavando novamente após combate ({0:F1}y XZ da marca)...</value></data>
+  <data name="Retrying dig for missing coffer ({0}/{1})..." xml:space="preserve"><value>Cavando novamente para baú ausente ({0}/{1})...</value></data>
+  <data name="Retrying in {0:F1}s" xml:space="preserve"><value>Tentando novamente em {0:F1}s</value></data>
+  <data name="Returning to flag after combat ({0:F1}y XZ)..." xml:space="preserve"><value>Voltando à marca após combate ({0:F1}y XZ)...</value></data>
+  <data name="Returning to flag to recover coffer ({0:F1}y XZ)..." xml:space="preserve"><value>Voltando à marca para recuperar baú ({0:F1}y XZ)...</value></data>
+  <data name="Running Loot Goblin Leave Duty sequence..." xml:space="preserve"><value>Executando sequência de saída Loot Goblin...</value></data>
+  <data name="Searching for portal... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>Buscando portal... ({0:F0}/{1:F0}s)</value></data>
+  <data name="Still trying to land by /mount toggle... ({0:F0}s)" xml:space="preserve"><value>Ainda tentando pousar com /mount... ({0:F0}s)</value></data>
+  <data name="Teleporting to {0} for ADS repair..." xml:space="preserve"><value>Teleportando a {0} para reparo ADS...</value></data>
+  <data name="Teleporting to {0} for ADS repair... ({1:F0}s)" xml:space="preserve"><value>Teleportando a {0} para reparo ADS... ({1:F0}s)</value></data>
+  <data name="Teleporting to {0}..." xml:space="preserve"><value>Teleportando para {0}...</value></data>
+  <data name="Teleporting... ({0:F0}s)" xml:space="preserve"><value>Teleportando... ({0:F0}s)</value></data>
+  <data name="Teleporting... settling ({0:F0}s)" xml:space="preserve"><value>Teleportando... estabilizando ({0:F0}s)</value></data>
+  <data name="Teleporting... waiting for area load ({0:F0}s)" xml:space="preserve"><value>Teleportando... esperando carregar área ({0:F0}s)</value></data>
+  <data name="Teleporting... waiting for cast lock to clear ({0:F0}s)" xml:space="preserve"><value>Teleportando... esperando fim do bloqueio ({0:F0}s)</value></data>
+  <data name="Teleporting... waiting for player after load ({0:F0}s)" xml:space="preserve"><value>Teleportando... esperando jogador após carregar ({0:F0}s)</value></data>
+  <data name="Teleporting... waiting for target territory ({0:F0}s)" xml:space="preserve"><value>Teleportando... esperando território alvo ({0:F0}s)</value></data>
+  <data name="Thief-map remount: waiting for party to mount ({0}/{1} required mounted others, {2:F0}s elapsed)..." xml:space="preserve"><value>Remontagem de mapa de ladrão: esperando grupo ({0}/{1} outros montados necessários, {2:F0}s decorridos)...</value></data>
+  <data name="Thief-map remount: waiting for party zone load ({0}/{1} mounted, {2:F0}s elapsed{3})..." xml:space="preserve"><value>Remontagem de mapa de ladrão: esperando grupo carregar ({0}/{1} montados, {2:F0}s decorridos{3})...</value></data>
+  <data name="Timeout waiting for mounts after {0}s." xml:space="preserve"><value>Limite esperando montarias após {0}s.</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff seam..." xml:space="preserve"><value>Masmorra do tesouro {0} detectada - esperando ponto seguro de transferência ADS...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff seam... ({1})" xml:space="preserve"><value>Masmorra do tesouro {0} detectada - esperando ponto seguro ADS... ({1})</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff settle..." xml:space="preserve"><value>Masmorra do tesouro {0} detectada - esperando transferência ADS estabilizar...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for loading to finish before ADS handoff..." xml:space="preserve"><value>Masmorra do tesouro {0} detectada - esperando carregar antes de ADS...</value></data>
+  <data name="Trying Higher/Lower callback attempt {0}..." xml:space="preserve"><value>Tentando callback Higher/Lower {0}...</value></data>
+  <data name="Waiting {0:F1}s before repair teleport {1} to {2}..." xml:space="preserve"><value>Esperando {0:F1}s antes de teleporte de reparo {1} para {2}...</value></data>
+  <data name="Waiting before teleporting... ({0:F0}s / {1}s)" xml:space="preserve"><value>Esperando antes de teleportar... ({0:F0}s / {1}s)</value></data>
+  <data name="Waiting for all {0} members to mount..." xml:space="preserve"><value>Esperando todos os {0} membros montarem...</value></data>
+  <data name="Waiting for captured portal approach... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>Esperando aproximação ao portal capturado... ({0:F0}/{1:F0}s)</value></data>
+  <data name="Waiting for character ready (dungeon start)..." xml:space="preserve"><value>Esperando personagem pronto (início da masmorra)...</value></data>
+  <data name="Waiting for chest after combat dig... ({0:F1}/5.0s)" xml:space="preserve"><value>Esperando baú após cavar em combate... ({0:F1}/5.0s)</value></data>
+  <data name="Waiting for chest after combat... ({0:F1}/5.0s)" xml:space="preserve"><value>Esperando baú após combate... ({0:F1}/5.0s)</value></data>
+  <data name="Waiting for chest to reappear... ({0:F1}/5.0s)" xml:space="preserve"><value>Esperando baú reaparecer... ({0:F1}/5.0s)</value></data>
+  <data name="Waiting for coffer after dig... ({0:F1}/{1:F1}s)" xml:space="preserve"><value>Esperando baú após cavar... ({0:F1}/{1:F1}s)</value></data>
+  <data name="Waiting for combat to end before portal fly approach..." xml:space="preserve"><value>Esperando combate terminar antes de voar ao portal...</value></data>
+  <data name="Waiting for door cutscene/loading to clear..." xml:space="preserve"><value>Esperando cena/carregamento da porta terminar...</value></data>
+  <data name="Waiting for door transition cutscene/loading to clear..." xml:space="preserve"><value>Esperando cena/carregamento da transição terminar...</value></data>
+  <data name="Waiting for dungeon objects to activate ({0:F0}/30s)..." xml:space="preserve"><value>Esperando objetos da masmorra ativarem ({0:F0}/30s)...</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen," xml:space="preserve"><value>Esperando captura completa do grupo ({0}/{1} outros vistos,</value></data>
+  <data name="Waiting for Higher/Lower puzzle after exhausting callback attempts..." xml:space="preserve"><value>Esperando Higher/Lower após esgotar tentativas de callback...</value></data>
+  <data name="Waiting for Higher/Lower puzzle UI ({0})..." xml:space="preserve"><value>Esperando interface Higher/Lower ({0})...</value></data>
+  <data name="Waiting for Higher/Lower puzzle UI to settle (attempt {0})..." xml:space="preserve"><value>Esperando Higher/Lower estabilizar (tentativa {0})...</value></data>
+  <data name="Waiting for Higher/Lower solver UI to settle..." xml:space="preserve"><value>Esperando solução Higher/Lower estabilizar...</value></data>
+  <data name="Waiting for Higher/Lower UI to change after solver callback..." xml:space="preserve"><value>Esperando Higher/Lower mudar após callback...</value></data>
+  <data name="Waiting for map location... ({0:F0}s / {1}s)" xml:space="preserve"><value>Esperando localização do mapa... ({0:F0}s / {1}s)</value></data>
+  <data name="Waiting for party snapshot ({0:F0}s elapsed, expecting {1} other players)..." xml:space="preserve"><value>Esperando captura do grupo ({0:F0}s, esperando {1} outros)...</value></data>
+  <data name="Waiting for party snapshot before next map..." xml:space="preserve"><value>Esperando captura do grupo antes do próximo mapa...</value></data>
+  <data name="Waiting for party to load after dungeon ({0}/{1} in zone; missing: {2})..." xml:space="preserve"><value>Esperando grupo carregar após masmorra ({0}/{1} na área; faltam: {2})...</value></data>
+  <data name="Waiting for party to load after dungeon ({0}/{1} required other players in zone)..." xml:space="preserve"><value>Esperando grupo após masmorra ({0}/{1} outros necessários na área)...</value></data>
+  <data name="Waiting for party to mount ({0}/{1} required mounted others, {2:F0}s elapsed)..." xml:space="preserve"><value>Esperando grupo montar ({0}/{1} outros necessários, {2:F0}s decorridos)...</value></data>
+  <data name="Waiting for party zone load ({0}/{1} mounted, {2:F0}s elapsed{3})..." xml:space="preserve"><value>Esperando grupo carregar ({0}/{1} montados, {2:F0}s decorridos{3})...</value></data>
+  <data name="Waiting for player before coffer interaction..." xml:space="preserve"><value>Esperando jogador antes de interagir com baú...</value></data>
+  <data name="Waiting for player before portal ground approach..." xml:space="preserve"><value>Esperando jogador antes de aproximar do portal...</value></data>
+  <data name="Waiting for player to be available..." xml:space="preserve"><value>Esperando jogador disponível...</value></data>
+  <data name="Waiting for progression objects to activate ({0:F0}/30s)..." xml:space="preserve"><value>Esperando objetos de progressão ativarem ({0:F0}/30s)...</value></data>
+  <data name="Waiting for reliable Higher/Lower solver snapshot..." xml:space="preserve"><value>Esperando captura confiável da solução Higher/Lower...</value></data>
+  <data name="Waiting for repair teleport settle proof at {0}" xml:space="preserve"><value>Esperando prova de teleporte de reparo estável em {0}</value></data>
+  <data name="Waiting for targetable High/Low world objects..." xml:space="preserve"><value>Esperando objetos High/Low selecionáveis...</value></data>
+  <data name="Waiting for targetable Higher/Lower world object for {0}..." xml:space="preserve"><value>Esperando objeto Higher/Lower selecionável para {0}...</value></data>
+  <data name="Waiting to interact with portal ({0})..." xml:space="preserve"><value>Esperando interagir com portal ({0})...</value></data>
+  <data name="Waiting to retry Higher/Lower world interaction for {0}..." xml:space="preserve"><value>Esperando repetir interação Higher/Lower para {0}...</value></data>
+  <data name="Waiting to retry portal after close nudge ({0})..." xml:space="preserve"><value>Esperando repetir portal após impulso ({0})...</value></data>
+  <data name="Walking through opened door ({0:F1}y)..." xml:space="preserve"><value>Andando pela porta aberta ({0:F1}y)...</value></data>
+  <data name="Treasure coffer recovery failed after dig. Manual intervention required." xml:space="preserve"><value>Falha ao recuperar baú após cavar. Intervenção manual necessária.</value></data>
+  <data name="Opening {0}..." xml:space="preserve"><value>Abrindo {0}...</value></data>
+  <data name="[Alexandrite] Expected {0} in inventory for normal map handoff, but it was not found." xml:space="preserve"><value>[Alexandrite] Esperava {0} no inventário para transferência normal, mas não encontrado.</value></data>
+  <data name="Map opened, reading location..." xml:space="preserve"><value>Mapa aberto, lendo localização...</value></data>
+  <data name="In zone but aetheryte closer ({0:F0}y vs {1:F0}y) - teleporting..." xml:space="preserve"><value>Na área, mas aetheryte mais perto ({0:F0}y vs {1:F0}y) - teleportando...</value></data>
+  <data name="Already diving near thief-map target - swimming to flag..." xml:space="preserve"><value>Já mergulhando perto do alvo - nadando à marca...</value></data>
+  <data name="Retrying map opening..." xml:space="preserve"><value>Tentando abrir mapa novamente...</value></data>
+  <data name="Map opening failed - map count didn&apos;t decrease" xml:space="preserve"><value>Falha ao abrir mapa - quantidade não diminuiu</value></data>
+  <data name="No aetheryte ID for teleport." xml:space="preserve"><value>Sem ID de aetheryte para teleportar.</value></data>
+  <data name="Teleport to {0} failed: {1}" xml:space="preserve"><value>Teleporte a {0} falhou: {1}</value></data>
+  <data name="No target territory after teleport." xml:space="preserve"><value>Sem território alvo após teleporte.</value></data>
+  <data name="Wrong territory after teleport: {0} (expected {1})." xml:space="preserve"><value>Território errado após teleporte: {0} (esperado {1}).</value></data>
+  <data name="Arrived! Mounting up..." xml:space="preserve"><value>Chegou! Montando...</value></data>
+  <data name="Thief-map remount: waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>Remontagem de mapa de ladrão: esperando grupo ({0}/{1} outros necessários)...</value></data>
+  <data name="Joined-FATE recovery mounted - flying to location..." xml:space="preserve"><value>Recuperação FATE montada - voando ao local...</value></data>
+  <data name="Recovery teleport complete - party mount wait satisfied! Flying to location..." xml:space="preserve"><value>Teleporte de recuperação concluído - grupo montado! Voando ao local...</value></data>
+  <data name="Party mount wait satisfied! Flying to location..." xml:space="preserve"><value>Grupo montado! Voando ao local...</value></data>
+  <data name="Recovery teleport complete - waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>Teleporte de recuperação concluído - esperando grupo ({0}/{1} outros necessários)...</value></data>
+  <data name="Waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>Esperando grupo montar ({0}/{1} outros necessários)...</value></data>
+  <data name="Mounted! Flying to location..." xml:space="preserve"><value>Montado! Voando ao local...</value></data>
+  <data name="Thief-map water remount recovery failed after 5 attempts. Manual intervention required." xml:space="preserve"><value>Recuperação de montaria aquática falhou após 5 tentativas. Intervenção manual necessária.</value></data>
+  <data name="Mount failed - please restart" xml:space="preserve"><value>Falha ao montar - reinicie</value></data>
+  <data name="Joined-FATE recovery - flying to location..." xml:space="preserve"><value>Recuperação FATE - voando ao local...</value></data>
+  <data name="Joined-FATE recovery - remounting for map target..." xml:space="preserve"><value>Recuperação FATE - remontando para o alvo...</value></data>
+  <data name="Wait for party disabled - flying to location..." xml:space="preserve"><value>Espera do grupo desativada - voando ao local...</value></data>
+  <data name="Required party members mounted! Flying..." xml:space="preserve"><value>Membros necessários montados! Voando...</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen, " xml:space="preserve"><value>Esperando captura completa do grupo ({0}/{1} outros vistos, </value></data>
+  <data name="No location data for navigation." xml:space="preserve"><value>Sem dados de localização para navegação.</value></data>
+  <data name="No location data for underwater navigation." xml:space="preserve"><value>Sem dados de localização para navegação subaquática.</value></data>
+  <data name="Navigation error: {0}" xml:space="preserve"><value>Erro de navegação: {0}</value></data>
+  <data name="No location data for underwater chest navigation." xml:space="preserve"><value>Sem dados de localização para navegar ao baú subaquático.</value></data>
+  <data name="Combat recovery: landing at map target..." xml:space="preserve"><value>Recuperação de combate: pousando no alvo do mapa...</value></data>
+  <data name="Outdoor map complete - skipping portal search..." xml:space="preserve"><value>Mapa externo concluído - ignorando busca de portal...</value></data>
+  <data name="Searching for portal..." xml:space="preserve"><value>Procurando portal...</value></data>
+  <data name="Recovered overworld treasure coffer - opening chest..." xml:space="preserve"><value>Baú de tesouro externo recuperado - abrindo...</value></data>
+  <data name="Resuming chest interaction loop..." xml:space="preserve"><value>Retomando ciclo de interação com o baú...</value></data>
+  <data name="Portal found - searching for portal..." xml:space="preserve"><value>Portal encontrado - procurando portal...</value></data>
+  <data name="Dungeon complete (reached floor {0})" xml:space="preserve"><value>Masmorra concluída (alcançou andar {0})</value></data>
+  <data name="Combat detected on floor {0}..." xml:space="preserve"><value>Combate detectado no andar {0}...</value></data>
+  <data name="Looting floor {0} (sweep then progression)..." xml:space="preserve"><value>Coletando no andar {0} (varredura e avanço)...</value></data>
+  <data name="Found {0} chest object(s) on floor {1}..." xml:space="preserve"><value>Encontrados {0} baús no andar {1}...</value></data>
+  <data name="Found {0} progression object(s) on floor {1}..." xml:space="preserve"><value>Encontrados {0} objetos de avanço no andar {1}...</value></data>
+  <data name="Dungeon complete (wiped on floor {0})" xml:space="preserve"><value>Masmorra concluída (derrota no andar {0})</value></data>
+  <data name="Returning to chest after combat on floor {0}..." xml:space="preserve"><value>Voltando ao baú após combate no andar {0}...</value></data>
+  <data name="Looting after combat on floor {0}..." xml:space="preserve"><value>Coletando após combate no andar {0}...</value></data>
+  <data name="No loot after combat - continuing dungeon on floor {0}..." xml:space="preserve"><value>Sem saque após combate - continuando no andar {0}...</value></data>
+  <data name="Combat ended - scanning floor {0}..." xml:space="preserve"><value>Combate encerrado - examinando andar {0}...</value></data>
+  <data name="Finding doors on floor {0}..." xml:space="preserve"><value>Procurando portas no andar {0}...</value></data>
+  <data name="All objectives cleared - heading to exit" xml:space="preserve"><value>Todos os objetivos concluídos - indo à saída</value></data>
+  <data name="Entering floor {0}..." xml:space="preserve"><value>Entrando no andar {0}...</value></data>
+  <data name="Dungeon complete (floor {0})" xml:space="preserve"><value>Masmorra concluída (andar {0})</value></data>
+  <data name="Combat on floor {0}..." xml:space="preserve"><value>Combate no andar {0}...</value></data>
+  <data name="More loot found on floor {0}..." xml:space="preserve"><value>Mais saque encontrado no andar {0}...</value></data>
+  <data name="Rescanning floor {0}..." xml:space="preserve"><value>Examinando andar {0} novamente...</value></data>
+  <data name="Still in dungeon - cannot start next map. Manual intervention required." xml:space="preserve"><value>Ainda na masmorra - não é possível iniciar o próximo mapa. Intervenção manual necessária.</value></data>
+  <data name="Auto-starting next map..." xml:space="preserve"><value>Iniciando próximo mapa automaticamente...</value></data>
+  <data name="Auto-starting next retainer map..." xml:space="preserve"><value>Iniciando próximo mapa do retentor automaticamente...</value></data>
+  <data name="Purchasing the next configured map through Emptor..." xml:space="preserve"><value>Comprando próximo mapa configurado pelo Emptor...</value></data>
+  <data name="Run complete." xml:space="preserve"><value>Execução concluída.</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is still active. Retrying the map instead of marking it complete." xml:space="preserve"><value>Item-chave de mapa de tesouro &apos;{0}&apos; ainda ativo. Tentando o mapa novamente em vez de marcar como concluído.</value></data>
+  <data name="Entering dungeon instance..." xml:space="preserve"><value>Entrando na instância da masmorra...</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but ADS is not loaded." xml:space="preserve"><value>Durabilidade equipada de {0}% abaixo do limite {1}%, mas ADS não está carregado.</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but player position is unavailable for ADS repair recovery." xml:space="preserve"><value>Durabilidade equipada de {0}% abaixo do limite {1}%, mas posição indisponível para recuperação de reparo ADS.</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but no unlocked aetheryte was found in current territory {2} for ADS NPC no-inn repair." xml:space="preserve"><value>Durabilidade equipada de {0}% abaixo do limite {1}%, mas nenhum aetheryte desbloqueado no território {2} para reparo NPC sem pousada do ADS.</value></data>
+  <data name="Waiting for repair teleport settle proof at {0} " xml:space="preserve"><value>Esperando prova de teleporte de reparo estável em {0} </value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s " xml:space="preserve"><value>{0} Nova tentativa de reparo ADS em {1:F1}s </value></data>
+  <data name="Could not read equipped gear durability before ADS repair retry." xml:space="preserve"><value>Não foi possível ler durabilidade antes de tentar reparo ADS novamente.</value></data>
+  <data name="ADS unloaded before repair retry. {0}" xml:space="preserve"><value>ADS descarregado antes da nova tentativa. {0}</value></data>
+  <data name="ADS repair finished, but equipped gear durability could not be read." xml:space="preserve"><value>Reparo ADS concluído, mas durabilidade equipada não pôde ser lida.</value></data>
+  <data name="{0} Could not read equipped gear durability." xml:space="preserve"><value>{0} Não foi possível ler durabilidade equipada.</value></data>
+  <data name="{0} {1} ADS is not loaded." xml:space="preserve"><value>{0} {1} ADS não está carregado.</value></data>
+  <data name="{0} Durability {1}%/{2}%. " xml:space="preserve"><value>{0} Durabilidade {1}%/{2}%. </value></data>
+  <data name="Retrying in {0:F1}s " xml:space="preserve"><value>Tentando novamente em {0:F1}s </value></data>
+  <data name="ADS owns the duty - waiting for completion..." xml:space="preserve"><value>ADS controla o dever - esperando conclusão...</value></data>
+  <data name="[Warning] {0}" xml:space="preserve"><value>[Aviso] {0}</value></data>
+  <data name="[Dungeon] === Object Scan (floor {0}, {1} objects) ===" xml:space="preserve"><value>[Masmorra] === Varredura de objetos (andar {0}, {1} objetos) ===</value></data>
+  <data name="Error #{0} (recovered): {1}" xml:space="preserve"><value>Erro #{0} (recuperado): {1}</value></data>
+  <data name="Error #{0}: recovering overworld portal search..." xml:space="preserve"><value>Erro #{0}: recuperando busca de portal externo...</value></data>
+  <data name="Error #{0}: recovering overworld coffer/portal..." xml:space="preserve"><value>Erro #{0}: recuperando baú/portal externo...</value></data>
+  <data name="Error #{0}: {1}" xml:space="preserve"><value>Erro #{0}: {1}</value></data>
+  <data name="Cycling aetherytes (0/{0})..." xml:space="preserve"><value>Alternando aetherytes (0/{0})...</value></data>
+  <data name="Aetheryte cycling complete!" xml:space="preserve"><value>Ciclo de aetherytes concluído!</value></data>
+  <data name="Map location cycling complete!" xml:space="preserve"><value>Ciclo de locais de mapa concluído!</value></data>
+  <data name="Location {0}/{1}: {2}" xml:space="preserve"><value>Local {0}/{1}: {2}</value></data>
+  <data name="[CycleMapLocs] No location set" xml:space="preserve"><value>[CycleMapLocs] Nenhum local definido</value></data>
+  <data name="Alexandrite run 1/{0}: Starting..." xml:space="preserve"><value>Execução Alexandrite 1/{0}: iniciando...</value></data>
+  <data name="Alexandrite farming complete!" xml:space="preserve"><value>Coleta de Alexandrite concluída!</value></data>
+  <data name="[Alexandrite] Lifestream is not loaded; cannot return to Revenant&apos;s Toll." xml:space="preserve"><value>[Alexandrite] Lifestream não carregado; não é possível voltar a Revenant&apos;s Toll.</value></data>
+  <data name="[Alexandrite] Cannot return to Revenant&apos;s Toll while in combat." xml:space="preserve"><value>[Alexandrite] Não é possível voltar a Revenant&apos;s Toll em combate.</value></data>
+  <data name="[Alexandrite] Failed to send /li rev." xml:space="preserve"><value>[Alexandrite] Falha ao enviar /li rev.</value></data>
+  <data name="[Alexandrite] /li rev return to Mor Dhona timed out" xml:space="preserve"><value>[Alexandrite] Tempo esgotado para voltar a Mor Dhona com /li rev</value></data>
+  <data name="[Alexandrite] Mount before Auriana approach timed out" xml:space="preserve"><value>[Alexandrite] Tempo esgotado ao montar antes de se aproximar de Auriana</value></data>
+  <data name="[Alexandrite] Mounted approach to Auriana timed out" xml:space="preserve"><value>[Alexandrite] Tempo esgotado na aproximação montada a Auriana</value></data>
+  <data name="[Alexandrite] Auriana NPC not found. {0}" xml:space="preserve"><value>[Alexandrite] NPC Auriana não encontrado. {0}</value></data>
+  <data name="[Alexandrite] SelectIconString dialog not appearing. {0}" xml:space="preserve"><value>[Alexandrite] Diálogo SelectIconString não aparece. {0}</value></data>
+  <data name="[Alexandrite] Purchase confirmation/map wait timed out. {0}" xml:space="preserve"><value>[Alexandrite] Tempo esgotado para confirmação de compra/espera do mapa. {0}</value></data>
+  <data name="[Alexandrite] Expected Mysterious Map in inventory for normal map handoff, but it was not found. {0}" xml:space="preserve"><value>[Alexandrite] Mysterious Map esperado no inventário para transferência normal, mas não encontrado. {0}</value></data>
+  <data name="Alexandrite: starting normal Mysterious Map flow..." xml:space="preserve"><value>Alexandrite: iniciando fluxo normal de Mysterious Map...</value></data>
+  <data name="Alexandrite run {0}/{1}: Starting..." xml:space="preserve"><value>Execução Alexandrite {0}/{1}: iniciando...</value></data>
+  <data name="current job unavailable" xml:space="preserve"><value>profissão atual indisponível</value></data>
+  <data name="no job snapshot captured" xml:space="preserve"><value>nenhum registro de profissão capturado</value></data>
+  <data name="no job configured" xml:space="preserve"><value>nenhuma profissão configurada</value></data>
+  <data name="gearset module unavailable" xml:space="preserve"><value>módulo de conjuntos indisponível</value></data>
+  <data name="Already on {0}." xml:space="preserve"><value>Já está em {0}.</value></data>
+  <data name="Found {0} gearset {1}." xml:space="preserve"><value>Encontrado conjunto {1} de {0}.</value></data>
+  <data name="No gearset exists for configured job {0}." xml:space="preserve"><value>Nenhum conjunto para profissão configurada {0}.</value></data>
+  <data name="Could not inspect gearsets: {0}" xml:space="preserve"><value>Não foi possível verificar conjuntos: {0}</value></data>
+  <data name="Gearset {0} is no longer valid." xml:space="preserve"><value>Conjunto {0} não é mais válido.</value></data>
+  <data name="EquipGearset({0}) failed with result {1}." xml:space="preserve"><value>EquipGearset({0}) falhou com resultado {1}.</value></data>
+  <data name="Switching to {0} gearset {1}." xml:space="preserve"><value>Trocando para {0}, conjunto {1}.</value></data>
+  <data name="Job switch failed: {0}" xml:space="preserve"><value>Falha na troca de profissão: {0}</value></data>
+  <data name="Party roster is unavailable while loading or logged out." xml:space="preserve"><value>Lista do grupo indisponível ao carregar ou desconectado.</value></data>
+  <data name="Local player is unavailable." xml:space="preserve"><value>Jogador local indisponível.</value></data>
+  <data name="Player is solo; no party roster needs restoration." xml:space="preserve"><value>Jogador solo; nenhuma lista de grupo para restaurar.</value></data>
+  <data name="Alliance rosters are not supported for market-board travel." xml:space="preserve"><value>Alianças não são compatíveis com viagens ao mercado.</value></data>
+  <data name="Party leader identity is unavailable." xml:space="preserve"><value>Identidade do líder do grupo indisponível.</value></data>
+  <data name="Party member slot {0} is unavailable." xml:space="preserve"><value>Posição {0} do grupo indisponível.</value></data>
+  <data name="Party member slot {0} has incomplete name, Content ID, or home-world identity." xml:space="preserve"><value>Posição {0} do grupo com nome, Content ID ou mundo de origem incompleto.</value></data>
+  <data name="Local player was not found in the native party roster." xml:space="preserve"><value>Jogador local não encontrado na lista nativa do grupo.</value></data>
+  <data name="Local player is not the party leader." xml:space="preserve"><value>Jogador local não é líder do grupo.</value></data>
+  <data name="Captured {0} complete native party identities." xml:space="preserve"><value>Capturadas {0} identidades nativas completas do grupo.</value></data>
+  <data name="Captured party roster is restored." xml:space="preserve"><value>Lista capturada do grupo restaurada.</value></data>
+  <data name="Waiting for {0} captured party member(s)." xml:space="preserve"><value>Esperando {0} membros capturados do grupo.</value></data>
+  <data name="Timed out switching to configured combat job {0}." xml:space="preserve"><value>Tempo esgotado ao trocar para profissão de combate configurada {0}.</value></data>
+  <data name="Could not switch to gather job: {0}" xml:space="preserve"><value>Não foi possível trocar para profissão de coleta: {0}</value></data>
+  <data name="unavailable (0)" xml:space="preserve"><value>indisponível (0)</value></data>
+  <data name="{0}h {1:D2}m" xml:space="preserve"><value>{0}h {1:D2}min</value></data>
+  <data name="{0}m" xml:space="preserve"><value>{0}min</value></data>
+  <data name="Map allowance cooldown: {0}" xml:space="preserve"><value>Recarga da coleta de mapa: {0}</value></data>
+  <data name="Map allowance: {0}" xml:space="preserve"><value>Permissão de coleta de mapa: {0}</value></data>
+  <data name="Map allowance: waiting for /timers data" xml:space="preserve"><value>Permissão de mapa: esperando dados de /timers</value></data>
+  <data name="[map can be gathered]" xml:space="preserve"><value>[mapa pode ser coletado]</value></data>
+  <data name="Seedling: toggle missing-map gathering | Blue X: unavailable through gathering" xml:space="preserve"><value>Broto: alternar coleta de mapas ausentes | X azul: indisponível por coleta</value></data>
+  <data name="Map allowance locked for {0}." xml:space="preserve"><value>Coleta de mapa bloqueada por {0}.</value></data>
+  <data name="Waiting for map allowance ({0} remaining)." xml:space="preserve"><value>Esperando permissão de mapa ({0} restantes).</value></data>
+  <data name="Map allowance for {0} is locked for {1}, longer than the {2}m wait limit." xml:space="preserve"><value>Coleta de {0} bloqueada por {1}, além do limite de espera de {2}min.</value></data>
+  <data name="Map allowance status unavailable: {0}" xml:space="preserve"><value>Estado da permissão de mapa indisponível: {0}</value></data>
+  <data name="This map is unknown to LootGoblin and cannot be gathered." xml:space="preserve"><value>LootGoblin não conhece este mapa; ele não pode ser coletado.</value></data>
+  <data name="This map is unavailable through gathering." xml:space="preserve"><value>Este mapa não está disponível por coleta.</value></data>
+  <data name="Configure Settings -&gt; Run -&gt; Gather Job to gather missing maps." xml:space="preserve"><value>Configure Configurações -&gt; Execução -&gt; Profissão de coleta para coletar mapas ausentes.</value></data>
+  <data name="Gathering enabled." xml:space="preserve"><value>Coleta ativada.</value></data>
+  <data name="Gathering disabled." xml:space="preserve"><value>Coleta desativada.</value></data>
+  <data name="{0} Map allowance status is unavailable." xml:space="preserve"><value>{0} Estado da permissão de mapa indisponível.</value></data>
+  <data name="{0} Click the seedling to change the missing-map gather selection while allowance is ready." xml:space="preserve"><value>{0} Clique no broto para alterar a coleta de mapas ausentes quando a permissão estiver pronta.</value></data>
+  <data name="{0} Allowance cooldown: {1} remaining. Selection is saved for the next allowance." xml:space="preserve"><value>{0} Recarga: {1} restantes. Seleção salva para a próxima permissão.</value></data>
+  <data name="PlayerNull" xml:space="preserve"><value>Jogador ausente</value></data>
+  <data name="OccupiedInCutSceneEvent" xml:space="preserve"><value>Ocupado em evento de cena</value></data>
+  <data name="Occupied33" xml:space="preserve"><value>Ocupado (33)</value></data>
+  <data name="WatchingCutscene" xml:space="preserve"><value>Assistindo cena</value></data>
+  <data name="OccupiedInQuestEvent" xml:space="preserve"><value>Ocupado em evento de missão</value></data>
+  <data name="Occupied39" xml:space="preserve"><value>Ocupado (39)</value></data>
+  <data name="BetweenAreas" xml:space="preserve"><value>Mudando de área</value></data>
+  <data name="BetweenAreas51" xml:space="preserve"><value>Mudando de área (51)</value></data>
+  <data name="Unknown" xml:space="preserve"><value>Desconhecido</value></data>
+  <data name="PlayHigher" xml:space="preserve"><value>Jogar maior</value></data>
+  <data name="PlayLower" xml:space="preserve"><value>Jogar menor</value></data>
+  <data name="CashOut" xml:space="preserve"><value>Retirar prêmio</value></data>
+  <data name="SolveExpectedValue" xml:space="preserve"><value>Resolver valor esperado</value></data>
+  <data name="ObserveOnly" xml:space="preserve"><value>Apenas observar</value></data>
+  <data name="PlayerCasting" xml:space="preserve"><value>Jogador conjurando</value></data>
+  <data name="; not loaded in same zone: {0}" xml:space="preserve"><value>; não carregados na mesma zona: {0}</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen, {2}/{3} mounted, {4:F0}s elapsed)..." xml:space="preserve"><value>Esperando registro completo do grupo ({0}/{1} outros vistos, {2}/{3} montados, {4:F0}s decorridos)...</value></data>
+  <data name="Thief-map remount: waiting for party zone load ({0}/{1} loaded in same zone; missing: {2})..." xml:space="preserve"><value>Remontaria em mapa de ladrão: esperando carregar grupo ({0}/{1} na mesma zona; ausentes: {2})...</value></data>
+  <data name="Waiting for valid party snapshot before map content (expecting {0} other players)..." xml:space="preserve"><value>Esperando registro válido do grupo antes do conteúdo do mapa (esperados {0} outros)...</value></data>
+  <data name="Waiting for valid party snapshot before map content..." xml:space="preserve"><value>Esperando registro válido do grupo antes do conteúdo do mapa...</value></data>
+  <data name="Party wait timeout reached; waiting for at least one resolved same-territory party member..." xml:space="preserve"><value>Tempo de espera do grupo esgotado; esperando ao menos um membro identificado no mesmo território...</value></data>
+  <data name="Waiting for party ({0}/{1} nearby within {2:F0}y, need {3} before map content{4})..." xml:space="preserve"><value>Esperando grupo ({0}/{1} próximos em {2:F0}y, precisa de {3} antes do mapa{4})...</value></data>
+  <data name=", {0} same-territory far" xml:space="preserve"><value>, {0} distantes no mesmo território</value></data>
+  <data name=", {0} unresolved" xml:space="preserve"><value>, {0} não identificados</value></data>
+  <data name=", {0} out-of-territory" xml:space="preserve"><value>, {0} fora do território</value></data>
+  <data name=", guarded recovery active" xml:space="preserve"><value>, recuperação protegida ativa</value></data>
+  <data name="Waiting for party before takeoff ({0}/{1} required mounted others)..." xml:space="preserve"><value>Esperando grupo antes de decolar ({0}/{1} outros montados necessários)...</value></data>
+  <data name="{0} {1}/{2}... ({3:F1}s)" xml:space="preserve"><value>{0} {1}/{2}... ({3:F1}s)</value></data>
+  <data name="Waiting after underwater XYZ dig retry {0}/{1}... ({2:F1}s)" xml:space="preserve"><value>Esperando após nova escavação XYZ subaquática {0}/{1}... ({2:F1}s)</value></data>
+  <data name="Waiting before underwater XYZ dig retry {0}/{1}... ({2:F1}s)" xml:space="preserve"><value>Esperando antes da nova escavação XYZ subaquática {0}/{1}... ({2:F1}s)</value></data>
+  <data name="Waiting for repair teleport settle proof at {0} ({1:F0}s, moved {2:F1}y)..." xml:space="preserve"><value>Esperando confirmação de estabilidade do teleporte de reparo em {0} ({1:F0}s, moveu {2:F1}y)...</value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s ({2}/{3})..." xml:space="preserve"><value>{0} Tentando reparo ADS novamente em {1:F1}s ({2}/{3})...</value></data>
+  <data name="{0} Durability {1}%/{2}%. Retrying in {3:F1}s ({4}/{5})..." xml:space="preserve"><value>{0} Durabilidade {1}%/{2}%. Nova tentativa em {3:F1}s ({4}/{5})...</value></data>
+  <data name="ADS unavailable; reflection hacks pending." xml:space="preserve"><value>ADS indisponível; ajustes por reflexão pendentes.</value></data>
+  <data name="ADS unavailable/pending: {0}." xml:space="preserve"><value>ADS indisponível/pendente: {0}.</value></data>
+  <data name="ADS returned false" xml:space="preserve"><value>ADS retornou false</value></data>
+  <data name="range ({0})" xml:space="preserve"><value>alcance ({0})</value></data>
+  <data name="range reset ({0})" xml:space="preserve"><value>alcance redefinido ({0})</value></data>
+  <data name="hunts ({0})" xml:space="preserve"><value>caçadas ({0})</value></data>
+  <data name="hunts reset ({0})" xml:space="preserve"><value>caçadas redefinidas ({0})</value></data>
+  <data name="No ADS utility status." xml:space="preserve"><value>Sem estado do utilitário ADS.</value></data>
+  <data name="status unavailable" xml:space="preserve"><value>estado indisponível</value></data>
+  <data name="utility status unavailable" xml:space="preserve"><value>estado do utilitário indisponível</value></data>
+  <data name="failure: {0}" xml:space="preserve"><value>falha: {0}</value></data>
+  <data name="status: {0}" xml:space="preserve"><value>estado: {0}</value></data>
+  <data name="last success: {0}" xml:space="preserve"><value>último sucesso: {0}</value></data>
+  <data name="ADS repair stopped before durability reached threshold; ADS {0}." xml:space="preserve"><value>Reparo ADS parou antes de atingir o limite de durabilidade; ADS {0}.</value></data>
+  <data name="ADS repair failed." xml:space="preserve"><value>Reparo ADS falhou.</value></data>
+  <data name="ADS unloaded during repair recovery; cannot start ADS repair." xml:space="preserve"><value>ADS descarregado durante recuperação; não é possível iniciar reparo ADS.</value></data>
+  <data name="Lifestream is not loaded; cannot teleport to aetheryte for ADS NPC no-inn repair." xml:space="preserve"><value>Lifestream não carregado; não é possível teleportar ao aetheryte para reparo NPC sem pousada do ADS.</value></data>
+  <data name="Cannot teleport to aetheryte for ADS NPC no-inn repair while in combat." xml:space="preserve"><value>Não é possível teleportar ao aetheryte para reparo NPC sem pousada do ADS em combate.</value></data>
+  <data name="Player position is unavailable while resolving ADS repair recovery aetheryte." xml:space="preserve"><value>Posição indisponível ao determinar aetheryte de recuperação de reparo ADS.</value></data>
+  <data name="Could not teleport to {0} for ADS repair: {1}" xml:space="preserve"><value>Não foi possível teleportar a {0} para reparo ADS: {1}</value></data>
+  <data name="Teleport to {0} for ADS repair failed: {1}" xml:space="preserve"><value>Teleporte a {0} para reparo ADS falhou: {1}</value></data>
+  <data name="Lifestream rejected ADS repair teleport to {0} (ID {1}) after {2} command attempt(s): {3}" xml:space="preserve"><value>Lifestream rejeitou teleporte de reparo ADS a {0} (ID {1}) após {2} tentativas: {3}</value></data>
+  <data name="InventoryManager is null" xml:space="preserve"><value>InventoryManager é null</value></data>
+  <data name="Selected map was not found in loaded saddlebags. Open saddlebags once this session and retry." xml:space="preserve"><value>Mapa selecionado não encontrado nos alforjes carregados. Abra os alforjes uma vez nesta sessão e tente novamente.</value></data>
+  <data name="No empty inventory slot is available for saddlebag retrieval." xml:space="preserve"><value>Sem posição livre no inventário para retirada dos alforjes.</value></data>
+  <data name="Selected {0}[{1}] -&gt; {2}[{3}]" xml:space="preserve"><value>Selecionado {0}[{1}] -&gt; {2}[{3}]</value></data>
+  <data name="Purchased map was not found in normal inventory." xml:space="preserve"><value>Mapa comprado não encontrado no inventário normal.</value></data>
+  <data name="Expected one purchased map in {0}[{1}], found quantity {2}." xml:space="preserve"><value>Esperado um mapa comprado em {0}[{1}], encontrada quantidade {2}.</value></data>
+  <data name="No empty loaded saddlebag slot is available." xml:space="preserve"><value>Sem posição livre em alforje carregado.</value></data>
+  <data name="Expected exactly one purchased map in normal inventory before storage, found {0}." xml:space="preserve"><value>Esperado exatamente um mapa comprado no inventário normal antes de guardar, encontrados {0}.</value></data>
+  <data name="Selected {0}[{1}] -&gt; {2}[{3}] (inventory={4}, saddlebag={5})" xml:space="preserve"><value>Selecionado {0}[{1}] -&gt; {2}[{3}] (inventário={4}, alforje={5})</value></data>
+  <data name="Source slot changed before move. Expected {0} x{1} in {2}[{3}]." xml:space="preserve"><value>Posição de origem mudou antes de mover. Esperado {0} x{1} em {2}[{3}].</value></data>
+  <data name="Destination slot changed before move. {0}[{1}] is no longer empty." xml:space="preserve"><value>Posição de destino mudou antes de mover. {0}[{1}] não está mais vazio.</value></data>
+  <data name="Map counts changed before move. Expected inventory/saddlebag {0}/{1}, found {2}/{3}." xml:space="preserve"><value>Contagens de mapas mudaram antes de mover. Esperado inventário/alforje {0}/{1}, encontrado {2}/{3}.</value></data>
+  <data name="Move issued for map {0}: {1}[{2}] -&gt; {3}[{4}]" xml:space="preserve"><value>Movimento emitido para mapa {0}: {1}[{2}] -&gt; {3}[{4}]</value></data>
+  <data name="Waiting for exact move confirmation: source={0}, destination={1} x{2}, inventory/saddlebag={3}/{4}, expected=0 and {5} x{6}, {7}/{8}." xml:space="preserve"><value>Esperando confirmação exata: origem={0}, destino={1} x{2}, inventário/alforje={3}/{4}, esperado=0 e {5} x{6}, {7}/{8}.</value></data>
+  <data name="Confirmed {0} moved to {1}[{2}]; inventory {3}-&gt;{4}, saddlebag {5}-&gt;{6}." xml:space="preserve"><value>Confirmado {0} movido a {1}[{2}]; inventário {3}-&gt;{4}, alforje {5}-&gt;{6}.</value></data>
+  <data name="Source container {0} is not loaded." xml:space="preserve"><value>Contêiner de origem {0} não carregado.</value></data>
+  <data name="Destination container {0} is not loaded." xml:space="preserve"><value>Contêiner de destino {0} não carregado.</value></data>
+  <data name="Source slot {0} is out of range for {1}." xml:space="preserve"><value>Posição de origem {0} fora do intervalo de {1}.</value></data>
+  <data name="Destination slot {0} is out of range for {1}." xml:space="preserve"><value>Posição de destino {0} fora do intervalo de {1}.</value></data>
+  <data name="Source slot changed before move. Expected {0} in {1}[{2}]." xml:space="preserve"><value>Posição de origem mudou antes de mover. Esperado {0} em {1}[{2}].</value></data>
+  <data name="Moved map {0} from {1}[{2}] to {3}[{4}]" xml:space="preserve"><value>Mapa {0} movido de {1}[{2}] a {3}[{4}]</value></data>
+  <data name="Retainer inventory containers are not loaded: {0}." xml:space="preserve"><value>Contêineres do retentor não carregados: {0}.</value></data>
+  <data name="Selected map {0} was not found in loaded retainer inventory. Scanned {1} ({2} slots, matched quantity {3})." xml:space="preserve"><value>Mapa {0} não encontrado no inventário carregado do retentor. Examinado {1} ({2} posições, quantidade correspondente {3}).</value></data>
+  <data name="No empty player inventory slot is available for retainer retrieval." xml:space="preserve"><value>Sem posição livre no inventário do jogador para retirar do retentor.</value></data>
+  <data name="Selected retainer map move {0}[{1}] -&gt; {2}[{3}]" xml:space="preserve"><value>Selecionado movimento de mapa do retentor {0}[{1}] -&gt; {2}[{3}]</value></data>
+  <data name="Source retainer container {0} is not loaded." xml:space="preserve"><value>Contêiner de origem do retentor {0} não carregado.</value></data>
+  <data name="Moved retainer map {0} from {1}[{2}] to {3}[{4}]" xml:space="preserve"><value>Mapa do retentor {0} movido de {1}[{2}] a {3}[{4}]</value></data>
+  <data name="A planned inventory slot is unavailable." xml:space="preserve"><value>Uma posição planejada do inventário está indisponível.</value></data>
+  <data name="GatherBuddy Reborn gathering one {0}." xml:space="preserve"><value>GatherBuddy Reborn coletando um {0}.</value></data>
+  <data name="GatherBuddy Reborn start failed: {0}" xml:space="preserve"><value>Falha ao iniciar GatherBuddy Reborn: {0}</value></data>
+  <data name="GatherBuddy Reborn one-shot target is not active." xml:space="preserve"><value>Alvo único do GatherBuddy Reborn não está ativo.</value></data>
+  <data name="GatherBuddy Reborn does not expose gatherable item {0} ({1})." xml:space="preserve"><value>GatherBuddy Reborn não expõe item coletável {0} ({1}).</value></data>
+  <data name="GatherBuddy Reborn already reports {0:N0} total {1}; cannot request one more." xml:space="preserve"><value>GatherBuddy Reborn já informa {0:N0} {1} no total; não é possível pedir mais um.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList type not found." xml:space="preserve"><value>Tipo AutoGatherList do GatherBuddy Reborn não encontrado.</value></data>
+  <data name="Could not create GatherBuddy Reborn auto-gather list." xml:space="preserve"><value>Não foi possível criar lista de coleta automática do GatherBuddy Reborn.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList.Add method not found." xml:space="preserve"><value>Método AutoGatherList.Add do GatherBuddy Reborn não encontrado.</value></data>
+  <data name="GatherBuddy Reborn did not add {0} to the auto-gather list." xml:space="preserve"><value>GatherBuddy Reborn não adicionou {0} à lista de coleta automática.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager.AddList method not found." xml:space="preserve"><value>Método AutoGatherListsManager.AddList do GatherBuddy Reborn não encontrado.</value></data>
+  <data name="Created GatherBuddy Reborn one-shot list for {0}." xml:space="preserve"><value>Lista única do GatherBuddy Reborn criada para {0}.</value></data>
+  <data name="Suppressed {0} enabled GatherBuddy Reborn list(s) for LootGoblin one-shot." xml:space="preserve"><value>Suprimidas {0} listas ativas do GatherBuddy Reborn para coleta única do LootGoblin.</value></data>
+  <data name="GatherBuddy Reborn one-shot exclusivity failed; enabled non-LootGoblin lists: {0}." xml:space="preserve"><value>Exclusividade da coleta única do GatherBuddy Reborn falhou; listas fora do LootGoblin ativas: {0}.</value></data>
+  <data name="GatherBuddy Reborn active target mismatch; expected item={0} quantity={1}; active={2}." xml:space="preserve"><value>Alvo ativo do GatherBuddy Reborn não corresponde; esperado item={0} quantidade={1}; ativo={2}.</value></data>
+  <data name="GatherBuddy Reborn active target verified; item={0}; quantity={1}; suppressedLists={2}." xml:space="preserve"><value>Alvo ativo do GatherBuddy Reborn verificado; item={0}; quantidade={1}; listas suprimidas={2}.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager.SetActiveItems method not found." xml:space="preserve"><value>Método AutoGatherListsManager.SetActiveItems do GatherBuddy Reborn não encontrado.</value></data>
+  <data name="GatherBuddy Reborn active items rebuilt." xml:space="preserve"><value>Itens ativos do GatherBuddy Reborn reconstruídos.</value></data>
+  <data name="GatherBuddy Reborn loaded, but plugin instance reflection failed." xml:space="preserve"><value>GatherBuddy Reborn carregado, mas reflexão da instância falhou.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager reflection failed." xml:space="preserve"><value>Reflexão de AutoGatherListsManager do GatherBuddy Reborn falhou.</value></data>
+  <data name="GatherBuddy Reborn gatherable count method not found." xml:space="preserve"><value>Método de contagem coletável do GatherBuddy Reborn não encontrado.</value></data>
+  <data name="GatherBuddy Reborn count read by {0}." xml:space="preserve"><value>Contagem do GatherBuddy Reborn lida por {0}.</value></data>
+  <data name="GatherBuddy Reborn gatherable count failed: {0}" xml:space="preserve"><value>Contagem coletável do GatherBuddy Reborn falhou: {0}</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList.SetPreferredLocation method not found." xml:space="preserve"><value>Método AutoGatherList.SetPreferredLocation do GatherBuddy Reborn não encontrado.</value></data>
+  <data name="GatherBuddy Reborn preferred location set." xml:space="preserve"><value>Local preferido do GatherBuddy Reborn definido.</value></data>
+  <data name="GatherBuddy Reborn active item list not found." xml:space="preserve"><value>Lista de itens ativos do GatherBuddy Reborn não encontrada.</value></data>
+  <data name="GatherBuddy Reborn active item entry could not be read: {0}." xml:space="preserve"><value>Não foi possível ler entrada de item ativo do GatherBuddy Reborn: {0}.</value></data>
+  <data name="GatherBuddy Reborn active item list read." xml:space="preserve"><value>Lista de itens ativos do GatherBuddy Reborn lida.</value></data>
+  <data name="Log in before refreshing Emptor price hints." xml:space="preserve"><value>Entre antes de atualizar dicas de preço do Emptor.</value></data>
+  <data name="An Emptor price refresh is already pending." xml:space="preserve"><value>Atualização de preço do Emptor já pendente.</value></data>
+  <data name="Manual price refresh is available in {0}." xml:space="preserve"><value>Atualização manual de preços disponível em {0}.</value></data>
+  <data name="The map item ID and maximum gil must both be positive." xml:space="preserve"><value>ID do item de mapa e gil máximo devem ser positivos.</value></data>
+  <data name="Emptor API v4 or newer is required for the configured marketboard city; detected v{0}. Select Ul&apos;dah (Emptor default) to keep using Emptor v1-v3." xml:space="preserve"><value>Cidade do mercado configurada exige Emptor API v4 ou superior; detectado v{0}. Selecione Ul&apos;dah (padrão Emptor) para continuar usando v1-v3.</value></data>
+  <data name="Emptor order submission failed: {0}" xml:space="preserve"><value>Envio de pedido Emptor falhou: {0}</value></data>
+  <data name="No LootGoblin-owned Emptor order ID is active." xml:space="preserve"><value>Nenhum ID de pedido Emptor do LootGoblin ativo.</value></data>
+  <data name="Emptor returned a different order ID ({0})." xml:space="preserve"><value>Emptor retornou outro ID de pedido ({0}).</value></data>
+  <data name="Emptor order polling failed: {0}" xml:space="preserve"><value>Consulta de pedido Emptor falhou: {0}</value></data>
+  <data name="Emptor did not accept cancellation for LootGoblin order {0}." xml:space="preserve"><value>Emptor não aceitou cancelamento do pedido LootGoblin {0}.</value></data>
+  <data name="Could not cancel LootGoblin Emptor order {0}: {1}" xml:space="preserve"><value>Não foi possível cancelar pedido LootGoblin Emptor {0}: {1}</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is active, but no AgentMap flag, TreasureSpot capture, or cached target was available after {1:F0}s. Manual intervention required." xml:space="preserve"><value>Item-chave de mapa &apos;{0}&apos; ativo, mas sem marcador AgentMap, captura TreasureSpot ou alvo em cache após {1:F0}s. Intervenção manual necessária.</value></data>
+  <data name="Active map target recovered from {0}, but no aetheryte is available for {1}. Manual intervention required." xml:space="preserve"><value>Alvo ativo recuperado de {0}, mas sem aetheryte para {1}. Intervenção manual necessária.</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s); continuing with secured stock." xml:space="preserve"><value>Preparados {0} de {1} mapas {2} planejados; continuando com estoque garantido.</value></data>
+  <data name="Market batch warning: {0} Continuing with {1} secured {2} map(s)." xml:space="preserve"><value>Aviso de lote do mercado: {0} Continuando com {1} mapas {2} garantidos.</value></data>
+  <data name="{0} Manual world return and party restoration may be required." xml:space="preserve"><value>{0} Retorno manual ao mundo e restauração do grupo podem ser necessários.</value></data>
+  <data name="Party restoration timed out; continuing without: {0}." xml:space="preserve"><value>Restauração do grupo expirou; continuando sem: {0}.</value></data>
+  <data name="Party restoration timed out; stopped with missing members: {0}." xml:space="preserve"><value>Restauração do grupo expirou; parado com membros ausentes: {0}.</value></data>
+  <data name="Cannot gather a map from Main Menu. Log in first." xml:space="preserve"><value>Não é possível coletar mapa no Menu Principal. Entre primeiro.</value></data>
+  <data name="Cannot gather a map while LootGoblin is busy ({0})." xml:space="preserve"><value>Não é possível coletar mapa enquanto LootGoblin está ocupado ({0}).</value></data>
+  <data name="Gather job not configured." xml:space="preserve"><value>Profissão de coleta não configurada.</value></data>
+  <data name="No gatherable map configured." xml:space="preserve"><value>Nenhum mapa coletável configurado.</value></data>
+  <data name="in duty" xml:space="preserve"><value>em dever</value></data>
+  <data name="Treasure coffer was expected after /dig but could not be resolved after {0:F0}s and {1}/{2} dig retries. Manual intervention required." xml:space="preserve"><value>Baú esperado após /dig, mas não identificado após {0:F0}s e {1}/{2} novas escavações. Intervenção manual necessária.</value></data>
+  <data name="Expected {0} in inventory for one-shot map run, but it was not found." xml:space="preserve"><value>Esperado {0} no inventário para execução única, mas não encontrado.</value></data>
+  <data name="No unlocked aetheryte was found in current territory {0} for ADS NPC no-inn repair retry." xml:space="preserve"><value>Nenhum aetheryte desbloqueado no território {0} para tentar reparo NPC sem pousada do ADS novamente.</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is active after error &apos;{1}&apos;, but no AgentMap flag, TreasureSpot capture, or cached target is available. Manual intervention required." xml:space="preserve"><value>Item-chave de mapa &apos;{0}&apos; ativo após erro &apos;{1}&apos;, mas sem marcador AgentMap, captura TreasureSpot ou alvo em cache. Intervenção manual necessária.</value></data>
+  <data name="Map gathering timed out after {0}s." xml:space="preserve"><value>Coleta de mapa expirou após {0}s.</value></data>
+  <data name="Searching {0} for {1}..." xml:space="preserve"><value>Procurando {1} em {0}...</value></data>
+  <data name="Preparing party for travel to {0}..." xml:space="preserve"><value>Preparando grupo para viajar a {0}...</value></data>
+  <data name="Teleporting the party to {0} before world travel..." xml:space="preserve"><value>Teleportando grupo a {0} antes da viagem de mundo...</value></data>
+  <data name="Disbanding party before world travel..." xml:space="preserve"><value>Dissolvendo grupo antes da viagem de mundo...</value></data>
+  <data name="Traveling to {0} for {1}..." xml:space="preserve"><value>Viajando a {0} para {1}...</value></data>
+  <data name="Emptor is searching for {0}..." xml:space="preserve"><value>Emptor procurando {0}...</value></data>
+  <data name="Emptor order finished ({0}); waiting for market-board cleanup..." xml:space="preserve"><value>Pedido Emptor concluído ({0}); esperando fechamento do mercado...</value></data>
+  <data name="Buying map {0} of {1}: {2}..." xml:space="preserve"><value>Comprando mapa {0} de {1}: {2}...</value></data>
+  <data name="Opening saddlebag to store {0} before the next order..." xml:space="preserve"><value>Abrindo alforje para guardar {0} antes do próximo pedido...</value></data>
+  <data name="Waiting for saddlebag UI to stabilize before storing {0}..." xml:space="preserve"><value>Esperando estabilizar alforje antes de guardar {0}...</value></data>
+  <data name="Waiting for InventoryBuddy before storing {0}..." xml:space="preserve"><value>Esperando InventoryBuddy antes de guardar {0}...</value></data>
+  <data name="Reopening saddlebag to store {0}..." xml:space="preserve"><value>Reabrindo alforje para guardar {0}...</value></data>
+  <data name="Could not plan safe saddlebag storage: {0}" xml:space="preserve"><value>Não foi possível planejar armazenamento seguro no alforje: {0}</value></data>
+  <data name="Moving {0} into the saddlebag..." xml:space="preserve"><value>Movendo {0} para o alforje...</value></data>
+  <data name="The inventory-to-saddlebag move plan was lost." xml:space="preserve"><value>Plano de movimento do inventário ao alforje perdido.</value></data>
+  <data name="InventoryBuddy closed before the planned saddlebag move." xml:space="preserve"><value>InventoryBuddy fechou antes do movimento planejado ao alforje.</value></data>
+  <data name="The guarded saddlebag move was not issued: {0}" xml:space="preserve"><value>Movimento protegido ao alforje não emitido: {0}</value></data>
+  <data name="Confirming {0} moved into the saddlebag..." xml:space="preserve"><value>Confirmando {0} movido ao alforje...</value></data>
+  <data name="The inventory-to-saddlebag confirmation plan was lost." xml:space="preserve"><value>Plano de confirmação do inventário ao alforje perdido.</value></data>
+  <data name="InventoryBuddy closed before move confirmation: {0}" xml:space="preserve"><value>InventoryBuddy fechou antes de confirmar movimento: {0}</value></data>
+  <data name="Timed out {0} after {1:F0} seconds." xml:space="preserve"><value>Tempo esgotado em {0} após {1:F0} segundos.</value></data>
+  <data name="Cannot decipher a batch map because key item &apos;{0}&apos; is already occupied." xml:space="preserve"><value>Não é possível decifrar mapa do lote pois item-chave &apos;{0}&apos; já está ocupado.</value></data>
+  <data name="Cannot decipher {0} because it is no longer in normal inventory." xml:space="preserve"><value>Não é possível decifrar {0} pois não está mais no inventário normal.</value></data>
+  <data name="Deciphering {0} into the key-item slot before the next order..." xml:space="preserve"><value>Decifrando {0} para posição de item-chave antes do próximo pedido...</value></data>
+  <data name="Could not confirm {0} in the key-item slot within {1:F0} seconds." xml:space="preserve"><value>Não foi possível confirmar {0} na posição de item-chave em {1:F0} segundos.</value></data>
+  <data name="Stopping the owned Emptor order and waiting for market-board cleanup..." xml:space="preserve"><value>Parando pedido Emptor próprio e esperando fechamento do mercado...</value></data>
+  <data name="Returning to {0} before restoring the party..." xml:space="preserve"><value>Voltando a {0} antes de restaurar o grupo...</value></data>
+  <data name="Could not return to {0}: {1}" xml:space="preserve"><value>Não foi possível voltar a {0}: {1}</value></data>
+  <data name="Timed out returning to {0}. Party invites were not sent from the wrong world." xml:space="preserve"><value>Tempo esgotado para voltar a {0}. Convites não enviados do mundo errado.</value></data>
+  <data name="Party restoration was blocked because the player is not on the captured starting world." xml:space="preserve"><value>Restauração do grupo bloqueada: jogador fora do mundo inicial capturado.</value></data>
+  <data name="Restoring the captured party roster..." xml:space="preserve"><value>Restaurando lista capturada do grupo...</value></data>
+  <data name="Party restoration stopped because the player left the captured starting world." xml:space="preserve"><value>Restauração do grupo parou: jogador saiu do mundo inicial capturado.</value></data>
+  <data name="Switching to gather job for {0}..." xml:space="preserve"><value>Trocando para profissão de coleta para {0}...</value></data>
+  <data name="No map gather target is active." xml:space="preserve"><value>Nenhum alvo de coleta de mapa ativo.</value></data>
+  <data name="Gather job was cleared while gathering." xml:space="preserve"><value>Profissão de coleta removida durante coleta.</value></data>
+  <data name="Starting GatherBuddy Reborn for {0}..." xml:space="preserve"><value>Iniciando GatherBuddy Reborn para {0}...</value></data>
+  <data name="Current job changed before GatherBuddy start; currentJob={0}; expectedJob={1}." xml:space="preserve"><value>Profissão mudou antes de iniciar GatherBuddy; profissão atual={0}; esperada={1}.</value></data>
+  <data name="Waiting for GatherBuddy Reborn to gather {0}..." xml:space="preserve"><value>Esperando GatherBuddy Reborn coletar {0}...</value></data>
+  <data name="GatherBuddy Reborn auto-gather stopped before {0} was obtained." xml:space="preserve"><value>Coleta automática do GatherBuddy Reborn parou antes de obter {0}.</value></data>
+  <data name="Gathering window closed for {0}; switching back..." xml:space="preserve"><value>Janela de coleta fechada para {0}; voltando à profissão anterior...</value></data>
+  <data name="Thief-map remount recovered - flying to location..." xml:space="preserve"><value>Remontaria do mapa de ladrão recuperada - voando ao local...</value></data>
+  <data name="Wait for party disabled - flying to thief-map location..." xml:space="preserve"><value>Espera do grupo desativada - voando ao local do mapa de ladrão...</value></data>
+  <data name="Required party members mounted - flying to thief-map location..." xml:space="preserve"><value>Membros necessários montados - voando ao local do mapa de ladrão...</value></data>
+  <data name="Could not start ADS repair ({0}) at {1}% durability." xml:space="preserve"><value>Não foi possível iniciar reparo ADS ({0}) com durabilidade {1}%.</value></data>
+  <data name="ADS repair recovery timed out after {0:F0}s while teleporting to {1} (ID {2})." xml:space="preserve"><value>Recuperação de reparo ADS expirou após {0:F0}s ao teleportar a {1} (ID {2}).</value></data>
+  <data name="Wrong territory during ADS repair recovery: {0} (expected {1})." xml:space="preserve"><value>Território errado na recuperação de reparo ADS: {0} (esperado {1}).</value></data>
+  <data name="opening InventoryBuddy" xml:space="preserve"><value>abrindo InventoryBuddy</value></data>
+  <data name="waiting for InventoryBuddy" xml:space="preserve"><value>esperando InventoryBuddy</value></data>
+  <data name="waiting for stable InventoryBuddy" xml:space="preserve"><value>esperando InventoryBuddy estabilizar</value></data>
+  <data name="moving the purchased map into the saddlebag" xml:space="preserve"><value>movendo mapa comprado ao alforje</value></data>
+  <data name="confirming the saddlebag move" xml:space="preserve"><value>confirmando movimento ao alforje</value></data>
+  <data name="SwitchingToGatherJob" xml:space="preserve"><value>Trocando para profissão de coleta</value></data>
+  <data name="StartingGatherBuddy" xml:space="preserve"><value>Iniciando GatherBuddy</value></data>
+  <data name="WaitingForMap" xml:space="preserve"><value>Esperando mapa</value></data>
+  <data name="ClosingGatherWindow" xml:space="preserve"><value>Fechando janela de coleta</value></data>
+  <data name="SwitchingBack" xml:space="preserve"><value>Voltando à profissão anterior</value></data>
+  <data name="An additional batch step failed: {0}" xml:space="preserve"><value>Uma etapa adicional do lote falhou: {0}</value></data>
+  <data name="{0} Market batch warning: {1} Continuing with {2} secured {3} map(s)." xml:space="preserve"><value>{0} Aviso de lote do mercado: {1} Continuando com {2} mapas {3} garantidos.</value></data>
+  <data name="{0} timed out while gathering {1}; targetMap={2} ({3}); currentJob={4}; expectedJob={5}; GatherBuddy={6}." xml:space="preserve"><value>{0} expirou ao coletar {1}; mapa alvo={2} ({3}); profissão atual={4}; esperada={5}; GatherBuddy={6}.</value></data>
+  <data name="{0} timed out while gathering {1}; targetMap={2} ({3}); currentJob={4}; expectedJob={5}; GatherBuddy={6}; closeGate={7}; closeAttempts={8}; cancelIssued={9}." xml:space="preserve"><value>{0} expirou ao coletar {1}; mapa alvo={2} ({3}); profissão atual={4}; esperada={5}; GatherBuddy={6}; condição de fechamento={7}; tentativas de fechamento={8}; cancelamento emitido={9}.</value></data>
+  <data name="Emptor API v5 or newer is required for price hints; detected v{0}." xml:space="preserve"><value>Dicas de preço exigem Emptor API v5 ou superior; detectado v{0}.</value></data>
+  <data name="Emptor API v5 price IPC is unavailable." xml:space="preserve"><value>IPC de preços Emptor API v5 indisponível.</value></data>
+  <data name="Emptor rejected the order ({0})." xml:space="preserve"><value>Emptor rejeitou o pedido ({0}).</value></data>
+  <data name="unknown state" xml:space="preserve"><value>estado desconhecido</value></data>
+  <data name="Indeterminate without a verified inventory map" xml:space="preserve"><value>Indeterminado sem mapa verificado no inventário</value></data>
+  <data name="FATE/combat cleared - resuming portal after {0}..." xml:space="preserve"><value>FATE/combate encerrado - retomando portal após {0}...</value></data>
+  <data name="FATE/combat cleared - resuming captured portal after {0}..." xml:space="preserve"><value>FATE/combate encerrado - retomando portal capturado após {0}...</value></data>
+  <data name="No acceptable {0} listing remained on any enabled world." xml:space="preserve"><value>Nenhum anúncio aceitável de {0} restou em mundos ativados.</value></data>
+  <data name="{0} appeared in inventory before an Emptor order was submitted." xml:space="preserve"><value>{0} apareceu no inventário antes do envio de pedido Emptor.</value></data>
+  <data name="Prepared {0} {1} map(s); the configured remaining run count no longer allows another order." xml:space="preserve"><value>Preparados {0} mapas {1}; contagem restante configurada não permite outro pedido.</value></data>
+  <data name="Purchased and verified one {0} on {1}." xml:space="preserve"><value>Comprado e verificado um {0} em {1}.</value></data>
+  <data name="Emptor reported Indeterminate, but {0} is present in inventory; no order will be resubmitted." xml:space="preserve"><value>Emptor informou Indeterminado, mas {0} está no inventário; pedido não será reenviado.</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s). {3}" xml:space="preserve"><value>Preparados {0} de {1} mapas {2} planejados. {3}</value></data>
+  <data name="No safe storage slot remained for another map order." xml:space="preserve"><value>Sem posição segura para armazenar outro pedido de mapa.</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s)." xml:space="preserve"><value>Preparados {0} de {1} mapas {2} planejados.</value></data>
+  <data name="Normal inventory still contains {0} {1} map(s), so another quantity-one order was not submitted." xml:space="preserve"><value>Inventário normal ainda contém {0} mapas {1}; outro pedido unitário não foi enviado.</value></data>
+  <data name="Opening saddlebag for {0}..." xml:space="preserve"><value>Abrindo alforje para {0}...</value></data>
+  <data name="{0} timed out for {1}." xml:space="preserve"><value>{0} expirou para {1}.</value></data>
+  <data name="Reopening saddlebag for {0}..." xml:space="preserve"><value>Reabrindo alforje para {0}...</value></data>
+  <data name="Moving {0} from saddlebag..." xml:space="preserve"><value>Movendo {0} dos alforjes...</value></data>
+  <data name="No saddlebag move plan." xml:space="preserve"><value>Sem plano de movimento dos alforjes.</value></data>
+  <data name="InventoryBuddy hidden before saddlebag move." xml:space="preserve"><value>InventoryBuddy oculto antes do movimento dos alforjes.</value></data>
+  <data name="Confirming {0} moved from saddlebag..." xml:space="preserve"><value>Confirmando {0} movido dos alforjes...</value></data>
+  <data name="Saddlebag visible; refreshed loaded map sources." xml:space="preserve"><value>Alforje visível; fontes de mapas carregadas atualizadas.</value></data>
+  <data name="Saddlebag did not open before timeout; refreshed currently loaded map sources." xml:space="preserve"><value>Alforje não abriu antes de expirar; fontes atualmente carregadas atualizadas.</value></data>
+  <data name="ADS repair timed out after {0:F0}s." xml:space="preserve"><value>Reparo ADS expirou após {0:F0}s.</value></data>
+  <data name="Lowest durability {0}%, threshold {1}%, ADS mode {2}, ADS {3}, retry count {4}/{5}, territory {6}." xml:space="preserve"><value>Durabilidade mínima {0}%, limite {1}%, modo ADS {2}, ADS {3}, tentativas {4}/{5}, território {6}.</value></data>
+  <data name="Opening" xml:space="preserve"><value>Abrindo</value></data>
+  <data name="WaitingForAddon" xml:space="preserve"><value>Esperando addon</value></data>
+  <data name="WaitingStable" xml:space="preserve"><value>Esperando estabilidade</value></data>
+  <data name="Moving" xml:space="preserve"><value>Movendo</value></data>
+  <data name="Confirming" xml:space="preserve"><value>Confirmando</value></data>
+  <data name="map allowance timer not loaded" xml:space="preserve"><value>temporizador da permissão de mapa não carregado</value></data>
+  <data name="map allowance detail not loaded" xml:space="preserve"><value>detalhe da permissão de mapa não carregado</value></data>
+  <data name="map allowance detail not recognized" xml:space="preserve"><value>detalhe da permissão de mapa não reconhecido</value></data>
+  <data name="No unlocked aetheryte was found in current territory {0} for ADS NPC no-inn repair retry. Last Lifestream error: {1}" xml:space="preserve"><value>Nenhum aetheryte desbloqueado no território {0} para tentar reparo NPC sem pousada do ADS novamente. Último erro Lifestream: {1}</value></data>
+  <data name="{0} Lowest durability {1}%, threshold {2}%, ADS mode {3}, ADS {4}, retry count {5}/{6}, territory {7}." xml:space="preserve"><value>{0} Durabilidade mínima {1}%, limite {2}%, modo ADS {3}, ADS {4}, tentativas {5}/{6}, território {7}.</value></data>
+  <data name="{0} Lowest durability {1}%, threshold {2}%, ADS mode {3}, ADS {4}, retry count {5}/{6}, territory {7}. ADS is not loaded." xml:space="preserve"><value>{0} Durabilidade mínima {1}%, limite {2}%, modo ADS {3}, ADS {4}, tentativas {5}/{6}, território {7}. ADS não está carregado.</value></data>
+  <data name="addons={0}; conditions=Gathering:{1}, ExecutingGatheringAction:{2}" xml:space="preserve"><value>addons={0}; condições=Gathering:{1}, ExecutingGatheringAction:{2}</value></data>
+  <data name="Window appearance" xml:space="preserve"><value>Aparência da janela</value></data>
+  <data name="Compact visible on main window" xml:space="preserve"><value>Mostrar modo compacto na janela principal</value></data>
+  <data name="Language visible on main window" xml:space="preserve"><value>Mostrar idioma na janela principal</value></data>
+  <data name="Transparency" xml:space="preserve"><value>Transparência</value></data>
+  <data name="Opacity (%)" xml:space="preserve"><value>Opacidade (%)</value></data>
+  <data name="Auto-fade when unfocused" xml:space="preserve"><value>Esmaecer automaticamente sem foco</value></data>
+  <data name="Unfocused opacity (%)" xml:space="preserve"><value>Opacidade sem foco (%)</value></data>
+  <data name="Unfocused delay (seconds)" xml:space="preserve"><value>Espera sem foco (segundos)</value></data>
+</root>

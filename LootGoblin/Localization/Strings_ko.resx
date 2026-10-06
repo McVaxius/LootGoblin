@@ -1,0 +1,1372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="({0:F0}, {1:F0}, {2:F0})" xml:space="preserve"><value>({0:F0}, {1:F0}, {2:F0})</value></data>
+  <data name="({0} missing)" xml:space="preserve"><value>({0}명 부족)</value></data>
+  <data name="({0} per map)" xml:space="preserve"><value>(지도당 {0})</value></data>
+  <data name="({0}/{1} mounted)" xml:space="preserve"><value>({0}/{1} 탑승)</value></data>
+  <data name="(all recorded)" xml:space="preserve"><value>(모두 기록됨)</value></data>
+  <data name="(Lvl {0})" xml:space="preserve"><value>(레벨 {0})</value></data>
+  <data name="(no args) - Toggle this window" xml:space="preserve"><value>(인수 없음) - 창 표시 전환</value></data>
+  <data name="(No Position)" xml:space="preserve"><value>(위치 없음)</value></data>
+  <data name="(none)" xml:space="preserve"><value>(없음)</value></data>
+  <data name="(Used for manual mounting)" xml:space="preserve"><value>(수동 탑승에 사용)</value></data>
+  <data name="[All 3 Types]" xml:space="preserve"><value>[모든 3종류]</value></data>
+  <data name="[Dungeon]" xml:space="preserve"><value>[던전]</value></data>
+  <data name="[Flying]" xml:space="preserve"><value>[비행 중]</value></data>
+  <data name="[Grounded]" xml:space="preserve"><value>[지상]</value></data>
+  <data name="[Guaranteed]" xml:space="preserve"><value>[확정]</value></data>
+  <data name="[In Combat]" xml:space="preserve"><value>[전투 중]</value></data>
+  <data name="[Map AI]" xml:space="preserve"><value>[지도 AI]</value></data>
+  <data name="[Mounted]" xml:space="preserve"><value>[탑승 중]</value></data>
+  <data name="[No Combat]" xml:space="preserve"><value>[비전투]</value></data>
+  <data name="[OK]" xml:space="preserve"><value>[OK]</value></data>
+  <data name="[On Foot]" xml:space="preserve"><value>[도보]</value></data>
+  <data name="[Outdoor]" xml:space="preserve"><value>[필드]</value></data>
+  <data name="[PAUSED]" xml:space="preserve"><value>[일시 정지]</value></data>
+  <data name="[READ MAP INDICES]" xml:space="preserve"><value>[지도 인덱스 읽기]</value></data>
+  <data name="[REDACTED]" xml:space="preserve"><value>[가림]</value></data>
+  <data name="[Roulette]" xml:space="preserve"><value>[무작위]</value></data>
+  <data name="[WIP]" xml:space="preserve"><value>[개발 중]</value></data>
+  <data name="{0} | Lvl {1}" xml:space="preserve"><value>{0} | 레벨 {1}</value></data>
+  <data name="{0} done, {1} remaining" xml:space="preserve"><value>{0}회 완료, {1}회 남음</value></data>
+  <data name="{0} inventory + {1} active + {2} from Poetics" xml:space="preserve"><value>소지품 {0} + 활성 {1} + 시학 구매 {2}</value></data>
+  <data name="{0}m{1:D2}s" xml:space="preserve"><value>{0}분 {1:D2}초</value></data>
+  <data name="|  Bot State:" xml:space="preserve"><value>|  봇 상태:</value></data>
+  <data name="|  Gysahl Greens: {0}" xml:space="preserve"><value>|  기살의 야채: {0}</value></data>
+  <data name="|  Outdoor suppression: {0}" xml:space="preserve"><value>|  필드 억제: {0}</value></data>
+  <data name="|  VBM forbidden zones: {0}" xml:space="preserve"><value>|  VBM 금지 구역: {0}</value></data>
+  <data name="| all mounted" xml:space="preserve"><value>| 전원 탑승</value></data>
+  <data name="| any mounted" xml:space="preserve"><value>| 한 명 이상 탑승</value></data>
+  <data name="| Territory {0}" xml:space="preserve"><value>| 지역 {0}</value></data>
+  <data name="| Territory {0} / {1}" xml:space="preserve"><value>| 지역 {0} / {1}</value></data>
+  <data name="| wait for {0} other player(s)" xml:space="preserve"><value>| 다른 플레이어 {0}명 대기</value></data>
+  <data name="★ You have {0} location(s) not in community DB - consider sharing!" xml:space="preserve"><value>★ 커뮤니티 DB에 없는 위치 {0}개를 공유해 주세요!</value></data>
+  <data name="♡ Ko-fi ♡" xml:space="preserve"><value>♡ Ko-fi ♡</value></data>
+  <data name="✓ MATCHES: {0} (ID: {1})" xml:space="preserve"><value>✓ 일치: {0} (ID: {1})</value></data>
+  <data name="0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing." xml:space="preserve"><value>0은 수리를 끕니다. 장비 내구도가 이 값보다 낮으면 계속하기 전에 ADS에 수리를 요청합니다.</value></data>
+  <data name="0 disables this map type. Positive numbers run that many resolved maps." xml:space="preserve"><value>0은 이 종류를 끕니다. 양수는 해당 수만큼 확인된 지도를 실행합니다.</value></data>
+  <data name="Active map:" xml:space="preserve"><value>활성 지도:</value></data>
+  <data name="Add Emptor's custom repository in Dalamud Settings, then install Emptor from the plugin installer." xml:space="preserve"><value>Dalamud 설정에 Emptor 저장소를 추가한 뒤 플러그인 설치 관리자에서 설치하세요.</value></data>
+  <data name="ADS" xml:space="preserve"><value>ADS</value></data>
+  <data name="ADS {0} repair test failed: {1}" xml:space="preserve"><value>ADS {0} 수리 테스트 실패: {1}</value></data>
+  <data name="ADS {0} repair test requested." xml:space="preserve"><value>ADS {0} 수리 테스트 요청됨.</value></data>
+  <data name="ADS / BMR Adjustments" xml:space="preserve"><value>ADS / BMR 조정</value></data>
+  <data name="ADS did not accept the repair request." xml:space="preserve"><value>ADS가 수리 요청을 수락하지 않았습니다.</value></data>
+  <data name="ADS dungeon handoff is enabled. Install ADS or disable it in settings." xml:space="preserve"><value>던전 ADS 인계가 켜져 있습니다. ADS를 설치하거나 설정에서 끄세요.</value></data>
+  <data name="ADS handoff runs /ads inside after confirmed duty entry. Completed-duty exit chooses a local delay, party departure, ADS delay or manual exit; chest and solver options are below." xml:space="preserve"><value>입장 확인 후 /ads inside를 실행합니다. 완료 후 퇴장은 로컬 지연, 파티 퇴장, ADS 지연 또는 수동을 선택합니다. 상자와 해결기 설정은 아래에 있습니다.</value></data>
+  <data name="ADS is not loaded; {0} repair test not started." xml:space="preserve"><value>ADS가 로드되지 않아 {0} 수리 테스트를 시작하지 않았습니다.</value></data>
+  <data name="ADS is not loaded. Install ADS or disable this setting." xml:space="preserve"><value>ADS가 로드되지 않았습니다. 설치하거나 이 설정을 끄세요.</value></data>
+  <data name="ADS missing" xml:space="preserve"><value>ADS 없음</value></data>
+  <data name="ADS NPC no-inn repair can only start from a sanctuary." xml:space="preserve"><value>ADS 여관 없는 NPC 수리는 안식처에서만 시작합니다.</value></data>
+  <data name="ADS reflection: {0}" xml:space="preserve"><value>ADS .NET 리플렉션: {0}</value></data>
+  <data name="ADS: exit after delay" xml:space="preserve"><value>ADS: 지연 후 퇴장</value></data>
+  <data name="Advanced" xml:space="preserve"><value>고급</value></data>
+  <data name="Aetherytes: {0} positions stored" xml:space="preserve"><value>에테라이트: 위치 {0}개 저장</value></data>
+  <data name="Aetherytes: {0}/{1} positions stored" xml:space="preserve"><value>에테라이트: 위치 {0}/{1}개 저장</value></data>
+  <data name="After a portal is accepted and duty entry is confirmed, LootGoblin sends /ads inside and waits for ADS to finish the dungeon instead of running its legacy dungeon solver." xml:space="preserve"><value>포털 수락과 입장 확인 후 /ads inside를 보내고 기존 해결기 대신 ADS의 완료를 기다립니다.</value></data>
+  <data name="After enabled local-region data centers are exhausted, try public OCE worlds. Requires data-center travel and defaults off." xml:space="preserve"><value>활성화된 지역 데이터센터를 모두 확인한 후 OCE 공개 월드를 시도합니다. 데이터센터 이동이 필요하며 기본은 꺼짐입니다.</value></data>
+  <data name="After the current data center is exhausted, visit public worlds on other data centers in the current region once per map search." xml:space="preserve"><value>현재 데이터센터를 모두 확인한 뒤 지도 검색마다 같은 지역의 다른 데이터센터 공개 월드를 한 번씩 방문합니다.</value></data>
+  <data name="Age: {0}" xml:space="preserve"><value>경과: {0}</value></data>
+  <data name="Alexandrite" xml:space="preserve"><value>알렉산드라이트</value></data>
+  <data name="Alexandrite Maps" xml:space="preserve"><value>알렉산드라이트 지도</value></data>
+  <data name="All Attackable Targets" xml:space="preserve"><value>공격 가능한 모든 대상</value></data>
+  <data name="All Targets When Solo" xml:space="preserve"><value>혼자일 때 모든 대상</value></data>
+  <data name="All Targets When Solo in Duty" xml:space="preserve"><value>임무에서 혼자일 때 모든 대상</value></data>
+  <data name="An Emptor price lookup is pending." xml:space="preserve"><value>Emptor 가격 조회가 대기 중입니다.</value></data>
+  <data name="Applied through RSR IPC immediately before /rotation auto or /rotation manual command triggers." xml:space="preserve"><value>/rotation auto 또는 /rotation manual 명령 직전에 RSR IPC로 적용합니다.</value></data>
+  <data name="Applies to all party waits. In count-threshold mode, timeout does not lower the configured player count." xml:space="preserve"><value>모든 파티 대기에 적용됩니다. 인원 기준 모드에서 시간 초과는 설정 인원을 낮추지 않습니다.</value></data>
+  <data name="Ate" xml:space="preserve"><value>식사 완료</value></data>
+  <data name="Attacker Stance" xml:space="preserve"><value>공격 태세</value></data>
+  <data name="Attention: {0}" xml:space="preserve"><value>주의: {0}</value></data>
+  <data name="Auto Discard (/ays discard)" xml:space="preserve"><value>자동 버리기 (/ays discard)</value></data>
+  <data name="Auto Discard needs AutoRetainer with a configured discard list. When selected, it runs while Loot Goblin is enabled, during safe mounted windows. Factory default: off." xml:space="preserve"><value>자동 버리기는 목록이 설정된 AutoRetainer가 필요합니다. Loot Goblin이 켜져 있을 때 안전한 탑승 구간에 실행합니다. 기본은 꺼짐입니다.</value></data>
+  <data name="Auto Loot Chest" xml:space="preserve"><value>보물상자 자동 획득</value></data>
+  <data name="Auto Start next map" xml:space="preserve"><value>다음 지도 자동 시작</value></data>
+  <data name="Auto Sync FATE" xml:space="preserve"><value>돌발 임무 자동 레벨 조율</value></data>
+  <data name="Auto Teleport" xml:space="preserve"><value>자동 텔레포</value></data>
+  <data name="Auto-summon chocobo companion using Gysahl Greens when timer is low. Will not summon in sanctuaries or duties." xml:space="preserve"><value>남은 시간이 적으면 기살의 야채로 초코보를 자동 소환합니다. 안식처나 임무에서는 소환하지 않습니다.</value></data>
+  <data name="Auto-update locations on login" xml:space="preserve"><value>로그인 시 위치 자동 갱신</value></data>
+  <data name="Automate your treasure map adventures." xml:space="preserve"><value>보물지도 모험을 자동화하세요.</value></data>
+  <data name="Automatically starts the next runnable selected map after completing one." xml:space="preserve"><value>완료 후 선택된 다음 실행 가능한 지도를 자동 시작합니다.</value></data>
+  <data name="Available" xml:space="preserve"><value>사용 가능</value></data>
+  <data name="Blank disables map gathering." xml:space="preserve"><value>비워 두면 지도 채집을 끕니다.</value></data>
+  <data name="Blank uses the player's current job at start." xml:space="preserve"><value>비워 두면 시작 시 현재 직업을 사용합니다.</value></data>
+  <data name="Blank/default city omits the city request field for Emptor v1-v3 compatibility. A selected city is sent only through Emptor API v4 or newer." xml:space="preserve"><value>비어 있거나 기본이면 Emptor v1–v3 호환을 위해 도시 필드를 생략합니다. 선택한 도시는 API v4 이상에서만 전송합니다.</value></data>
+  <data name="Blue" xml:space="preserve"><value>파랑</value></data>
+  <data name="Blue X: unavailable through gathering" xml:space="preserve"><value>파란 X: 채집 불가</value></data>
+  <data name="BMR active module: {0}{1}" xml:space="preserve"><value>BMR 활성 모듈: {0}{1}</value></data>
+  <data name="BMR Disable Hunt Modules" xml:space="preserve"><value>BMR 마물 사냥 모듈 끄기</value></data>
+  <data name="BMR reduce activation range for outdoor areas" xml:space="preserve"><value>야외 BMR 활성 범위 축소</value></data>
+  <data name="BossMod danger:" xml:space="preserve"><value>BossMod 위험:</value></data>
+  <data name="Bot disabled" xml:space="preserve"><value>봇 비활성</value></data>
+  <data name="Bot State" xml:space="preserve"><value>봇 상태</value></data>
+  <data name="Buy" xml:space="preserve"><value>구매</value></data>
+  <data name="Buys Mysterious Maps from Auriana in Revenant's Toll (75 Poetics each), then runs each map automatically." xml:space="preserve"><value>망자의 종소리의 오리아나에게서 수수께끼 지도를 장당 시학 75개로 구매하고 자동 실행합니다.</value></data>
+  <data name="by SaMo; used for treasure map statistics" xml:space="preserve"><value>SaMo 제작, 보물지도 통계에 사용</value></data>
+  <data name="Cart: buy missing maps through Emptor after gathering is unavailable. A market trip may prepare up to three, capped by remaining runs." xml:space="preserve"><value>카트: 채집 불가 시 Emptor로 누락 지도를 구매합니다. 한 번의 장터 이동에 남은 실행 횟수를 한도로 최대 3장 준비합니다.</value></data>
+  <data name="Character command triggers saved." xml:space="preserve"><value>캐릭터 명령 트리거 저장됨.</value></data>
+  <data name="Checked maps run. Use max for unlimited runs or a number for finite runs." xml:space="preserve"><value>선택한 지도를 실행합니다. 최대는 무제한, 숫자는 제한 횟수입니다.</value></data>
+  <data name="Chest Open Timeout (s)" xml:space="preserve"><value>상자 열기 제한 시간(초)</value></data>
+  <data name="Chocobo:" xml:space="preserve"><value>초코보:</value></data>
+  <data name="Choose a combat job, or keep Current job. Gathering needs GatherBuddyReborn, an unlocked gather job with a gearset, and a gatherable map enabled for gathering in Map Queue." xml:space="preserve"><value>전투 직업을 선택하거나 현재 직업을 유지하세요. 채집에는 GatherBuddyReborn, 장비 세트가 있는 개방된 채집 직업, 대기열에서 채집이 켜진 채집 가능 지도가 필요합니다.</value></data>
+  <data name="Chooses where Emptor travels for its marketboard. Ul'dah stores a blank key and keeps Emptor's default behavior." xml:space="preserve"><value>Emptor 장터 도시를 선택합니다. 울다하는 빈 키를 저장하여 기본 동작을 유지합니다.</value></data>
+  <data name="Clear" xml:space="preserve"><value>지우기</value></data>
+  <data name="Clear ALL positions for fresh scanning (dev use)" xml:space="preserve"><value>새 스캔을 위해 모든 위치 삭제(개발용)</value></data>
+  <data name="Clear Food" xml:space="preserve"><value>음식 해제</value></data>
+  <data name="Clear user positions - restore community defaults" xml:space="preserve"><value>사용자 위치 삭제 및 커뮤니티 기본값 복원</value></data>
+  <data name="Color" xml:space="preserve"><value>색상</value></data>
+  <data name="Combat job" xml:space="preserve"><value>전투 직업</value></data>
+  <data name="command trigger override changed" xml:space="preserve"><value>명령 트리거 재정의 변경됨</value></data>
+  <data name="Command Triggers" xml:space="preserve"><value>명령 트리거</value></data>
+  <data name="command triggers saved: {0}" xml:space="preserve"><value>명령 트리거 저장: {0}</value></data>
+  <data name="Commands" xml:space="preserve"><value>명령어</value></data>
+  <data name="Community: {0}" xml:space="preserve"><value>커뮤니티: {0}</value></data>
+  <data name="Compact mode" xml:space="preserve"><value>간소화 모드</value></data>
+  <data name="Companion Stance" xml:space="preserve"><value>버디 태세</value></data>
+  <data name="Completed-duty exit" xml:space="preserve"><value>임무 완료 후 퇴장</value></data>
+  <data name="config    - Open settings" xml:space="preserve"><value>config    - 설정 열기</value></data>
+  <data name="Configure optional food, discard and combat automation here. Command Triggers run slash commands at Landing / Duty Entry and Finish; review them for the plugins you use." xml:space="preserve"><value>음식, 버리기, 전투 자동화를 설정합니다. 명령 트리거는 착륙/입장과 완료 시 실행되므로 사용 플러그인에 맞게 확인하세요.</value></data>
+  <data name="Configured city '{0}' requires Emptor API v4 or newer; detected v{1}." xml:space="preserve"><value>도시 '{0}'에는 Emptor API v4 이상이 필요합니다. 감지: v{1}.</value></data>
+  <data name="Continue if not all party members rejoin after" xml:space="preserve"><value>다음 시간 후 전원이 재합류하지 않아도 진행</value></data>
+  <data name="Control login visibility and settings-window movement. Krangle Names obfuscates player and server names displayed by Loot Goblin." xml:space="preserve"><value>로그인 시 표시와 설정 창 이동을 제어합니다. Krangle Names는 표시되는 플레이어와 서버 이름을 가립니다.</value></data>
+  <data name="Controls BossMod Reborn only. Default: off. Applies on Start and after each configured command batch, regardless of combat provider." xml:space="preserve"><value>BossMod Reborn만 제어합니다. 기본은 꺼짐입니다. 전투 제공자와 무관하게 시작 시 및 명령 묶음 후 적용됩니다.</value></data>
+  <data name="Copy Emptor repo URL" xml:space="preserve"><value>Emptor 저장소 URL 복사</value></data>
+  <data name="Copy this session's positive NQ minimum-listing hint into the ceiling. This does not enable the cart." xml:space="preserve"><value>현재 세션의 양수 NQ 최저가를 상한에 복사합니다. 카트를 활성화하지 않습니다.</value></data>
+  <data name="Current job" xml:space="preserve"><value>현재 직업</value></data>
+  <data name="Current Run" xml:space="preserve"><value>현재 실행</value></data>
+  <data name="Custom RGB" xml:space="preserve"><value>사용자 RGB</value></data>
+  <data name="Cycle Missing Aetherytes" xml:space="preserve"><value>누락 에테라이트 순회</value></data>
+  <data name="Cycle Missing XYZ" xml:space="preserve"><value>누락 XYZ 순회</value></data>
+  <data name="Debug Log" xml:space="preserve"><value>디버그 로그</value></data>
+  <data name="Debug Mode" xml:space="preserve"><value>디버그 모드</value></data>
+  <data name="Debug-only IPC test: ADS.StartRepair(&quot;{0}&quot;)." xml:space="preserve"><value>디버그 전용 IPC 테스트: ADS.StartRepair(&quot;{0}&quot;).</value></data>
+  <data name="Defaults" xml:space="preserve"><value>기본값</value></data>
+  <data name="Defender Stance" xml:space="preserve"><value>방어 태세</value></data>
+  <data name="Dependencies" xml:space="preserve"><value>의존성</value></data>
+  <data name="Diff: X={0:F1} Y={1:F1} Z={2:F1}  Dist={3:F0}y" xml:space="preserve"><value>차이: X={0:F1} Y={1:F1} Z={2:F1}  거리={3:F0}y</value></data>
+  <data name="different territory" xml:space="preserve"><value>다른 지역</value></data>
+  <data name="Disable Pandora's Box" xml:space="preserve"><value>Pandora's Box 끄기</value></data>
+  <data name="Disable Pandora's Box through Dalamud." xml:space="preserve"><value>Dalamud에서 Pandora's Box를 비활성화합니다.</value></data>
+  <data name="DISABLED" xml:space="preserve"><value>비활성화</value></data>
+  <data name="Dismount wait:" xml:space="preserve"><value>내리기 대기:</value></data>
+  <data name="Do not use Tamamizu aetheryte" xml:space="preserve"><value>타마미즈 에테라이트 사용 안 함</value></data>
+  <data name="Done: {0}" xml:space="preserve"><value>완료: {0}</value></data>
+  <data name="Download Updated Locs" xml:space="preserve"><value>최신 위치 다운로드</value></data>
+  <data name="Downloading..." xml:space="preserve"><value>다운로드 중...</value></data>
+  <data name="Dungeon/Loot" xml:space="preserve"><value>던전/전리품</value></data>
+  <data name="Duty-end delay (s)" xml:space="preserve"><value>임무 종료 지연(초)</value></data>
+  <data name="Editing character profile {0}." xml:space="preserve"><value>캐릭터 프로필 {0} 편집 중.</value></data>
+  <data name="Editing global command triggers." xml:space="preserve"><value>전역 명령 트리거 편집 중.</value></data>
+  <data name="Editing global command triggers. Log in to edit a character override." xml:space="preserve"><value>전역 명령 트리거 편집 중입니다. 캐릭터 재정의를 편집하려면 로그인하세요.</value></data>
+  <data name="Emptor API v5 or newer is required for price hints." xml:space="preserve"><value>가격 힌트에는 Emptor API v5 이상이 필요합니다.</value></data>
+  <data name="EMPTOR IS NOT INSTALLED OR LOADED" xml:space="preserve"><value>EMPTOR가 설치 또는 로드되지 않음</value></data>
+  <data name="Emptor is unavailable. Open Marketboard settings for installation guidance." xml:space="preserve"><value>Emptor를 사용할 수 없습니다. 장터 설정의 설치 안내를 확인하세요.</value></data>
+  <data name="Emptor marketboard city" xml:space="preserve"><value>Emptor 장터 도시</value></data>
+  <data name="Emptor NQ minimum listing: {0:N0} gil" xml:space="preserve"><value>Emptor NQ 최저 등록가: {0:N0}길</value></data>
+  <data name="Emptor NQ minimum listing: unavailable" xml:space="preserve"><value>Emptor NQ 최저 등록가: 사용 불가</value></data>
+  <data name="Emptor v5+ supplies session-only NQ minimum-listing price hints for known marketable maps." xml:space="preserve"><value>Emptor v5 이상은 알려진 거래 가능 지도의 NQ 최저가를 현재 세션에만 제공합니다.</value></data>
+  <data name="Enable a cart on a marketable map row and set a positive maximum gil price." xml:space="preserve"><value>거래 가능한 지도 행의 카트를 켜고 양수 길 상한을 설정하세요.</value></data>
+  <data name="Enable State Logging" xml:space="preserve"><value>상태 기록 활성화</value></data>
+  <data name="ENABLED" xml:space="preserve"><value>활성화</value></data>
+  <data name="Error" xml:space="preserve"><value>오류</value></data>
+  <data name="Errors: {0}" xml:space="preserve"><value>오류: {0}</value></data>
+  <data name="Extra delay before sending the map teleport command after the map target is resolved." xml:space="preserve"><value>지도 목적지 확인 후 텔레포 명령 전 추가 지연입니다.</value></data>
+  <data name="Factory defaults: ADS handoff on; ADS exit after 20 seconds; Auto Loot Chest on; Gambler's Lure set to Solve EV (expected value)." xml:space="preserve"><value>기본: ADS 인계 켜짐, 20초 후 ADS 퇴장, 상자 자동 획득 켜짐, Gambler's Lure 기댓값 해결.</value></data>
+  <data name="Factory defaults: Auto Teleport and Require vnavmesh on; Company Chocobo selected." xml:space="preserve"><value>기본: 자동 텔레포와 vnavmesh 필수 켜짐, 회사 초코보 선택.</value></data>
+  <data name="Factory defaults: current combat job; gathering off. The controls below show your current selections." xml:space="preserve"><value>기본: 현재 전투 직업, 채집 꺼짐. 아래에 현재 선택이 표시됩니다.</value></data>
+  <data name="Factory defaults: show the main window on login and allow settings movement; name obfuscation off." xml:space="preserve"><value>기본: 로그인 시 메인 창 표시 및 설정 이동 허용, 이름 가림 꺼짐.</value></data>
+  <data name="Factory defaults: state logging on; Debug Mode, map diagnostics and dedicated file logging off." xml:space="preserve"><value>기본: 상태 기록 켜짐, 디버그 모드·지도 진단·전용 파일 기록 꺼짐.</value></data>
+  <data name="Failed" xml:space="preserve"><value>실패</value></data>
+  <data name="FC" xml:space="preserve"><value>FC</value></data>
+  <data name="Fetch maps from retainers" xml:space="preserve"><value>집사에게서 지도 회수</value></data>
+  <data name="Fetch maps from saddlebags" xml:space="preserve"><value>초코보 가방에서 지도 회수</value></data>
+  <data name="Finish" xml:space="preserve"><value>실행 종료</value></data>
+  <data name="Follow" xml:space="preserve"><value>따라가기</value></data>
+  <data name="Food" xml:space="preserve"><value>음식</value></data>
+  <data name="Food:" xml:space="preserve"><value>음식:</value></data>
+  <data name="For the next map search, start after the world where the previous search ended, wrapping to the beginning when needed." xml:space="preserve"><value>다음 지도 검색은 이전 마지막 월드 다음부터 시작하며 필요하면 처음으로 돌아갑니다.</value></data>
+  <data name="Free Stance" xml:space="preserve"><value>자유 태세</value></data>
+  <data name="Fresh Scan" xml:space="preserve"><value>새 스캔</value></data>
+  <data name="Gambler's Lure Solver" xml:space="preserve"><value>Gambler's Lure 해결기</value></data>
+  <data name="Gather" xml:space="preserve"><value>채집</value></data>
+  <data name="Gather job (current character)" xml:space="preserve"><value>채집 직업(현재 캐릭터)</value></data>
+  <data name="GatherBuddy Reborn" xml:space="preserve"><value>GatherBuddy Reborn</value></data>
+  <data name="Global command triggers saved." xml:space="preserve"><value>전역 명령 트리거 저장됨.</value></data>
+  <data name="Ground-only map diagnostics" xml:space="preserve"><value>지상 전용 지도 진단</value></data>
+  <data name="Healer Stance" xml:space="preserve"><value>치유 태세</value></data>
+  <data name="HQ" xml:space="preserve"><value>HQ</value></data>
+  <data name="ID {0}" xml:space="preserve"><value>ID {0}</value></data>
+  <data name="Idle" xml:space="preserve"><value>대기</value></data>
+  <data name="If selected food runs out, search inventory for a fallback food from the FrenRider priority list." xml:space="preserve"><value>선택한 음식이 소진되면 FrenRider 우선 목록에 따라 소지품에서 대체 음식을 찾습니다.</value></data>
+  <data name="In full-party proximity waits, timeout can allow guarded recovery when unresolved or out-of-territory members are the only blockers." xml:space="preserve"><value>전체 파티 근접 대기에서는 미확인 또는 다른 지역 구성원만 방해하는 경우 시간 초과 후 제한된 복구를 허용할 수 있습니다.</value></data>
+  <data name="Include data center travel for purchasing maps" xml:space="preserve"><value>지도 구매 시 데이터센터 이동 포함</value></data>
+  <data name="Include same-data-center server travel for purchasing maps" xml:space="preserve"><value>지도 구매 시 같은 데이터센터 월드 이동 포함</value></data>
+  <data name="Include visiting OCE for maps once local data centers are exhausted" xml:space="preserve"><value>지역 데이터센터 소진 후 OCE 지도 검색 포함</value></data>
+  <data name="Inn" xml:space="preserve"><value>여관</value></data>
+  <data name="Integrations" xml:space="preserve"><value>연동</value></data>
+  <data name="Interaction Range (y)" xml:space="preserve"><value>상호작용 거리(y)</value></data>
+  <data name="Interface" xml:space="preserve"><value>인터페이스</value></data>
+  <data name="inventory" xml:space="preserve"><value>소지품</value></data>
+  <data name="inventory or loaded saddlebags" xml:space="preserve"><value>소지품 또는 로드된 초코보 가방</value></data>
+  <data name="InventoryBuddy" xml:space="preserve"><value>InventoryBuddy</value></data>
+  <data name="Invite missing captured members immediately and every 30 seconds after returning. Checked continues with whoever rejoined after timeout; unchecked stops." xml:space="preserve"><value>복귀 후 누락된 기록 구성원을 즉시 및 30초마다 초대합니다. 체크하면 시간 초과 후 재합류자와 진행하며 해제하면 중지합니다.</value></data>
+  <data name="Krangle Names" xml:space="preserve"><value>이름 숨기기</value></data>
+  <data name="Landing / Duty Entry" xml:space="preserve"><value>착륙 / 임무 입장</value></data>
+  <data name="Language" xml:space="preserve"><value>언어</value></data>
+  <data name="Level" xml:space="preserve"><value>레벨</value></data>
+  <data name="Lifestream" xml:space="preserve"><value>Lifestream</value></data>
+  <data name="Lifestream is required for off-world searches. LootGoblin verifies arrival and returns to the starting world before restoring the party." xml:space="preserve"><value>다른 월드 검색에는 Lifestream이 필요합니다. 도착을 확인하고 파티 복원 전에 시작 월드로 돌아갑니다.</value></data>
+  <data name="Lifestream missing" xml:space="preserve"><value>Lifestream 없음</value></data>
+  <data name="Lifestream missing. LootGoblin cannot issue /li travel without it." xml:space="preserve"><value>Lifestream이 없습니다. 없으면 /li 이동을 실행할 수 없습니다.</value></data>
+  <data name="Limsa Lominsa is the default. City selection requires Emptor v4+; blank Ul'dah remains compatible with v1-v3." xml:space="preserve"><value>기본은 림사 로민사입니다. 도시 선택에는 Emptor v4 이상이 필요하며 빈 울다하는 v1–v3와 호환됩니다.</value></data>
+  <data name="Listings can change after lookup. Refresh is manual and rate-limited to five minutes." xml:space="preserve"><value>조회 후 등록 내역이 바뀔 수 있습니다. 갱신은 수동이며 5분에 한 번으로 제한됩니다.</value></data>
+  <data name="loaded" xml:space="preserve"><value>불러옴</value></data>
+  <data name="Loading UI fonts..." xml:space="preserve"><value>UI 글꼴 로드 중...</value></data>
+  <data name="Location Data" xml:space="preserve"><value>위치 데이터</value></data>
+  <data name="Location Data by Zone" xml:space="preserve"><value>지역별 위치 데이터</value></data>
+  <data name="Location: {0}" xml:space="preserve"><value>위치: {0}</value></data>
+  <data name="Locations: {0} total" xml:space="preserve"><value>위치: 총 {0}개</value></data>
+  <data name="Log in to check party status." xml:space="preserve"><value>파티 상태를 보려면 로그인하세요.</value></data>
+  <data name="Log in to scan inventory." xml:space="preserve"><value>소지품 스캔을 위해 로그인하세요.</value></data>
+  <data name="Log in to see Poetics." xml:space="preserve"><value>시학을 보려면 로그인하세요.</value></data>
+  <data name="Log in to use navigation." xml:space="preserve"><value>이동 기능을 사용하려면 로그인하세요.</value></data>
+  <data name="Log in to view current run." xml:space="preserve"><value>현재 실행을 보려면 로그인하세요.</value></data>
+  <data name="Logged In:" xml:space="preserve"><value>로그인:</value></data>
+  <data name="Lookup scope: {0}" xml:space="preserve"><value>조회 범위: {0}</value></data>
+  <data name="Loot Goblin" xml:space="preserve"><value>Loot Goblin</value></data>
+  <data name="Loot Goblin Settings" xml:space="preserve"><value>Loot Goblin 설정</value></data>
+  <data name="Loot Goblin: exit after delay" xml:space="preserve"><value>Loot Goblin: 지연 후 퇴장</value></data>
+  <data name="Loot Goblin: exit when all others have left" xml:space="preserve"><value>Loot Goblin: 다른 전원 퇴장 후 퇴장</value></data>
+  <data name="LootGoblin submits quantity-one orders and can prepare up to three maps per trip." xml:space="preserve"><value>LootGoblin은 한 장씩 주문하고 이동 한 번에 최대 3장을 준비합니다.</value></data>
+  <data name="Manual map refresh after saddlebag opened." xml:space="preserve"><value>가방을 연 뒤 지도 수동 갱신.</value></data>
+  <data name="Manual map refresh after saddlebag timeout." xml:space="preserve"><value>가방 대기 시간 초과 후 지도 수동 갱신.</value></data>
+  <data name="Manual map refresh completed after saddlebag retrieval was disabled." xml:space="preserve"><value>가방 회수가 꺼진 후 지도 수동 갱신이 완료되었습니다.</value></data>
+  <data name="Manual map refresh with saddlebag already open." xml:space="preserve"><value>가방이 이미 열린 상태에서 지도 수동 갱신.</value></data>
+  <data name="Manual map refresh without saddlebag retrieval." xml:space="preserve"><value>가방 회수 없이 지도 수동 갱신.</value></data>
+  <data name="Manual refresh is available in {0}." xml:space="preserve"><value>{0} 후 수동 갱신 가능.</value></data>
+  <data name="Map" xml:space="preserve"><value>지도</value></data>
+  <data name="Map Diagnostics" xml:space="preserve"><value>지도 진단</value></data>
+  <data name="Map Flag Reader" xml:space="preserve"><value>Map Flag Reader</value></data>
+  <data name="Map Queue" xml:space="preserve"><value>지도 대기열</value></data>
+  <data name="Map travel uses Lifestream for teleports and vnavmesh for movement. Choose an unlocked mount below for manual mounting." xml:space="preserve"><value>텔레포는 Lifestream, 이동은 vnavmesh를 사용합니다. 아래에서 수동 탑승할 개방된 탈것을 선택하세요.</value></data>
+  <data name="Map:" xml:space="preserve"><value>지도:</value></data>
+  <data name="MapPartyAssist" xml:space="preserve"><value>MapPartyAssist</value></data>
+  <data name="Maps" xml:space="preserve"><value>지도</value></data>
+  <data name="Maps in inventory:" xml:space="preserve"><value>소지 지도:</value></data>
+  <data name="Maps: {0}" xml:space="preserve"><value>지도: {0}</value></data>
+  <data name="Mark This Spot" xml:space="preserve"><value>이 지점 표시</value></data>
+  <data name="Marketboard" xml:space="preserve"><value>장터 게시판</value></data>
+  <data name="Matching tabs are highlighted. Select a tab to view settings." xml:space="preserve"><value>일치하는 탭이 강조됩니다. 탭을 선택해 설정을 보세요.</value></data>
+  <data name="max" xml:space="preserve"><value>최대</value></data>
+  <data name="Max gil" xml:space="preserve"><value>길 상한</value></data>
+  <data name="Max map allowance wait (min)" xml:space="preserve"><value>지도 획득권 최대 대기(분)</value></data>
+  <data name="Maximum gil for one map. Zero disables purchasing for this map." xml:space="preserve"><value>지도 한 장의 길 상한입니다. 0이면 구매를 끕니다.</value></data>
+  <data name="Maximum time to wait for the captured roster to rejoin. Allowed range is 30–3600 seconds; default is 300." xml:space="preserve"><value>기록된 구성원의 재합류 최대 대기 시간입니다. 30–3600초, 기본 300초.</value></data>
+  <data name="Members: {0}" xml:space="preserve"><value>구성원: {0}</value></data>
+  <data name="MISSING" xml:space="preserve"><value>설치되지 않음</value></data>
+  <data name="Missing: {0}" xml:space="preserve"><value>누락: {0}</value></data>
+  <data name="Mount Selection" xml:space="preserve"><value>탈것 선택</value></data>
+  <data name="Mount wait:" xml:space="preserve"><value>탑승 대기:</value></data>
+  <data name="Mounted" xml:space="preserve"><value>탑승 중</value></data>
+  <data name="Movable Settings Window" xml:space="preserve"><value>설정 창 이동 허용</value></data>
+  <data name="Multiple map types detected - use checkboxes to select which to run" xml:space="preserve"><value>여러 종류 감지됨: 실행할 지도를 체크하세요</value></data>
+  <data name="N/A" xml:space="preserve"><value>해당 없음</value></data>
+  <data name="Nav Timeout (s)" xml:space="preserve"><value>이동 제한 시간(초)</value></data>
+  <data name="Nav:" xml:space="preserve"><value>이동:</value></data>
+  <data name="Navigation" xml:space="preserve"><value>이동</value></data>
+  <data name="needed for assisted retainer/saddlebag retrieval" xml:space="preserve"><value>집사/가방 보조 회수에 필요</value></data>
+  <data name="needed for retainer map lookup" xml:space="preserve"><value>집사 지도 조회에 필요</value></data>
+  <data name="Next manual refresh: {0}" xml:space="preserve"><value>다음 수동 갱신: {0}</value></data>
+  <data name="Next retry/reassert in {0}s." xml:space="preserve"><value>재시도/재적용까지 {0}s.</value></data>
+  <data name="No" xml:space="preserve"><value>아니요</value></data>
+  <data name="No automatic exit" xml:space="preserve"><value>자동 퇴장 없음</value></data>
+  <data name="No food" xml:space="preserve"><value>음식 없음</value></data>
+  <data name="No food selected." xml:space="preserve"><value>선택한 음식이 없습니다.</value></data>
+  <data name="No matching tabs." xml:space="preserve"><value>일치하는 탭이 없습니다.</value></data>
+  <data name="No results." xml:space="preserve"><value>결과 없음.</value></data>
+  <data name="No treasure maps found in {0}." xml:space="preserve"><value>{0}에서 보물지도를 찾지 못했습니다.</value></data>
+  <data name="Not found" xml:space="preserve"><value>찾을 수 없음</value></data>
+  <data name="not logged in" xml:space="preserve"><value>로그인하지 않음</value></data>
+  <data name="Not Mounted" xml:space="preserve"><value>미탑승</value></data>
+  <data name="Not Started: {0}" xml:space="preserve"><value>시작 안 됨: {0}</value></data>
+  <data name="Not summoned" xml:space="preserve"><value>소환 안 됨</value></data>
+  <data name="NPC no inn" xml:space="preserve"><value>NPC(여관 없음)</value></data>
+  <data name="NPC No Inn + No TP" xml:space="preserve"><value>NPC 수리(여관·텔레포 없음)</value></data>
+  <data name="NPC no-inn" xml:space="preserve"><value>NPC 수리(여관 없음)</value></data>
+  <data name="NPC no-inn/no-teleport" xml:space="preserve"><value>NPC(여관/텔레포 없음)</value></data>
+  <data name="npc-no-inn" xml:space="preserve"><value>npc-no-inn</value></data>
+  <data name="npc-no-teleport-no-inn" xml:space="preserve"><value>npc-no-teleport-no-inn</value></data>
+  <data name="NQ" xml:space="preserve"><value>NQ</value></data>
+  <data name="Number of other party members required for every party wait. Local player is not counted." xml:space="preserve"><value>모든 파티 대기에 필요한 다른 구성원 수입니다. 자신은 제외합니다.</value></data>
+  <data name="Observe only" xml:space="preserve"><value>관찰만</value></data>
+  <data name="Obstacle maps on" xml:space="preserve"><value>장애물 지도 켜기</value></data>
+  <data name="off" xml:space="preserve"><value>꺼짐</value></data>
+  <data name="off       - Disable bot" xml:space="preserve"><value>off       - 봇 비활성화</value></data>
+  <data name="OK" xml:space="preserve"><value>정상</value></data>
+  <data name="on        - Enable bot" xml:space="preserve"><value>on        - 봇 활성화</value></data>
+  <data name="Open /xlplugins" xml:space="preserve"><value>/xlplugins 열기</value></data>
+  <data name="Open /xlsettings" xml:space="preserve"><value>/xlsettings 열기</value></data>
+  <data name="OPEN ADS LOOT OPTIONS" xml:space="preserve"><value>ADS 전리품 설정 열기</value></data>
+  <data name="Open Config Folder" xml:space="preserve"><value>설정 폴더 열기</value></data>
+  <data name="Open Data Folder" xml:space="preserve"><value>DATA 폴더 열기</value></data>
+  <data name="Open Log Folder" xml:space="preserve"><value>로그 폴더 열기</value></data>
+  <data name="Open the folder containing AetherytePositions.json for sharing" xml:space="preserve"><value>공유할 AetherytePositions.json 폴더 열기</value></data>
+  <data name="Opens decipher menu and reads all map entries to show correct indices" xml:space="preserve"><value>해독 메뉴를 열고 모든 지도를 읽어 정확한 인덱스 표시</value></data>
+  <data name="Optional (Combat/Rotation):" xml:space="preserve"><value>선택(전투/로테이션):</value></data>
+  <data name="Optional (Map Gathering):" xml:space="preserve"><value>선택(지도 채집):</value></data>
+  <data name="Optional (Retainer/Saddlebag Retrieval):" xml:space="preserve"><value>선택(집사/가방 회수):</value></data>
+  <data name="Optional (Treasure Map Statistics):" xml:space="preserve"><value>선택(보물지도 통계):</value></data>
+  <data name="Out of" xml:space="preserve"><value>소진:</value></data>
+  <data name="Overrides the general Wait for Party setting for thief-map underwater travel, remount recovery, and descent/dig waits." xml:space="preserve"><value>도둑 지도 수중 이동, 재탑승 복구, 하강/발굴 대기에서 일반 파티 대기 설정을 덮어씁니다.</value></data>
+  <data name="Party" xml:space="preserve"><value>파티</value></data>
+  <data name="Party Status" xml:space="preserve"><value>파티 상태</value></data>
+  <data name="Party Wait Timeout (s)" xml:space="preserve"><value>파티 대기 제한 시간(초)</value></data>
+  <data name="Party waits coordinate takeoff, remounting and arrival; thief-map underwater waits have their own switch. Player-count thresholds count other players, excluding you." xml:space="preserve"><value>파티 대기는 이륙, 재탑승, 도착을 조정합니다. 도둑 지도 수중 대기는 별도 설정입니다. 인원 기준은 자신을 제외합니다.</value></data>
+  <data name="party-list position" xml:space="preserve"><value>파티 목록 위치</value></data>
+  <data name="Party:" xml:space="preserve"><value>파티:</value></data>
+  <data name="Pause" xml:space="preserve"><value>일시 정지</value></data>
+  <data name="Paused" xml:space="preserve"><value>일시 중지됨</value></data>
+  <data name="Personal" xml:space="preserve"><value>개인</value></data>
+  <data name="Pink" xml:space="preserve"><value>분홍</value></data>
+  <data name="Players to wait for" xml:space="preserve"><value>대기할 플레이어 수</value></data>
+  <data name="Plugin loaded and ready." xml:space="preserve"><value>플러그인 로드 및 준비 완료.</value></data>
+  <data name="Poetics:" xml:space="preserve"><value>시학:</value></data>
+  <data name="position unresolved" xml:space="preserve"><value>위치 확인 안 됨</value></data>
+  <data name="Previously Engaged Targets" xml:space="preserve"><value>교전한 대상</value></data>
+  <data name="Price hints live only for this Loot Goblin session; they are not saved to disk." xml:space="preserve"><value>가격 힌트는 현재 Loot Goblin 세션에만 존재하며 디스크에 저장되지 않습니다.</value></data>
+  <data name="Purchase requirements" xml:space="preserve"><value>구매 조건</value></data>
+  <data name="Queue one global refresh for all marketable known maps using the current travel scope." xml:space="preserve"><value>현재 이동 범위의 알려진 거래 가능 지도 전체 갱신을 한 번 예약합니다.</value></data>
+  <data name="Ready" xml:space="preserve"><value>준비 완료</value></data>
+  <data name="Red X overlay: allowance cooldown" xml:space="preserve"><value>빨간 X: 획득권 재사용 대기</value></data>
+  <data name="Refresh Dependencies" xml:space="preserve"><value>의존성 새로고침</value></data>
+  <data name="Refresh Emptor Prices" xml:space="preserve"><value>Emptor 가격 새로고침</value></data>
+  <data name="Refresh Maps" xml:space="preserve"><value>지도 새로고침</value></data>
+  <data name="refreshed" xml:space="preserve"><value>갱신됨</value></data>
+  <data name="refreshing..." xml:space="preserve"><value>업데이트 중...</value></data>
+  <data name="Repair mode" xml:space="preserve"><value>수리 모드</value></data>
+  <data name="Repair threshold %" xml:space="preserve"><value>수리 기준 %</value></data>
+  <data name="Repair uses ADS; a 0% threshold disables it. Factory defaults: 75%, NPC no inn." xml:space="preserve"><value>수리는 ADS를 사용하며 0%면 끕니다. 기본: 75%, 여관 없는 NPC.</value></data>
+  <data name="Report Issue" xml:space="preserve"><value>문제 보고</value></data>
+  <data name="Require All Mounted" xml:space="preserve"><value>전원 탑승 필요</value></data>
+  <data name="Require vnavmesh" xml:space="preserve"><value>vnavmesh 필요</value></data>
+  <data name="Required:" xml:space="preserve"><value>필수:</value></data>
+  <data name="Reset All Aetherytes" xml:space="preserve"><value>모든 에테라이트 초기화</value></data>
+  <data name="Resolved: {0}" xml:space="preserve"><value>확인됨: {0}</value></data>
+  <data name="Resume" xml:space="preserve"><value>재개</value></data>
+  <data name="Retainer" xml:space="preserve"><value>집사</value></data>
+  <data name="Retainer:" xml:space="preserve"><value>집사:</value></data>
+  <data name="Retainers need XA Database (XADB) and a reachable retainer bell. Saddlebag retrieval uses /saddlebag. Both retrieval options are on by factory default." xml:space="preserve"><value>집사 회수에는 XA Database(XADB)와 접근 가능한 집사 초인종이 필요합니다. 가방은 /saddlebag를 사용하며 둘 다 기본 켜짐입니다.</value></data>
+  <data name="Return destination" xml:space="preserve"><value>귀환 장소</value></data>
+  <data name="Return when done" xml:space="preserve"><value>완료 후 복귀</value></data>
+  <data name="Return when done optionally uses Lifestream once enabled map sources are exhausted. Factory default: off." xml:space="preserve"><value>활성 지도 공급원이 소진되면 Lifestream으로 복귀할 수 있습니다. 기본은 꺼짐입니다.</value></data>
+  <data name="Rotate" xml:space="preserve"><value>순환</value></data>
+  <data name="RSR hostile targeting" xml:space="preserve"><value>RSR 적대 대상</value></data>
+  <data name="Run" xml:space="preserve"><value>실행</value></data>
+  <data name="Run count" xml:space="preserve"><value>실행 횟수</value></data>
+  <data name="Runnable:" xml:space="preserve"><value>실행 가능:</value></data>
+  <data name="Runs /levelsync on after joining a FATE and pauses coffer/portal recovery for joined-FATE handling. Turn off to ignore joined FATEs during map coffer flow." xml:space="preserve"><value>돌발 임무 참여 후 /levelsync on을 실행하고 상자/포털 복구를 일시 중지합니다. 끄면 지도 상자 진행 중 참여한 돌발 임무를 무시합니다.</value></data>
+  <data name="Runs the selected Lifestream return only after no enabled inventory, saddlebag, or retainer maps remain." xml:space="preserve"><value>소지품, 가방, 집사에 활성 지도가 없을 때만 선택한 Lifestream 복귀를 실행합니다.</value></data>
+  <data name="Runs this map type until no available maps remain." xml:space="preserve"><value>해당 종류의 지도가 소진될 때까지 실행합니다.</value></data>
+  <data name="Runs:" xml:space="preserve"><value>실행 횟수:</value></data>
+  <data name="Saddlebag" xml:space="preserve"><value>초코보 가방</value></data>
+  <data name="Saddlebag includes regular ({0}) + premium ({1}) saddlebag counts." xml:space="preserve"><value>가방은 일반({0}) + 프리미엄({1}) 수량입니다.</value></data>
+  <data name="same territory" xml:space="preserve"><value>같은 지역</value></data>
+  <data name="Search" xml:space="preserve"><value>검색</value></data>
+  <data name="Search for Food if Depleted" xml:space="preserve"><value>음식이 떨어지면 다른 음식 검색</value></data>
+  <data name="Search settings" xml:space="preserve"><value>설정 검색</value></data>
+  <data name="seconds" xml:space="preserve"><value>초</value></data>
+  <data name="Seedling: toggle missing-map gathering" xml:space="preserve"><value>새싹: 누락 지도 채집 전환</value></data>
+  <data name="Select {0}..." xml:space="preserve"><value>{0} 선택...</value></data>
+  <data name="Selected: {0} [{1}] ({2})" xml:space="preserve"><value>선택됨: {0} [{1}] ({2})</value></data>
+  <data name="SelectIconString" xml:space="preserve"><value>SelectIconString</value></data>
+  <data name="Self" xml:space="preserve"><value>직접 수리</value></data>
+  <data name="Send /ads leave once after the configured delay." xml:space="preserve"><value>설정한 지연 후 /ads leave를 한 번 보냅니다.</value></data>
+  <data name="Set a positive maximum gil price before enabling this cart." xml:space="preserve"><value>카트를 켜기 전에 양수 길 상한을 설정하세요.</value></data>
+  <data name="Settings" xml:space="preserve"><value>설정</value></data>
+  <data name="Show all map types" xml:space="preserve"><value>모든 지도 종류 표시</value></data>
+  <data name="Show Main Window on Login" xml:space="preserve"><value>로그인 시 메인 창 표시</value></data>
+  <data name="Shows Location Data diagnostics in the main window and enables map/aetheryte collection tools." xml:space="preserve"><value>메인 창 위치 진단을 표시하고 지도/에테라이트 수집 도구를 켭니다.</value></data>
+  <data name="Shows runnable map rows even when none are currently in inventory or loaded saddlebags." xml:space="preserve"><value>소지품이나 로드된 가방에 없어도 실행 가능한 지도 행을 표시합니다.</value></data>
+  <data name="Skip" xml:space="preserve"><value>건너뛰기</value></data>
+  <data name="Skips Tamamizu when choosing the map teleport destination." xml:space="preserve"><value>지도 텔레포 목적지를 선택할 때 타마미즈를 제외합니다.</value></data>
+  <data name="Solo" xml:space="preserve"><value>솔로</value></data>
+  <data name="Solo Deep Dungeon Smart" xml:space="preserve"><value>솔로 딥 던전 지능형 선택</value></data>
+  <data name="Solve EV" xml:space="preserve"><value>기댓값으로 해결</value></data>
+  <data name="Solve EV clicks only after it reads a reliable card/stage; otherwise it holds and retries. Skip keeps current skip/close behavior. Observe logs readable state only and never clicks." xml:space="preserve"><value>기댓값 모드는 카드/단계를 확실히 읽은 후에만 클릭하고 아니면 대기 후 재시도합니다. 건너뛰기는 기존 닫기 동작을 유지하며 관찰은 기록만 하고 클릭하지 않습니다.</value></data>
+  <data name="Specify number of party to wait for" xml:space="preserve"><value>대기할 파티원 수 지정</value></data>
+  <data name="Start" xml:space="preserve"><value>시작</value></data>
+  <data name="Start on the last world that successfully sold a map, then try each remaining unvisited enabled world if it has no acceptable listing. This is the default." xml:space="preserve"><value>마지막 구매 성공 월드부터 시작하고 적절한 등록이 없으면 방문하지 않은 활성 월드를 시도합니다. 기본 동작입니다.</value></data>
+  <data name="State:" xml:space="preserve"><value>상태:</value></data>
+  <data name="Status" xml:space="preserve"><value>상태</value></data>
+  <data name="status    - Print current status" xml:space="preserve"><value>status    - 현재 상태 출력</value></data>
+  <data name="Status:" xml:space="preserve"><value>상태:</value></data>
+  <data name="Sticky success" xml:space="preserve"><value>마지막 성공 월드 우선</value></data>
+  <data name="Stop" xml:space="preserve"><value>중지</value></data>
+  <data name="Stop Cycling" xml:space="preserve"><value>순회 중지</value></data>
+  <data name="Stop dungeon progression after completion and wait for a manual duty exit." xml:space="preserve"><value>완료 후 던전 진행을 멈추고 수동 퇴장을 기다립니다.</value></data>
+  <data name="Summon Chocobo" xml:space="preserve"><value>초코보 소환</value></data>
+  <data name="Support development on Ko-fi" xml:space="preserve"><value>Ko-fi에서 개발 후원</value></data>
+  <data name="Switch this map type back to unlimited runs." xml:space="preserve"><value>이 종류를 무제한 실행으로 되돌립니다.</value></data>
+  <data name="Take Control" xml:space="preserve"><value>제어권 가져오기</value></data>
+  <data name="Teal" xml:space="preserve"><value>청록</value></data>
+  <data name="territory unresolved" xml:space="preserve"><value>지역 확인 안 됨</value></data>
+  <data name="Test ADS Repair Mode" xml:space="preserve"><value>ADS 수리 모드 테스트</value></data>
+  <data name="TextAdvance" xml:space="preserve"><value>TextAdvance</value></data>
+  <data name="The optional chocobo companion needs Gysahl Greens. Factory defaults: party and all-mounted waits on; companion summon off." xml:space="preserve"><value>선택 초코보 동료는 기살의 야채가 필요합니다. 기본: 파티 및 전원 탑승 대기 켜짐, 동료 소환 꺼짐.</value></data>
+  <data name="Tier {0}" xml:space="preserve"><value>등급 {0}</value></data>
+  <data name="Time to wait before teleporting (s)" xml:space="preserve"><value>텔레포 전 대기(초)</value></data>
+  <data name="Travel" xml:space="preserve"><value>여행</value></data>
+  <data name="TreasureSpot: {0}" xml:space="preserve"><value>보물 위치: {0}</value></data>
+  <data name="Try the current world first, then each remaining public world on the current data center once per map search." xml:space="preserve"><value>지도 검색마다 현재 월드 먼저, 같은 데이터센터의 나머지 공개 월드를 한 번씩 시도합니다.</value></data>
+  <data name="Type at least 2 characters to search." xml:space="preserve"><value>검색하려면 2자 이상 입력하세요.</value></data>
+  <data name="UI fonts failed to load. See the plugin log." xml:space="preserve"><value>UI 글꼴 로드 실패. 플러그인 로그 확인.</value></data>
+  <data name="unavailable" xml:space="preserve"><value>사용 불가</value></data>
+  <data name="Unknown ({0})" xml:space="preserve"><value>알 수 없음({0})</value></data>
+  <data name="Unknown Map (ID: {0})" xml:space="preserve"><value>알 수 없는 지도(ID: {0})</value></data>
+  <data name="unloaded" xml:space="preserve"><value>미로드</value></data>
+  <data name="Use" xml:space="preserve"><value>사용</value></data>
+  <data name="Use a count of other party members instead of waiting for the entire party roster. Applies to takeoff, remount, landing, underwater, and next-map waits." xml:space="preserve"><value>전체 명단 대신 지정한 다른 파티원 수를 기다립니다. 이륙, 재탑승, 착륙, 수중, 다음 지도 대기에 적용됩니다.</value></data>
+  <data name="Use ADS for dungeon phase" xml:space="preserve"><value>던전 단계에 ADS 사용</value></data>
+  <data name="Use current-character command trigger override" xml:space="preserve"><value>현재 캐릭터 명령 트리거 재정의 사용</value></data>
+  <data name="Use HQ food" xml:space="preserve"><value>HQ 음식 사용</value></data>
+  <data name="Use Loot Goblin's local Leave Duty flow after the configured delay." xml:space="preserve"><value>설정 지연 후 Loot Goblin의 로컬 임무 퇴장을 사용합니다.</value></data>
+  <data name="Use Loot Goblin's local Leave Duty flow once no other loaded party members remain in the duty territory." xml:space="preserve"><value>임무 지역에 다른 로드된 파티원이 없으면 Loot Goblin의 로컬 퇴장을 사용합니다.</value></data>
+  <data name="Use Map Queue in the main window to select maps and run counts. Retrieval below supplies enabled maps when inventory runs out." xml:space="preserve"><value>메인 지도 대기열에서 지도와 횟수를 선택하세요. 소지품이 소진되면 아래 회수 기능이 활성 지도를 공급합니다.</value></data>
+  <data name="Use these controls for diagnostics and troubleshooting. The snapshot button needs dedicated logging; Test ADS Repair Mode starts a repair using the mode selected in Run." xml:space="preserve"><value>진단 도구입니다. 스냅샷에는 전용 기록이 필요하며 ADS 수리 테스트는 실행 탭의 선택 모드로 수리를 시작합니다.</value></data>
+  <data name="User: {0}" xml:space="preserve"><value>사용자: {0}</value></data>
+  <data name="vnavmesh" xml:space="preserve"><value>vnavmesh</value></data>
+  <data name="vnavmesh missing" xml:space="preserve"><value>vnavmesh 없음</value></data>
+  <data name="vnavmesh required for navigation." xml:space="preserve"><value>이동에는 vnavmesh가 필요합니다.</value></data>
+  <data name="Wait at the destination until party members are within 10 yalms before dismounting." xml:space="preserve"><value>목적지에서 파티원이 10얄름 이내에 올 때까지 내리지 않고 기다립니다.</value></data>
+  <data name="Wait for Party" xml:space="preserve"><value>파티 대기</value></data>
+  <data name="Wait for party before dismounting" xml:space="preserve"><value>내리기 전 파티 대기</value></data>
+  <data name="Wait for Party for thief maps / underwater" xml:space="preserve"><value>도둑 지도/수중에서 파티 대기</value></data>
+  <data name="Well Fed" xml:space="preserve"><value>식사 효과</value></data>
+  <data name="When count threshold is off, takeoff and remount waits require every other party member mounted. Turn off to continue when any other same-zone party member is mounted." xml:space="preserve"><value>인원 기준이 꺼져 있으면 이륙과 재탑승에 다른 전원 탑승을 요구합니다. 끄면 같은 지역의 다른 한 명이 탑승해도 진행합니다.</value></data>
+  <data name="When enabled, LootGoblin asks ADS to disable BMR hunt modules." xml:space="preserve"><value>켜면 LootGoblin이 ADS에 BMR 마물 모듈 비활성화를 요청합니다.</value></data>
+  <data name="When enabled, LootGoblin asks ADS to set BMR MaxLoadDistance to {0:0}." xml:space="preserve"><value>켜면 LootGoblin이 ADS에 BMR MaxLoadDistance를 {0:0}으로 설정하도록 요청합니다.</value></data>
+  <data name="When enabled, the bot waits for party members before takeoff, remount recovery, and map travel handoffs." xml:space="preserve"><value>켜면 이륙, 재탑승 복구, 지도 이동 인계 전에 파티원을 기다립니다.</value></data>
+  <data name="When missing-map gathering is the only remaining action, wait this long for a map allowance before finishing the run." xml:space="preserve"><value>지도 채집만 남으면 실행 종료 전에 이 시간만큼 지도 획득권을 기다립니다.</value></data>
+  <data name="When no enabled map is in inventory, LootGoblin can open /saddlebag and move one enabled map into inventory. Disable to ignore saddlebags entirely." xml:space="preserve"><value>소지품에 활성 지도가 없으면 /saddlebag를 열어 한 장 옮길 수 있습니다. 끄면 가방을 완전히 무시합니다.</value></data>
+  <data name="When no enabled map is in inventory, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell." xml:space="preserve"><value>소지품에 활성 지도가 없으면 XA Database에서 집사 지도를 확인하고 초인종에서 한 장 꺼냅니다.</value></data>
+  <data name="While Loot Goblin is enabled, runs /ays discard every 30s during safe mounted windows. Defers in combat, loading or cutscenes. Requires AutoRetainer and a configured discard list." xml:space="preserve"><value>Loot Goblin이 켜져 있으면 안전한 탑승 구간에서 30초마다 /ays discard를 실행합니다. 전투, 로딩, 영상 중에는 미룹니다. AutoRetainer와 버리기 목록이 필요합니다.</value></data>
+  <data name="WIP: {0}" xml:space="preserve"><value>개발 중: {0}</value></data>
+  <data name="World: {0}" xml:space="preserve"><value>월드: {0}</value></data>
+  <data name="Write dedicated LootGoblin diagnostic log" xml:space="preserve"><value>LootGoblin 전용 진단 로그 기록</value></data>
+  <data name="Write Snapshot Now" xml:space="preserve"><value>지금 스냅샷 기록</value></data>
+  <data name="Writes high-signal events and state snapshots. Rotates at 20 MB and retains the newest 10 files." xml:space="preserve"><value>주요 이벤트와 상태 스냅샷을 기록합니다. 20MB마다 분할하고 최신 10개 파일을 보관합니다.</value></data>
+  <data name="xadb" xml:space="preserve"><value>XADB</value></data>
+  <data name="xaslave" xml:space="preserve"><value>xaslave</value></data>
+  <data name="Yes" xml:space="preserve"><value>예</value></data>
+  <data name="Zone:" xml:space="preserve"><value>지역:</value></data>
+  <data name="Repairing" xml:space="preserve"><value>수리 중</value></data>
+  <data name="StartPreflight" xml:space="preserve"><value>시작 전 확인</value></data>
+  <data name="SelectingMap" xml:space="preserve"><value>지도 선택 중</value></data>
+  <data name="OpeningMap" xml:space="preserve"><value>지도 여는 중</value></data>
+  <data name="DetectingLocation" xml:space="preserve"><value>위치 확인 중</value></data>
+  <data name="Teleporting" xml:space="preserve"><value>텔레포 중</value></data>
+  <data name="Mounting" xml:space="preserve"><value>탑승 중</value></data>
+  <data name="WaitingForParty" xml:space="preserve"><value>파티 대기 중</value></data>
+  <data name="Flying" xml:space="preserve"><value>비행 중</value></data>
+  <data name="OpeningChest" xml:space="preserve"><value>보물상자 여는 중</value></data>
+  <data name="InCombat" xml:space="preserve"><value>전투 중</value></data>
+  <data name="InDungeon" xml:space="preserve"><value>던전 내부</value></data>
+  <data name="DungeonCombat" xml:space="preserve"><value>던전 전투</value></data>
+  <data name="DungeonLooting" xml:space="preserve"><value>던전 전리품 획득</value></data>
+  <data name="DungeonProgressing" xml:space="preserve"><value>던전 진행</value></data>
+  <data name="CyclingAetherytes" xml:space="preserve"><value>에테라이트 스캔</value></data>
+  <data name="CyclingMapLocations" xml:space="preserve"><value>지도 위치 스캔</value></data>
+  <data name="AlexandriteFarming" xml:space="preserve"><value>알렉산드라이트 수집</value></data>
+  <data name="GatheringMap" xml:space="preserve"><value>지도 채집 중</value></data>
+  <data name="WaitingForTeleport" xml:space="preserve"><value>텔레포 대기</value></data>
+  <data name="WaitingForNavmesh" xml:space="preserve"><value>Navmesh 대기</value></data>
+  <data name="Arrived" xml:space="preserve"><value>도착</value></data>
+  <data name="Completed" xml:space="preserve"><value>완료</value></data>
+  <data name="{0} members" xml:space="preserve"><value>{0}명</value></data>
+  <data name="on" xml:space="preserve"><value>켜짐</value></data>
+  <data name="actor position" xml:space="preserve"><value>액터 위치</value></data>
+  <data name="not reported" xml:space="preserve"><value>보고되지 않음</value></data>
+  <data name="current world" xml:space="preserve"><value>현재 월드</value></data>
+  <data name="current data center" xml:space="preserve"><value>현재 데이터 센터</value></data>
+  <data name="current region" xml:space="preserve"><value>현재 지역</value></data>
+  <data name="reachable regions + Materia" xml:space="preserve"><value>이동 가능한 지역 + Materia</value></data>
+  <data name="No food item resolved" xml:space="preserve"><value>음식 아이템을 확인할 수 없음</value></data>
+  <data name="Paused: {0}" xml:space="preserve"><value>일시 중지: {0}</value></data>
+  <data name="Well Fed: {0:F0}s ({1} [{2}])" xml:space="preserve"><value>음식 효과: {0:F0}초 ({1} [{2}])</value></data>
+  <data name="Need food (cooldown {0:F1}s)" xml:space="preserve"><value>음식 필요 (재사용 대기 {0:F1}초)</value></data>
+  <data name="Ate {0} [{1}] ({2} left)" xml:space="preserve"><value>{0} [{1}] 사용함 (남은 수량 {2})</value></data>
+  <data name="Failed to eat {0} [{1}]" xml:space="preserve"><value>{0} [{1}] 사용 실패</value></data>
+  <data name="Out of {0} [{1}]" xml:space="preserve"><value>{0} [{1}] 소진됨</value></data>
+  <data name="Switched to {0} [{1}]" xml:space="preserve"><value>{0} [{1}](으)로 전환함</value></data>
+  <data name="No food in inventory" xml:space="preserve"><value>소지품에 음식 없음</value></data>
+  <data name="[+{0} yours]" xml:space="preserve"><value>[+{0} 내 위치]</value></data>
+  <data name="{0:F0}y XZ" xml:space="preserve"><value>{0:F0}y XZ</value></data>
+  <data name="ADS reflection applied; no reassert pending." xml:space="preserve"><value>ADS 리플렉션 적용 완료. 재적용 대기 없음.</value></data>
+  <data name="ADS reflection applied; waiting for desired-state change or ADS reload." xml:space="preserve"><value>ADS 리플렉션 적용 완료. 설정 상태 변경 또는 ADS 다시 불러오기 대기 중.</value></data>
+  <data name="ADS reflection hacks reset." xml:space="preserve"><value>ADS 특수 기능이 초기화되었습니다.</value></data>
+  <data name="No ADS reflection hacks enabled." xml:space="preserve"><value>활성화된 ADS 리플렉션 기능 없음.</value></data>
+  <data name="vnavmesh not available." xml:space="preserve"><value>vnavmesh를 사용할 수 없습니다.</value></data>
+  <data name="Not logged in." xml:space="preserve"><value>로그인하지 않았습니다.</value></data>
+  <data name="Cannot teleport while in combat." xml:space="preserve"><value>전투 중에는 텔레포할 수 없습니다.</value></data>
+  <data name="Already between areas." xml:space="preserve"><value>이미 지역 이동 중입니다.</value></data>
+  <data name="Lifestream not available." xml:space="preserve"><value>Lifestream을 사용할 수 없습니다.</value></data>
+  <data name="Lifestream rejected {0}: {1}" xml:space="preserve"><value>Lifestream이 {0}을(를) 거부했습니다: {1}</value></data>
+  <data name="Navigation stopped." xml:space="preserve"><value>이동이 중지되었습니다.</value></data>
+  <data name="Mounting {0}..." xml:space="preserve"><value>{0} 탑승 중...</value></data>
+  <data name="Flying to {0}..." xml:space="preserve"><value>{0}(으)로 비행 중...</value></data>
+  <data name="Moving to {0}..." xml:space="preserve"><value>{0}(으)로 이동 중...</value></data>
+  <data name="Flying to map flag..." xml:space="preserve"><value>지도 깃발로 비행 중...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before flying to {0}..." xml:space="preserve"><value>vnavmesh 구축 완료 후 {0}(으)로 비행 대기...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before moving to {0}..." xml:space="preserve"><value>vnavmesh 구축 완료 후 {0}(으)로 이동 대기...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before flying to map flag..." xml:space="preserve"><value>vnavmesh 구축 완료 후 지도 깃발로 비행 대기...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh..." xml:space="preserve"><value>vnavmesh 구축 완료 대기 중...</value></data>
+  <data name="GatherBuddy Reborn not loaded." xml:space="preserve"><value>GatherBuddy Reborn이 로드되지 않았습니다.</value></data>
+  <data name="GatherBuddy Reborn IPC version {0} is unsupported; version 2 is required." xml:space="preserve"><value>GatherBuddy Reborn IPC 버전 {0}은 지원되지 않습니다. 버전 2가 필요합니다.</value></data>
+  <data name="Available." xml:space="preserve"><value>사용할 수 있습니다.</value></data>
+  <data name="GatherBuddy Reborn IPC unavailable: {0}" xml:space="preserve"><value>GatherBuddy Reborn IPC 사용 불가: {0}</value></data>
+  <data name="Not checked." xml:space="preserve"><value>확인되지 않았습니다.</value></data>
+  <data name="ADS reflection pending." xml:space="preserve"><value>ADS 반영 대기 중.</value></data>
+  <data name="Lifestream IPC is available." xml:space="preserve"><value>Lifestream IPC를 사용할 수 있습니다.</value></data>
+  <data name="Lifestream is not installed, loaded, or exposing supported IPC." xml:space="preserve"><value>Lifestream이 설치 또는 로드되지 않았거나 지원 IPC를 제공하지 않습니다.</value></data>
+  <data name="Lifestream IPC has not been checked." xml:space="preserve"><value>Lifestream IPC가 아직 확인되지 않았습니다.</value></data>
+  <data name="Emptor IPC has not been checked." xml:space="preserve"><value>Emptor IPC가 아직 확인되지 않았습니다.</value></data>
+  <data name="Using built-in city choices until Emptor v4 city IPC is available." xml:space="preserve"><value>Emptor v4 도시 IPC 사용 가능 전까지 기본 도시 목록을 사용합니다.</value></data>
+  <data name="Price hints have not been requested." xml:space="preserve"><value>가격 정보가 아직 요청되지 않았습니다.</value></data>
+  <data name="Paused: logged out" xml:space="preserve"><value>일시 중지: 로그아웃 상태</value></data>
+  <data name="Paused: player unavailable" xml:space="preserve"><value>일시 중지: 캐릭터 정보 없음</value></data>
+  <data name="Paused: dead" xml:space="preserve"><value>일시 중지: 전투 불능</value></data>
+  <data name="Paused: casting" xml:space="preserve"><value>일시 중지: 시전 중</value></data>
+  <data name="Paused: in combat" xml:space="preserve"><value>일시 중지: 전투 중</value></data>
+  <data name="Paused: between areas" xml:space="preserve"><value>일시 중지: 지역 이동 중</value></data>
+  <data name="Paused: busy or in cutscene" xml:space="preserve"><value>일시 중지: 다른 작업 또는 컷신 진행 중</value></data>
+  <data name="Idle." xml:space="preserve"><value>대기 중.</value></data>
+  <data name="XA Database unavailable." xml:space="preserve"><value>XA Database를 사용할 수 없습니다.</value></data>
+  <data name="Moving to retainer bell for {0}..." xml:space="preserve"><value>{0}을(를) 위해 초인종으로 이동 중...</value></data>
+  <data name="No nearby retainer bell found. Traveling to Revenant's Toll..." xml:space="preserve"><value>근처에 초인종이 없습니다. 망자의 종소리로 이동 중...</value></data>
+  <data name="Timed out closing retainer UI. Still visible: {0}." xml:space="preserve"><value>집사 UI 닫기 시간이 초과되었습니다. 아직 표시됨: {0}.</value></data>
+  <data name="Timed out during {0}." xml:space="preserve"><value>{0} 중 시간이 초과되었습니다.</value></data>
+  <data name="Timed out traveling to Revenant's Toll retainer bell." xml:space="preserve"><value>망자의 종소리 초인종 이동 시간이 초과되었습니다.</value></data>
+  <data name="Traveling to retainer bell..." xml:space="preserve"><value>초인종으로 이동 중...</value></data>
+  <data name="Waiting for Revenant's Toll arrival..." xml:space="preserve"><value>망자의 종소리 도착 대기 중...</value></data>
+  <data name="Waiting for player before moving to Revenant's Toll bell approach..." xml:space="preserve"><value>캐릭터 준비 후 망자의 종소리 초인종 접근 대기...</value></data>
+  <data name="Moving to Revenant's Toll retainer bell approach..." xml:space="preserve"><value>망자의 종소리 초인종 접근 중...</value></data>
+  <data name="Arrived. Waiting for retainer bell object..." xml:space="preserve"><value>도착했습니다. 초인종 오브젝트 대기 중...</value></data>
+  <data name="Moving to Revenant's Toll retainer bell..." xml:space="preserve"><value>망자의 종소리 초인종으로 이동 중...</value></data>
+  <data name="Waiting for player before moving to retainer bell..." xml:space="preserve"><value>캐릭터 준비 후 초인종 이동 대기...</value></data>
+  <data name="Traveling to Revenant's Toll retainer bell..." xml:space="preserve"><value>망자의 종소리 초인종으로 이동 중...</value></data>
+  <data name="Moving to Revenant's Toll bell approach... ({0:F1}y)" xml:space="preserve"><value>망자의 종소리 초인종 접근 중... ({0:F1}y)</value></data>
+  <data name="At bell approach. Waiting for Summoning Bell object..." xml:space="preserve"><value>초인종 근처에 도착했습니다. 초인종 오브젝트 대기 중...</value></data>
+  <data name="Moving to retainer bell... ({0:F1}y)" xml:space="preserve"><value>초인종으로 이동 중... ({0:F1}y)</value></data>
+  <data name="Opening retainer bell..." xml:space="preserve"><value>초인종 열기 중...</value></data>
+  <data name="Selecting retainer..." xml:space="preserve"><value>집사 선택 중...</value></data>
+  <data name="Retainer bell disappeared before interaction." xml:space="preserve"><value>상호작용 전에 초인종이 사라졌습니다.</value></data>
+  <data name="Waiting for retainer list..." xml:space="preserve"><value>집사 목록 대기 중...</value></data>
+  <data name="Waiting for retainer menu..." xml:space="preserve"><value>집사 메뉴 대기 중...</value></data>
+  <data name="Retainer list is visible but target retainer '{0}' was not found by confirmed name. Visible retainers/text: {1}." xml:space="preserve"><value>집사 목록이 표시되지만 확인된 이름으로 대상 집사 '{0}'을(를) 찾지 못했습니다. 표시된 집사/텍스트: {1}.</value></data>
+  <data name="Opening retainer inventory..." xml:space="preserve"><value>집사 소지품 열기 중...</value></data>
+  <data name="Waiting to select retainer {0}..." xml:space="preserve"><value>집사 {0} 선택 대기 중...</value></data>
+  <data name="Retrieving {0}..." xml:space="preserve"><value>{0} 꺼내는 중...</value></data>
+  <data name="Waiting for retainer inventory menu..." xml:space="preserve"><value>집사 소지품 메뉴 대기 중...</value></data>
+  <data name="No retainer map target." xml:space="preserve"><value>집사에게서 꺼낼 지도가 없습니다.</value></data>
+  <data name="Retrieved {0}. Closing retainer..." xml:space="preserve"><value>{0}을(를) 꺼냈습니다. 집사 창 닫는 중...</value></data>
+  <data name="Waiting for active retainer inventory..." xml:space="preserve"><value>활성 집사 소지품 대기 중...</value></data>
+  <data name="Could not plan retainer map retrieval from {0}: {1}" xml:space="preserve"><value>{0}에서 집사 지도 꺼내기를 계획하지 못했습니다: {1}</value></data>
+  <data name="Could not move retainer map from {0}: {1}" xml:space="preserve"><value>{0}에서 집사 지도를 옮기지 못했습니다: {1}</value></data>
+  <data name="Waiting for {0} retrieval..." xml:space="preserve"><value>{0} 꺼내기 대기 중...</value></data>
+  <data name="Retainer map retrieved." xml:space="preserve"><value>집사에게서 지도를 꺼냈습니다.</value></data>
+  <data name="Closing retainer UI... ({0})" xml:space="preserve"><value>집사 UI 닫는 중... ({0})</value></data>
+  <data name="Retainer map retrieval disabled." xml:space="preserve"><value>집사 지도 꺼내기가 비활성화되었습니다.</value></data>
+  <data name="No enabled maps configured for retainer lookup." xml:space="preserve"><value>집사 검색용으로 활성화된 지도가 없습니다.</value></data>
+  <data name="No enabled current-character retainer map found in XA Database." xml:space="preserve"><value>XA Database에서 현재 캐릭터의 활성 집사 지도를 찾지 못했습니다.</value></data>
+  <data name="XA Database scoped current-character item search failed." xml:space="preserve"><value>XA Database의 현재 캐릭터 대상 아이템 검색에 실패했습니다.</value></data>
+  <data name="No enabled maps found on current-character retainers in XA Database." xml:space="preserve"><value>XA Database에서 현재 캐릭터의 집사에게 활성 지도가 없습니다.</value></data>
+  <data name="XA Database not ready." xml:space="preserve"><value>XA Database가 준비되지 않았습니다.</value></data>
+  <data name="Closing retainer UI..." xml:space="preserve"><value>집사 UI 닫는 중...</value></data>
+  <data name="Retainer UI closed; map open allowed." xml:space="preserve"><value>집사 UI가 닫혔습니다. 지도를 열 수 있습니다.</value></data>
+  <data name="Item sheet unavailable." xml:space="preserve"><value>아이템 데이터를 사용할 수 없습니다.</value></data>
+  <data name="XA Database readiness IPC failed: {0}" xml:space="preserve"><value>XA Database 준비 상태 IPC 실패: {0}</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson IPC returned empty response." xml:space="preserve"><value>XA Database SearchCurrentCharacterItemsJson IPC가 빈 응답을 반환했습니다.</value></data>
+  <data name="XA Database scoped current-character item search returned ready=false." xml:space="preserve"><value>XA Database의 현재 캐릭터 아이템 검색이 ready=false를 반환했습니다.</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson IPC failed: {0}" xml:space="preserve"><value>XA Database SearchCurrentCharacterItemsJson IPC 실패: {0}</value></data>
+  <data name="XA Database Refresh IPC failed: {0}" xml:space="preserve"><value>XA Database Refresh IPC 실패: {0}</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson returned invalid JSON: {0}" xml:space="preserve"><value>XA Database SearchCurrentCharacterItemsJson이 잘못된 JSON을 반환했습니다: {0}</value></data>
+  <data name="Emptor API v{0} is available." xml:space="preserve"><value>Emptor API v{0}을 사용할 수 있습니다.</value></data>
+  <data name="Emptor API v{0} is incompatible; v1 or newer is required." xml:space="preserve"><value>Emptor API v{0}은 호환되지 않습니다. v1 이상이 필요합니다.</value></data>
+  <data name="Emptor is not installed, loaded, or exposing supported v1 IPC." xml:space="preserve"><value>Emptor가 설치 또는 로드되지 않았거나 지원 v1 IPC를 제공하지 않습니다.</value></data>
+  <data name="Manual Emptor price refresh queued." xml:space="preserve"><value>Emptor 수동 가격 갱신이 대기열에 추가되었습니다.</value></data>
+  <data name="Manual price refresh is deferred until login." xml:space="preserve"><value>수동 가격 갱신이 로그인할 때까지 연기됩니다.</value></data>
+  <data name="Price hints unavailable: Emptor v5+ is required; detected v{0}." xml:space="preserve"><value>가격 정보 사용 불가: Emptor v5+가 필요합니다. 감지된 버전: v{0}.</value></data>
+  <data name="Price hints unavailable: Emptor v5 price IPC is not loaded." xml:space="preserve"><value>가격 정보 사용 불가: Emptor v5 가격 IPC가 로드되지 않았습니다.</value></data>
+  <data name="Initial Emptor price lookup is deferred until login." xml:space="preserve"><value>초기 Emptor 가격 조회가 로그인할 때까지 연기됩니다.</value></data>
+  <data name="Loaded {0} city choices from Emptor v{1}." xml:space="preserve"><value>Emptor v{1}에서 도시 {0}개를 불러왔습니다.</value></data>
+  <data name="Price hints unavailable: no marketable known maps were found." xml:space="preserve"><value>가격 정보 사용 불가: 거래 가능한 알려진 지도가 없습니다.</value></data>
+  <data name="Requesting {0} Emptor price hint(s) for {1}..." xml:space="preserve"><value>{1}의 Emptor 가격 정보 {0}개 요청 중...</value></data>
+  <data name="Price hints unavailable: Emptor lookup failed ({0})." xml:space="preserve"><value>가격 정보 사용 불가: Emptor 조회 실패 ({0}).</value></data>
+  <data name="Emptor price follow-up failed for {0} map(s): {1}" xml:space="preserve"><value>지도 {0}개의 Emptor 가격 후속 조회 실패: {1}</value></data>
+  <data name="Price hints unavailable: {0}" xml:space="preserve"><value>가격 정보 사용 불가: {0}</value></data>
+  <data name="Emptor price lookup pending for {0} map(s); one follow-up is scheduled." xml:space="preserve"><value>지도 {0}개의 Emptor 가격 조회 대기 중. 후속 조회 1회가 예약되었습니다.</value></data>
+  <data name="Price hints unavailable: malformed Emptor response ({0})." xml:space="preserve"><value>가격 정보 사용 불가: Emptor 응답 형식 오류 ({0}).</value></data>
+  <data name="Loaded {0} Emptor price hint(s) for {1}." xml:space="preserve"><value>{1}의 Emptor 가격 정보 {0}개를 불러왔습니다.</value></data>
+  <data name="Loaded {0} Emptor price hint(s) for {1}; {2} unavailable." xml:space="preserve"><value>{1}의 Emptor 가격 정보 {0}개를 불러왔습니다. {2}개 사용 불가.</value></data>
+  <data name="Using built-in city choices because Emptor v4 city IPC is unavailable." xml:space="preserve"><value>Emptor v4 도시 IPC를 사용할 수 없어 기본 도시 목록을 사용합니다.</value></data>
+  <data name="Using built-in city choices because Emptor city IPC is unavailable." xml:space="preserve"><value>Emptor 도시 IPC를 사용할 수 없어 기본 도시 목록을 사용합니다.</value></data>
+  <data name="Using built-in city choices because Emptor.GetCities returned invalid data: {0}" xml:space="preserve"><value>Emptor.GetCities가 잘못된 데이터를 반환해 기본 도시 목록을 사용합니다: {0}</value></data>
+  <data name="Emptor price lookup failed: {0}" xml:space="preserve"><value>Emptor 가격 조회 실패: {0}</value></data>
+  <data name="Emptor price follow-up failed: {0}" xml:space="preserve"><value>Emptor 가격 후속 조회 실패: {0}</value></data>
+  <data name="Malformed Emptor price response: {0}" xml:space="preserve"><value>Emptor 가격 응답 형식 오류: {0}</value></data>
+  <data name="Emptor price lookup is pending." xml:space="preserve"><value>Emptor 가격 조회 대기 중.</value></data>
+  <data name="Emptor price lookup was still pending after the required follow-up." xml:space="preserve"><value>필요한 후속 조회 후에도 Emptor 가격 조회가 대기 중이었습니다.</value></data>
+  <data name="Emptor returned no price data for this item." xml:space="preserve"><value>Emptor가 이 아이템의 가격 데이터를 반환하지 않았습니다.</value></data>
+  <data name="Emptor returned no price levels for this item." xml:space="preserve"><value>Emptor가 이 아이템의 가격 범위를 반환하지 않았습니다.</value></data>
+  <data name="Emptor returned no {0} price level." xml:space="preserve"><value>Emptor가 {0}의 가격 범위를 반환하지 않았습니다.</value></data>
+  <data name="No NQ listings were returned for this scope." xml:space="preserve"><value>이 검색 범위에 대한 NQ 판매 목록이 반환되지 않았습니다.</value></data>
+  <data name="No positive NQ minimum listing was returned for this scope." xml:space="preserve"><value>이 검색 범위에 양수인 NQ 최저 판매 가격이 반환되지 않았습니다.</value></data>
+  <data name="The NQ minimum listing exceeds Loot Goblin's maximum ceiling." xml:space="preserve"><value>NQ 최저 판매 가격이 Loot Goblin의 최대 상한을 초과합니다.</value></data>
+  <data name="Lost connection - not logged in." xml:space="preserve"><value>연결 끊김 - 로그인되지 않았습니다.</value></data>
+  <data name="Timeout in state {0} after {1}s." xml:space="preserve"><value>상태 {0}에서 {1}초 후 시간 초과.</value></data>
+  <data name="Holding teleport while {0} ({1:F0}s)..." xml:space="preserve"><value>{0} 중 텔레포 보류 ({1:F0}초)...</value></data>
+  <data name="Outdoor map flow paused while {0} ({1:F0}s)..." xml:space="preserve"><value>{0} 중 야외 지도 진행 일시 중지 ({1:F0}초)...</value></data>
+  <data name="Joined FATE {0} active - landing/dismounting before level sync..." xml:space="preserve"><value>참여한 돌발 임무 {0} 진행 중 - 레벨 조율 전 착지/탑승 해제...</value></data>
+  <data name="Teleport blocked by combat - retrying..." xml:space="preserve"><value>전투로 텔레포 차단 - 재시도 중...</value></data>
+  <data name="Restarting after accepted party teleport offer..." xml:space="preserve"><value>파티 텔레포 수락 후 다시 시작 중...</value></data>
+  <data name="Cannot start LootGoblin from Main Menu. Log in first." xml:space="preserve"><value>메인 메뉴에서는 LootGoblin을 시작할 수 없습니다. 먼저 로그인하세요.</value></data>
+  <data name="Start preflight: cleared map flag, attempted dismount, waiting 1s..." xml:space="preserve"><value>시작 전 점검: 지도 깃발 삭제, 탑승 해제 시도, 1초 대기...</value></data>
+  <data name="Start preflight: waiting {0:0.0}s before start flow..." xml:space="preserve"><value>시작 전 점검: 진행 시작 전 {0:0.0}초 대기...</value></data>
+  <data name="Alexandrite: closing purchase UI ({0})..." xml:space="preserve"><value>알렉산드라이트: 구매 UI 닫는 중 ({0})...</value></data>
+  <data name="Alexandrite: waiting to open Mysterious Map ({0})..." xml:space="preserve"><value>알렉산드라이트: 수수께끼 지도 열기 대기 중 ({0})...</value></data>
+  <data name="Map duty active outside treasure dungeon - recovering coffer/portal..." xml:space="preserve"><value>보물 던전 밖에서 지도 임무 진행 중 - 상자/포털 복구 중...</value></data>
+  <data name="ADS handoff active - waiting for dungeon to finish..." xml:space="preserve"><value>ADS에 제어 전달됨 - 던전 완료 대기 중...</value></data>
+  <data name="Starting in dungeon - looking for chests within 80y..." xml:space="preserve"><value>던전 내 시작 - 80y 이내 상자 찾는 중...</value></data>
+  <data name="Repairing gear before starting map run..." xml:space="preserve"><value>지도 진행 전 장비 수리 중...</value></data>
+  <data name="Alexandrite: selecting purchased Mysterious Map..." xml:space="preserve"><value>알렉산드라이트: 구매한 수수께끼 지도 선택 중...</value></data>
+  <data name="Selecting one-shot {0}..." xml:space="preserve"><value>일회 실행할 {0} 선택 중...</value></data>
+  <data name="Starting map run - refreshing saddlebag maps..." xml:space="preserve"><value>지도 실행 시작 - 초코보 가방 지도 갱신 중...</value></data>
+  <data name="Dismounting before combat job switch to {0}..." xml:space="preserve"><value>전투 직업을 {0}(으)로 변경하기 전 탑승 해제 중...</value></data>
+  <data name="Waiting to switch to combat job: {0}" xml:space="preserve"><value>전투 직업 변경 대기 중: {0}</value></data>
+  <data name="FATE/combat cleared - resuming chest recovery..." xml:space="preserve"><value>돌발 임무/전투 중단 해제 - 상자 복구 재개 중...</value></data>
+  <data name="FATE/combat cleared - returning to known coffer..." xml:space="preserve"><value>돌발 임무/전투 중단 해제 - 확인된 상자로 복귀 중...</value></data>
+  <data name="FATE/combat cleared - looking for treasure coffer..." xml:space="preserve"><value>돌발 임무/전투 중단 해제 - 보물 상자 찾는 중...</value></data>
+  <data name="FATE/combat cleared - landing at map target..." xml:space="preserve"><value>돌발 임무/전투 중단 해제 - 지도 목적지 착지 중...</value></data>
+  <data name="FATE/combat cleared - teleporting back to map zone..." xml:space="preserve"><value>돌발 임무/전투 중단 해제 - 지도 지역으로 텔레포 복귀 중...</value></data>
+  <data name="FATE/combat cleared - flying to active map target..." xml:space="preserve"><value>돌발 임무/전투 중단 해제 - 활성 지도 목적지로 비행 중...</value></data>
+  <data name="FATE/combat cleared - remounting for active map target..." xml:space="preserve"><value>돌발 임무/전투 중단 해제 - 활성 지도 목적지 이동을 위해 다시 탑승 중...</value></data>
+  <data name="Accepted party teleport - waiting for loading to finish..." xml:space="preserve"><value>파티 텔레포 수락됨 - 로딩 완료 대기 중...</value></data>
+  <data name="Accepted party teleport - waiting for arrival to settle..." xml:space="preserve"><value>파티 텔레포 수락됨 - 도착 후 안정화 대기 중...</value></data>
+  <data name="Accepted party teleport - waiting for teleport handoff..." xml:space="preserve"><value>파티 텔레포 수락됨 - 텔레포 제어 전환 대기 중...</value></data>
+  <data name="Accepted party teleport - waiting for player to become available..." xml:space="preserve"><value>파티 텔레포 수락됨 - 캐릭터 사용 가능 상태 대기 중...</value></data>
+  <data name="Could not switch to configured combat job: {0}" xml:space="preserve"><value>설정된 전투 직업으로 변경하지 못했습니다: {0}</value></data>
+  <data name="Waiting for combat job switch to {0}..." xml:space="preserve"><value>전투 직업 {0} 변경 대기 중...</value></data>
+  <data name="Stopped by user ({0})." xml:space="preserve"><value>사용자가 중지했습니다 ({0}).</value></data>
+  <data name="Full reset by user ({0})." xml:space="preserve"><value>사용자가 전체 초기화했습니다 ({0}).</value></data>
+  <data name="Recovering active map target for {0}..." xml:space="preserve"><value>{0}의 활성 지도 목적지 복구 중...</value></data>
+  <data name="Opening active key-item map '{0}'... ({1:F0}/{2:F0}s)" xml:space="preserve"><value>활성 중요 아이템 지도 '{0}' 여는 중... ({1:F0}/{2:F0}초)</value></data>
+  <data name="Ignoring stale completed active key item for {0}..." xml:space="preserve"><value>{0}의 오래된 완료 상태 중요 아이템 무시 중...</value></data>
+  <data name="Recovered active map target from {0}; teleporting to {1}..." xml:space="preserve"><value>{0}에서 활성 지도 목적지 복구됨. {1}(으)로 텔레포 중...</value></data>
+  <data name="Skipping market purchase for map {0}: {1}" xml:space="preserve"><value>지도 {0}의 시장 구매 건너뜀: {1}</value></data>
+  <data name="Skipping market purchase for map {0}: configured city '{1}' requires Emptor API v4 or newer; detected v{2}." xml:space="preserve"><value>지도 {0} 구매 건너뜀: 설정된 도시 '{1}'에는 Emptor API v4 이상이 필요합니다. 감지: v{2}.</value></data>
+  <data name="Skipping market purchase for map {0}: current world is unavailable." xml:space="preserve"><value>지도 {0} 구매 건너뜀: 현재 월드 정보 없음.</value></data>
+  <data name="Skipping market purchase for map {0}: no eligible public worlds were found." xml:space="preserve"><value>지도 {0} 구매 건너뜀: 이용 가능한 공개 월드 없음.</value></data>
+  <data name="Lifestream is required for off-world map purchasing: {0}" xml:space="preserve"><value>다른 월드 지도 구매에는 Lifestream이 필요합니다: {0}</value></data>
+  <data name="No unlocked World Visit city aetheryte was available (Ul'dah, Gridania, or Limsa Lominsa)." xml:space="preserve"><value>월드 방문에 사용할 수 있는 개방된 도시 에테라이트가 없습니다(울다하, 그리다니아, 림사 로민사).</value></data>
+  <data name="Waiting to arrive at the World Visit city aetheryte..." xml:space="preserve"><value>월드 방문용 도시 에테라이트 도착 대기 중...</value></data>
+  <data name="Timed out teleporting the party to a World Visit city aetheryte." xml:space="preserve"><value>파티의 월드 방문용 도시 에테라이트 텔레포 시간이 초과되었습니다.</value></data>
+  <data name="Party cannot be safely disbanded for world travel: {0}" xml:space="preserve"><value>월드 이동을 위해 파티를 안전하게 해산할 수 없습니다: {0}</value></data>
+  <data name="Could not issue the party disband command." xml:space="preserve"><value>파티 해산 명령을 보내지 못했습니다.</value></data>
+  <data name="Party disband could not be verified; off-world purchasing was not started." xml:space="preserve"><value>파티 해산을 확인하지 못했습니다. 다른 월드 구매를 시작하지 않았습니다.</value></data>
+  <data name="Lifestream could not start travel to {0}." xml:space="preserve"><value>Lifestream이 {0}(으)로 이동을 시작하지 못했습니다.</value></data>
+  <data name="Arrived on {0}; waiting for world travel to settle..." xml:space="preserve"><value>{0} 도착. 월드 이동 안정화 대기 중...</value></data>
+  <data name="Timed out traveling to {0}." xml:space="preserve"><value>{0}(으)로 이동 시간이 초과되었습니다.</value></data>
+  <data name="Purchase settings for {0} are no longer valid." xml:space="preserve"><value>{0} 구매 설정이 더 이상 유효하지 않습니다.</value></data>
+  <data name="Emptor returned unknown order state '{0}'." xml:space="preserve"><value>Emptor가 알 수 없는 주문 상태 '{0}'을(를) 반환했습니다.</value></data>
+  <data name="Emptor order {0} is {1}..." xml:space="preserve"><value>Emptor 주문 {0} 상태: {1}...</value></data>
+  <data name="Emptor terminal order data was lost." xml:space="preserve"><value>Emptor 주문의 최종 데이터가 유실되었습니다.</value></data>
+  <data name="Waiting to verify {0} in inventory..." xml:space="preserve"><value>소지품에서 {0} 확인 대기 중...</value></data>
+  <data name="Emptor purchase failed operationally: {0}." xml:space="preserve"><value>Emptor 구매 처리 실패: {0}.</value></data>
+  <data name="Emptor purchase failed operationally: {0}. {1}" xml:space="preserve"><value>Emptor 구매 처리 실패: {0}. {1}</value></data>
+  <data name="Waiting to open saddlebag for map batching: {0}" xml:space="preserve"><value>지도 일괄 준비를 위한 초코보 가방 열기 대기 중: {0}</value></data>
+  <data name="Waiting for saddlebag UI during map batching: {0}" xml:space="preserve"><value>지도 일괄 준비 중 초코보 가방 UI 대기 중: {0}</value></data>
+  <data name="Waiting for stable saddlebag UI during map batching: {0}" xml:space="preserve"><value>지도 일괄 준비 중 초코보 가방 UI 안정화 대기 중: {0}</value></data>
+  <data name="Waiting to store the purchased map: {0}" xml:space="preserve"><value>구매한 지도 보관 대기 중: {0}</value></data>
+  <data name="Restoring party: {0} captured member(s) still missing..." xml:space="preserve"><value>파티 복구 중: 기록된 구성원 {0}명 미참가...</value></data>
+  <data name="Waiting to open saddlebag: {0}" xml:space="preserve"><value>초코보 가방 열기 대기 중: {0}</value></data>
+  <data name="Waiting for saddlebag UI: {0}" xml:space="preserve"><value>초코보 가방 UI 대기 중: {0}</value></data>
+  <data name="Waiting for saddlebag UI for {0}..." xml:space="preserve"><value>{0} 초코보 가방 UI 대기 중...</value></data>
+  <data name="Waiting for stable saddlebag UI: {0}" xml:space="preserve"><value>초코보 가방 UI 안정화 대기 중: {0}</value></data>
+  <data name="Waiting for saddlebag UI to stabilize for {0}..." xml:space="preserve"><value>{0} 초코보 가방 UI 안정화 대기 중...</value></data>
+  <data name="Waiting for loaded saddlebag source for {0}..." xml:space="preserve"><value>{0} 초코보 가방 원본 로드 대기 중...</value></data>
+  <data name="Waiting to move saddlebag map: {0}" xml:space="preserve"><value>초코보 가방 지도 이동 대기 중: {0}</value></data>
+  <data name="Retrieved {0} from saddlebag. Rechecking inventory..." xml:space="preserve"><value>초코보 가방에서 {0}을(를) 꺼냈습니다. 소지품 재확인 중...</value></data>
+  <data name="Waiting for {0} saddlebag move confirmation..." xml:space="preserve"><value>{0} 초코보 가방 이동 확인 대기 중...</value></data>
+  <data name="Could not retrieve {0} from saddlebag: {1}" xml:space="preserve"><value>초코보 가방에서 {0}을(를) 꺼내지 못했습니다: {1}</value></data>
+  <data name="Waiting to refresh saddlebags: player unavailable..." xml:space="preserve"><value>초코보 가방 갱신 대기 중: 캐릭터 정보 없음...</value></data>
+  <data name="Opening saddlebag to refresh map sources..." xml:space="preserve"><value>지도 출처 갱신을 위해 초코보 가방 여는 중...</value></data>
+  <data name="Waiting for saddlebag map refresh..." xml:space="preserve"><value>초코보 가방 지도 갱신 대기 중...</value></data>
+  <data name="Saddlebag map refresh complete." xml:space="preserve"><value>초코보 가방 지도 갱신이 완료되었습니다.</value></data>
+  <data name="Retainer map retrieved. Rechecking inventory..." xml:space="preserve"><value>집사에게서 지도를 꺼냈습니다. 소지품 재확인 중...</value></data>
+  <data name="Could not retrieve retainer map: {0}" xml:space="preserve"><value>집사에게서 지도를 꺼내지 못했습니다: {0}</value></data>
+  <data name="Waiting to gather {0}: {1}" xml:space="preserve"><value>{0} 채집 대기 중: {1}</value></data>
+  <data name="Cannot gather {0}: {1}." xml:space="preserve"><value>{0} 채집 불가: {1}.</value></data>
+  <data name="Skipping map gathering for {0}: {1}" xml:space="preserve"><value>{0} 지도 채집 건너뜀: {1}</value></data>
+  <data name="Cannot gather {0}: {1}" xml:space="preserve"><value>{0} 채집 불가: {1}</value></data>
+  <data name="Gathering {0}..." xml:space="preserve"><value>{0} 채집 중...</value></data>
+  <data name="Gathering missing {0}..." xml:space="preserve"><value>부족한 {0} 채집 중...</value></data>
+  <data name="Waiting for gather job switch to {0}; current job {1}..." xml:space="preserve"><value>채집 직업 {0} 변경 대기 중. 현재 직업: {1}...</value></data>
+  <data name="Waiting to switch to gather job: {0}" xml:space="preserve"><value>채집 직업 변경 대기 중: {0}</value></data>
+  <data name="Waiting for gather job to settle before starting GatherBuddy Reborn for {0}..." xml:space="preserve"><value>{0} GatherBuddy Reborn 시작 전 채집 직업 안정화 대기 중...</value></data>
+  <data name="Waiting to start GatherBuddy Reborn: {0}" xml:space="preserve"><value>GatherBuddy Reborn 시작 대기 중: {0}</value></data>
+  <data name="Gathering {0}: {1}" xml:space="preserve"><value>{0} 채집 중: {1}</value></data>
+  <data name="Closing gathering window for {0}..." xml:space="preserve"><value>{0} 채집 창 닫는 중...</value></data>
+  <data name="Waiting to switch back after gathering: {0}" xml:space="preserve"><value>채집 후 원래 직업 변경 대기 중: {0}</value></data>
+  <data name="Gathered {0}, but could not switch back to combat job: {1}" xml:space="preserve"><value>{0} 채집 완료, 전투 직업으로 복귀하지 못했습니다: {1}</value></data>
+  <data name="player unavailable" xml:space="preserve"><value>캐릭터 정보 없음</value></data>
+  <data name="casting" xml:space="preserve"><value>시전 중</value></data>
+  <data name="loading" xml:space="preserve"><value>로딩 중</value></data>
+  <data name="occupied" xml:space="preserve"><value>다른 작업 중</value></data>
+  <data name="in combat" xml:space="preserve"><value>전투 중</value></data>
+  <data name="in combat during joined FATE {0}" xml:space="preserve"><value>참여한 돌발 임무 {0}에서 전투 중</value></data>
+  <data name="map target" xml:space="preserve"><value>지도 목적지</value></data>
+  <data name="coffer" xml:space="preserve"><value>상자</value></data>
+  <data name="displaced coffer" xml:space="preserve"><value>위치가 바뀐 상자</value></data>
+  <data name="captured coffer" xml:space="preserve"><value>기록된 상자</value></data>
+  <data name="missing coffer flag" xml:space="preserve"><value>누락된 상자 깃발</value></data>
+  <data name="combat recovery flag" xml:space="preserve"><value>전투 복구 깃발</value></data>
+  <data name="coffer flag fallback" xml:space="preserve"><value>상자 깃발 대체 처리</value></data>
+  <data name="portal flag fallback" xml:space="preserve"><value>포털 깃발 대체 처리</value></data>
+  <data name="Gathered {0}; starting one-shot map run..." xml:space="preserve"><value>{0} 채집 완료. 일회 지도 실행 시작 중...</value></data>
+  <data name="Gathered {0}." xml:space="preserve"><value>{0} 채집 완료.</value></data>
+  <data name="Gathered {0}; rechecking maps..." xml:space="preserve"><value>{0} 채집 완료. 지도 재확인 중...</value></data>
+  <data name="Could not gather {0}: {1}" xml:space="preserve"><value>{0} 채집에 실패했습니다: {1}</value></data>
+  <data name="Nudging forward after repeated vnav path failures..." xml:space="preserve"><value>반복된 vnav 경로 실패 후 조금 전진 중...</value></data>
+  <data name="Nudging forward after repeated vnav path failures... ({0:F1}s)" xml:space="preserve"><value>반복된 vnav 경로 실패 후 조금 전진 중... ({0:F1}초)</value></data>
+  <data name="Coffer was too far to open - re-approaching..." xml:space="preserve"><value>상자가 너무 멀어 열 수 없습니다 - 다시 접근 중...</value></data>
+  <data name="Portal was too far - waiting for targetable portal..." xml:space="preserve"><value>포털이 너무 멉니다 - 선택 가능한 포털 대기 중...</value></data>
+  <data name="Portal was too far - approaching targetable portal..." xml:space="preserve"><value>포털이 너무 멉니다 - 선택 가능한 포털 접근 중...</value></data>
+  <data name="Portal was too far - ground-approaching closer..." xml:space="preserve"><value>포털이 너무 멉니다 - 지상에서 접근 중...</value></data>
+  <data name="Flying to current map flag after vnav flyto failure..." xml:space="preserve"><value>vnav flyto 실패 후 현재 지도 깃발로 비행 중...</value></data>
+  <data name="Reissuing explicit XYZ after vnav flyto failure..." xml:space="preserve"><value>vnav flyto 실패 후 명시적 XYZ 좌표 다시 전송 중...</value></data>
+  <data name="vnav flyto failed and no current map flag or explicit XYZ target is available." xml:space="preserve"><value>vnav flyto 실패. 현재 지도 깃발 또는 명시적 XYZ 목적지가 없습니다.</value></data>
+  <data name="Recovering {0}: re-pathing ({1:F1}y)..." xml:space="preserve"><value>{0} 복구 중: 경로 재계산 ({1:F1}y)...</value></data>
+  <data name="{0}: stuck {1} - teleporting to nearest aetheryte..." xml:space="preserve"><value>{0}: {1}에서 막힘 - 가장 가까운 에테라이트로 텔레포 중...</value></data>
+  <data name="Landing by /mount toggle... ({0:F0}s)" xml:space="preserve"><value>/mount 전환으로 착지 중... ({0:F0}초)</value></data>
+  <data name="Waiting for treasure coffer after dig... ({0:F1}s)" xml:space="preserve"><value>발굴 후 보물 상자 대기 중... ({0:F1}초)</value></data>
+  <data name="Looking for treasure coffer to interact..." xml:space="preserve"><value>상호작용할 보물 상자 찾는 중...</value></data>
+  <data name="Porta Praetoria takeoff nudge waiting for map target..." xml:space="preserve"><value>Porta Praetoria 이륙 보조 지도 목적지 대기 중...</value></data>
+  <data name="Porta Praetoria takeoff nudge waiting for mounted player readiness..." xml:space="preserve"><value>Porta Praetoria 이륙 보조 탑승 캐릭터 준비 대기 중...</value></data>
+  <data name="Porta Praetoria takeoff nudge toward {0} ({1:F1}s)..." xml:space="preserve"><value>Porta Praetoria 이륙 보조 {0} 방향 이동 중 ({1:F1}초)...</value></data>
+  <data name="Porta Praetoria takeoff nudge complete; preparing vnav flight..." xml:space="preserve"><value>Porta Praetoria 이륙 보조 완료. vnav 비행 준비 중...</value></data>
+  <data name="Thief-map water travel: remounting before far target..." xml:space="preserve"><value>도둑 지도 수상 이동: 먼 목적지 이동 전 다시 탑승 중...</value></data>
+  <data name="Thief-map water recovery: remounting before travel..." xml:space="preserve"><value>도둑 지도 수상 복구: 이동 전 다시 탑승 중...</value></data>
+  <data name="Holding Lochs thief-map dive entry... (entry {0:F1}y, target {1:F1}y)" xml:space="preserve"><value>Lochs 도둑 지도 잠수 진입 유지 중... (진입 {0:F1}y, 목적지 {1:F1}y)</value></data>
+  <data name="Waiting for Lochs thief-map dive recovery... (entry {0:F1}y, target {1:F1}y)" xml:space="preserve"><value>Lochs 도둑 지도 잠수 복구 대기 중... (진입 {0:F1}y, 목적지 {1:F1}y)</value></data>
+  <data name="Descending for underwater thief-map trigger..." xml:space="preserve"><value>도둑 지도 수중 트리거를 위해 하강 중...</value></data>
+  <data name="Moving to surfaced thief-map flag X/Z... ({0:F1}y)" xml:space="preserve"><value>수면 도둑 지도 깃발 X/Z로 이동 중... ({0:F1}y)</value></data>
+  <data name="Waiting for mount state before thief-map dig... ({0:F1}y XZ)" xml:space="preserve"><value>도둑 지도 발굴 전 탑승 상태 대기 중... ({0:F1}y XZ)</value></data>
+  <data name="Descending for non-diving thief-map landing... ({0:F1}y XZ)" xml:space="preserve"><value>잠수 없는 도둑 지도 착지를 위해 하강 중... ({0:F1}y XZ)</value></data>
+  <data name="Waiting for thief-map landing to settle... (Y change {0:F1}y)" xml:space="preserve"><value>도둑 지도 착지 안정화 대기 중... (Y 변화 {0:F1}y)</value></data>
+  <data name="Confirming thief-map landing settle... ({0:F1}/{1:F1}s)" xml:space="preserve"><value>도둑 지도 착지 안정화 확인 중... ({0:F1}/{1:F1}초)</value></data>
+  <data name="Waiting for safe non-diving thief-map landing before retry dig..." xml:space="preserve"><value>도둑 지도에서 잠수하지 않고 안전하게 착지한 후 발굴을 재시도합니다...</value></data>
+  <data name="Thief-map recovery: returning to landing before dig..." xml:space="preserve"><value>도둑 지도 복구: 발굴 전에 착지 지점으로 돌아갑니다...</value></data>
+  <data name="Waiting after underwater XYZ dig retry" xml:space="preserve"><value>수중 XYZ 발굴 재시도 후 대기 중</value></data>
+  <data name="Waiting before underwater XYZ dig retry" xml:space="preserve"><value>수중 XYZ 발굴 재시도 전 대기 중</value></data>
+  <data name="Underwater XYZ dig retry {0}/{1}..." xml:space="preserve"><value>수중 XYZ 발굴 재시도 {0}/{1}...</value></data>
+  <data name="Waiting for underwater thief-map player position..." xml:space="preserve"><value>수중 도둑 지도의 플레이어 위치를 기다립니다...</value></data>
+  <data name="Waiting for underwater thief-map flag target..." xml:space="preserve"><value>수중 도둑 지도의 깃발 목표를 기다립니다...</value></data>
+  <data name="Swimming to underwater flag X/Z... ({0:F1}y)" xml:space="preserve"><value>수중 깃발 X/Z로 수영합니다... ({0:F1}y)</value></data>
+  <data name="Holding underwater thief-map trigger..." xml:space="preserve"><value>수중 도둑 지도 트리거를 유지합니다...</value></data>
+  <data name="Resetting camera before interacting with &apos;{0}&apos;..." xml:space="preserve"><value>&apos;{0}&apos; 상호작용 전에 카메라를 초기화합니다...</value></data>
+  <data name="Waiting briefly for camera reset before interacting with &apos;{0}&apos;..." xml:space="preserve"><value>&apos;{0}&apos; 상호작용 전에 카메라 초기화를 잠시 기다립니다...</value></data>
+  <data name="In combat - waiting to return to coffer XYZ ({0:F1}y)..." xml:space="preserve"><value>전투 중 - 보물상자 XYZ로 돌아갈 때까지 기다립니다 ({0:F1}y)...</value></data>
+  <data name="Returning to captured coffer XYZ ({0:F1}y)..." xml:space="preserve"><value>기록된 보물상자 XYZ로 돌아갑니다 ({0:F1}y)...</value></data>
+  <data name="Waiting for player during {0} flag fallback..." xml:space="preserve"><value>{0} 깃발 대체 이동에서 플레이어를 기다립니다...</value></data>
+  <data name="In combat - pausing {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>전투 중 - {0} 깃발 대체 이동을 일시 정지합니다 ({1:F1}y)...</value></data>
+  <data name="Mounting for {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>{0} 깃발 대체 이동을 위해 탈것에 탑니다 ({1:F1}y)...</value></data>
+  <data name="Flying to {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>{0} 대체 깃발로 비행합니다 ({1:F1}y)...</value></data>
+  <data name="Dismounting near &apos;{0}&apos; for ground approach ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>&apos;{0}&apos; 근처에서 지상 접근을 위해 내립니다 ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Ground-approaching nearby coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>근처 보물상자 &apos;{0}&apos;에 지상으로 접근합니다 ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Ground approach failed for &apos;{0}&apos; ({1:F1}y) - preparing mounted recovery..." xml:space="preserve"><value>&apos;{0}&apos; 지상 접근 실패 ({1:F1}y) - 탈것 복구를 준비합니다...</value></data>
+  <data name="Ground-approaching nearby coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y, {3:F0}s)..." xml:space="preserve"><value>근처 보물상자 &apos;{0}&apos;에 지상으로 접근합니다 ({1:F1}y, Y {2:F1}y, {3:F0}s)...</value></data>
+  <data name="Waiting for combat to end before coffer recovery ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>보물상자 복구 전 전투 종료를 기다립니다 ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Mounting before coffer recovery ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>보물상자 복구 전에 탈것에 탑니다 ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Dismounting near &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>&apos;{0}&apos; 근처에서 내립니다 ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Landing at &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>&apos;{0}&apos;에 착지합니다 ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Waiting to interact with &apos;{0}&apos; ({1})..." xml:space="preserve"><value>&apos;{0}&apos; 상호작용을 기다립니다 ({1})...</value></data>
+  <data name="Interacting with &apos;{0}&apos; after recovery ({1:F1}y)..." xml:space="preserve"><value>복구 후 &apos;{0}&apos;에 상호작용합니다 ({1:F1}y)...</value></data>
+  <data name="Flying to displaced coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>위치가 바뀐 보물상자 &apos;{0}&apos;로 비행합니다 ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Waiting for coffer to become targetable ({0:F1}y)..." xml:space="preserve"><value>보물상자를 대상으로 지정할 수 있을 때까지 기다립니다 ({0:F1}y)...</value></data>
+  <data name="In combat - waiting to recover missing coffer ({0:F1}y from flag)..." xml:space="preserve"><value>전투 중 - 사라진 보물상자 복구를 기다립니다 (깃발에서 {0:F1}y)...</value></data>
+  <data name="In combat - waiting to recover missing coffer..." xml:space="preserve"><value>전투 중 - 사라진 보물상자 복구를 기다립니다...</value></data>
+  <data name="Mounting to return to flag and recover coffer ({0:F1}y XZ)..." xml:space="preserve"><value>깃발로 돌아가 보물상자를 복구하기 위해 탈것에 탑니다 ({0:F1}y XZ)...</value></data>
+  <data name="({0:F0}s, moved {1:F1}y)..." xml:space="preserve"><value>({0:F0}초, {1:F1}y 이동)...</value></data>
+  <data name="[{0}] Flying to {1} ({2}) XYZ: {3}" xml:space="preserve"><value>[{0}] {1}(으)로 비행 ({2}), XYZ: {3}</value></data>
+  <data name="[Ground] Location {0}/{1}: {2} ({3:F0}y)" xml:space="preserve"><value>[지상] 위치 {0}/{1}: {2} ({3:F0}y)</value></data>
+  <data name="[Ground] Teleporting to {0}..." xml:space="preserve"><value>[지상] {0}(으)로 텔레포...</value></data>
+  <data name="[Underwater {0}] Flying to {1} XYZ: {2}" xml:space="preserve"><value>[수중 {0}] {1}(으)로 이동, XYZ: {2}</value></data>
+  <data name="{0} Durability {1}%/{2}%." xml:space="preserve"><value>{0} 내구도 {1}%/{2}%.</value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s" xml:space="preserve"><value>{0} {1:F1}초 후 ADS 수리 재시도</value></data>
+  <data name="{0}/{1} mounted, {2:F0}s elapsed)..." xml:space="preserve"><value>{0}/{1} 탑승, {2:F0}초 경과)...</value></data>
+  <data name="ADS handoff pending - waiting for ownership... ({0:F0}s, {1}/{2})" xml:space="preserve"><value>ADS 인계, 제어권 대기 ({0:F0}초, {1}/{2})...</value></data>
+  <data name="ADS handoff pending - waiting for ownership... ({0:F0}s, status unavailable)" xml:space="preserve"><value>ADS 인계, 제어권 대기 ({0:F0}초, 상태 확인 불가)...</value></data>
+  <data name="ADS leave requested - waiting for duty exit..." xml:space="preserve"><value>ADS 퇴장 요청, 임무 퇴장 대기...</value></data>
+  <data name="ADS leave requested - waiting for duty exit... ({0:F0}s, {1})" xml:space="preserve"><value>ADS 퇴장 요청, 임무 퇴장 대기 ({0:F0}s, {1})...</value></data>
+  <data name="ADS ownership was seen - waiting for readable status... ({0:F0}s)" xml:space="preserve"><value>ADS 제어권 확인, 상태 읽기 대기 ({0:F0}초)...</value></data>
+  <data name="ADS owns the duty - waiting for completion... ({0:F0}s, {1})" xml:space="preserve"><value>ADS 임무 제어 중, 완료 대기 ({0:F0}초, {1})...</value></data>
+  <data name="ADS released ownership - stopping ADS and leaving duty..." xml:space="preserve"><value>ADS 제어권 해제, ADS 중지 후 퇴장...</value></data>
+  <data name="ADS repair requested ({0}) - waiting for ADS status... ({1:F0}s)" xml:space="preserve"><value>ADS 수리({0}) 요청, 상태 대기 ({1:F0}초)...</value></data>
+  <data name="ADS repair requested ({0}) - waiting for utility start... ({1:F0}s)" xml:space="preserve"><value>ADS 수리({0}) 요청, 유틸리티 시작 대기 ({1:F0}초)...</value></data>
+  <data name="ADS repair requested ({0}); durability {1}% below threshold {2}%..." xml:space="preserve"><value>ADS 수리({0}), 내구도 {1}%가 기준 {2}% 미만...</value></data>
+  <data name="ADS repair running ({0})... ({1:F0}s, {2})" xml:space="preserve"><value>ADS 수리 중({0})... ({1:F0}초, {2})</value></data>
+  <data name="Alexandrite {0}/{1}: Confirming map purchase..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 지도 구매 확인 중...</value></data>
+  <data name="Alexandrite {0}/{1}: Dismounting at Auriana..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 오리아나 앞에서 내리는 중...</value></data>
+  <data name="Alexandrite {0}/{1}: Mounting for Auriana..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 오리아나 이동을 위해 탑승 중...</value></data>
+  <data name="Alexandrite {0}/{1}: Returning to Revenant's Toll..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 망자의 종소리로 복귀 중...</value></data>
+  <data name="Alexandrite {0}/{1}: Riding to Auriana..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 오리아나로 이동 중...</value></data>
+  <data name="Alexandrite {0}/{1}: Talking to Auriana..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 오리아나와 대화 중...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for area load..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 지역 로딩 대기...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for arrival settle..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 도착 안정 대기...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for cast lock..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 시전 잠금 해제 대기...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for Mor Dhona..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 모르도나 도착 대기...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for mount..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 탑승 대기...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player position..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 플레이어 위치 대기...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player readiness..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 플레이어 준비 대기...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 플레이어 대기...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for purchase confirmation..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 구매 확인 대기...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for purchased map..." xml:space="preserve"><value>알렉산드라이트 {0}/{1}: 구매한 지도 대기...</value></data>
+  <data name="All party members mounted!" xml:space="preserve"><value>파티원 모두 탑승 완료!</value></data>
+  <data name="Approaching '{0}' ({1:F1}y away)..." xml:space="preserve"><value>'{0}' 접근 중 ({1:F1}y)...</value></data>
+  <data name="Approaching captured portal XYZ {0} ({1:F1}y)..." xml:space="preserve"><value>기록된 포털 좌표 {0} 접근 ({1:F1}y)...</value></data>
+  <data name="Approaching portal XYZ {0} ({1:F1}y)..." xml:space="preserve"><value>포털 좌표 {0} 접근 ({1:F1}y)...</value></data>
+  <data name="Approaching+interacting '{0}' ({1:F1}y, attempt #{2})..." xml:space="preserve"><value>'{0}' 접근 및 상호작용 ({1:F1}y, 시도 {2})...</value></data>
+  <data name="At captured portal XYZ - waiting for targetable portal... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>기록된 포털 위치, 대상 지정 대기 ({0:F0}/{1:F0}초)...</value></data>
+  <data name="Combat detected, waiting aborted." xml:space="preserve"><value>전투 감지, 대기 취소.</value></data>
+  <data name="Combat ended - waiting for despawn... ({0:F1}/2.0s)" xml:space="preserve"><value>전투 종료, 사라짐 대기 ({0:F1}/2.0초)...</value></data>
+  <data name="Combat ended - waiting to retry dig... ({0:F1}/3.0s)" xml:space="preserve"><value>전투 종료, 발굴 재시도 대기 ({0:F1}/3.0초)...</value></data>
+  <data name="Confirming dungeon entry..." xml:space="preserve"><value>던전 입장 확인 중...</value></data>
+  <data name="Cycling aetherytes ({0}/{1}): {2}" xml:space="preserve"><value>에테라이트 순회 ({0}/{1}): {2}</value></data>
+  <data name="danger detected outside outdoor flow" xml:space="preserve"><value>야외 진행 외부에서 위험 감지</value></data>
+  <data name="Descent mode... (Y change: {0:F1}y, {1:F0}s)" xml:space="preserve"><value>하강 모드 (Y 변화 {0:F1}y, {1:F0}초)...</value></data>
+  <data name="Dismounting at '{0}' ({1:F1}y)..." xml:space="preserve"><value>'{0}'에서 내리는 중 ({1:F1}y)...</value></data>
+  <data name="Dismounting for portal close nudge ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>포털 미세 접근을 위해 내리는 중 ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Dismounting for portal ground approach ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>포털 지상 접근을 위해 내리는 중 ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Door opened - settling before walk-through..." xml:space="preserve"><value>문 열림, 통과 전 안정 대기...</value></data>
+  <data name="Door transition ready - settling briefly..." xml:space="preserve"><value>문 전환 준비, 잠시 안정 대기...</value></data>
+  <data name="Duty completed - {0} exit in {1:F0}s..." xml:space="preserve"><value>임무 완료, {1:F0}초 후 {0} 퇴장...</value></data>
+  <data name="Duty completed - party exit grace period ({0:F0}s)..." xml:space="preserve"><value>임무 완료, 파티 퇴장 유예 ({0:F0}초)...</value></data>
+  <data name="Duty completed - preparing configured exit..." xml:space="preserve"><value>임무 완료, 설정된 퇴장 준비...</value></data>
+  <data name="Duty completed - waiting for {0} other party member(s) to leave..." xml:space="preserve"><value>임무 완료, 다른 파티원 {0}명 퇴장 대기...</value></data>
+  <data name="Duty completed - waiting for combat to end before exit..." xml:space="preserve"><value>임무 완료, 퇴장 전 전투 종료 대기...</value></data>
+  <data name="Duty completed - waiting for manual exit..." xml:space="preserve"><value>임무 완료, 수동 퇴장 대기...</value></data>
+  <data name="Duty completed - waiting for party status..." xml:space="preserve"><value>임무 완료, 파티 상태 대기...</value></data>
+  <data name="Duty exit requested - waiting to leave duty..." xml:space="preserve"><value>퇴장 요청, 임무 퇴장 대기...</value></data>
+  <data name="Fallback descent... ({0:F0}s)" xml:space="preserve"><value>대체 하강 ({0:F0}초)...</value></data>
+  <data name="Floor {0} - scanning for objects... ({1:F0}s)" xml:space="preserve"><value>{0}층, 객체 탐색 ({1:F0}초)...</value></data>
+  <data name="Gear durability {0}% below {1}% - teleporting to {2} for ADS repair..." xml:space="preserve"><value>내구도 {0}%가 {1}% 미만, ADS 수리를 위해 {2} 텔레포...</value></data>
+  <data name="Ground-approaching portal ({0:F1}y, XZ {1:F1}y, Y {2:F1}y, {3:F0}s)..." xml:space="preserve"><value>포털 지상 접근 ({0:F1}y, XZ {1:F1}y, Y {2:F1}y, {3:F0}초)...</value></data>
+  <data name="Ground-approaching portal ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>포털 지상 접근 ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Ground-nudging closer to portal ({0:F1}y, XZ {1:F1}y)..." xml:space="preserve"><value>포털 지상 미세 접근 ({0:F1}y, XZ {1:F1}y)...</value></data>
+  <data name="In combat - waiting ({0:F1}y from '{1}')..." xml:space="preserve"><value>전투 중, 대기 ('{1}'에서 {0:F1}y)...</value></data>
+  <data name="In combat - waiting before portal ground approach ({0:F1}y)..." xml:space="preserve"><value>전투 중, 포털 지상 접근 대기 ({0:F1}y)...</value></data>
+  <data name="In combat - waiting to recover chest ({0:F1}y XZ from flag)..." xml:space="preserve"><value>전투 중, 상자 복구 대기 (깃발에서 {0:F1}y XZ)...</value></data>
+  <data name="In combat - waiting to recover chest..." xml:space="preserve"><value>전투 중, 상자 복구 대기...</value></data>
+  <data name="In combat on floor {0} - BMR handling..." xml:space="preserve"><value>{0}층 전투 중, BMR 처리...</value></data>
+  <data name="In combat on floor {0} - waiting..." xml:space="preserve"><value>{0}층 전투 중, 대기...</value></data>
+  <data name="Interacting with '{0}' - waiting for portal..." xml:space="preserve"><value>'{0}' 상호작용, 포털 대기...</value></data>
+  <data name="Interacting with '{0}' ({1:F1}y, attempt #{2})..." xml:space="preserve"><value>'{0}' 상호작용 ({1:F1}y, 시도 {2})...</value></data>
+  <data name="Interacting with portal ({0:F1}y)..." xml:space="preserve"><value>포털 상호작용 ({0:F1}y)...</value></data>
+  <data name="Joined FATE {0} active - holding chest recovery during {1} ({2:F0}s)..." xml:space="preserve"><value>참여한 돌발 임무 {0} 진행 중, {1} 중 상자 복구 보류 ({2:F0}초)...</value></data>
+  <data name="Joined FATE {0} active - holding portal recovery during {1} ({2:F0}s)..." xml:space="preserve"><value>참여한 돌발 임무 {0} 진행 중, {1} 중 포털 복구 보류 ({2:F0}초)...</value></data>
+  <data name="joined FATE {0} combat automation active" xml:space="preserve"><value>참여한 돌발 임무 {0} 전투 자동화 중</value></data>
+  <data name="Joined FATE cleared - settling before chest/portal recovery..." xml:space="preserve"><value>참여한 돌발 임무 종료, 상자/포털 복구 전 안정 대기...</value></data>
+  <data name="Landing at portal ({0:F1}y)..." xml:space="preserve"><value>포털 착륙 ({0:F1}y)...</value></data>
+  <data name="Lifestream rejected repair teleport to {0}: {1}. Retrying ({2})..." xml:space="preserve"><value>Lifestream이 {0} 수리 텔레포 거부: {1}. 재시도 ({2})...</value></data>
+  <data name="Loading dungeon room..." xml:space="preserve"><value>던전 방 로딩 중...</value></data>
+  <data name="Loading..." xml:space="preserve"><value>로딩 중...</value></data>
+  <data name="Location {0}/{1}: {2} ({3:F0}s)" xml:space="preserve"><value>위치 {0}/{1}: {2} ({3:F0}초)</value></data>
+  <data name="Looking for door/progression on floor {0}... ({1:F0}s)" xml:space="preserve"><value>{0}층 문/진행 경로 탐색 ({1:F0}초)...</value></data>
+  <data name="MANUAL CONTROL - Location {0}/{1}: {2}" xml:space="preserve"><value>수동 제어, 위치 {0}/{1}: {2}</value></data>
+  <data name="Map duty active in territory {0} - continuing portal interaction..." xml:space="preserve"><value>지역 {0} 지도 임무 진행 중, 포털 상호작용 계속...</value></data>
+  <data name="Map duty active in territory {0} - recovering coffer/portal..." xml:space="preserve"><value>지역 {0} 지도 임무 진행 중, 상자/포털 복구...</value></data>
+  <data name="Map duty active in territory {0} - waiting for duty to clear..." xml:space="preserve"><value>지역 {0} 지도 임무 진행 중, 종료 대기...</value></data>
+  <data name="Map duty active in territory {0} - waiting for treasure dungeon territory..." xml:space="preserve"><value>지역 {0} 지도 임무 진행 중, 보물 던전 지역 대기...</value></data>
+  <data name="Mounting (attempt {0}/5)..." xml:space="preserve"><value>탑승 (시도 {0}/5)...</value></data>
+  <data name="Mounting before portal fly approach..." xml:space="preserve"><value>포털 비행 접근 전 탑승...</value></data>
+  <data name="Mounting to return to flag after combat ({0:F1}y XZ)..." xml:space="preserve"><value>전투 후 깃발 복귀 탑승 ({0:F1}y XZ)...</value></data>
+  <data name="Moving forward to trigger area shift... ({0:F0}/10s)" xml:space="preserve"><value>지역 전환을 위해 전진 ({0:F0}/10초)...</value></data>
+  <data name="Navigating through door transition ({0:F1}y)..." xml:space="preserve"><value>문 전환 구간 이동 ({0:F1}y)...</value></data>
+  <data name="Navigating to '{0}' ({1:F1}y, {2:F0}s)..." xml:space="preserve"><value>'{0}' 경로 이동 ({1:F1}y, {2:F0}초)...</value></data>
+  <data name="Navigating to dungeon start ({0:F1}y)..." xml:space="preserve"><value>던전 시작점 경로 이동 ({0:F1}y)...</value></data>
+  <data name="No nearby repair NPC for ADS {0}; continuing map flow." xml:space="preserve"><value>ADS {0} 근처 수리 NPC 없음, 지도 진행 계속.</value></data>
+  <data name="Normal dismount... ({0:F0}s)" xml:space="preserve"><value>일반 하차 ({0:F0}초)...</value></data>
+  <data name="Observing Higher/Lower puzzle..." xml:space="preserve"><value>높음/낮음 퍼즐 관찰...</value></data>
+  <data name="Opening Duty Finder to leave duty..." xml:space="preserve"><value>퇴장을 위해 임무 찾기 열기...</value></data>
+  <data name="Party snapshot unavailable." xml:space="preserve"><value>파티 정보 사용 불가.</value></data>
+  <data name="Playing Higher/Lower stage {0}: {1}..." xml:space="preserve"><value>높음/낮음 {0}단계: {1}...</value></data>
+  <data name="Portal accepted - loading treasure dungeon territory from {0}..." xml:space="preserve"><value>포털 수락, {0}에서 보물 던전 지역 로딩...</value></data>
+  <data name="Portal accepted - waiting for loading to finish..." xml:space="preserve"><value>포털 수락, 로딩 완료 대기...</value></data>
+  <data name="Portal accepted - waiting for treasure dungeon territory..." xml:space="preserve"><value>포털 수락, 보물 던전 지역 대기...</value></data>
+  <data name="Portal close nudge waiting for local player..." xml:space="preserve"><value>포털 미세 접근, 로컬 플레이어 대기...</value></data>
+  <data name="Portal ground approach failed ({0:F1}y) - preparing mounted recovery..." xml:space="preserve"><value>포털 지상 접근 실패 ({0:F1}y), 탑승 복구 준비...</value></data>
+  <data name="Portal still active - continuing portal interaction..." xml:space="preserve"><value>포털 활성 상태, 상호작용 계속...</value></data>
+  <data name="Preparing to mount ({0}s)..." xml:space="preserve"><value>탑승 준비 ({0}초)...</value></data>
+  <data name="Pushing through door transition ({0:F0}s)..." xml:space="preserve"><value>문 전환 통과를 위해 전진 ({0:F0}초)...</value></data>
+  <data name="Recovering missing coffer (retry {0}/{1})..." xml:space="preserve"><value>사라진 상자 복구 (재시도 {0}/{1})...</value></data>
+  <data name="Recovering missing coffer near flag ({0:F1}y XZ, retry {1}/{2})..." xml:space="preserve"><value>깃발 근처 사라진 상자 복구 ({0:F1}y XZ, 재시도 {1}/{2})...</value></data>
+  <data name="Reopening Higher/Lower puzzle (attempt {0})..." xml:space="preserve"><value>높음/낮음 다시 열기 (시도 {0})...</value></data>
+  <data name="restored: {0}" xml:space="preserve"><value>복원됨: {0}</value></data>
+  <data name="Retrying dig after combat ({0:F1}y XZ from flag)..." xml:space="preserve"><value>전투 후 발굴 재시도 (깃발에서 {0:F1}y XZ)...</value></data>
+  <data name="Retrying dig for missing coffer ({0}/{1})..." xml:space="preserve"><value>사라진 상자 발굴 재시도 ({0}/{1})...</value></data>
+  <data name="Retrying in {0:F1}s" xml:space="preserve"><value>{0:F1}초 후 재시도</value></data>
+  <data name="Returning to flag after combat ({0:F1}y XZ)..." xml:space="preserve"><value>전투 후 깃발 복귀 ({0:F1}y XZ)...</value></data>
+  <data name="Returning to flag to recover coffer ({0:F1}y XZ)..." xml:space="preserve"><value>깃발 복귀 및 상자 복구 ({0:F1}y XZ)...</value></data>
+  <data name="Running Loot Goblin Leave Duty sequence..." xml:space="preserve"><value>Loot Goblin 임무 퇴장 절차 실행...</value></data>
+  <data name="Searching for portal... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>포털 탐색 ({0:F0}/{1:F0}초)...</value></data>
+  <data name="Still trying to land by /mount toggle... ({0:F0}s)" xml:space="preserve"><value>/mount 착륙 계속 시도 ({0:F0}초)...</value></data>
+  <data name="Teleporting to {0} for ADS repair..." xml:space="preserve"><value>ADS 수리를 위해 {0} 텔레포...</value></data>
+  <data name="Teleporting to {0} for ADS repair... ({1:F0}s)" xml:space="preserve"><value>ADS 수리를 위해 {0} 텔레포 ({1:F0}s)...</value></data>
+  <data name="Teleporting to {0}..." xml:space="preserve"><value>{0}(으)로 텔레포...</value></data>
+  <data name="Teleporting... ({0:F0}s)" xml:space="preserve"><value>텔레포 중 ({0:F0}초)...</value></data>
+  <data name="Teleporting... settling ({0:F0}s)" xml:space="preserve"><value>텔레포, 안정 대기 ({0:F0}초)...</value></data>
+  <data name="Teleporting... waiting for area load ({0:F0}s)" xml:space="preserve"><value>텔레포, 지역 로딩 대기 ({0:F0}초)...</value></data>
+  <data name="Teleporting... waiting for cast lock to clear ({0:F0}s)" xml:space="preserve"><value>텔레포, 시전 잠금 해제 대기 ({0:F0}초)...</value></data>
+  <data name="Teleporting... waiting for player after load ({0:F0}s)" xml:space="preserve"><value>텔레포, 로딩 후 플레이어 대기 ({0:F0}초)...</value></data>
+  <data name="Teleporting... waiting for target territory ({0:F0}s)" xml:space="preserve"><value>텔레포, 목표 지역 대기 ({0:F0}초)...</value></data>
+  <data name="Thief-map remount: waiting for party to mount ({0}/{1} required mounted others, {2:F0}s elapsed)..." xml:space="preserve"><value>도둑 지도 재탑승, 파티 탑승 대기 (필요한 다른 인원 {0}/{1}, {2:F0}초)...</value></data>
+  <data name="Thief-map remount: waiting for party zone load ({0}/{1} mounted, {2:F0}s elapsed{3})..." xml:space="preserve"><value>도둑 지도 재탑승, 파티 지역 로딩 대기 ({0}/{1} 탑승, {2:F0}초{3})...</value></data>
+  <data name="Timeout waiting for mounts after {0}s." xml:space="preserve"><value>{0}초 후 탑승 대기 시간 초과.</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff seam..." xml:space="preserve"><value>보물 던전 지역 {0} 감지, 안전한 ADS 인계 지점 대기...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff seam... ({1})" xml:space="preserve"><value>보물 던전 지역 {0} 감지, 안전한 ADS 인계 지점 대기 ({1})...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff settle..." xml:space="preserve"><value>보물 던전 지역 {0} 감지, ADS 인계 안정 대기...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for loading to finish before ADS handoff..." xml:space="preserve"><value>보물 던전 지역 {0} 감지, ADS 인계 전 로딩 완료 대기...</value></data>
+  <data name="Trying Higher/Lower callback attempt {0}..." xml:space="preserve"><value>높음/낮음 콜백 시도 {0}...</value></data>
+  <data name="Waiting {0:F1}s before repair teleport {1} to {2}..." xml:space="preserve"><value>{2} 수리 텔레포 {1} 전 {0:F1}초 대기...</value></data>
+  <data name="Waiting before teleporting... ({0:F0}s / {1}s)" xml:space="preserve"><value>텔레포 전 대기 ({0:F0}초 / {1}초)...</value></data>
+  <data name="Waiting for all {0} members to mount..." xml:space="preserve"><value>모든 {0}명 탑승 대기...</value></data>
+  <data name="Waiting for captured portal approach... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>기록된 포털 접근 대기 ({0:F0}/{1:F0}초)...</value></data>
+  <data name="Waiting for character ready (dungeon start)..." xml:space="preserve"><value>던전 시작 시 캐릭터 준비 대기...</value></data>
+  <data name="Waiting for chest after combat dig... ({0:F1}/5.0s)" xml:space="preserve"><value>전투 후 발굴 상자 대기 ({0:F1}/5.0초)...</value></data>
+  <data name="Waiting for chest after combat... ({0:F1}/5.0s)" xml:space="preserve"><value>전투 후 상자 대기 ({0:F1}/5.0초)...</value></data>
+  <data name="Waiting for chest to reappear... ({0:F1}/5.0s)" xml:space="preserve"><value>상자 재등장 대기 ({0:F1}/5.0초)...</value></data>
+  <data name="Waiting for coffer after dig... ({0:F1}/{1:F1}s)" xml:space="preserve"><value>발굴 후 상자 대기 ({0:F1}/{1:F1}초)...</value></data>
+  <data name="Waiting for combat to end before portal fly approach..." xml:space="preserve"><value>포털 비행 접근 전 전투 종료 대기...</value></data>
+  <data name="Waiting for door cutscene/loading to clear..." xml:space="preserve"><value>문 영상/로딩 종료 대기...</value></data>
+  <data name="Waiting for door transition cutscene/loading to clear..." xml:space="preserve"><value>문 전환 영상/로딩 종료 대기...</value></data>
+  <data name="Waiting for dungeon objects to activate ({0:F0}/30s)..." xml:space="preserve"><value>던전 객체 활성화 대기 ({0:F0}/30초)...</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen," xml:space="preserve"><value>전체 파티 정보 대기 (다른 플레이어 {0}/{1}명 확인,</value></data>
+  <data name="Waiting for Higher/Lower puzzle after exhausting callback attempts..." xml:space="preserve"><value>콜백 시도 소진 후 높음/낮음 퍼즐 대기...</value></data>
+  <data name="Waiting for Higher/Lower puzzle UI ({0})..." xml:space="preserve"><value>높음/낮음 퍼즐 UI 대기 ({0})...</value></data>
+  <data name="Waiting for Higher/Lower puzzle UI to settle (attempt {0})..." xml:space="preserve"><value>높음/낮음 퍼즐 UI 안정 대기 (시도 {0})...</value></data>
+  <data name="Waiting for Higher/Lower solver UI to settle..." xml:space="preserve"><value>높음/낮음 해결기 UI 안정 대기...</value></data>
+  <data name="Waiting for Higher/Lower UI to change after solver callback..." xml:space="preserve"><value>해결기 콜백 후 높음/낮음 UI 변경 대기...</value></data>
+  <data name="Waiting for map location... ({0:F0}s / {1}s)" xml:space="preserve"><value>지도 위치 대기 ({0:F0}초 / {1}초)...</value></data>
+  <data name="Waiting for party snapshot ({0:F0}s elapsed, expecting {1} other players)..." xml:space="preserve"><value>파티 정보 대기 ({0:F0}초 경과, 다른 플레이어 {1}명 예상)...</value></data>
+  <data name="Waiting for party snapshot before next map..." xml:space="preserve"><value>다음 지도 전 파티 정보 대기...</value></data>
+  <data name="Waiting for party to load after dungeon ({0}/{1} in zone; missing: {2})..." xml:space="preserve"><value>던전 후 파티 로딩 대기 ({0}/{1} 지역 내, 누락: {2})...</value></data>
+  <data name="Waiting for party to load after dungeon ({0}/{1} required other players in zone)..." xml:space="preserve"><value>던전 후 파티 로딩 대기 (필요한 다른 플레이어 {0}/{1} 지역 내)...</value></data>
+  <data name="Waiting for party to mount ({0}/{1} required mounted others, {2:F0}s elapsed)..." xml:space="preserve"><value>파티 탑승 대기 (필요한 다른 인원 {0}/{1}, {2:F0}초 경과)...</value></data>
+  <data name="Waiting for party zone load ({0}/{1} mounted, {2:F0}s elapsed{3})..." xml:space="preserve"><value>파티 지역 로딩 대기 ({0}/{1} 탑승, {2:F0}초 경과{3})...</value></data>
+  <data name="Waiting for player before coffer interaction..." xml:space="preserve"><value>상자 상호작용 전 플레이어 대기...</value></data>
+  <data name="Waiting for player before portal ground approach..." xml:space="preserve"><value>포털 지상 접근 전 플레이어 대기...</value></data>
+  <data name="Waiting for player to be available..." xml:space="preserve"><value>플레이어 준비 대기...</value></data>
+  <data name="Waiting for progression objects to activate ({0:F0}/30s)..." xml:space="preserve"><value>진행 객체 활성화 대기 ({0:F0}/30초)...</value></data>
+  <data name="Waiting for reliable Higher/Lower solver snapshot..." xml:space="preserve"><value>신뢰할 수 있는 높음/낮음 정보 대기...</value></data>
+  <data name="Waiting for repair teleport settle proof at {0}" xml:space="preserve"><value>수리 텔레포 {0} 도착 안정 확인 대기</value></data>
+  <data name="Waiting for targetable High/Low world objects..." xml:space="preserve"><value>대상 지정 가능한 높음/낮음 월드 객체 대기...</value></data>
+  <data name="Waiting for targetable Higher/Lower world object for {0}..." xml:space="preserve"><value>{0} 대상 지정 가능한 높음/낮음 객체 대기...</value></data>
+  <data name="Waiting to interact with portal ({0})..." xml:space="preserve"><value>포털 상호작용 대기 ({0})...</value></data>
+  <data name="Waiting to retry Higher/Lower world interaction for {0}..." xml:space="preserve"><value>{0} 높음/낮음 월드 상호작용 재시도 대기...</value></data>
+  <data name="Waiting to retry portal after close nudge ({0})..." xml:space="preserve"><value>미세 접근 후 포털 재시도 대기 ({0})...</value></data>
+  <data name="Walking through opened door ({0:F1}y)..." xml:space="preserve"><value>열린 문 도보 통과 ({0:F1}y)...</value></data>
+  <data name="Treasure coffer recovery failed after dig. Manual intervention required." xml:space="preserve"><value>발굴 후 보물상자 복구에 실패했습니다. 수동 조작이 필요합니다.</value></data>
+  <data name="Opening {0}..." xml:space="preserve"><value>{0} 여는 중...</value></data>
+  <data name="[Alexandrite] Expected {0} in inventory for normal map handoff, but it was not found." xml:space="preserve"><value>[알렉산드라이트] 일반 지도 인계를 위해 소지품에 {0}이(가) 있어야 하지만 찾지 못했습니다.</value></data>
+  <data name="Map opened, reading location..." xml:space="preserve"><value>지도를 열었습니다. 위치를 읽는 중...</value></data>
+  <data name="In zone but aetheryte closer ({0:F0}y vs {1:F0}y) - teleporting..." xml:space="preserve"><value>구역 안이지만 에테라이트가 더 가까워 ({0:F0}y 대 {1:F0}y) 텔레포합니다...</value></data>
+  <data name="Already diving near thief-map target - swimming to flag..." xml:space="preserve"><value>도둑 지도 목표 근처에서 이미 잠수 중 - 깃발로 수영합니다...</value></data>
+  <data name="Retrying map opening..." xml:space="preserve"><value>지도 열기를 재시도합니다...</value></data>
+  <data name="Map opening failed - map count didn&apos;t decrease" xml:space="preserve"><value>지도 열기 실패 - 지도 수가 감소하지 않았습니다</value></data>
+  <data name="No aetheryte ID for teleport." xml:space="preserve"><value>텔레포할 에테라이트 ID가 없습니다.</value></data>
+  <data name="Teleport to {0} failed: {1}" xml:space="preserve"><value>{0} 텔레포 실패: {1}</value></data>
+  <data name="No target territory after teleport." xml:space="preserve"><value>텔레포 후 목표 지역이 없습니다.</value></data>
+  <data name="Wrong territory after teleport: {0} (expected {1})." xml:space="preserve"><value>텔레포 후 지역 불일치: {0} (예상 {1}).</value></data>
+  <data name="Arrived! Mounting up..." xml:space="preserve"><value>도착했습니다! 탈것에 탑니다...</value></data>
+  <data name="Thief-map remount: waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>도둑 지도 재탑승: 파티를 기다립니다 (필요한 다른 탑승자 {0}/{1})...</value></data>
+  <data name="Joined-FATE recovery mounted - flying to location..." xml:space="preserve"><value>참여 FATE 복구 탑승 완료 - 위치로 비행합니다...</value></data>
+  <data name="Recovery teleport complete - party mount wait satisfied! Flying to location..." xml:space="preserve"><value>복구 텔레포 완료 - 파티 탑승 대기 충족! 위치로 비행합니다...</value></data>
+  <data name="Party mount wait satisfied! Flying to location..." xml:space="preserve"><value>파티 탑승 대기 충족! 위치로 비행합니다...</value></data>
+  <data name="Recovery teleport complete - waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>복구 텔레포 완료 - 파티 탑승을 기다립니다 (필요한 다른 탑승자 {0}/{1})...</value></data>
+  <data name="Waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>파티 탑승을 기다립니다 (필요한 다른 탑승자 {0}/{1})...</value></data>
+  <data name="Mounted! Flying to location..." xml:space="preserve"><value>탑승했습니다! 위치로 비행합니다...</value></data>
+  <data name="Thief-map water remount recovery failed after 5 attempts. Manual intervention required." xml:space="preserve"><value>도둑 지도 수중 재탑승 복구가 5회 시도 후 실패했습니다. 수동 조작이 필요합니다.</value></data>
+  <data name="Mount failed - please restart" xml:space="preserve"><value>탑승 실패 - 다시 시작하세요</value></data>
+  <data name="Joined-FATE recovery - flying to location..." xml:space="preserve"><value>참여 FATE 복구 - 위치로 비행합니다...</value></data>
+  <data name="Joined-FATE recovery - remounting for map target..." xml:space="preserve"><value>참여 FATE 복구 - 지도 목표를 위해 다시 탑니다...</value></data>
+  <data name="Wait for party disabled - flying to location..." xml:space="preserve"><value>파티 대기 꺼짐 - 위치로 비행합니다...</value></data>
+  <data name="Required party members mounted! Flying..." xml:space="preserve"><value>필요한 파티원이 탑승했습니다! 비행합니다...</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen, " xml:space="preserve"><value>전체 파티 정보를 기다립니다 (다른 플레이어 확인 {0}/{1}, </value></data>
+  <data name="No location data for navigation." xml:space="preserve"><value>이동할 위치 데이터가 없습니다.</value></data>
+  <data name="No location data for underwater navigation." xml:space="preserve"><value>수중 이동할 위치 데이터가 없습니다.</value></data>
+  <data name="Navigation error: {0}" xml:space="preserve"><value>이동 오류: {0}</value></data>
+  <data name="No location data for underwater chest navigation." xml:space="preserve"><value>수중 보물상자로 이동할 위치 데이터가 없습니다.</value></data>
+  <data name="Combat recovery: landing at map target..." xml:space="preserve"><value>전투 복구: 지도 목표에 착지합니다...</value></data>
+  <data name="Outdoor map complete - skipping portal search..." xml:space="preserve"><value>야외 지도 완료 - 포털 검색을 건너뜁니다...</value></data>
+  <data name="Searching for portal..." xml:space="preserve"><value>포털을 찾는 중...</value></data>
+  <data name="Recovered overworld treasure coffer - opening chest..." xml:space="preserve"><value>야외 보물상자 복구 - 상자를 여는 중...</value></data>
+  <data name="Resuming chest interaction loop..." xml:space="preserve"><value>보물상자 상호작용 반복을 재개합니다...</value></data>
+  <data name="Portal found - searching for portal..." xml:space="preserve"><value>포털 발견 - 포털을 찾는 중...</value></data>
+  <data name="Dungeon complete (reached floor {0})" xml:space="preserve"><value>던전 완료 ({0}층 도달)</value></data>
+  <data name="Combat detected on floor {0}..." xml:space="preserve"><value>{0}층에서 전투 감지...</value></data>
+  <data name="Looting floor {0} (sweep then progression)..." xml:space="preserve"><value>{0}층 전리품 수집 (탐색 후 진행)...</value></data>
+  <data name="Found {0} chest object(s) on floor {1}..." xml:space="preserve"><value>{1}층에서 상자 오브젝트 {0}개 발견...</value></data>
+  <data name="Found {0} progression object(s) on floor {1}..." xml:space="preserve"><value>{1}층에서 진행 오브젝트 {0}개 발견...</value></data>
+  <data name="Dungeon complete (wiped on floor {0})" xml:space="preserve"><value>던전 종료 ({0}층에서 전멸)</value></data>
+  <data name="Returning to chest after combat on floor {0}..." xml:space="preserve"><value>{0}층 전투 후 상자로 돌아갑니다...</value></data>
+  <data name="Looting after combat on floor {0}..." xml:space="preserve"><value>{0}층 전투 후 전리품을 수집합니다...</value></data>
+  <data name="No loot after combat - continuing dungeon on floor {0}..." xml:space="preserve"><value>전투 후 전리품 없음 - {0}층 던전을 계속 진행합니다...</value></data>
+  <data name="Combat ended - scanning floor {0}..." xml:space="preserve"><value>전투 종료 - {0}층을 탐색합니다...</value></data>
+  <data name="Finding doors on floor {0}..." xml:space="preserve"><value>{0}층 문을 찾는 중...</value></data>
+  <data name="All objectives cleared - heading to exit" xml:space="preserve"><value>모든 목표 완료 - 출구로 이동</value></data>
+  <data name="Entering floor {0}..." xml:space="preserve"><value>{0}층 입장 중...</value></data>
+  <data name="Dungeon complete (floor {0})" xml:space="preserve"><value>던전 완료 ({0}층)</value></data>
+  <data name="Combat on floor {0}..." xml:space="preserve"><value>{0}층 전투 중...</value></data>
+  <data name="More loot found on floor {0}..." xml:space="preserve"><value>{0}층에서 추가 전리품 발견...</value></data>
+  <data name="Rescanning floor {0}..." xml:space="preserve"><value>{0}층을 다시 탐색합니다...</value></data>
+  <data name="Still in dungeon - cannot start next map. Manual intervention required." xml:space="preserve"><value>아직 던전 안입니다. 다음 지도를 시작할 수 없습니다. 수동 조작이 필요합니다.</value></data>
+  <data name="Auto-starting next map..." xml:space="preserve"><value>다음 지도를 자동 시작합니다...</value></data>
+  <data name="Auto-starting next retainer map..." xml:space="preserve"><value>다음 집사 지도를 자동 시작합니다...</value></data>
+  <data name="Purchasing the next configured map through Emptor..." xml:space="preserve"><value>Emptor로 다음 설정된 지도를 구매합니다...</value></data>
+  <data name="Run complete." xml:space="preserve"><value>실행 완료.</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is still active. Retrying the map instead of marking it complete." xml:space="preserve"><value>보물 지도 주요 아이템 &apos;{0}&apos;이(가) 아직 활성 상태입니다. 완료 처리 대신 지도를 재시도합니다.</value></data>
+  <data name="Entering dungeon instance..." xml:space="preserve"><value>던전 인스턴스 입장 중...</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but ADS is not loaded." xml:space="preserve"><value>장비 내구도 {0}%가 수리 기준 {1}% 미만이지만 ADS가 로드되지 않았습니다.</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but player position is unavailable for ADS repair recovery." xml:space="preserve"><value>장비 내구도 {0}%가 수리 기준 {1}% 미만이지만 ADS 수리 복구에 필요한 플레이어 위치를 사용할 수 없습니다.</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but no unlocked aetheryte was found in current territory {2} for ADS NPC no-inn repair." xml:space="preserve"><value>장비 내구도 {0}%가 수리 기준 {1}% 미만이지만 현재 지역 {2}에서 ADS 여관 없는 NPC 수리에 사용할 개방된 에테라이트를 찾지 못했습니다.</value></data>
+  <data name="Waiting for repair teleport settle proof at {0} " xml:space="preserve"><value>{0}에서 수리 텔레포 도착 안정 확인을 기다립니다 </value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s " xml:space="preserve"><value>{0} {1:F1}s 후 ADS 수리를 재시도합니다 </value></data>
+  <data name="Could not read equipped gear durability before ADS repair retry." xml:space="preserve"><value>ADS 수리 재시도 전에 장비 내구도를 읽을 수 없습니다.</value></data>
+  <data name="ADS unloaded before repair retry. {0}" xml:space="preserve"><value>수리 재시도 전에 ADS가 언로드되었습니다. {0}</value></data>
+  <data name="ADS repair finished, but equipped gear durability could not be read." xml:space="preserve"><value>ADS 수리가 끝났지만 장비 내구도를 읽을 수 없습니다.</value></data>
+  <data name="{0} Could not read equipped gear durability." xml:space="preserve"><value>{0} 장비 내구도를 읽을 수 없습니다.</value></data>
+  <data name="{0} {1} ADS is not loaded." xml:space="preserve"><value>{0} {1} ADS가 로드되지 않았습니다.</value></data>
+  <data name="{0} Durability {1}%/{2}%. " xml:space="preserve"><value>{0} 내구도 {1}%/{2}%. </value></data>
+  <data name="Retrying in {0:F1}s " xml:space="preserve"><value>{0:F1}s 후 재시도 </value></data>
+  <data name="ADS owns the duty - waiting for completion..." xml:space="preserve"><value>ADS가 임무를 관리 중 - 완료를 기다립니다...</value></data>
+  <data name="[Warning] {0}" xml:space="preserve"><value>[경고] {0}</value></data>
+  <data name="[Dungeon] === Object Scan (floor {0}, {1} objects) ===" xml:space="preserve"><value>[던전] === 오브젝트 탐색 ({0}층, {1}개) ===</value></data>
+  <data name="Error #{0} (recovered): {1}" xml:space="preserve"><value>오류 #{0} (복구됨): {1}</value></data>
+  <data name="Error #{0}: recovering overworld portal search..." xml:space="preserve"><value>오류 #{0}: 야외 포털 검색을 복구합니다...</value></data>
+  <data name="Error #{0}: recovering overworld coffer/portal..." xml:space="preserve"><value>오류 #{0}: 야외 보물상자/포털을 복구합니다...</value></data>
+  <data name="Error #{0}: {1}" xml:space="preserve"><value>오류 #{0}: {1}</value></data>
+  <data name="Cycling aetherytes (0/{0})..." xml:space="preserve"><value>에테라이트 순회 중 (0/{0})...</value></data>
+  <data name="Aetheryte cycling complete!" xml:space="preserve"><value>에테라이트 순회 완료!</value></data>
+  <data name="Map location cycling complete!" xml:space="preserve"><value>지도 위치 순회 완료!</value></data>
+  <data name="Location {0}/{1}: {2}" xml:space="preserve"><value>위치 {0}/{1}: {2}</value></data>
+  <data name="[CycleMapLocs] No location set" xml:space="preserve"><value>[CycleMapLocs] 설정된 위치 없음</value></data>
+  <data name="Alexandrite run 1/{0}: Starting..." xml:space="preserve"><value>알렉산드라이트 실행 1/{0}: 시작 중...</value></data>
+  <data name="Alexandrite farming complete!" xml:space="preserve"><value>알렉산드라이트 수집 완료!</value></data>
+  <data name="[Alexandrite] Lifestream is not loaded; cannot return to Revenant&apos;s Toll." xml:space="preserve"><value>[알렉산드라이트] Lifestream이 로드되지 않아 망자의 종소리로 돌아갈 수 없습니다.</value></data>
+  <data name="[Alexandrite] Cannot return to Revenant&apos;s Toll while in combat." xml:space="preserve"><value>[알렉산드라이트] 전투 중에는 망자의 종소리로 돌아갈 수 없습니다.</value></data>
+  <data name="[Alexandrite] Failed to send /li rev." xml:space="preserve"><value>[알렉산드라이트] /li rev 전송 실패.</value></data>
+  <data name="[Alexandrite] /li rev return to Mor Dhona timed out" xml:space="preserve"><value>[알렉산드라이트] /li rev 모르도나 귀환 시간 초과</value></data>
+  <data name="[Alexandrite] Mount before Auriana approach timed out" xml:space="preserve"><value>[알렉산드라이트] 오리아나 접근 전 탑승 시간 초과</value></data>
+  <data name="[Alexandrite] Mounted approach to Auriana timed out" xml:space="preserve"><value>[알렉산드라이트] 탈것으로 오리아나 접근 시간 초과</value></data>
+  <data name="[Alexandrite] Auriana NPC not found. {0}" xml:space="preserve"><value>[알렉산드라이트] 오리아나 NPC를 찾지 못했습니다. {0}</value></data>
+  <data name="[Alexandrite] SelectIconString dialog not appearing. {0}" xml:space="preserve"><value>[알렉산드라이트] SelectIconString 대화창이 나타나지 않습니다. {0}</value></data>
+  <data name="[Alexandrite] Purchase confirmation/map wait timed out. {0}" xml:space="preserve"><value>[알렉산드라이트] 구매 확인/지도 대기 시간 초과. {0}</value></data>
+  <data name="[Alexandrite] Expected Mysterious Map in inventory for normal map handoff, but it was not found. {0}" xml:space="preserve"><value>[알렉산드라이트] 일반 지도 인계에 필요한 수수께끼의 지도를 소지품에서 찾지 못했습니다. {0}</value></data>
+  <data name="Alexandrite: starting normal Mysterious Map flow..." xml:space="preserve"><value>알렉산드라이트: 일반 수수께끼의 지도 흐름을 시작합니다...</value></data>
+  <data name="Alexandrite run {0}/{1}: Starting..." xml:space="preserve"><value>알렉산드라이트 실행 {0}/{1}: 시작 중...</value></data>
+  <data name="current job unavailable" xml:space="preserve"><value>현재 직업을 사용할 수 없음</value></data>
+  <data name="no job snapshot captured" xml:space="preserve"><value>저장된 직업 정보 없음</value></data>
+  <data name="no job configured" xml:space="preserve"><value>설정된 직업 없음</value></data>
+  <data name="gearset module unavailable" xml:space="preserve"><value>장비세트 모듈을 사용할 수 없음</value></data>
+  <data name="Already on {0}." xml:space="preserve"><value>이미 {0}입니다.</value></data>
+  <data name="Found {0} gearset {1}." xml:space="preserve"><value>{0} 장비세트 {1} 발견.</value></data>
+  <data name="No gearset exists for configured job {0}." xml:space="preserve"><value>설정된 직업 {0}의 장비세트가 없습니다.</value></data>
+  <data name="Could not inspect gearsets: {0}" xml:space="preserve"><value>장비세트를 확인할 수 없습니다: {0}</value></data>
+  <data name="Gearset {0} is no longer valid." xml:space="preserve"><value>장비세트 {0}이(가) 더 이상 유효하지 않습니다.</value></data>
+  <data name="EquipGearset({0}) failed with result {1}." xml:space="preserve"><value>EquipGearset({0}) 실패, 결과 {1}.</value></data>
+  <data name="Switching to {0} gearset {1}." xml:space="preserve"><value>{0} 장비세트 {1}(으)로 변경 중.</value></data>
+  <data name="Job switch failed: {0}" xml:space="preserve"><value>직업 변경 실패: {0}</value></data>
+  <data name="Party roster is unavailable while loading or logged out." xml:space="preserve"><value>불러오는 중이거나 로그아웃 상태에서는 파티 목록을 사용할 수 없습니다.</value></data>
+  <data name="Local player is unavailable." xml:space="preserve"><value>로컬 플레이어를 사용할 수 없습니다.</value></data>
+  <data name="Player is solo; no party roster needs restoration." xml:space="preserve"><value>혼자이므로 복원할 파티 목록이 없습니다.</value></data>
+  <data name="Alliance rosters are not supported for market-board travel." xml:space="preserve"><value>장터 이동은 연합 파티를 지원하지 않습니다.</value></data>
+  <data name="Party leader identity is unavailable." xml:space="preserve"><value>파티장 정보를 사용할 수 없습니다.</value></data>
+  <data name="Party member slot {0} is unavailable." xml:space="preserve"><value>파티원 슬롯 {0}을(를) 사용할 수 없습니다.</value></data>
+  <data name="Party member slot {0} has incomplete name, Content ID, or home-world identity." xml:space="preserve"><value>파티원 슬롯 {0}의 이름, Content ID 또는 출신 서버 정보가 불완전합니다.</value></data>
+  <data name="Local player was not found in the native party roster." xml:space="preserve"><value>게임 파티 목록에서 로컬 플레이어를 찾지 못했습니다.</value></data>
+  <data name="Local player is not the party leader." xml:space="preserve"><value>로컬 플레이어는 파티장이 아닙니다.</value></data>
+  <data name="Captured {0} complete native party identities." xml:space="preserve"><value>완전한 게임 파티 정보 {0}개 저장.</value></data>
+  <data name="Captured party roster is restored." xml:space="preserve"><value>저장된 파티 목록이 복원되었습니다.</value></data>
+  <data name="Waiting for {0} captured party member(s)." xml:space="preserve"><value>저장된 파티원 {0}명을 기다립니다.</value></data>
+  <data name="Timed out switching to configured combat job {0}." xml:space="preserve"><value>설정된 전투 직업 {0} 변경 시간 초과.</value></data>
+  <data name="Could not switch to gather job: {0}" xml:space="preserve"><value>채집 직업으로 변경할 수 없습니다: {0}</value></data>
+  <data name="unavailable (0)" xml:space="preserve"><value>사용 불가 (0)</value></data>
+  <data name="{0}h {1:D2}m" xml:space="preserve"><value>{0}시간 {1:D2}분</value></data>
+  <data name="{0}m" xml:space="preserve"><value>{0}분</value></data>
+  <data name="Map allowance cooldown: {0}" xml:space="preserve"><value>지도 채집권 대기 시간: {0}</value></data>
+  <data name="Map allowance: {0}" xml:space="preserve"><value>지도 채집권: {0}</value></data>
+  <data name="Map allowance: waiting for /timers data" xml:space="preserve"><value>지도 채집권: /timers 데이터 대기 중</value></data>
+  <data name="[map can be gathered]" xml:space="preserve"><value>[지도 채집 가능]</value></data>
+  <data name="Seedling: toggle missing-map gathering | Blue X: unavailable through gathering" xml:space="preserve"><value>새싹: 부족한 지도 채집 전환 | 파란 X: 채집 불가</value></data>
+  <data name="Map allowance locked for {0}." xml:space="preserve"><value>지도 채집권이 {0} 동안 잠겨 있습니다.</value></data>
+  <data name="Waiting for map allowance ({0} remaining)." xml:space="preserve"><value>지도 채집권을 기다립니다 ({0} 남음).</value></data>
+  <data name="Map allowance for {0} is locked for {1}, longer than the {2}m wait limit." xml:space="preserve"><value>{0} 지도 채집권이 {1} 동안 잠겨 있어 대기 제한 {2}분을 초과합니다.</value></data>
+  <data name="Map allowance status unavailable: {0}" xml:space="preserve"><value>지도 채집권 상태를 사용할 수 없습니다: {0}</value></data>
+  <data name="This map is unknown to LootGoblin and cannot be gathered." xml:space="preserve"><value>LootGoblin에 등록되지 않은 지도이므로 채집할 수 없습니다.</value></data>
+  <data name="This map is unavailable through gathering." xml:space="preserve"><value>이 지도는 채집할 수 없습니다.</value></data>
+  <data name="Configure Settings -&gt; Run -&gt; Gather Job to gather missing maps." xml:space="preserve"><value>부족한 지도를 채집하려면 설정 -&gt; 실행 -&gt; 채집 직업을 설정하세요.</value></data>
+  <data name="Gathering enabled." xml:space="preserve"><value>채집이 켜져 있습니다.</value></data>
+  <data name="Gathering disabled." xml:space="preserve"><value>채집이 꺼져 있습니다.</value></data>
+  <data name="{0} Map allowance status is unavailable." xml:space="preserve"><value>{0} 지도 채집권 상태를 사용할 수 없습니다.</value></data>
+  <data name="{0} Click the seedling to change the missing-map gather selection while allowance is ready." xml:space="preserve"><value>{0} 채집권이 준비되었을 때 새싹을 눌러 부족한 지도 채집 선택을 변경하세요.</value></data>
+  <data name="{0} Allowance cooldown: {1} remaining. Selection is saved for the next allowance." xml:space="preserve"><value>{0} 채집권 대기 시간: {1} 남음. 선택은 다음 채집권에 저장됩니다.</value></data>
+  <data name="PlayerNull" xml:space="preserve"><value>플레이어 사용 불가</value></data>
+  <data name="OccupiedInCutSceneEvent" xml:space="preserve"><value>영상 이벤트 중</value></data>
+  <data name="Occupied33" xml:space="preserve"><value>조작 불가 (33)</value></data>
+  <data name="WatchingCutscene" xml:space="preserve"><value>영상 시청 중</value></data>
+  <data name="OccupiedInQuestEvent" xml:space="preserve"><value>퀘스트 이벤트 중</value></data>
+  <data name="Occupied39" xml:space="preserve"><value>조작 불가 (39)</value></data>
+  <data name="BetweenAreas" xml:space="preserve"><value>지역 이동 중</value></data>
+  <data name="BetweenAreas51" xml:space="preserve"><value>지역 이동 중 (51)</value></data>
+  <data name="Unknown" xml:space="preserve"><value>알 수 없음</value></data>
+  <data name="PlayHigher" xml:space="preserve"><value>높음 선택</value></data>
+  <data name="PlayLower" xml:space="preserve"><value>낮음 선택</value></data>
+  <data name="CashOut" xml:space="preserve"><value>보상 수령</value></data>
+  <data name="SolveExpectedValue" xml:space="preserve"><value>기댓값으로 풀기</value></data>
+  <data name="ObserveOnly" xml:space="preserve"><value>관찰만</value></data>
+  <data name="PlayerCasting" xml:space="preserve"><value>플레이어 시전 중</value></data>
+  <data name="; not loaded in same zone: {0}" xml:space="preserve"><value>; 같은 구역에 로드되지 않음: {0}</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen, {2}/{3} mounted, {4:F0}s elapsed)..." xml:space="preserve"><value>전체 파티 정보를 기다립니다 (다른 플레이어 확인 {0}/{1}, 탑승 {2}/{3}, {4:F0}s 경과)...</value></data>
+  <data name="Thief-map remount: waiting for party zone load ({0}/{1} loaded in same zone; missing: {2})..." xml:space="preserve"><value>도둑 지도 재탑승: 파티 구역 로드를 기다립니다 (같은 구역 로드 {0}/{1}, 누락: {2})...</value></data>
+  <data name="Waiting for valid party snapshot before map content (expecting {0} other players)..." xml:space="preserve"><value>지도 콘텐츠 전에 유효한 파티 정보를 기다립니다 (다른 플레이어 {0}명 예상)...</value></data>
+  <data name="Waiting for valid party snapshot before map content..." xml:space="preserve"><value>지도 콘텐츠 전에 유효한 파티 정보를 기다립니다...</value></data>
+  <data name="Party wait timeout reached; waiting for at least one resolved same-territory party member..." xml:space="preserve"><value>파티 대기 시간 초과. 같은 지역에서 확인된 파티원 한 명 이상을 기다립니다...</value></data>
+  <data name="Waiting for party ({0}/{1} nearby within {2:F0}y, need {3} before map content{4})..." xml:space="preserve"><value>파티를 기다립니다 ({2:F0}y 이내 {0}/{1}, 지도 콘텐츠 전에 {3}명 필요{4})...</value></data>
+  <data name=", {0} same-territory far" xml:space="preserve"><value>, 같은 지역에서 멀리 있음 {0}명</value></data>
+  <data name=", {0} unresolved" xml:space="preserve"><value>, 확인되지 않음 {0}명</value></data>
+  <data name=", {0} out-of-territory" xml:space="preserve"><value>, 다른 지역 {0}명</value></data>
+  <data name=", guarded recovery active" xml:space="preserve"><value>, 보호된 복구 활성</value></data>
+  <data name="Waiting for party before takeoff ({0}/{1} required mounted others)..." xml:space="preserve"><value>이륙 전에 파티를 기다립니다 (필요한 다른 탑승자 {0}/{1})...</value></data>
+  <data name="{0} {1}/{2}... ({3:F1}s)" xml:space="preserve"><value>{0} {1}/{2}... ({3:F1}s)</value></data>
+  <data name="Waiting after underwater XYZ dig retry {0}/{1}... ({2:F1}s)" xml:space="preserve"><value>수중 XYZ 발굴 재시도 {0}/{1} 후 대기 중... ({2:F1}s)</value></data>
+  <data name="Waiting before underwater XYZ dig retry {0}/{1}... ({2:F1}s)" xml:space="preserve"><value>수중 XYZ 발굴 재시도 {0}/{1} 전 대기 중... ({2:F1}s)</value></data>
+  <data name="Waiting for repair teleport settle proof at {0} ({1:F0}s, moved {2:F1}y)..." xml:space="preserve"><value>{0}에서 수리 텔레포 도착 안정 확인을 기다립니다 ({1:F0}s, 이동 {2:F1}y)...</value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s ({2}/{3})..." xml:space="preserve"><value>{0} {1:F1}s 후 ADS 수리를 재시도합니다 ({2}/{3})...</value></data>
+  <data name="{0} Durability {1}%/{2}%. Retrying in {3:F1}s ({4}/{5})..." xml:space="preserve"><value>{0} 내구도 {1}%/{2}%. {3:F1}s 후 재시도 ({4}/{5})...</value></data>
+  <data name="ADS unavailable; reflection hacks pending." xml:space="preserve"><value>ADS 사용 불가; 리플렉션 설정 적용 대기 중.</value></data>
+  <data name="ADS unavailable/pending: {0}." xml:space="preserve"><value>ADS 사용 불가/대기 중: {0}.</value></data>
+  <data name="ADS returned false" xml:space="preserve"><value>ADS가 false를 반환함</value></data>
+  <data name="range ({0})" xml:space="preserve"><value>범위 ({0})</value></data>
+  <data name="range reset ({0})" xml:space="preserve"><value>범위 초기화 ({0})</value></data>
+  <data name="hunts ({0})" xml:space="preserve"><value>마물 사냥 ({0})</value></data>
+  <data name="hunts reset ({0})" xml:space="preserve"><value>마물 사냥 초기화 ({0})</value></data>
+  <data name="No ADS utility status." xml:space="preserve"><value>ADS 유틸리티 상태가 없습니다.</value></data>
+  <data name="status unavailable" xml:space="preserve"><value>상태 사용 불가</value></data>
+  <data name="utility status unavailable" xml:space="preserve"><value>유틸리티 상태 사용 불가</value></data>
+  <data name="failure: {0}" xml:space="preserve"><value>실패: {0}</value></data>
+  <data name="status: {0}" xml:space="preserve"><value>상태: {0}</value></data>
+  <data name="last success: {0}" xml:space="preserve"><value>마지막 성공: {0}</value></data>
+  <data name="ADS repair stopped before durability reached threshold; ADS {0}." xml:space="preserve"><value>내구도 기준에 도달하기 전에 ADS 수리가 중지되었습니다. ADS {0}.</value></data>
+  <data name="ADS repair failed." xml:space="preserve"><value>ADS 수리에 실패했습니다.</value></data>
+  <data name="ADS unloaded during repair recovery; cannot start ADS repair." xml:space="preserve"><value>수리 복구 중 ADS가 언로드되어 ADS 수리를 시작할 수 없습니다.</value></data>
+  <data name="Lifestream is not loaded; cannot teleport to aetheryte for ADS NPC no-inn repair." xml:space="preserve"><value>Lifestream이 로드되지 않아 ADS 여관 없는 NPC 수리용 에테라이트로 텔레포할 수 없습니다.</value></data>
+  <data name="Cannot teleport to aetheryte for ADS NPC no-inn repair while in combat." xml:space="preserve"><value>전투 중에는 ADS 여관 없는 NPC 수리용 에테라이트로 텔레포할 수 없습니다.</value></data>
+  <data name="Player position is unavailable while resolving ADS repair recovery aetheryte." xml:space="preserve"><value>ADS 수리 복구 에테라이트를 찾는 동안 플레이어 위치를 사용할 수 없습니다.</value></data>
+  <data name="Could not teleport to {0} for ADS repair: {1}" xml:space="preserve"><value>ADS 수리를 위해 {0} 텔레포 실패: {1}</value></data>
+  <data name="Teleport to {0} for ADS repair failed: {1}" xml:space="preserve"><value>ADS 수리를 위한 {0} 텔레포 실패: {1}</value></data>
+  <data name="Lifestream rejected ADS repair teleport to {0} (ID {1}) after {2} command attempt(s): {3}" xml:space="preserve"><value>Lifestream이 {2}회 명령 시도 후 {0} (ID {1}) ADS 수리 텔레포를 거부했습니다: {3}</value></data>
+  <data name="InventoryManager is null" xml:space="preserve"><value>InventoryManager가 null입니다</value></data>
+  <data name="Selected map was not found in loaded saddlebags. Open saddlebags once this session and retry." xml:space="preserve"><value>불러온 초코보 가방에서 선택한 지도를 찾지 못했습니다. 이번 세션에서 가방을 한 번 열고 재시도하세요.</value></data>
+  <data name="No empty inventory slot is available for saddlebag retrieval." xml:space="preserve"><value>초코보 가방에서 꺼낼 소지품 빈칸이 없습니다.</value></data>
+  <data name="Selected {0}[{1}] -&gt; {2}[{3}]" xml:space="preserve"><value>선택됨 {0}[{1}] -&gt; {2}[{3}]</value></data>
+  <data name="Purchased map was not found in normal inventory." xml:space="preserve"><value>일반 소지품에서 구매한 지도를 찾지 못했습니다.</value></data>
+  <data name="Expected one purchased map in {0}[{1}], found quantity {2}." xml:space="preserve"><value>{0}[{1}]에 구매한 지도 한 개가 있어야 하지만 수량 {2}개를 확인했습니다.</value></data>
+  <data name="No empty loaded saddlebag slot is available." xml:space="preserve"><value>불러온 초코보 가방에 빈칸이 없습니다.</value></data>
+  <data name="Expected exactly one purchased map in normal inventory before storage, found {0}." xml:space="preserve"><value>보관 전 일반 소지품에 구매한 지도가 정확히 한 개 있어야 하지만 {0}개를 확인했습니다.</value></data>
+  <data name="Selected {0}[{1}] -&gt; {2}[{3}] (inventory={4}, saddlebag={5})" xml:space="preserve"><value>선택됨 {0}[{1}] -&gt; {2}[{3}] (소지품={4}, 가방={5})</value></data>
+  <data name="Source slot changed before move. Expected {0} x{1} in {2}[{3}]." xml:space="preserve"><value>이동 전에 출발 슬롯이 바뀌었습니다. {2}[{3}]에 {0} x{1}이(가) 있어야 합니다.</value></data>
+  <data name="Destination slot changed before move. {0}[{1}] is no longer empty." xml:space="preserve"><value>이동 전에 목적지 슬롯이 바뀌었습니다. {0}[{1}]이(가) 비어 있지 않습니다.</value></data>
+  <data name="Map counts changed before move. Expected inventory/saddlebag {0}/{1}, found {2}/{3}." xml:space="preserve"><value>이동 전에 지도 수가 바뀌었습니다. 소지품/가방 예상 {0}/{1}, 확인 {2}/{3}.</value></data>
+  <data name="Move issued for map {0}: {1}[{2}] -&gt; {3}[{4}]" xml:space="preserve"><value>지도 {0} 이동 요청: {1}[{2}] -&gt; {3}[{4}]</value></data>
+  <data name="Waiting for exact move confirmation: source={0}, destination={1} x{2}, inventory/saddlebag={3}/{4}, expected=0 and {5} x{6}, {7}/{8}." xml:space="preserve"><value>정확한 이동 확인 대기: 출발={0}, 목적지={1} x{2}, 소지품/가방={3}/{4}, 예상=0 및 {5} x{6}, {7}/{8}.</value></data>
+  <data name="Confirmed {0} moved to {1}[{2}]; inventory {3}-&gt;{4}, saddlebag {5}-&gt;{6}." xml:space="preserve"><value>{0}의 {1}[{2}] 이동 확인; 소지품 {3}-&gt;{4}, 가방 {5}-&gt;{6}.</value></data>
+  <data name="Source container {0} is not loaded." xml:space="preserve"><value>출발 컨테이너 {0}이(가) 로드되지 않았습니다.</value></data>
+  <data name="Destination container {0} is not loaded." xml:space="preserve"><value>목적지 컨테이너 {0}이(가) 로드되지 않았습니다.</value></data>
+  <data name="Source slot {0} is out of range for {1}." xml:space="preserve"><value>출발 슬롯 {0}이(가) {1} 범위를 벗어났습니다.</value></data>
+  <data name="Destination slot {0} is out of range for {1}." xml:space="preserve"><value>목적지 슬롯 {0}이(가) {1} 범위를 벗어났습니다.</value></data>
+  <data name="Source slot changed before move. Expected {0} in {1}[{2}]." xml:space="preserve"><value>이동 전에 출발 슬롯이 바뀌었습니다. {1}[{2}]에 {0}이(가) 있어야 합니다.</value></data>
+  <data name="Moved map {0} from {1}[{2}] to {3}[{4}]" xml:space="preserve"><value>지도 {0}을(를) {1}[{2}]에서 {3}[{4}](으)로 이동</value></data>
+  <data name="Retainer inventory containers are not loaded: {0}." xml:space="preserve"><value>집사 소지품 컨테이너가 로드되지 않았습니다: {0}.</value></data>
+  <data name="Selected map {0} was not found in loaded retainer inventory. Scanned {1} ({2} slots, matched quantity {3})." xml:space="preserve"><value>불러온 집사 소지품에서 지도 {0}을(를) 찾지 못했습니다. {1} 검색 ({2}칸, 일치 수량 {3}).</value></data>
+  <data name="No empty player inventory slot is available for retainer retrieval." xml:space="preserve"><value>집사에게서 꺼낼 플레이어 소지품 빈칸이 없습니다.</value></data>
+  <data name="Selected retainer map move {0}[{1}] -&gt; {2}[{3}]" xml:space="preserve"><value>집사 지도 이동 선택 {0}[{1}] -&gt; {2}[{3}]</value></data>
+  <data name="Source retainer container {0} is not loaded." xml:space="preserve"><value>집사 출발 컨테이너 {0}이(가) 로드되지 않았습니다.</value></data>
+  <data name="Moved retainer map {0} from {1}[{2}] to {3}[{4}]" xml:space="preserve"><value>집사 지도 {0}을(를) {1}[{2}]에서 {3}[{4}](으)로 이동</value></data>
+  <data name="A planned inventory slot is unavailable." xml:space="preserve"><value>계획된 소지품 슬롯을 사용할 수 없습니다.</value></data>
+  <data name="GatherBuddy Reborn gathering one {0}." xml:space="preserve"><value>GatherBuddy Reborn이 {0} 한 개를 채집합니다.</value></data>
+  <data name="GatherBuddy Reborn start failed: {0}" xml:space="preserve"><value>GatherBuddy Reborn 시작 실패: {0}</value></data>
+  <data name="GatherBuddy Reborn one-shot target is not active." xml:space="preserve"><value>GatherBuddy Reborn 일회성 목표가 활성 상태가 아닙니다.</value></data>
+  <data name="GatherBuddy Reborn does not expose gatherable item {0} ({1})." xml:space="preserve"><value>GatherBuddy Reborn이 채집 가능한 아이템 {0} ({1})을(를) 제공하지 않습니다.</value></data>
+  <data name="GatherBuddy Reborn already reports {0:N0} total {1}; cannot request one more." xml:space="preserve"><value>GatherBuddy Reborn이 이미 총 {0:N0}개의 {1}을(를) 보고하여 하나 더 요청할 수 없습니다.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList type not found." xml:space="preserve"><value>GatherBuddy Reborn AutoGatherList 형식을 찾지 못했습니다.</value></data>
+  <data name="Could not create GatherBuddy Reborn auto-gather list." xml:space="preserve"><value>GatherBuddy Reborn 자동 채집 목록을 만들 수 없습니다.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList.Add method not found." xml:space="preserve"><value>GatherBuddy Reborn AutoGatherList.Add 메서드를 찾지 못했습니다.</value></data>
+  <data name="GatherBuddy Reborn did not add {0} to the auto-gather list." xml:space="preserve"><value>GatherBuddy Reborn이 {0}을(를) 자동 채집 목록에 추가하지 않았습니다.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager.AddList method not found." xml:space="preserve"><value>GatherBuddy Reborn AutoGatherListsManager.AddList 메서드를 찾지 못했습니다.</value></data>
+  <data name="Created GatherBuddy Reborn one-shot list for {0}." xml:space="preserve"><value>{0}용 GatherBuddy Reborn 일회성 목록을 만들었습니다.</value></data>
+  <data name="Suppressed {0} enabled GatherBuddy Reborn list(s) for LootGoblin one-shot." xml:space="preserve"><value>LootGoblin 일회성 작업을 위해 GatherBuddy Reborn 활성 목록 {0}개를 억제했습니다.</value></data>
+  <data name="GatherBuddy Reborn one-shot exclusivity failed; enabled non-LootGoblin lists: {0}." xml:space="preserve"><value>GatherBuddy Reborn 일회성 전용 상태 실패; 활성 비LootGoblin 목록: {0}.</value></data>
+  <data name="GatherBuddy Reborn active target mismatch; expected item={0} quantity={1}; active={2}." xml:space="preserve"><value>GatherBuddy Reborn 활성 목표 불일치; 예상 아이템={0} 수량={1}; 활성={2}.</value></data>
+  <data name="GatherBuddy Reborn active target verified; item={0}; quantity={1}; suppressedLists={2}." xml:space="preserve"><value>GatherBuddy Reborn 활성 목표 확인; 아이템={0}; 수량={1}; 억제된 목록={2}.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager.SetActiveItems method not found." xml:space="preserve"><value>GatherBuddy Reborn AutoGatherListsManager.SetActiveItems 메서드를 찾지 못했습니다.</value></data>
+  <data name="GatherBuddy Reborn active items rebuilt." xml:space="preserve"><value>GatherBuddy Reborn 활성 아이템을 다시 구성했습니다.</value></data>
+  <data name="GatherBuddy Reborn loaded, but plugin instance reflection failed." xml:space="preserve"><value>GatherBuddy Reborn은 로드되었지만 플러그인 인스턴스 리플렉션에 실패했습니다.</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager reflection failed." xml:space="preserve"><value>GatherBuddy Reborn AutoGatherListsManager 리플렉션 실패.</value></data>
+  <data name="GatherBuddy Reborn gatherable count method not found." xml:space="preserve"><value>GatherBuddy Reborn 채집 수량 메서드를 찾지 못했습니다.</value></data>
+  <data name="GatherBuddy Reborn count read by {0}." xml:space="preserve"><value>{0}(으)로 GatherBuddy Reborn 수량을 읽었습니다.</value></data>
+  <data name="GatherBuddy Reborn gatherable count failed: {0}" xml:space="preserve"><value>GatherBuddy Reborn 채집 수량 확인 실패: {0}</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList.SetPreferredLocation method not found." xml:space="preserve"><value>GatherBuddy Reborn AutoGatherList.SetPreferredLocation 메서드를 찾지 못했습니다.</value></data>
+  <data name="GatherBuddy Reborn preferred location set." xml:space="preserve"><value>GatherBuddy Reborn 선호 위치를 설정했습니다.</value></data>
+  <data name="GatherBuddy Reborn active item list not found." xml:space="preserve"><value>GatherBuddy Reborn 활성 아이템 목록을 찾지 못했습니다.</value></data>
+  <data name="GatherBuddy Reborn active item entry could not be read: {0}." xml:space="preserve"><value>GatherBuddy Reborn 활성 아이템 항목을 읽을 수 없습니다: {0}.</value></data>
+  <data name="GatherBuddy Reborn active item list read." xml:space="preserve"><value>GatherBuddy Reborn 활성 아이템 목록을 읽었습니다.</value></data>
+  <data name="Log in before refreshing Emptor price hints." xml:space="preserve"><value>Emptor 가격 정보를 새로 고치기 전에 로그인하세요.</value></data>
+  <data name="An Emptor price refresh is already pending." xml:space="preserve"><value>Emptor 가격 새로 고침이 이미 대기 중입니다.</value></data>
+  <data name="Manual price refresh is available in {0}." xml:space="preserve"><value>수동 가격 새로 고침은 {0} 후에 가능합니다.</value></data>
+  <data name="The map item ID and maximum gil must both be positive." xml:space="preserve"><value>지도 아이템 ID와 최대 길은 모두 양수여야 합니다.</value></data>
+  <data name="Emptor API v4 or newer is required for the configured marketboard city; detected v{0}. Select Ul&apos;dah (Emptor default) to keep using Emptor v1-v3." xml:space="preserve"><value>설정된 장터 도시는 Emptor API v4 이상이 필요합니다. 감지된 버전 v{0}. Emptor v1-v3을 계속 사용하려면 울다하 (Emptor 기본값)를 선택하세요.</value></data>
+  <data name="Emptor order submission failed: {0}" xml:space="preserve"><value>Emptor 주문 제출 실패: {0}</value></data>
+  <data name="No LootGoblin-owned Emptor order ID is active." xml:space="preserve"><value>활성 LootGoblin 소유 Emptor 주문 ID가 없습니다.</value></data>
+  <data name="Emptor returned a different order ID ({0})." xml:space="preserve"><value>Emptor가 다른 주문 ID ({0})를 반환했습니다.</value></data>
+  <data name="Emptor order polling failed: {0}" xml:space="preserve"><value>Emptor 주문 조회 실패: {0}</value></data>
+  <data name="Emptor did not accept cancellation for LootGoblin order {0}." xml:space="preserve"><value>Emptor가 LootGoblin 주문 {0} 취소를 수락하지 않았습니다.</value></data>
+  <data name="Could not cancel LootGoblin Emptor order {0}: {1}" xml:space="preserve"><value>LootGoblin Emptor 주문 {0}을(를) 취소할 수 없습니다: {1}</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is active, but no AgentMap flag, TreasureSpot capture, or cached target was available after {1:F0}s. Manual intervention required." xml:space="preserve"><value>지도 주요 아이템 &apos;{0}&apos;이(가) 활성 상태이지만 {1:F0}s 후에도 AgentMap 깃발, TreasureSpot 기록 또는 캐시 목표가 없습니다. 수동 조작이 필요합니다.</value></data>
+  <data name="Active map target recovered from {0}, but no aetheryte is available for {1}. Manual intervention required." xml:space="preserve"><value>{0}에서 활성 지도 목표를 복구했지만 {1}에 사용할 에테라이트가 없습니다. 수동 조작이 필요합니다.</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s); continuing with secured stock." xml:space="preserve"><value>예정된 {2} 지도 {1}개 중 {0}개를 준비했습니다. 확보된 재고로 계속합니다.</value></data>
+  <data name="Market batch warning: {0} Continuing with {1} secured {2} map(s)." xml:space="preserve"><value>장터 일괄 작업 경고: {0} 확보한 {2} 지도 {1}개로 계속합니다.</value></data>
+  <data name="{0} Manual world return and party restoration may be required." xml:space="preserve"><value>{0} 수동 서버 귀환과 파티 복원이 필요할 수 있습니다.</value></data>
+  <data name="Party restoration timed out; continuing without: {0}." xml:space="preserve"><value>파티 복원 시간 초과. 다음 인원 없이 계속합니다: {0}.</value></data>
+  <data name="Party restoration timed out; stopped with missing members: {0}." xml:space="preserve"><value>파티 복원 시간 초과. 누락된 파티원이 있어 중지합니다: {0}.</value></data>
+  <data name="Cannot gather a map from Main Menu. Log in first." xml:space="preserve"><value>메인 메뉴에서는 지도를 채집할 수 없습니다. 먼저 로그인하세요.</value></data>
+  <data name="Cannot gather a map while LootGoblin is busy ({0})." xml:space="preserve"><value>LootGoblin이 작업 중 ({0})이므로 지도를 채집할 수 없습니다.</value></data>
+  <data name="Gather job not configured." xml:space="preserve"><value>채집 직업이 설정되지 않았습니다.</value></data>
+  <data name="No gatherable map configured." xml:space="preserve"><value>채집 가능한 지도가 설정되지 않았습니다.</value></data>
+  <data name="in duty" xml:space="preserve"><value>임무 중</value></data>
+  <data name="Treasure coffer was expected after /dig but could not be resolved after {0:F0}s and {1}/{2} dig retries. Manual intervention required." xml:space="preserve"><value>/dig 후 보물상자가 있어야 하지만 {0:F0}s와 {1}/{2} 발굴 재시도 후에도 확인하지 못했습니다. 수동 조작이 필요합니다.</value></data>
+  <data name="Expected {0} in inventory for one-shot map run, but it was not found." xml:space="preserve"><value>일회성 지도 실행에 필요한 {0}을(를) 소지품에서 찾지 못했습니다.</value></data>
+  <data name="No unlocked aetheryte was found in current territory {0} for ADS NPC no-inn repair retry." xml:space="preserve"><value>현재 지역 {0}에서 ADS 여관 없는 NPC 수리 재시도용 개방된 에테라이트를 찾지 못했습니다.</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is active after error &apos;{1}&apos;, but no AgentMap flag, TreasureSpot capture, or cached target is available. Manual intervention required." xml:space="preserve"><value>오류 &apos;{1}&apos; 후에도 지도 주요 아이템 &apos;{0}&apos;이(가) 활성 상태이지만 AgentMap 깃발, TreasureSpot 기록 또는 캐시 목표가 없습니다. 수동 조작이 필요합니다.</value></data>
+  <data name="Map gathering timed out after {0}s." xml:space="preserve"><value>지도 채집이 {0}s 후 시간 초과되었습니다.</value></data>
+  <data name="Searching {0} for {1}..." xml:space="preserve"><value>{0}에서 {1}을(를) 찾는 중...</value></data>
+  <data name="Preparing party for travel to {0}..." xml:space="preserve"><value>{0} 이동을 위해 파티를 준비합니다...</value></data>
+  <data name="Teleporting the party to {0} before world travel..." xml:space="preserve"><value>서버 이동 전에 파티를 {0}(으)로 텔레포합니다...</value></data>
+  <data name="Disbanding party before world travel..." xml:space="preserve"><value>서버 이동 전에 파티를 해산합니다...</value></data>
+  <data name="Traveling to {0} for {1}..." xml:space="preserve"><value>{1}을(를) 위해 {0}(으)로 이동합니다...</value></data>
+  <data name="Emptor is searching for {0}..." xml:space="preserve"><value>Emptor가 {0}을(를) 찾는 중...</value></data>
+  <data name="Emptor order finished ({0}); waiting for market-board cleanup..." xml:space="preserve"><value>Emptor 주문 종료 ({0}); 장터 정리를 기다립니다...</value></data>
+  <data name="Buying map {0} of {1}: {2}..." xml:space="preserve"><value>지도 {0}/{1} 구매 중: {2}...</value></data>
+  <data name="Opening saddlebag to store {0} before the next order..." xml:space="preserve"><value>다음 주문 전에 {0}을(를) 보관하기 위해 초코보 가방을 엽니다...</value></data>
+  <data name="Waiting for saddlebag UI to stabilize before storing {0}..." xml:space="preserve"><value>{0} 보관 전에 초코보 가방 화면이 안정되기를 기다립니다...</value></data>
+  <data name="Waiting for InventoryBuddy before storing {0}..." xml:space="preserve"><value>{0} 보관 전에 InventoryBuddy를 기다립니다...</value></data>
+  <data name="Reopening saddlebag to store {0}..." xml:space="preserve"><value>{0}을(를) 보관하기 위해 초코보 가방을 다시 엽니다...</value></data>
+  <data name="Could not plan safe saddlebag storage: {0}" xml:space="preserve"><value>안전한 초코보 가방 보관을 계획할 수 없습니다: {0}</value></data>
+  <data name="Moving {0} into the saddlebag..." xml:space="preserve"><value>{0}을(를) 초코보 가방으로 옮깁니다...</value></data>
+  <data name="The inventory-to-saddlebag move plan was lost." xml:space="preserve"><value>소지품에서 초코보 가방으로 이동할 계획이 사라졌습니다.</value></data>
+  <data name="InventoryBuddy closed before the planned saddlebag move." xml:space="preserve"><value>예정된 초코보 가방 이동 전에 InventoryBuddy가 닫혔습니다.</value></data>
+  <data name="The guarded saddlebag move was not issued: {0}" xml:space="preserve"><value>보호된 초코보 가방 이동이 요청되지 않았습니다: {0}</value></data>
+  <data name="Confirming {0} moved into the saddlebag..." xml:space="preserve"><value>{0}의 초코보 가방 이동을 확인합니다...</value></data>
+  <data name="The inventory-to-saddlebag confirmation plan was lost." xml:space="preserve"><value>소지품에서 초코보 가방으로 이동할 확인 계획이 사라졌습니다.</value></data>
+  <data name="InventoryBuddy closed before move confirmation: {0}" xml:space="preserve"><value>이동 확인 전에 InventoryBuddy가 닫혔습니다: {0}</value></data>
+  <data name="Timed out {0} after {1:F0} seconds." xml:space="preserve"><value>{0}이(가) {1:F0}초 후 시간 초과되었습니다.</value></data>
+  <data name="Cannot decipher a batch map because key item &apos;{0}&apos; is already occupied." xml:space="preserve"><value>주요 아이템 &apos;{0}&apos;이(가) 이미 점유되어 일괄 지도를 해독할 수 없습니다.</value></data>
+  <data name="Cannot decipher {0} because it is no longer in normal inventory." xml:space="preserve"><value>{0}이(가) 일반 소지품에 없어 해독할 수 없습니다.</value></data>
+  <data name="Deciphering {0} into the key-item slot before the next order..." xml:space="preserve"><value>다음 주문 전에 {0}을(를) 해독하여 주요 아이템 칸에 넣습니다...</value></data>
+  <data name="Could not confirm {0} in the key-item slot within {1:F0} seconds." xml:space="preserve"><value>{1:F0}초 안에 주요 아이템 칸의 {0}을(를) 확인할 수 없습니다.</value></data>
+  <data name="Stopping the owned Emptor order and waiting for market-board cleanup..." xml:space="preserve"><value>소유한 Emptor 주문을 중지하고 장터 정리를 기다립니다...</value></data>
+  <data name="Returning to {0} before restoring the party..." xml:space="preserve"><value>파티 복원 전에 {0}(으)로 돌아갑니다...</value></data>
+  <data name="Could not return to {0}: {1}" xml:space="preserve"><value>{0} 귀환 실패: {1}</value></data>
+  <data name="Timed out returning to {0}. Party invites were not sent from the wrong world." xml:space="preserve"><value>{0} 귀환 시간 초과. 잘못된 서버에서 파티 초대를 보내지 않았습니다.</value></data>
+  <data name="Party restoration was blocked because the player is not on the captured starting world." xml:space="preserve"><value>플레이어가 저장된 시작 서버에 없어 파티 복원이 차단되었습니다.</value></data>
+  <data name="Restoring the captured party roster..." xml:space="preserve"><value>저장된 파티 목록을 복원합니다...</value></data>
+  <data name="Party restoration stopped because the player left the captured starting world." xml:space="preserve"><value>플레이어가 저장된 시작 서버를 떠나 파티 복원이 중지되었습니다.</value></data>
+  <data name="Switching to gather job for {0}..." xml:space="preserve"><value>{0}을(를) 위해 채집 직업으로 변경합니다...</value></data>
+  <data name="No map gather target is active." xml:space="preserve"><value>활성 지도 채집 목표가 없습니다.</value></data>
+  <data name="Gather job was cleared while gathering." xml:space="preserve"><value>채집 중에 채집 직업 설정이 지워졌습니다.</value></data>
+  <data name="Starting GatherBuddy Reborn for {0}..." xml:space="preserve"><value>{0}용 GatherBuddy Reborn을 시작합니다...</value></data>
+  <data name="Current job changed before GatherBuddy start; currentJob={0}; expectedJob={1}." xml:space="preserve"><value>GatherBuddy 시작 전에 현재 직업이 바뀌었습니다. 현재={0}; 예상={1}.</value></data>
+  <data name="Waiting for GatherBuddy Reborn to gather {0}..." xml:space="preserve"><value>GatherBuddy Reborn이 {0}을(를) 채집하기를 기다립니다...</value></data>
+  <data name="GatherBuddy Reborn auto-gather stopped before {0} was obtained." xml:space="preserve"><value>{0}을(를) 얻기 전에 GatherBuddy Reborn 자동 채집이 중지되었습니다.</value></data>
+  <data name="Gathering window closed for {0}; switching back..." xml:space="preserve"><value>{0} 채집 창을 닫았습니다. 이전 직업으로 변경합니다...</value></data>
+  <data name="Thief-map remount recovered - flying to location..." xml:space="preserve"><value>도둑 지도 재탑승 복구 완료 - 위치로 비행합니다...</value></data>
+  <data name="Wait for party disabled - flying to thief-map location..." xml:space="preserve"><value>파티 대기 꺼짐 - 도둑 지도 위치로 비행합니다...</value></data>
+  <data name="Required party members mounted - flying to thief-map location..." xml:space="preserve"><value>필요한 파티원 탑승 - 도둑 지도 위치로 비행합니다...</value></data>
+  <data name="Could not start ADS repair ({0}) at {1}% durability." xml:space="preserve"><value>내구도 {1}%에서 ADS 수리 ({0})를 시작할 수 없습니다.</value></data>
+  <data name="ADS repair recovery timed out after {0:F0}s while teleporting to {1} (ID {2})." xml:space="preserve"><value>{1} (ID {2}) 텔레포 중 ADS 수리 복구가 {0:F0}s 후 시간 초과되었습니다.</value></data>
+  <data name="Wrong territory during ADS repair recovery: {0} (expected {1})." xml:space="preserve"><value>ADS 수리 복구 중 지역 불일치: {0} (예상 {1}).</value></data>
+  <data name="opening InventoryBuddy" xml:space="preserve"><value>InventoryBuddy 열기</value></data>
+  <data name="waiting for InventoryBuddy" xml:space="preserve"><value>InventoryBuddy 대기</value></data>
+  <data name="waiting for stable InventoryBuddy" xml:space="preserve"><value>InventoryBuddy 안정 대기</value></data>
+  <data name="moving the purchased map into the saddlebag" xml:space="preserve"><value>구매한 지도 초코보 가방 이동</value></data>
+  <data name="confirming the saddlebag move" xml:space="preserve"><value>초코보 가방 이동 확인</value></data>
+  <data name="SwitchingToGatherJob" xml:space="preserve"><value>채집 직업 변경</value></data>
+  <data name="StartingGatherBuddy" xml:space="preserve"><value>GatherBuddy 시작</value></data>
+  <data name="WaitingForMap" xml:space="preserve"><value>지도 대기</value></data>
+  <data name="ClosingGatherWindow" xml:space="preserve"><value>채집 창 닫기</value></data>
+  <data name="SwitchingBack" xml:space="preserve"><value>이전 직업 변경</value></data>
+  <data name="An additional batch step failed: {0}" xml:space="preserve"><value>추가 일괄 단계 실패: {0}</value></data>
+  <data name="{0} Market batch warning: {1} Continuing with {2} secured {3} map(s)." xml:space="preserve"><value>{0} 장터 일괄 작업 경고: {1} 확보한 {3} 지도 {2}개로 계속합니다.</value></data>
+  <data name="{0} timed out while gathering {1}; targetMap={2} ({3}); currentJob={4}; expectedJob={5}; GatherBuddy={6}." xml:space="preserve"><value>{1} 채집 중 {0} 시간 초과; 목표 지도={2} ({3}); 현재 직업={4}; 예상 직업={5}; GatherBuddy={6}.</value></data>
+  <data name="{0} timed out while gathering {1}; targetMap={2} ({3}); currentJob={4}; expectedJob={5}; GatherBuddy={6}; closeGate={7}; closeAttempts={8}; cancelIssued={9}." xml:space="preserve"><value>{1} 채집 중 {0} 시간 초과; 목표 지도={2} ({3}); 현재 직업={4}; 예상 직업={5}; GatherBuddy={6}; 닫기 조건={7}; 시도={8}; 취소 요청={9}.</value></data>
+  <data name="Emptor API v5 or newer is required for price hints; detected v{0}." xml:space="preserve"><value>가격 정보에는 Emptor API v5 이상이 필요합니다. 감지된 버전 v{0}.</value></data>
+  <data name="Emptor API v5 price IPC is unavailable." xml:space="preserve"><value>Emptor API v5 가격 IPC를 사용할 수 없습니다.</value></data>
+  <data name="Emptor rejected the order ({0})." xml:space="preserve"><value>Emptor가 주문을 거부했습니다 ({0}).</value></data>
+  <data name="unknown state" xml:space="preserve"><value>알 수 없는 상태</value></data>
+  <data name="Indeterminate without a verified inventory map" xml:space="preserve"><value>소지품 지도가 확인되지 않아 미확정</value></data>
+  <data name="FATE/combat cleared - resuming portal after {0}..." xml:space="preserve"><value>FATE/전투 종료 - {0} 후 포털을 재개합니다...</value></data>
+  <data name="FATE/combat cleared - resuming captured portal after {0}..." xml:space="preserve"><value>FATE/전투 종료 - {0} 후 기록된 포털을 재개합니다...</value></data>
+  <data name="No acceptable {0} listing remained on any enabled world." xml:space="preserve"><value>활성 서버에 허용 가능한 {0} 매물이 남아 있지 않습니다.</value></data>
+  <data name="{0} appeared in inventory before an Emptor order was submitted." xml:space="preserve"><value>Emptor 주문 제출 전에 {0}이(가) 소지품에 나타났습니다.</value></data>
+  <data name="Prepared {0} {1} map(s); the configured remaining run count no longer allows another order." xml:space="preserve"><value>{1} 지도 {0}개를 준비했습니다. 설정된 남은 실행 횟수로는 추가 주문할 수 없습니다.</value></data>
+  <data name="Purchased and verified one {0} on {1}." xml:space="preserve"><value>{1}에서 {0} 한 개를 구매하고 확인했습니다.</value></data>
+  <data name="Emptor reported Indeterminate, but {0} is present in inventory; no order will be resubmitted." xml:space="preserve"><value>Emptor가 Indeterminate를 보고했지만 소지품에 {0}이(가) 있어 주문을 다시 제출하지 않습니다.</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s). {3}" xml:space="preserve"><value>예정된 {2} 지도 {1}개 중 {0}개를 준비했습니다. {3}</value></data>
+  <data name="No safe storage slot remained for another map order." xml:space="preserve"><value>추가 지도 주문을 위한 안전한 보관 칸이 없습니다.</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s)." xml:space="preserve"><value>예정된 {2} 지도 {1}개 중 {0}개를 준비했습니다.</value></data>
+  <data name="Normal inventory still contains {0} {1} map(s), so another quantity-one order was not submitted." xml:space="preserve"><value>일반 소지품에 {1} 지도가 {0}개 있어 추가 단일 주문을 제출하지 않았습니다.</value></data>
+  <data name="Opening saddlebag for {0}..." xml:space="preserve"><value>{0}용 초코보 가방을 엽니다...</value></data>
+  <data name="{0} timed out for {1}." xml:space="preserve"><value>{1}의 {0} 시간 초과.</value></data>
+  <data name="Reopening saddlebag for {0}..." xml:space="preserve"><value>{0}용 초코보 가방을 다시 엽니다...</value></data>
+  <data name="Moving {0} from saddlebag..." xml:space="preserve"><value>{0}을(를) 초코보 가방에서 옮깁니다...</value></data>
+  <data name="No saddlebag move plan." xml:space="preserve"><value>초코보 가방 이동 계획이 없습니다.</value></data>
+  <data name="InventoryBuddy hidden before saddlebag move." xml:space="preserve"><value>초코보 가방 이동 전에 InventoryBuddy가 숨겨졌습니다.</value></data>
+  <data name="Confirming {0} moved from saddlebag..." xml:space="preserve"><value>{0}의 초코보 가방 이동을 확인합니다...</value></data>
+  <data name="Saddlebag visible; refreshed loaded map sources." xml:space="preserve"><value>초코보 가방이 표시되어 불러온 지도 출처를 새로 고쳤습니다.</value></data>
+  <data name="Saddlebag did not open before timeout; refreshed currently loaded map sources." xml:space="preserve"><value>제한 시간 안에 초코보 가방이 열리지 않아 현재 불러온 지도 출처를 새로 고쳤습니다.</value></data>
+  <data name="ADS repair timed out after {0:F0}s." xml:space="preserve"><value>ADS 수리가 {0:F0}s 후 시간 초과되었습니다.</value></data>
+  <data name="Lowest durability {0}%, threshold {1}%, ADS mode {2}, ADS {3}, retry count {4}/{5}, territory {6}." xml:space="preserve"><value>최저 내구도 {0}%, 기준 {1}%, ADS 모드 {2}, ADS {3}, 재시도 {4}/{5}, 지역 {6}.</value></data>
+  <data name="Opening" xml:space="preserve"><value>여는 중</value></data>
+  <data name="WaitingForAddon" xml:space="preserve"><value>UI 대기 중</value></data>
+  <data name="WaitingStable" xml:space="preserve"><value>UI 안정화 대기 중</value></data>
+  <data name="Moving" xml:space="preserve"><value>이동 중</value></data>
+  <data name="Confirming" xml:space="preserve"><value>확인 중</value></data>
+  <data name="map allowance timer not loaded" xml:space="preserve"><value>지도 획득 타이머를 불러오지 못함</value></data>
+  <data name="map allowance detail not loaded" xml:space="preserve"><value>지도 획득 세부 정보를 불러오지 못함</value></data>
+  <data name="map allowance detail not recognized" xml:space="preserve"><value>지도 획득 세부 정보를 인식할 수 없음</value></data>
+  <data name="No unlocked aetheryte was found in current territory {0} for ADS NPC no-inn repair retry. Last Lifestream error: {1}" xml:space="preserve"><value>현재 지역 {0}에서 여관을 사용하지 않는 ADS NPC 수리를 재시도할 개방된 에테라이트를 찾지 못했습니다. 마지막 Lifestream 오류: {1}</value></data>
+  <data name="{0} Lowest durability {1}%, threshold {2}%, ADS mode {3}, ADS {4}, retry count {5}/{6}, territory {7}." xml:space="preserve"><value>{0} 최저 내구도 {1}%, 기준 {2}%, ADS 모드 {3}, ADS {4}, 재시도 {5}/{6}, 지역 {7}.</value></data>
+  <data name="{0} Lowest durability {1}%, threshold {2}%, ADS mode {3}, ADS {4}, retry count {5}/{6}, territory {7}. ADS is not loaded." xml:space="preserve"><value>{0} 최저 내구도 {1}%, 기준 {2}%, ADS 모드 {3}, ADS {4}, 재시도 {5}/{6}, 지역 {7}. ADS를 불러오지 못했습니다.</value></data>
+  <data name="addons={0}; conditions=Gathering:{1}, ExecutingGatheringAction:{2}" xml:space="preserve"><value>UI={0}; 조건=Gathering:{1}, ExecutingGatheringAction:{2}</value></data>
+  <data name="Window appearance" xml:space="preserve"><value>창 모양</value></data>
+  <data name="Compact visible on main window" xml:space="preserve"><value>메인 창에 간결 모드 전환 표시</value></data>
+  <data name="Language visible on main window" xml:space="preserve"><value>메인 창에 언어 선택 표시</value></data>
+  <data name="Transparency" xml:space="preserve"><value>투명도</value></data>
+  <data name="Opacity (%)" xml:space="preserve"><value>불투명도 (%)</value></data>
+  <data name="Auto-fade when unfocused" xml:space="preserve"><value>포커스를 잃으면 자동으로 흐리게 표시</value></data>
+  <data name="Unfocused opacity (%)" xml:space="preserve"><value>포커스가 없을 때 불투명도 (%)</value></data>
+  <data name="Unfocused delay (seconds)" xml:space="preserve"><value>포커스를 잃은 후 대기 시간 (초)</value></data>
+</root>

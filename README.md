@@ -40,6 +40,16 @@ Common commands:
 
 Every `/lg` command also works with `/lootgoblin`. `/lg debug` toggles map diagnostics in the UI. `/lg fetchretainer` starts manual retainer map retrieval when XADB is available and a configured map exists on a retainer.
 
+## Interface
+
+The main window groups controls, a live Bot State/Party/Food summary, Map Queue, Current Run, Party Status, Navigation and Commands into panels. Current Run and Party Status appear side by side when the window is wide enough. Existing section disclosure controls keep their state, and map diagnostics remain available through the existing debug settings.
+
+Use **C** in the header for compact mode. It reduces padding, gaps, action heights and title size across the main, Settings and Alexandrite windows. The header colour swatch offers teal, blue, pink and custom RGB colours; the language selector offers English, German, French, Spanish, Italian, Russian, Japanese, Korean, Simplified Chinese, Vietnamese, Brazilian Portuguese, Indonesian, Polish and Turkish. The same appearance controls are in Settings → Interface. These choices save through the existing plugin configuration and apply to all three windows. Status colours retain their meaning when the decorative theme changes.
+
+Settings search highlights tabs matching every search word, including conditional settings. Search accepts translated labels and the original English aliases. Clear or closing Settings resets it. Plugin names, game catalogue names, commands and diagnostic logs retain their original text; UI numbers use the selected language's formatting.
+
+Loot Goblin uses managed host fonts for the selected language and the fourteen native language names. A loading or error window appears when the required fonts are unavailable; details are written to the plugin log. Game font and screenshot acceptance remain pending.
+
 ## Core Workflow
 
 1. Enable Loot Goblin from the main window or with `/lg on`.
@@ -130,12 +140,18 @@ For party-drop investigations, line up the death/respawn line, `Return to` promp
 
 ## Build
 
-```bash
-git clone https://github.com/McVaxius/LootGoblin.git
-cd LootGoblin
-dotnet restore
-dotnet build -c Release
+Local builds require installed SDK **10.0.201**, the Dalamud API 15 distribution, and an authorized AethertekUI checkout beside LootGoblin. Its project reference resolves to `../aethertekUI` relative to the repository root. A consumer-only checkout cannot resolve that reference. The existing workspace launcher enters AethertekUI's tool environment and builds the plugin project directly.
+
+For a compilation-only Debug/x64 check from the sibling workspace:
+
+```powershell
+. .\aethertekUI\eng\Enter-RepoEnv.ps1
+Set-Location .\aethertekUI
+dotnet restore ..\LootGoblin\LootGoblin\LootGoblin.csproj -p:Configuration=Debug -p:Platform=x64
+dotnet build ..\LootGoblin\LootGoblin\LootGoblin.csproj --no-restore -c Debug -p:Platform=x64 -p:Use_DalamudPackager=false -p:ImportNuGetBuildTargets=false
 ```
+
+Stop if restore fails. The final flag skips NuGet build targets for this compilation check; release packaging uses normal imports. Distributions include `AethertekUI.dll` beside `LootGoblin.dll` and exclude host-owned Dalamud and ImGui assemblies.
 
 ## License
 

@@ -1,0 +1,1372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="({0:F0}, {1:F0}, {2:F0})" xml:space="preserve"><value>({0:F0}, {1:F0}, {2:F0})</value></data>
+  <data name="({0} missing)" xml:space="preserve"><value>（{0}人不足）</value></data>
+  <data name="({0} per map)" xml:space="preserve"><value>（1地図あたり{0}）</value></data>
+  <data name="({0}/{1} mounted)" xml:space="preserve"><value>（騎乗{0}/{1}）</value></data>
+  <data name="(all recorded)" xml:space="preserve"><value>（すべて記録済み）</value></data>
+  <data name="(Lvl {0})" xml:space="preserve"><value>（Lv {0}）</value></data>
+  <data name="(no args) - Toggle this window" xml:space="preserve"><value>（引数なし）- このウィンドウを切り替え</value></data>
+  <data name="(No Position)" xml:space="preserve"><value>（位置なし）</value></data>
+  <data name="(none)" xml:space="preserve"><value>（なし）</value></data>
+  <data name="(Used for manual mounting)" xml:space="preserve"><value>（手動騎乗に使用）</value></data>
+  <data name="[All 3 Types]" xml:space="preserve"><value>［全3種類］</value></data>
+  <data name="[Dungeon]" xml:space="preserve"><value>［ダンジョン］</value></data>
+  <data name="[Flying]" xml:space="preserve"><value>［飛行中］</value></data>
+  <data name="[Grounded]" xml:space="preserve"><value>［地上］</value></data>
+  <data name="[Guaranteed]" xml:space="preserve"><value>［確定］</value></data>
+  <data name="[In Combat]" xml:space="preserve"><value>［戦闘中］</value></data>
+  <data name="[Map AI]" xml:space="preserve"><value>［地図AI］</value></data>
+  <data name="[Mounted]" xml:space="preserve"><value>［騎乗中］</value></data>
+  <data name="[No Combat]" xml:space="preserve"><value>［非戦闘］</value></data>
+  <data name="[OK]" xml:space="preserve"><value>[OK]</value></data>
+  <data name="[On Foot]" xml:space="preserve"><value>［徒歩］</value></data>
+  <data name="[Outdoor]" xml:space="preserve"><value>［フィールド］</value></data>
+  <data name="[PAUSED]" xml:space="preserve"><value>［一時停止］</value></data>
+  <data name="[READ MAP INDICES]" xml:space="preserve"><value>［地図インデックス読取］</value></data>
+  <data name="[REDACTED]" xml:space="preserve"><value>［非表示］</value></data>
+  <data name="[Roulette]" xml:space="preserve"><value>［ルーレット］</value></data>
+  <data name="[WIP]" xml:space="preserve"><value>［開発中］</value></data>
+  <data name="{0} | Lvl {1}" xml:space="preserve"><value>{0} | Lv {1}</value></data>
+  <data name="{0} done, {1} remaining" xml:space="preserve"><value>完了{0}、残り{1}</value></data>
+  <data name="{0} inventory + {1} active + {2} from Poetics" xml:space="preserve"><value>所持{0} + 使用中{1} + 詩学で{2}</value></data>
+  <data name="{0}m{1:D2}s" xml:space="preserve"><value>{0}分{1:D2}秒</value></data>
+  <data name="|  Bot State:" xml:space="preserve"><value>|  Bot状態：</value></data>
+  <data name="|  Gysahl Greens: {0}" xml:space="preserve"><value>|  ギサールの野菜：{0}</value></data>
+  <data name="|  Outdoor suppression: {0}" xml:space="preserve"><value>|  フィールド抑制：{0}</value></data>
+  <data name="|  VBM forbidden zones: {0}" xml:space="preserve"><value>|  VBM禁止エリア：{0}</value></data>
+  <data name="| all mounted" xml:space="preserve"><value>| 全員騎乗</value></data>
+  <data name="| any mounted" xml:space="preserve"><value>| 誰かが騎乗</value></data>
+  <data name="| Territory {0}" xml:space="preserve"><value>| エリア{0}</value></data>
+  <data name="| Territory {0} / {1}" xml:space="preserve"><value>| エリア{0} / {1}</value></data>
+  <data name="| wait for {0} other player(s)" xml:space="preserve"><value>| 他の{0}人を待機</value></data>
+  <data name="★ You have {0} location(s) not in community DB - consider sharing!" xml:space="preserve"><value>★ 共有DBにない位置が{0}件あります。共有をご検討ください！</value></data>
+  <data name="♡ Ko-fi ♡" xml:space="preserve"><value>♡ Ko-fi ♡</value></data>
+  <data name="✓ MATCHES: {0} (ID: {1})" xml:space="preserve"><value>✓ 一致：{0}（ID：{1}）</value></data>
+  <data name="0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing." xml:space="preserve"><value>0で修理を無効化。装備の耐久がこの値未満になると、続行前にADSへ修理を要求します。</value></data>
+  <data name="0 disables this map type. Positive numbers run that many resolved maps." xml:space="preserve"><value>0でこの種類を無効化。正の数を指定すると、その回数だけ特定済み地図を実行します。</value></data>
+  <data name="Active map:" xml:space="preserve"><value>使用中の地図：</value></data>
+  <data name="Add Emptor's custom repository in Dalamud Settings, then install Emptor from the plugin installer." xml:space="preserve"><value>Dalamud設定にEmptorリポジトリを追加し、プラグインインストーラーからEmptorを導入してください。</value></data>
+  <data name="ADS" xml:space="preserve"><value>ADS</value></data>
+  <data name="ADS {0} repair test failed: {1}" xml:space="preserve"><value>ADS修理テスト{0}失敗：{1}</value></data>
+  <data name="ADS {0} repair test requested." xml:space="preserve"><value>ADS修理テスト{0}を要求しました。</value></data>
+  <data name="ADS / BMR Adjustments" xml:space="preserve"><value>ADS / BMR調整</value></data>
+  <data name="ADS did not accept the repair request." xml:space="preserve"><value>ADSが修理要求を受理しませんでした。</value></data>
+  <data name="ADS dungeon handoff is enabled. Install ADS or disable it in settings." xml:space="preserve"><value>ダンジョンのADS引き継ぎが有効です。ADSを導入するか、設定で無効にしてください。</value></data>
+  <data name="ADS handoff runs /ads inside after confirmed duty entry. Completed-duty exit chooses a local delay, party departure, ADS delay or manual exit; chest and solver options are below." xml:space="preserve"><value>入場確認後に/ads insideを送信します。完了後の退出はローカル遅延、全員退出、ADS遅延、手動から選択。宝箱とソルバーの設定は下にあります。</value></data>
+  <data name="ADS is not loaded; {0} repair test not started." xml:space="preserve"><value>ADS未読込のため、修理テスト{0}は開始していません。</value></data>
+  <data name="ADS is not loaded. Install ADS or disable this setting." xml:space="preserve"><value>ADSが未読込です。インストールするか、この設定を無効にしてください。</value></data>
+  <data name="ADS missing" xml:space="preserve"><value>ADSなし</value></data>
+  <data name="ADS NPC no-inn repair can only start from a sanctuary." xml:space="preserve"><value>ADSの宿屋なしNPC修理は休息エリアでのみ開始できます。</value></data>
+  <data name="ADS reflection: {0}" xml:space="preserve"><value>ADS .NETリフレクション：{0}</value></data>
+  <data name="ADS: exit after delay" xml:space="preserve"><value>ADS：遅延後に退出</value></data>
+  <data name="Advanced" xml:space="preserve"><value>詳細設定</value></data>
+  <data name="Aetherytes: {0} positions stored" xml:space="preserve"><value>エーテライト：位置{0}件保存</value></data>
+  <data name="Aetherytes: {0}/{1} positions stored" xml:space="preserve"><value>エーテライト：位置{0}/{1}件保存</value></data>
+  <data name="After a portal is accepted and duty entry is confirmed, LootGoblin sends /ads inside and waits for ADS to finish the dungeon instead of running its legacy dungeon solver." xml:space="preserve"><value>ポータル受諾と入場確認後、/ads insideを送信し、従来のソルバーを使わずADSの完了を待ちます。</value></data>
+  <data name="After enabled local-region data centers are exhausted, try public OCE worlds. Requires data-center travel and defaults off." xml:space="preserve"><value>有効な地域内DCを探し終えたら公開OCEワールドを試します。DC移動が必要で、既定は無効です。</value></data>
+  <data name="After the current data center is exhausted, visit public worlds on other data centers in the current region once per map search." xml:space="preserve"><value>現在のDCを探し終えたら、地図検索ごとに地域内の他DCの公開ワールドを一度ずつ訪問します。</value></data>
+  <data name="Age: {0}" xml:space="preserve"><value>経過：{0}</value></data>
+  <data name="Alexandrite" xml:space="preserve"><value>アレキサンドライト</value></data>
+  <data name="Alexandrite Maps" xml:space="preserve"><value>アレキサンドライト地図</value></data>
+  <data name="All Attackable Targets" xml:space="preserve"><value>攻撃可能な全対象</value></data>
+  <data name="All Targets When Solo" xml:space="preserve"><value>ソロ時の全対象</value></data>
+  <data name="All Targets When Solo in Duty" xml:space="preserve"><value>コンテンツ内ソロ時の全対象</value></data>
+  <data name="An Emptor price lookup is pending." xml:space="preserve"><value>Emptorの価格照会が進行中です。</value></data>
+  <data name="Applied through RSR IPC immediately before /rotation auto or /rotation manual command triggers." xml:space="preserve"><value>/rotation autoまたは/rotation manualの直前にRSR IPCで適用します。</value></data>
+  <data name="Applies to all party waits. In count-threshold mode, timeout does not lower the configured player count." xml:space="preserve"><value>すべてのパーティ待機に適用。人数しきい値モードでは時間切れでも指定人数を減らしません。</value></data>
+  <data name="Ate" xml:space="preserve"><value>食事済み</value></data>
+  <data name="Attacker Stance" xml:space="preserve"><value>アタッカースタンス</value></data>
+  <data name="Attention: {0}" xml:space="preserve"><value>注意：{0}</value></data>
+  <data name="Auto Discard (/ays discard)" xml:space="preserve"><value>自動処分 (/ays discard)</value></data>
+  <data name="Auto Discard needs AutoRetainer with a configured discard list. When selected, it runs while Loot Goblin is enabled, during safe mounted windows. Factory default: off." xml:space="preserve"><value>自動破棄にはAutoRetainerの破棄リスト設定が必要です。Loot Goblin有効時、安全な騎乗中に実行。既定は無効です。</value></data>
+  <data name="Auto Loot Chest" xml:space="preserve"><value>宝箱を自動回収</value></data>
+  <data name="Auto Start next map" xml:space="preserve"><value>次の地図を自動開始</value></data>
+  <data name="Auto Sync FATE" xml:space="preserve"><value>FATEレベルシンク自動化</value></data>
+  <data name="Auto Teleport" xml:space="preserve"><value>自動テレポ</value></data>
+  <data name="Auto-summon chocobo companion using Gysahl Greens when timer is low. Will not summon in sanctuaries or duties." xml:space="preserve"><value>残り時間が少なくなるとギサールの野菜でバディを自動召喚。休息エリアやコンテンツ内では召喚しません。</value></data>
+  <data name="Auto-update locations on login" xml:space="preserve"><value>ログイン時に位置情報を更新</value></data>
+  <data name="Automate your treasure map adventures." xml:space="preserve"><value>宝の地図の冒険を自動化。</value></data>
+  <data name="Automatically starts the next runnable selected map after completing one." xml:space="preserve"><value>完了後、選択済みの実行可能な次の地図を自動開始します。</value></data>
+  <data name="Available" xml:space="preserve"><value>利用可能</value></data>
+  <data name="Blank disables map gathering." xml:space="preserve"><value>空欄で地図採集を無効化します。</value></data>
+  <data name="Blank uses the player's current job at start." xml:space="preserve"><value>空欄なら開始時の現在のジョブを使用します。</value></data>
+  <data name="Blank/default city omits the city request field for Emptor v1-v3 compatibility. A selected city is sent only through Emptor API v4 or newer." xml:space="preserve"><value>空欄・既定ならEmptor v1～v3互換のため都市指定を省略します。選択都市はAPI v4以降でのみ送信します。</value></data>
+  <data name="Blue" xml:space="preserve"><value>ブルー</value></data>
+  <data name="Blue X: unavailable through gathering" xml:space="preserve"><value>青い×：採集不可</value></data>
+  <data name="BMR active module: {0}{1}" xml:space="preserve"><value>BMR有効モジュール：{0}{1}</value></data>
+  <data name="BMR Disable Hunt Modules" xml:space="preserve"><value>BMRモブハントモジュールを無効化</value></data>
+  <data name="BMR reduce activation range for outdoor areas" xml:space="preserve"><value>屋外のBMR有効範囲を縮小</value></data>
+  <data name="BossMod danger:" xml:space="preserve"><value>BossMod危険：</value></data>
+  <data name="Bot disabled" xml:space="preserve"><value>Bot無効</value></data>
+  <data name="Bot State" xml:space="preserve"><value>Bot状態</value></data>
+  <data name="Buy" xml:space="preserve"><value>購入</value></data>
+  <data name="Buys Mysterious Maps from Auriana in Revenant's Toll (75 Poetics each), then runs each map automatically." xml:space="preserve"><value>レヴナンツトールのオーリアナから謎めいた地図を購入（1枚詩学75）し、自動実行します。</value></data>
+  <data name="by SaMo; used for treasure map statistics" xml:space="preserve"><value>SaMo制作。宝の地図の統計に使用</value></data>
+  <data name="Cart: buy missing maps through Emptor after gathering is unavailable. A market trip may prepare up to three, capped by remaining runs." xml:space="preserve"><value>カート：採集できない場合にEmptorで不足地図を購入。1回の買い出しで残り回数を上限に最大3枚準備します。</value></data>
+  <data name="Character command triggers saved." xml:space="preserve"><value>キャラクターのコマンドトリガーを保存しました。</value></data>
+  <data name="Checked maps run. Use max for unlimited runs or a number for finite runs." xml:space="preserve"><value>チェックした地図を実行します。最大は無制限、数値は回数指定です。</value></data>
+  <data name="Chest Open Timeout (s)" xml:space="preserve"><value>宝箱を開く制限時間（秒）</value></data>
+  <data name="Chocobo:" xml:space="preserve"><value>チョコボ：</value></data>
+  <data name="Choose a combat job, or keep Current job. Gathering needs GatherBuddyReborn, an unlocked gather job with a gearset, and a gatherable map enabled for gathering in Map Queue." xml:space="preserve"><value>戦闘ジョブを選ぶか現在のジョブを維持。採集にはGatherBuddyReborn、ギアセットのある開放済み採集ジョブ、キューで採集を有効にした採集可能地図が必要です。</value></data>
+  <data name="Chooses where Emptor travels for its marketboard. Ul'dah stores a blank key and keeps Emptor's default behavior." xml:space="preserve"><value>Emptorのマーケット都市を選択。ウルダハは空のキーを保存しEmptorの既定動作を使います。</value></data>
+  <data name="Clear" xml:space="preserve"><value>クリア</value></data>
+  <data name="Clear ALL positions for fresh scanning (dev use)" xml:space="preserve"><value>全位置を消去して再走査（開発用）</value></data>
+  <data name="Clear Food" xml:space="preserve"><value>食事を解除</value></data>
+  <data name="Clear user positions - restore community defaults" xml:space="preserve"><value>ユーザー位置を消去し共有データに戻す</value></data>
+  <data name="Color" xml:space="preserve"><value>色</value></data>
+  <data name="Combat job" xml:space="preserve"><value>戦闘ジョブ</value></data>
+  <data name="command trigger override changed" xml:space="preserve"><value>コマンドトリガー上書きを変更</value></data>
+  <data name="Command Triggers" xml:space="preserve"><value>コマンドトリガー</value></data>
+  <data name="command triggers saved: {0}" xml:space="preserve"><value>コマンドトリガー保存：{0}</value></data>
+  <data name="Commands" xml:space="preserve"><value>コマンド</value></data>
+  <data name="Community: {0}" xml:space="preserve"><value>共有：{0}</value></data>
+  <data name="Compact mode" xml:space="preserve"><value>コンパクトモード</value></data>
+  <data name="Companion Stance" xml:space="preserve"><value>バディのスタンス</value></data>
+  <data name="Completed-duty exit" xml:space="preserve"><value>コンテンツ完了後の退出</value></data>
+  <data name="config    - Open settings" xml:space="preserve"><value>config    - 設定を開く</value></data>
+  <data name="Configure optional food, discard and combat automation here. Command Triggers run slash commands at Landing / Duty Entry and Finish; review them for the plugins you use." xml:space="preserve"><value>食事・破棄・戦闘自動化を設定。着地／入場と終了時にコマンドトリガーを実行します。使用プラグインに合わせて確認してください。</value></data>
+  <data name="Configured city '{0}' requires Emptor API v4 or newer; detected v{1}." xml:space="preserve"><value>都市'{0}'にはEmptor API v4以降が必要です。検出：v{1}。</value></data>
+  <data name="Continue if not all party members rejoin after" xml:space="preserve"><value>全員が再合流しなくても次の時間後に続行</value></data>
+  <data name="Control login visibility and settings-window movement. Krangle Names obfuscates player and server names displayed by Loot Goblin." xml:space="preserve"><value>ログイン時の表示と設定ウィンドウ移動を設定。Krangle Namesは表示するプレイヤー・サーバー名を匿名化します。</value></data>
+  <data name="Controls BossMod Reborn only. Default: off. Applies on Start and after each configured command batch, regardless of combat provider." xml:space="preserve"><value>BossMod Rebornのみ対象。既定は無効。戦闘プラグインに関係なく、開始時と設定コマンド実行後に適用します。</value></data>
+  <data name="Copy Emptor repo URL" xml:space="preserve"><value>EmptorリポジトリURLをコピー</value></data>
+  <data name="Copy this session's positive NQ minimum-listing hint into the ceiling. This does not enable the cart." xml:space="preserve"><value>今回のセッションの正のNQ最安値を上限にコピーします。カートは有効にしません。</value></data>
+  <data name="Current job" xml:space="preserve"><value>現在のジョブ</value></data>
+  <data name="Current Run" xml:space="preserve"><value>現在の実行</value></data>
+  <data name="Custom RGB" xml:space="preserve"><value>カスタムRGB</value></data>
+  <data name="Cycle Missing Aetherytes" xml:space="preserve"><value>未記録エーテライトを巡回</value></data>
+  <data name="Cycle Missing XYZ" xml:space="preserve"><value>未記録XYZを巡回</value></data>
+  <data name="Debug Log" xml:space="preserve"><value>デバッグログ</value></data>
+  <data name="Debug Mode" xml:space="preserve"><value>デバッグモード</value></data>
+  <data name="Debug-only IPC test: ADS.StartRepair(&quot;{0}&quot;)." xml:space="preserve"><value>デバッグ専用IPCテスト：ADS.StartRepair(&quot;{0}&quot;).</value></data>
+  <data name="Defaults" xml:space="preserve"><value>既定値</value></data>
+  <data name="Defender Stance" xml:space="preserve"><value>ディフェンダースタンス</value></data>
+  <data name="Dependencies" xml:space="preserve"><value>依存関係</value></data>
+  <data name="Diff: X={0:F1} Y={1:F1} Z={2:F1}  Dist={3:F0}y" xml:space="preserve"><value>差分：X={0:F1} Y={1:F1} Z={2:F1}  距離={3:F0}y</value></data>
+  <data name="different territory" xml:space="preserve"><value>別エリア</value></data>
+  <data name="Disable Pandora's Box" xml:space="preserve"><value>Pandora's Boxを無効化</value></data>
+  <data name="Disable Pandora's Box through Dalamud." xml:space="preserve"><value>DalamudでPandora's Boxを無効にします。</value></data>
+  <data name="DISABLED" xml:space="preserve"><value>無効</value></data>
+  <data name="Dismount wait:" xml:space="preserve"><value>降りるまで待機：</value></data>
+  <data name="Do not use Tamamizu aetheryte" xml:space="preserve"><value>タマミズのエーテライトを使わない</value></data>
+  <data name="Done: {0}" xml:space="preserve"><value>完了：{0}</value></data>
+  <data name="Download Updated Locs" xml:space="preserve"><value>最新位置情報をダウンロード</value></data>
+  <data name="Downloading..." xml:space="preserve"><value>ダウンロード中...</value></data>
+  <data name="Dungeon/Loot" xml:space="preserve"><value>ダンジョン／戦利品</value></data>
+  <data name="Duty-end delay (s)" xml:space="preserve"><value>完了後の遅延（秒）</value></data>
+  <data name="Editing character profile {0}." xml:space="preserve"><value>キャラクタープロフィール{0}を編集中。</value></data>
+  <data name="Editing global command triggers." xml:space="preserve"><value>共通コマンドトリガーを編集中。</value></data>
+  <data name="Editing global command triggers. Log in to edit a character override." xml:space="preserve"><value>共通コマンドトリガーを編集中。キャラクター設定の編集にはログインが必要です。</value></data>
+  <data name="Emptor API v5 or newer is required for price hints." xml:space="preserve"><value>価格ヒントにはEmptor API v5以降が必要です。</value></data>
+  <data name="EMPTOR IS NOT INSTALLED OR LOADED" xml:space="preserve"><value>EMPTOR未インストールまたは未読込</value></data>
+  <data name="Emptor is unavailable. Open Marketboard settings for installation guidance." xml:space="preserve"><value>Emptorが利用できません。マーケット設定の導入手順を確認してください。</value></data>
+  <data name="Emptor marketboard city" xml:space="preserve"><value>Emptorマーケット都市</value></data>
+  <data name="Emptor NQ minimum listing: {0:N0} gil" xml:space="preserve"><value>Emptor NQ最安出品：{0:N0}ギル</value></data>
+  <data name="Emptor NQ minimum listing: unavailable" xml:space="preserve"><value>Emptor NQ最安出品：取得不可</value></data>
+  <data name="Emptor v5+ supplies session-only NQ minimum-listing price hints for known marketable maps." xml:space="preserve"><value>Emptor v5以降は既知の取引可能地図のNQ最安値をセッション限定で提供します。</value></data>
+  <data name="Enable a cart on a marketable map row and set a positive maximum gil price." xml:space="preserve"><value>取引可能地図の行でカートを有効にし、正のギル上限を設定してください。</value></data>
+  <data name="Enable State Logging" xml:space="preserve"><value>状態ログを有効化</value></data>
+  <data name="ENABLED" xml:space="preserve"><value>有効</value></data>
+  <data name="Error" xml:space="preserve"><value>エラー</value></data>
+  <data name="Errors: {0}" xml:space="preserve"><value>エラー：{0}</value></data>
+  <data name="Extra delay before sending the map teleport command after the map target is resolved." xml:space="preserve"><value>地図の目的地特定後、テレポコマンド送信前に追加で待機します。</value></data>
+  <data name="Factory defaults: ADS handoff on; ADS exit after 20 seconds; Auto Loot Chest on; Gambler's Lure set to Solve EV (expected value)." xml:space="preserve"><value>既定：ADS引き継ぎ有効、20秒後ADS退出、宝箱自動回収有効、Gambler's Lureは期待値で解く。</value></data>
+  <data name="Factory defaults: Auto Teleport and Require vnavmesh on; Company Chocobo selected." xml:space="preserve"><value>既定：自動テレポとvnavmesh必須が有効、マイチョコボを選択。</value></data>
+  <data name="Factory defaults: current combat job; gathering off. The controls below show your current selections." xml:space="preserve"><value>既定：現在の戦闘ジョブ、採集無効。下のコントロールに現在の選択を表示します。</value></data>
+  <data name="Factory defaults: show the main window on login and allow settings movement; name obfuscation off." xml:space="preserve"><value>既定：ログイン時メイン表示と設定ウィンドウ移動を有効、名前の匿名化は無効。</value></data>
+  <data name="Factory defaults: state logging on; Debug Mode, map diagnostics and dedicated file logging off." xml:space="preserve"><value>既定：状態ログ有効、デバッグ・地図診断・専用ファイルログは無効。</value></data>
+  <data name="Failed" xml:space="preserve"><value>失敗</value></data>
+  <data name="FC" xml:space="preserve"><value>FC</value></data>
+  <data name="Fetch maps from retainers" xml:space="preserve"><value>リテイナーから地図を回収</value></data>
+  <data name="Fetch maps from saddlebags" xml:space="preserve"><value>チョコボかばんから地図を回収</value></data>
+  <data name="Finish" xml:space="preserve"><value>実行完了</value></data>
+  <data name="Follow" xml:space="preserve"><value>追従</value></data>
+  <data name="Food" xml:space="preserve"><value>食事</value></data>
+  <data name="Food:" xml:space="preserve"><value>食事：</value></data>
+  <data name="For the next map search, start after the world where the previous search ended, wrapping to the beginning when needed." xml:space="preserve"><value>次回は前回検索を終えたワールドの次から開始し、必要なら先頭に戻ります。</value></data>
+  <data name="Free Stance" xml:space="preserve"><value>フリースタンス</value></data>
+  <data name="Fresh Scan" xml:space="preserve"><value>再走査</value></data>
+  <data name="Gambler's Lure Solver" xml:space="preserve"><value>Gambler's Lureソルバー</value></data>
+  <data name="Gather" xml:space="preserve"><value>採集</value></data>
+  <data name="Gather job (current character)" xml:space="preserve"><value>採集ジョブ（現在のキャラ）</value></data>
+  <data name="GatherBuddy Reborn" xml:space="preserve"><value>GatherBuddy Reborn</value></data>
+  <data name="Global command triggers saved." xml:space="preserve"><value>共通コマンドトリガーを保存しました。</value></data>
+  <data name="Ground-only map diagnostics" xml:space="preserve"><value>地上限定の地図診断</value></data>
+  <data name="Healer Stance" xml:space="preserve"><value>ヒーラースタンス</value></data>
+  <data name="HQ" xml:space="preserve"><value>HQ</value></data>
+  <data name="ID {0}" xml:space="preserve"><value>ID {0}</value></data>
+  <data name="Idle" xml:space="preserve"><value>待機</value></data>
+  <data name="If selected food runs out, search inventory for a fallback food from the FrenRider priority list." xml:space="preserve"><value>選択した食事が切れたら、FrenRiderの優先リストに従って所持品から代替を探します。</value></data>
+  <data name="In full-party proximity waits, timeout can allow guarded recovery when unresolved or out-of-territory members are the only blockers." xml:space="preserve"><value>全員の接近待機では、未特定または別エリアのメンバーだけが障害の場合、時間切れ後に保護付き復旧を許可できます。</value></data>
+  <data name="Include data center travel for purchasing maps" xml:space="preserve"><value>地図購入でDC間移動を使用</value></data>
+  <data name="Include same-data-center server travel for purchasing maps" xml:space="preserve"><value>地図購入で同DCの別ワールドを訪問</value></data>
+  <data name="Include visiting OCE for maps once local data centers are exhausted" xml:space="preserve"><value>地域内DCを探し終えたらOCEで地図を検索</value></data>
+  <data name="Inn" xml:space="preserve"><value>宿屋</value></data>
+  <data name="Integrations" xml:space="preserve"><value>連携</value></data>
+  <data name="Interaction Range (y)" xml:space="preserve"><value>操作距離（y）</value></data>
+  <data name="Interface" xml:space="preserve"><value>インターフェイス</value></data>
+  <data name="inventory" xml:space="preserve"><value>所持品</value></data>
+  <data name="inventory or loaded saddlebags" xml:space="preserve"><value>所持品または読込済みチョコボかばん</value></data>
+  <data name="InventoryBuddy" xml:space="preserve"><value>InventoryBuddy</value></data>
+  <data name="Invite missing captured members immediately and every 30 seconds after returning. Checked continues with whoever rejoined after timeout; unchecked stops." xml:space="preserve"><value>帰還後、記録済みの不足メンバーを即時と30秒ごとに招待。オンなら時間切れ後に再合流者だけで続行、オフなら停止します。</value></data>
+  <data name="Krangle Names" xml:space="preserve"><value>名前を匿名化</value></data>
+  <data name="Landing / Duty Entry" xml:space="preserve"><value>着地／コンテンツ入場</value></data>
+  <data name="Language" xml:space="preserve"><value>言語</value></data>
+  <data name="Level" xml:space="preserve"><value>レベル</value></data>
+  <data name="Lifestream" xml:space="preserve"><value>Lifestream</value></data>
+  <data name="Lifestream is required for off-world searches. LootGoblin verifies arrival and returns to the starting world before restoring the party." xml:space="preserve"><value>別ワールド検索にはLifestreamが必要です。到着を確認し、パーティ復元前に出発ワールドへ戻ります。</value></data>
+  <data name="Lifestream missing" xml:space="preserve"><value>Lifestreamなし</value></data>
+  <data name="Lifestream missing. LootGoblin cannot issue /li travel without it." xml:space="preserve"><value>Lifestreamがありません。/liによる移動はできません。</value></data>
+  <data name="Limsa Lominsa is the default. City selection requires Emptor v4+; blank Ul'dah remains compatible with v1-v3." xml:space="preserve"><value>既定はリムサ・ロミンサ。都市指定にはEmptor v4以降が必要です。空欄のウルダハはv1～v3互換です。</value></data>
+  <data name="Listings can change after lookup. Refresh is manual and rate-limited to five minutes." xml:space="preserve"><value>検索後に出品が変わる場合があります。更新は手動で、5分に1回までです。</value></data>
+  <data name="loaded" xml:space="preserve"><value>読み込み済み</value></data>
+  <data name="Loading UI fonts..." xml:space="preserve"><value>UIフォント読込中...</value></data>
+  <data name="Location Data" xml:space="preserve"><value>位置データ</value></data>
+  <data name="Location Data by Zone" xml:space="preserve"><value>エリア別位置データ</value></data>
+  <data name="Location: {0}" xml:space="preserve"><value>位置：{0}</value></data>
+  <data name="Locations: {0} total" xml:space="preserve"><value>位置：合計{0}件</value></data>
+  <data name="Log in to check party status." xml:space="preserve"><value>ログインしてパーティ状況を確認してください。</value></data>
+  <data name="Log in to scan inventory." xml:space="preserve"><value>ログインして所持品を走査してください。</value></data>
+  <data name="Log in to see Poetics." xml:space="preserve"><value>ログインして詩学を確認してください。</value></data>
+  <data name="Log in to use navigation." xml:space="preserve"><value>ログインしてナビゲーションを使用してください。</value></data>
+  <data name="Log in to view current run." xml:space="preserve"><value>ログインして現在の実行を確認してください。</value></data>
+  <data name="Logged In:" xml:space="preserve"><value>ログイン：</value></data>
+  <data name="Lookup scope: {0}" xml:space="preserve"><value>検索範囲：{0}</value></data>
+  <data name="Loot Goblin" xml:space="preserve"><value>Loot Goblin</value></data>
+  <data name="Loot Goblin Settings" xml:space="preserve"><value>Loot Goblin設定</value></data>
+  <data name="Loot Goblin: exit after delay" xml:space="preserve"><value>Loot Goblin：遅延後に退出</value></data>
+  <data name="Loot Goblin: exit when all others have left" xml:space="preserve"><value>Loot Goblin：他の全員が退出したら退出</value></data>
+  <data name="LootGoblin submits quantity-one orders and can prepare up to three maps per trip." xml:space="preserve"><value>注文数量は1枚ずつで、1回の買い出しで最大3枚準備します。</value></data>
+  <data name="Manual map refresh after saddlebag opened." xml:space="preserve"><value>かばんを開いた後の手動地図更新。</value></data>
+  <data name="Manual map refresh after saddlebag timeout." xml:space="preserve"><value>かばん待機が時間切れ後の手動地図更新。</value></data>
+  <data name="Manual map refresh completed after saddlebag retrieval was disabled." xml:space="preserve"><value>かばん回収が無効化されたため手動地図更新を完了しました。</value></data>
+  <data name="Manual map refresh with saddlebag already open." xml:space="preserve"><value>かばんが開いている状態で手動地図更新。</value></data>
+  <data name="Manual map refresh without saddlebag retrieval." xml:space="preserve"><value>かばん回収なしの手動地図更新。</value></data>
+  <data name="Manual refresh is available in {0}." xml:space="preserve"><value>手動更新は{0}後に利用可能です。</value></data>
+  <data name="Map" xml:space="preserve"><value>地図</value></data>
+  <data name="Map Diagnostics" xml:space="preserve"><value>地図診断</value></data>
+  <data name="Map Flag Reader" xml:space="preserve"><value>Map Flag Reader</value></data>
+  <data name="Map Queue" xml:space="preserve"><value>地図キュー</value></data>
+  <data name="Map travel uses Lifestream for teleports and vnavmesh for movement. Choose an unlocked mount below for manual mounting." xml:space="preserve"><value>テレポはLifestream、移動はvnavmeshを使用。手動騎乗用の開放済みマウントを下から選択してください。</value></data>
+  <data name="Map:" xml:space="preserve"><value>地図:</value></data>
+  <data name="MapPartyAssist" xml:space="preserve"><value>MapPartyAssist</value></data>
+  <data name="Maps" xml:space="preserve"><value>地図</value></data>
+  <data name="Maps in inventory:" xml:space="preserve"><value>所持地図：</value></data>
+  <data name="Maps: {0}" xml:space="preserve"><value>地図：{0}</value></data>
+  <data name="Mark This Spot" xml:space="preserve"><value>この位置を記録</value></data>
+  <data name="Marketboard" xml:space="preserve"><value>マーケットボード</value></data>
+  <data name="Matching tabs are highlighted. Select a tab to view settings." xml:space="preserve"><value>一致するタブを強調表示します。タブを選択して設定を確認してください。</value></data>
+  <data name="max" xml:space="preserve"><value>最大</value></data>
+  <data name="Max gil" xml:space="preserve"><value>ギル上限</value></data>
+  <data name="Max map allowance wait (min)" xml:space="preserve"><value>地図取得権の最大待機（分）</value></data>
+  <data name="Maximum gil for one map. Zero disables purchasing for this map." xml:space="preserve"><value>1枚のギル上限。0でこの地図の購入を無効化します。</value></data>
+  <data name="Maximum time to wait for the captured roster to rejoin. Allowed range is 30–3600 seconds; default is 300." xml:space="preserve"><value>記録したメンバーの再合流を待つ最大時間。30～3600秒、既定は300秒。</value></data>
+  <data name="Members: {0}" xml:space="preserve"><value>メンバー：{0}</value></data>
+  <data name="MISSING" xml:space="preserve"><value>未導入</value></data>
+  <data name="Missing: {0}" xml:space="preserve"><value>不足：{0}</value></data>
+  <data name="Mount Selection" xml:space="preserve"><value>マウント選択</value></data>
+  <data name="Mount wait:" xml:space="preserve"><value>騎乗待機：</value></data>
+  <data name="Mounted" xml:space="preserve"><value>騎乗中</value></data>
+  <data name="Movable Settings Window" xml:space="preserve"><value>設定ウィンドウを移動可能</value></data>
+  <data name="Multiple map types detected - use checkboxes to select which to run" xml:space="preserve"><value>複数種類を検出。実行する種類にチェックしてください</value></data>
+  <data name="N/A" xml:space="preserve"><value>該当なし</value></data>
+  <data name="Nav Timeout (s)" xml:space="preserve"><value>移動タイムアウト（秒）</value></data>
+  <data name="Nav:" xml:space="preserve"><value>移動：</value></data>
+  <data name="Navigation" xml:space="preserve"><value>ナビゲーション</value></data>
+  <data name="needed for assisted retainer/saddlebag retrieval" xml:space="preserve"><value>リテイナー／かばんの補助回収に必要</value></data>
+  <data name="needed for retainer map lookup" xml:space="preserve"><value>リテイナー地図検索に必要</value></data>
+  <data name="Next manual refresh: {0}" xml:space="preserve"><value>次の手動更新：{0}</value></data>
+  <data name="Next retry/reassert in {0}s." xml:space="preserve"><value>再試行・再適用まで{0}s。</value></data>
+  <data name="No" xml:space="preserve"><value>いいえ</value></data>
+  <data name="No automatic exit" xml:space="preserve"><value>自動退出しない</value></data>
+  <data name="No food" xml:space="preserve"><value>食事なし</value></data>
+  <data name="No food selected." xml:space="preserve"><value>食事が選択されていません。</value></data>
+  <data name="No matching tabs." xml:space="preserve"><value>一致するタブがありません。</value></data>
+  <data name="No results." xml:space="preserve"><value>結果なし。</value></data>
+  <data name="No treasure maps found in {0}." xml:space="preserve"><value>{0}に宝の地図がありません。</value></data>
+  <data name="Not found" xml:space="preserve"><value>見つからず</value></data>
+  <data name="not logged in" xml:space="preserve"><value>未ログイン</value></data>
+  <data name="Not Mounted" xml:space="preserve"><value>未騎乗</value></data>
+  <data name="Not Started: {0}" xml:space="preserve"><value>未開始：{0}</value></data>
+  <data name="Not summoned" xml:space="preserve"><value>未召喚</value></data>
+  <data name="NPC no inn" xml:space="preserve"><value>NPC（宿屋なし）</value></data>
+  <data name="NPC No Inn + No TP" xml:space="preserve"><value>NPC修理（宿・テレポなし）</value></data>
+  <data name="NPC no-inn" xml:space="preserve"><value>NPC修理（宿なし）</value></data>
+  <data name="NPC no-inn/no-teleport" xml:space="preserve"><value>NPC（宿屋・テレポなし）</value></data>
+  <data name="npc-no-inn" xml:space="preserve"><value>npc-no-inn</value></data>
+  <data name="npc-no-teleport-no-inn" xml:space="preserve"><value>npc-no-teleport-no-inn</value></data>
+  <data name="NQ" xml:space="preserve"><value>NQ</value></data>
+  <data name="Number of other party members required for every party wait. Local player is not counted." xml:space="preserve"><value>各パーティ待機で必要な他のメンバー数。自分は数えません。</value></data>
+  <data name="Observe only" xml:space="preserve"><value>観察のみ</value></data>
+  <data name="Obstacle maps on" xml:space="preserve"><value>障害物マップを有効化</value></data>
+  <data name="off" xml:space="preserve"><value>オフ</value></data>
+  <data name="off       - Disable bot" xml:space="preserve"><value>off       - Botを無効化</value></data>
+  <data name="OK" xml:space="preserve"><value>正常</value></data>
+  <data name="on        - Enable bot" xml:space="preserve"><value>on        - Botを有効化</value></data>
+  <data name="Open /xlplugins" xml:space="preserve"><value>/xlpluginsを開く</value></data>
+  <data name="Open /xlsettings" xml:space="preserve"><value>/xlsettingsを開く</value></data>
+  <data name="OPEN ADS LOOT OPTIONS" xml:space="preserve"><value>ADSロット設定を開く</value></data>
+  <data name="Open Config Folder" xml:space="preserve"><value>設定フォルダーを開く</value></data>
+  <data name="Open Data Folder" xml:space="preserve"><value>DATA フォルダーを開く</value></data>
+  <data name="Open Log Folder" xml:space="preserve"><value>ログフォルダーを開く</value></data>
+  <data name="Open the folder containing AetherytePositions.json for sharing" xml:space="preserve"><value>共有用のAetherytePositions.jsonフォルダーを開く</value></data>
+  <data name="Opens decipher menu and reads all map entries to show correct indices" xml:space="preserve"><value>解読メニューを開き、全地図を読んで正しいインデックスを表示</value></data>
+  <data name="Optional (Combat/Rotation):" xml:space="preserve"><value>任意（戦闘／回し）：</value></data>
+  <data name="Optional (Map Gathering):" xml:space="preserve"><value>任意（地図採集）：</value></data>
+  <data name="Optional (Retainer/Saddlebag Retrieval):" xml:space="preserve"><value>任意（リテイナー／かばん回収）：</value></data>
+  <data name="Optional (Treasure Map Statistics):" xml:space="preserve"><value>任意（宝の地図統計）：</value></data>
+  <data name="Out of" xml:space="preserve"><value>在庫切れ：</value></data>
+  <data name="Overrides the general Wait for Party setting for thief-map underwater travel, remount recovery, and descent/dig waits." xml:space="preserve"><value>盗賊地図の水中移動、再騎乗復旧、下降・掘り待機で通常のパーティ待機設定を上書きします。</value></data>
+  <data name="Party" xml:space="preserve"><value>パーティ</value></data>
+  <data name="Party Status" xml:space="preserve"><value>パーティ状況</value></data>
+  <data name="Party Wait Timeout (s)" xml:space="preserve"><value>パーティ待機時間（秒）</value></data>
+  <data name="Party waits coordinate takeoff, remounting and arrival; thief-map underwater waits have their own switch. Player-count thresholds count other players, excluding you." xml:space="preserve"><value>離陸・再騎乗・到着をパーティ待機で調整。盗賊地図の水中待機は別設定です。人数しきい値は自分を除く他のプレイヤー数です。</value></data>
+  <data name="party-list position" xml:space="preserve"><value>パーティーリストの位置</value></data>
+  <data name="Party:" xml:space="preserve"><value>パーティ：</value></data>
+  <data name="Pause" xml:space="preserve"><value>一時停止</value></data>
+  <data name="Paused" xml:space="preserve"><value>一時停止中</value></data>
+  <data name="Personal" xml:space="preserve"><value>個人宅</value></data>
+  <data name="Pink" xml:space="preserve"><value>ピンク</value></data>
+  <data name="Players to wait for" xml:space="preserve"><value>待機する人数</value></data>
+  <data name="Plugin loaded and ready." xml:space="preserve"><value>プラグイン読込済み、準備完了。</value></data>
+  <data name="Poetics:" xml:space="preserve"><value>詩学：</value></data>
+  <data name="position unresolved" xml:space="preserve"><value>位置未特定</value></data>
+  <data name="Previously Engaged Targets" xml:space="preserve"><value>交戦済みの対象</value></data>
+  <data name="Price hints live only for this Loot Goblin session; they are not saved to disk." xml:space="preserve"><value>価格ヒントは今回のセッション限定で、ディスクに保存しません。</value></data>
+  <data name="Purchase requirements" xml:space="preserve"><value>購入条件</value></data>
+  <data name="Queue one global refresh for all marketable known maps using the current travel scope." xml:space="preserve"><value>現在の移動範囲で既知の取引可能地図を一括更新する要求を1件キューに追加します。</value></data>
+  <data name="Ready" xml:space="preserve"><value>準備完了</value></data>
+  <data name="Red X overlay: allowance cooldown" xml:space="preserve"><value>赤い×：取得権クールダウン</value></data>
+  <data name="Refresh Dependencies" xml:space="preserve"><value>依存関係を更新</value></data>
+  <data name="Refresh Emptor Prices" xml:space="preserve"><value>Emptor価格を更新</value></data>
+  <data name="Refresh Maps" xml:space="preserve"><value>地図を更新</value></data>
+  <data name="refreshed" xml:space="preserve"><value>更新済み</value></data>
+  <data name="refreshing..." xml:space="preserve"><value>更新中...</value></data>
+  <data name="Repair mode" xml:space="preserve"><value>修理モード</value></data>
+  <data name="Repair threshold %" xml:space="preserve"><value>修理しきい値 %</value></data>
+  <data name="Repair uses ADS; a 0% threshold disables it. Factory defaults: 75%, NPC no inn." xml:space="preserve"><value>修理はADSを使用。0%で無効。既定は75%、宿屋なしNPC修理です。</value></data>
+  <data name="Report Issue" xml:space="preserve"><value>問題を報告</value></data>
+  <data name="Require All Mounted" xml:space="preserve"><value>全員の騎乗を要求</value></data>
+  <data name="Require vnavmesh" xml:space="preserve"><value>vnavmeshを必須にする</value></data>
+  <data name="Required:" xml:space="preserve"><value>必須：</value></data>
+  <data name="Reset All Aetherytes" xml:space="preserve"><value>全エーテライトをリセット</value></data>
+  <data name="Resolved: {0}" xml:space="preserve"><value>特定済み：{0}</value></data>
+  <data name="Resume" xml:space="preserve"><value>再開</value></data>
+  <data name="Retainer" xml:space="preserve"><value>リテイナー</value></data>
+  <data name="Retainer:" xml:space="preserve"><value>リテイナー：</value></data>
+  <data name="Retainers need XA Database (XADB) and a reachable retainer bell. Saddlebag retrieval uses /saddlebag. Both retrieval options are on by factory default." xml:space="preserve"><value>リテイナー回収にはXA Database（XADB）と到達可能なベルが必要。かばん回収は/saddlebagを使用。両方とも既定で有効です。</value></data>
+  <data name="Return destination" xml:space="preserve"><value>帰還先</value></data>
+  <data name="Return when done" xml:space="preserve"><value>終了時に戻る</value></data>
+  <data name="Return when done optionally uses Lifestream once enabled map sources are exhausted. Factory default: off." xml:space="preserve"><value>有効な地図供給元を使い切ったらLifestreamで帰還できます。既定は無効。</value></data>
+  <data name="Rotate" xml:space="preserve"><value>順次移動</value></data>
+  <data name="RSR hostile targeting" xml:space="preserve"><value>RSR敵対ターゲット</value></data>
+  <data name="Run" xml:space="preserve"><value>実行</value></data>
+  <data name="Run count" xml:space="preserve"><value>実行回数</value></data>
+  <data name="Runnable:" xml:space="preserve"><value>実行可能：</value></data>
+  <data name="Runs /levelsync on after joining a FATE and pauses coffer/portal recovery for joined-FATE handling. Turn off to ignore joined FATEs during map coffer flow." xml:space="preserve"><value>FATE参加後に/levelsync onを実行し、FATE処理中は宝箱・ポータル復旧を停止。無効にすると地図進行中のFATEを無視します。</value></data>
+  <data name="Runs the selected Lifestream return only after no enabled inventory, saddlebag, or retainer maps remain." xml:space="preserve"><value>所持品・かばん・リテイナーに有効な地図が残っていない場合にのみ指定のLifestream帰還を実行します。</value></data>
+  <data name="Runs this map type until no available maps remain." xml:space="preserve"><value>この種類の地図がなくなるまで実行します。</value></data>
+  <data name="Runs:" xml:space="preserve"><value>回数：</value></data>
+  <data name="Saddlebag" xml:space="preserve"><value>チョコボかばん</value></data>
+  <data name="Saddlebag includes regular ({0}) + premium ({1}) saddlebag counts." xml:space="preserve"><value>かばんは通常（{0}）＋プレミアム（{1}）の合計です。</value></data>
+  <data name="same territory" xml:space="preserve"><value>同じエリア</value></data>
+  <data name="Search" xml:space="preserve"><value>検索</value></data>
+  <data name="Search for Food if Depleted" xml:space="preserve"><value>食事がなくなったら代替品を探す</value></data>
+  <data name="Search settings" xml:space="preserve"><value>設定を検索</value></data>
+  <data name="seconds" xml:space="preserve"><value>秒</value></data>
+  <data name="Seedling: toggle missing-map gathering" xml:space="preserve"><value>芽：不足する地図の採集を切り替え</value></data>
+  <data name="Select {0}..." xml:space="preserve"><value>{0}を選択...</value></data>
+  <data name="Selected: {0} [{1}] ({2})" xml:space="preserve"><value>選択中：{0} [{1}] ({2})</value></data>
+  <data name="SelectIconString" xml:space="preserve"><value>SelectIconString</value></data>
+  <data name="Self" xml:space="preserve"><value>自己修理</value></data>
+  <data name="Send /ads leave once after the configured delay." xml:space="preserve"><value>設定した遅延後に/ads leaveを1回送信します。</value></data>
+  <data name="Set a positive maximum gil price before enabling this cart." xml:space="preserve"><value>カートを有効にする前に正のギル上限を設定してください。</value></data>
+  <data name="Settings" xml:space="preserve"><value>設定</value></data>
+  <data name="Show all map types" xml:space="preserve"><value>全種類の地図を表示</value></data>
+  <data name="Show Main Window on Login" xml:space="preserve"><value>ログイン時にメインを表示</value></data>
+  <data name="Shows Location Data diagnostics in the main window and enables map/aetheryte collection tools." xml:space="preserve"><value>メインに位置データ診断を表示し、地図・エーテライト情報収集ツールを有効にします。</value></data>
+  <data name="Shows runnable map rows even when none are currently in inventory or loaded saddlebags." xml:space="preserve"><value>所持品や読込済みかばんにない場合でも実行可能な地図の行を表示します。</value></data>
+  <data name="Skip" xml:space="preserve"><value>スキップ</value></data>
+  <data name="Skips Tamamizu when choosing the map teleport destination." xml:space="preserve"><value>地図テレポ先の選択でタマミズを除外します。</value></data>
+  <data name="Solo" xml:space="preserve"><value>ソロ</value></data>
+  <data name="Solo Deep Dungeon Smart" xml:space="preserve"><value>ソロDDのスマート選択</value></data>
+  <data name="Solve EV" xml:space="preserve"><value>期待値で解く</value></data>
+  <data name="Solve EV clicks only after it reads a reliable card/stage; otherwise it holds and retries. Skip keeps current skip/close behavior. Observe logs readable state only and never clicks." xml:space="preserve"><value>期待値はカード・段階を確実に読めた時のみクリックし、それ以外は待機して再試行。スキップは従来の終了動作を維持。観察は読取状態のログだけでクリックしません。</value></data>
+  <data name="Specify number of party to wait for" xml:space="preserve"><value>待機するパーティ人数を指定</value></data>
+  <data name="Start" xml:space="preserve"><value>スタート</value></data>
+  <data name="Start on the last world that successfully sold a map, then try each remaining unvisited enabled world if it has no acceptable listing. This is the default." xml:space="preserve"><value>最後に地図を購入できたワールドから開始し、適切な出品がなければ未訪問の有効ワールドを順に試します。既定の動作です。</value></data>
+  <data name="State:" xml:space="preserve"><value>状態：</value></data>
+  <data name="Status" xml:space="preserve"><value>状態</value></data>
+  <data name="status    - Print current status" xml:space="preserve"><value>status    - 現在の状態を表示</value></data>
+  <data name="Status:" xml:space="preserve"><value>状況：</value></data>
+  <data name="Sticky success" xml:space="preserve"><value>前回成功ワールドを優先</value></data>
+  <data name="Stop" xml:space="preserve"><value>停止</value></data>
+  <data name="Stop Cycling" xml:space="preserve"><value>巡回停止</value></data>
+  <data name="Stop dungeon progression after completion and wait for a manual duty exit." xml:space="preserve"><value>完了後のダンジョン進行を停止し、手動退出を待ちます。</value></data>
+  <data name="Summon Chocobo" xml:space="preserve"><value>チョコボを呼び出す</value></data>
+  <data name="Support development on Ko-fi" xml:space="preserve"><value>Ko-fi で開発を支援</value></data>
+  <data name="Switch this map type back to unlimited runs." xml:space="preserve"><value>この種類を回数無制限に戻します。</value></data>
+  <data name="Take Control" xml:space="preserve"><value>制御を引き継ぐ</value></data>
+  <data name="Teal" xml:space="preserve"><value>ティール</value></data>
+  <data name="territory unresolved" xml:space="preserve"><value>エリア未特定</value></data>
+  <data name="Test ADS Repair Mode" xml:space="preserve"><value>ADS修理モードをテスト</value></data>
+  <data name="TextAdvance" xml:space="preserve"><value>TextAdvance</value></data>
+  <data name="The optional chocobo companion needs Gysahl Greens. Factory defaults: party and all-mounted waits on; companion summon off." xml:space="preserve"><value>任意のバディ召喚にはギサールの野菜が必要。既定はパーティ・全員騎乗待機が有効、バディ召喚は無効。</value></data>
+  <data name="Tier {0}" xml:space="preserve"><value>ランク{0}</value></data>
+  <data name="Time to wait before teleporting (s)" xml:space="preserve"><value>テレポ前の待機（秒）</value></data>
+  <data name="Travel" xml:space="preserve"><value>移動</value></data>
+  <data name="TreasureSpot: {0}" xml:space="preserve"><value>宝の位置：{0}</value></data>
+  <data name="Try the current world first, then each remaining public world on the current data center once per map search." xml:space="preserve"><value>地図検索ごとに現在のワールドを最初に、同DCの他の公開ワールドを一度ずつ試します。</value></data>
+  <data name="Type at least 2 characters to search." xml:space="preserve"><value>2文字以上で検索してください。</value></data>
+  <data name="UI fonts failed to load. See the plugin log." xml:space="preserve"><value>UIフォント読込失敗。プラグインログを確認。</value></data>
+  <data name="unavailable" xml:space="preserve"><value>利用不可</value></data>
+  <data name="Unknown ({0})" xml:space="preserve"><value>不明（{0}）</value></data>
+  <data name="Unknown Map (ID: {0})" xml:space="preserve"><value>不明な地図（ID：{0}）</value></data>
+  <data name="unloaded" xml:space="preserve"><value>未読込</value></data>
+  <data name="Use" xml:space="preserve"><value>使用</value></data>
+  <data name="Use a count of other party members instead of waiting for the entire party roster. Applies to takeoff, remount, landing, underwater, and next-map waits." xml:space="preserve"><value>全員ではなく他のメンバーの指定人数を待機。離陸・再騎乗・着地・水中・次の地図の待機に適用します。</value></data>
+  <data name="Use ADS for dungeon phase" xml:space="preserve"><value>ダンジョンでADSを使用</value></data>
+  <data name="Use current-character command trigger override" xml:space="preserve"><value>現在のキャラのコマンドトリガーを使用</value></data>
+  <data name="Use HQ food" xml:space="preserve"><value>HQ食事を使用</value></data>
+  <data name="Use Loot Goblin's local Leave Duty flow after the configured delay." xml:space="preserve"><value>設定した遅延後にLoot Goblin自身の退出処理を使用します。</value></data>
+  <data name="Use Loot Goblin's local Leave Duty flow once no other loaded party members remain in the duty territory." xml:space="preserve"><value>コンテンツのエリアに他の読込済みパーティメンバーがいなくなったら、ローカル退出処理を使います。</value></data>
+  <data name="Use Map Queue in the main window to select maps and run counts. Retrieval below supplies enabled maps when inventory runs out." xml:space="preserve"><value>メインの地図キューで種類と回数を選択。所持品が切れたら下の回収設定で有効な地図を補充します。</value></data>
+  <data name="Use these controls for diagnostics and troubleshooting. The snapshot button needs dedicated logging; Test ADS Repair Mode starts a repair using the mode selected in Run." xml:space="preserve"><value>診断用コントロールです。スナップショットには専用ログが必要。ADS修理テストは実行タブで選択した方式の修理を開始します。</value></data>
+  <data name="User: {0}" xml:space="preserve"><value>ユーザー：{0}</value></data>
+  <data name="vnavmesh" xml:space="preserve"><value>vnavmesh</value></data>
+  <data name="vnavmesh missing" xml:space="preserve"><value>vnavmeshなし</value></data>
+  <data name="vnavmesh required for navigation." xml:space="preserve"><value>移動にはvnavmeshが必要です。</value></data>
+  <data name="Wait at the destination until party members are within 10 yalms before dismounting." xml:space="preserve"><value>目的地でパーティメンバーが10ヤルム以内に入るまで降りずに待機します。</value></data>
+  <data name="Wait for Party" xml:space="preserve"><value>パーティを待機</value></data>
+  <data name="Wait for party before dismounting" xml:space="preserve"><value>降りる前にパーティを待機</value></data>
+  <data name="Wait for Party for thief maps / underwater" xml:space="preserve"><value>盗賊地図／水中でパーティを待機</value></data>
+  <data name="Well Fed" xml:space="preserve"><value>食事効果</value></data>
+  <data name="When count threshold is off, takeoff and remount waits require every other party member mounted. Turn off to continue when any other same-zone party member is mounted." xml:space="preserve"><value>人数しきい値が無効なら離陸・再騎乗時に他の全員の騎乗を要求。これをオフにすると同エリアの誰かが騎乗したら続行します。</value></data>
+  <data name="When enabled, LootGoblin asks ADS to disable BMR hunt modules." xml:space="preserve"><value>有効ならADSへBMRハントモジュールの無効化を要求します。</value></data>
+  <data name="When enabled, LootGoblin asks ADS to set BMR MaxLoadDistance to {0:0}." xml:space="preserve"><value>有効ならADSへBMR MaxLoadDistanceを{0:0}にするよう要求します。</value></data>
+  <data name="When enabled, the bot waits for party members before takeoff, remount recovery, and map travel handoffs." xml:space="preserve"><value>有効なら離陸・再騎乗復旧・地図移動の引き継ぎ前にメンバーを待機します。</value></data>
+  <data name="When missing-map gathering is the only remaining action, wait this long for a map allowance before finishing the run." xml:space="preserve"><value>不足地図の採集だけが残った場合、この時間まで地図取得権を待ってから終了します。</value></data>
+  <data name="When no enabled map is in inventory, LootGoblin can open /saddlebag and move one enabled map into inventory. Disable to ignore saddlebags entirely." xml:space="preserve"><value>有効な地図が所持品になければ/saddlebagを開いて1枚移します。無効ならかばんを完全に無視します。</value></data>
+  <data name="When no enabled map is in inventory, LootGoblin checks XA Database for retainer-owned maps and tries to withdraw one at a retainer bell." xml:space="preserve"><value>有効な地図が所持品になければXA Databaseでリテイナーの地図を検索し、ベルで1枚取り出します。</value></data>
+  <data name="While Loot Goblin is enabled, runs /ays discard every 30s during safe mounted windows. Defers in combat, loading or cutscenes. Requires AutoRetainer and a configured discard list." xml:space="preserve"><value>有効時は安全な騎乗中に30秒ごと/ays discardを実行。戦闘・読込・カットシーン中は延期。AutoRetainerと破棄リストが必要です。</value></data>
+  <data name="WIP: {0}" xml:space="preserve"><value>開発中：{0}</value></data>
+  <data name="World: {0}" xml:space="preserve"><value>ワールド: {0}</value></data>
+  <data name="Write dedicated LootGoblin diagnostic log" xml:space="preserve"><value>LootGoblin専用診断ログを記録</value></data>
+  <data name="Write Snapshot Now" xml:space="preserve"><value>今すぐスナップショットを記録</value></data>
+  <data name="Writes high-signal events and state snapshots. Rotates at 20 MB and retains the newest 10 files." xml:space="preserve"><value>重要なイベントと状態スナップショットを記録。20MBで切り替え、最新10ファイルを保持します。</value></data>
+  <data name="xadb" xml:space="preserve"><value>XADB</value></data>
+  <data name="xaslave" xml:space="preserve"><value>xaslave</value></data>
+  <data name="Yes" xml:space="preserve"><value>はい</value></data>
+  <data name="Zone:" xml:space="preserve"><value>エリア：</value></data>
+  <data name="Repairing" xml:space="preserve"><value>修理中</value></data>
+  <data name="StartPreflight" xml:space="preserve"><value>開始前確認</value></data>
+  <data name="SelectingMap" xml:space="preserve"><value>地図選択中</value></data>
+  <data name="OpeningMap" xml:space="preserve"><value>地図を開く</value></data>
+  <data name="DetectingLocation" xml:space="preserve"><value>位置特定中</value></data>
+  <data name="Teleporting" xml:space="preserve"><value>テレポ中</value></data>
+  <data name="Mounting" xml:space="preserve"><value>騎乗中</value></data>
+  <data name="WaitingForParty" xml:space="preserve"><value>パーティ待機</value></data>
+  <data name="Flying" xml:space="preserve"><value>飛行中</value></data>
+  <data name="OpeningChest" xml:space="preserve"><value>宝箱を開く</value></data>
+  <data name="InCombat" xml:space="preserve"><value>戦闘中</value></data>
+  <data name="InDungeon" xml:space="preserve"><value>ダンジョン内</value></data>
+  <data name="DungeonCombat" xml:space="preserve"><value>ダンジョン戦闘</value></data>
+  <data name="DungeonLooting" xml:space="preserve"><value>ダンジョン回収</value></data>
+  <data name="DungeonProgressing" xml:space="preserve"><value>ダンジョン進行</value></data>
+  <data name="CyclingAetherytes" xml:space="preserve"><value>エーテライト走査</value></data>
+  <data name="CyclingMapLocations" xml:space="preserve"><value>地図位置走査</value></data>
+  <data name="AlexandriteFarming" xml:space="preserve"><value>アレキサンドライト周回</value></data>
+  <data name="GatheringMap" xml:space="preserve"><value>地図採集中</value></data>
+  <data name="WaitingForTeleport" xml:space="preserve"><value>テレポ待機</value></data>
+  <data name="WaitingForNavmesh" xml:space="preserve"><value>Navmesh待機</value></data>
+  <data name="Arrived" xml:space="preserve"><value>到着</value></data>
+  <data name="Completed" xml:space="preserve"><value>完了</value></data>
+  <data name="{0} members" xml:space="preserve"><value>{0}人</value></data>
+  <data name="on" xml:space="preserve"><value>オン</value></data>
+  <data name="actor position" xml:space="preserve"><value>アクターの位置</value></data>
+  <data name="not reported" xml:space="preserve"><value>未報告</value></data>
+  <data name="current world" xml:space="preserve"><value>現在のワールド</value></data>
+  <data name="current data center" xml:space="preserve"><value>現在のデータセンター</value></data>
+  <data name="current region" xml:space="preserve"><value>現在の地域</value></data>
+  <data name="reachable regions + Materia" xml:space="preserve"><value>移動可能な地域 + Materia</value></data>
+  <data name="No food item resolved" xml:space="preserve"><value>食事アイテムを特定できません</value></data>
+  <data name="Paused: {0}" xml:space="preserve"><value>一時停止：{0}</value></data>
+  <data name="Well Fed: {0:F0}s ({1} [{2}])" xml:space="preserve"><value>食事効果：{0:F0}秒（{1} [{2}]）</value></data>
+  <data name="Need food (cooldown {0:F1}s)" xml:space="preserve"><value>食事が必要（待機時間{0:F1}秒）</value></data>
+  <data name="Ate {0} [{1}] ({2} left)" xml:space="preserve"><value>{0} [{1}]を使用（残り{2}）</value></data>
+  <data name="Failed to eat {0} [{1}]" xml:space="preserve"><value>{0} [{1}]を使用できませんでした</value></data>
+  <data name="Out of {0} [{1}]" xml:space="preserve"><value>{0} [{1}]を使い切りました</value></data>
+  <data name="Switched to {0} [{1}]" xml:space="preserve"><value>{0} [{1}]に切り替えました</value></data>
+  <data name="No food in inventory" xml:space="preserve"><value>所持品に食事アイテムがありません</value></data>
+  <data name="[+{0} yours]" xml:space="preserve"><value>[+{0} 自分の登録]</value></data>
+  <data name="{0:F0}y XZ" xml:space="preserve"><value>{0:F0}y XZ</value></data>
+  <data name="ADS reflection applied; no reassert pending." xml:space="preserve"><value>ADSリフレクション適用済み。再適用待ちはありません。</value></data>
+  <data name="ADS reflection applied; waiting for desired-state change or ADS reload." xml:space="preserve"><value>ADSリフレクション適用済み。設定状態の変更またはADSの再読み込みを待機しています。</value></data>
+  <data name="ADS reflection hacks reset." xml:space="preserve"><value>ADSの特殊機能をリセットしました。</value></data>
+  <data name="No ADS reflection hacks enabled." xml:space="preserve"><value>ADSのリフレクション機能は無効です。</value></data>
+  <data name="vnavmesh not available." xml:space="preserve"><value>vnavmeshを利用できません。</value></data>
+  <data name="Not logged in." xml:space="preserve"><value>ログインしていません。</value></data>
+  <data name="Cannot teleport while in combat." xml:space="preserve"><value>戦闘中はテレポできません。</value></data>
+  <data name="Already between areas." xml:space="preserve"><value>エリア移動中です。</value></data>
+  <data name="Lifestream not available." xml:space="preserve"><value>Lifestreamを利用できません。</value></data>
+  <data name="Lifestream rejected {0}: {1}" xml:space="preserve"><value>Lifestreamが{0}を拒否しました：{1}</value></data>
+  <data name="Navigation stopped." xml:space="preserve"><value>移動を停止しました。</value></data>
+  <data name="Mounting {0}..." xml:space="preserve"><value>{0}に騎乗中...</value></data>
+  <data name="Flying to {0}..." xml:space="preserve"><value>{0}へ飛行中...</value></data>
+  <data name="Moving to {0}..." xml:space="preserve"><value>{0}へ移動中...</value></data>
+  <data name="Flying to map flag..." xml:space="preserve"><value>地図のフラグへ飛行中...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before flying to {0}..." xml:space="preserve"><value>vnavmeshの構築完了を待機してから{0}へ飛行します...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before moving to {0}..." xml:space="preserve"><value>vnavmeshの構築完了を待機してから{0}へ移動します...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh before flying to map flag..." xml:space="preserve"><value>vnavmeshの構築完了を待機してから地図のフラグへ飛行します...</value></data>
+  <data name="Waiting for vnavmesh to finish building the navmesh..." xml:space="preserve"><value>vnavmeshの構築完了を待機中...</value></data>
+  <data name="GatherBuddy Reborn not loaded." xml:space="preserve"><value>GatherBuddy Rebornが読み込まれていません。</value></data>
+  <data name="GatherBuddy Reborn IPC version {0} is unsupported; version 2 is required." xml:space="preserve"><value>GatherBuddy RebornのIPCバージョン{0}は非対応です。バージョン2が必要です。</value></data>
+  <data name="Available." xml:space="preserve"><value>利用可能です。</value></data>
+  <data name="GatherBuddy Reborn IPC unavailable: {0}" xml:space="preserve"><value>GatherBuddy RebornのIPCを利用できません：{0}</value></data>
+  <data name="Not checked." xml:space="preserve"><value>未確認です。</value></data>
+  <data name="ADS reflection pending." xml:space="preserve"><value>ADS反映待機中。</value></data>
+  <data name="Lifestream IPC is available." xml:space="preserve"><value>LifestreamのIPCを利用できます。</value></data>
+  <data name="Lifestream is not installed, loaded, or exposing supported IPC." xml:space="preserve"><value>Lifestreamが未インストール、未読み込み、または対応IPCを提供していません。</value></data>
+  <data name="Lifestream IPC has not been checked." xml:space="preserve"><value>LifestreamのIPCは未確認です。</value></data>
+  <data name="Emptor IPC has not been checked." xml:space="preserve"><value>EmptorのIPCは未確認です。</value></data>
+  <data name="Using built-in city choices until Emptor v4 city IPC is available." xml:space="preserve"><value>Emptor v4の都市IPCを利用できるまで内蔵の都市候補を使用します。</value></data>
+  <data name="Price hints have not been requested." xml:space="preserve"><value>価格情報はまだ要求されていません。</value></data>
+  <data name="Paused: logged out" xml:space="preserve"><value>一時停止：ログアウト中</value></data>
+  <data name="Paused: player unavailable" xml:space="preserve"><value>一時停止：プレイヤーを取得できません</value></data>
+  <data name="Paused: dead" xml:space="preserve"><value>一時停止：戦闘不能</value></data>
+  <data name="Paused: casting" xml:space="preserve"><value>一時停止：詠唱中</value></data>
+  <data name="Paused: in combat" xml:space="preserve"><value>一時停止：戦闘中</value></data>
+  <data name="Paused: between areas" xml:space="preserve"><value>一時停止：エリア移動中</value></data>
+  <data name="Paused: busy or in cutscene" xml:space="preserve"><value>一時停止：操作制限中またはカットシーン中</value></data>
+  <data name="Idle." xml:space="preserve"><value>待機中。</value></data>
+  <data name="XA Database unavailable." xml:space="preserve"><value>XA Databaseを利用できません。</value></data>
+  <data name="Moving to retainer bell for {0}..." xml:space="preserve"><value>{0}のためにリテイナーベルへ移動中...</value></data>
+  <data name="No nearby retainer bell found. Traveling to Revenant's Toll..." xml:space="preserve"><value>近くにリテイナーベルがありません。レヴナンツトールへ移動中...</value></data>
+  <data name="Timed out closing retainer UI. Still visible: {0}." xml:space="preserve"><value>リテイナーUIを閉じる処理がタイムアウトしました。表示中：{0}。</value></data>
+  <data name="Timed out during {0}." xml:space="preserve"><value>{0}中にタイムアウトしました。</value></data>
+  <data name="Timed out traveling to Revenant's Toll retainer bell." xml:space="preserve"><value>レヴナンツトールのリテイナーベルへの移動がタイムアウトしました。</value></data>
+  <data name="Traveling to retainer bell..." xml:space="preserve"><value>リテイナーベルへ移動中...</value></data>
+  <data name="Waiting for Revenant's Toll arrival..." xml:space="preserve"><value>レヴナンツトールへの到着を待機中...</value></data>
+  <data name="Waiting for player before moving to Revenant's Toll bell approach..." xml:space="preserve"><value>プレイヤーの準備を待機してからレヴナンツトールのベルへ接近します...</value></data>
+  <data name="Moving to Revenant's Toll retainer bell approach..." xml:space="preserve"><value>レヴナンツトールのリテイナーベルへ接近中...</value></data>
+  <data name="Arrived. Waiting for retainer bell object..." xml:space="preserve"><value>到着しました。リテイナーベルのオブジェクトを待機中...</value></data>
+  <data name="Moving to Revenant's Toll retainer bell..." xml:space="preserve"><value>レヴナンツトールのリテイナーベルへ移動中...</value></data>
+  <data name="Waiting for player before moving to retainer bell..." xml:space="preserve"><value>プレイヤーの準備を待機してからリテイナーベルへ移動します...</value></data>
+  <data name="Traveling to Revenant's Toll retainer bell..." xml:space="preserve"><value>レヴナンツトールのリテイナーベルへ移動中...</value></data>
+  <data name="Moving to Revenant's Toll bell approach... ({0:F1}y)" xml:space="preserve"><value>レヴナンツトールのベルへ接近中... ({0:F1}y)</value></data>
+  <data name="At bell approach. Waiting for Summoning Bell object..." xml:space="preserve"><value>ベル付近に到着しました。リテイナーベルのオブジェクトを待機中...</value></data>
+  <data name="Moving to retainer bell... ({0:F1}y)" xml:space="preserve"><value>リテイナーベルへ移動中... ({0:F1}y)</value></data>
+  <data name="Opening retainer bell..." xml:space="preserve"><value>リテイナーベルを開いています...</value></data>
+  <data name="Selecting retainer..." xml:space="preserve"><value>リテイナーを選択中...</value></data>
+  <data name="Retainer bell disappeared before interaction." xml:space="preserve"><value>操作前にリテイナーベルが消えました。</value></data>
+  <data name="Waiting for retainer list..." xml:space="preserve"><value>リテイナー一覧を待機中...</value></data>
+  <data name="Waiting for retainer menu..." xml:space="preserve"><value>リテイナーメニューを待機中...</value></data>
+  <data name="Retainer list is visible but target retainer '{0}' was not found by confirmed name. Visible retainers/text: {1}." xml:space="preserve"><value>リテイナー一覧は表示されていますが、確認済みの名前で対象リテイナー'{0}'を見つけられません。表示中のリテイナー／テキスト：{1}。</value></data>
+  <data name="Opening retainer inventory..." xml:space="preserve"><value>リテイナーの所持品を開いています...</value></data>
+  <data name="Waiting to select retainer {0}..." xml:space="preserve"><value>リテイナー{0}の選択を待機中...</value></data>
+  <data name="Retrieving {0}..." xml:space="preserve"><value>{0}を取り出しています...</value></data>
+  <data name="Waiting for retainer inventory menu..." xml:space="preserve"><value>リテイナーの所持品メニューを待機中...</value></data>
+  <data name="No retainer map target." xml:space="preserve"><value>リテイナーから取り出す地図がありません。</value></data>
+  <data name="Retrieved {0}. Closing retainer..." xml:space="preserve"><value>{0}を取り出しました。リテイナーを閉じています...</value></data>
+  <data name="Waiting for active retainer inventory..." xml:space="preserve"><value>操作中のリテイナー所持品を待機中...</value></data>
+  <data name="Could not plan retainer map retrieval from {0}: {1}" xml:space="preserve"><value>{0}からリテイナーの地図を取り出す計画を立てられません：{1}</value></data>
+  <data name="Could not move retainer map from {0}: {1}" xml:space="preserve"><value>{0}からリテイナーの地図を移動できません：{1}</value></data>
+  <data name="Waiting for {0} retrieval..." xml:space="preserve"><value>{0}の取り出しを待機中...</value></data>
+  <data name="Retainer map retrieved." xml:space="preserve"><value>リテイナーから地図を取り出しました。</value></data>
+  <data name="Closing retainer UI... ({0})" xml:space="preserve"><value>リテイナーUIを閉じています... ({0})</value></data>
+  <data name="Retainer map retrieval disabled." xml:space="preserve"><value>リテイナーからの地図取り出しは無効です。</value></data>
+  <data name="No enabled maps configured for retainer lookup." xml:space="preserve"><value>リテイナー検索用に有効な地図が設定されていません。</value></data>
+  <data name="No enabled current-character retainer map found in XA Database." xml:space="preserve"><value>XA Databaseに現在のキャラクターのリテイナーが持つ有効な地図がありません。</value></data>
+  <data name="XA Database scoped current-character item search failed." xml:space="preserve"><value>XA Databaseの現在のキャラクターを対象としたアイテム検索に失敗しました。</value></data>
+  <data name="No enabled maps found on current-character retainers in XA Database." xml:space="preserve"><value>XA Databaseに現在のキャラクターのリテイナーが持つ有効な地図がありません。</value></data>
+  <data name="XA Database not ready." xml:space="preserve"><value>XA Databaseの準備ができていません。</value></data>
+  <data name="Closing retainer UI..." xml:space="preserve"><value>リテイナーUIを閉じています...</value></data>
+  <data name="Retainer UI closed; map open allowed." xml:space="preserve"><value>リテイナーUIを閉じました。地図を開けます。</value></data>
+  <data name="Item sheet unavailable." xml:space="preserve"><value>アイテムデータを利用できません。</value></data>
+  <data name="XA Database readiness IPC failed: {0}" xml:space="preserve"><value>XA Databaseの準備状況IPCに失敗しました：{0}</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson IPC returned empty response." xml:space="preserve"><value>XA DatabaseのSearchCurrentCharacterItemsJson IPCが空の応答を返しました。</value></data>
+  <data name="XA Database scoped current-character item search returned ready=false." xml:space="preserve"><value>XA Databaseの現在のキャラクターを対象としたアイテム検索がready=falseを返しました。</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson IPC failed: {0}" xml:space="preserve"><value>XA DatabaseのSearchCurrentCharacterItemsJson IPCに失敗しました：{0}</value></data>
+  <data name="XA Database Refresh IPC failed: {0}" xml:space="preserve"><value>XA DatabaseのRefresh IPCに失敗しました：{0}</value></data>
+  <data name="XA Database SearchCurrentCharacterItemsJson returned invalid JSON: {0}" xml:space="preserve"><value>XA DatabaseのSearchCurrentCharacterItemsJsonが不正なJSONを返しました：{0}</value></data>
+  <data name="Emptor API v{0} is available." xml:space="preserve"><value>Emptor API v{0}を利用できます。</value></data>
+  <data name="Emptor API v{0} is incompatible; v1 or newer is required." xml:space="preserve"><value>Emptor API v{0}は非互換です。v1以降が必要です。</value></data>
+  <data name="Emptor is not installed, loaded, or exposing supported v1 IPC." xml:space="preserve"><value>Emptorが未インストール、未読み込み、または対応v1 IPCを提供していません。</value></data>
+  <data name="Manual Emptor price refresh queued." xml:space="preserve"><value>Emptorの手動価格更新を予約しました。</value></data>
+  <data name="Manual price refresh is deferred until login." xml:space="preserve"><value>手動価格更新はログインまで延期されます。</value></data>
+  <data name="Price hints unavailable: Emptor v5+ is required; detected v{0}." xml:space="preserve"><value>価格情報を利用できません：Emptor v5+が必要です。検出：v{0}。</value></data>
+  <data name="Price hints unavailable: Emptor v5 price IPC is not loaded." xml:space="preserve"><value>価格情報を利用できません：Emptor v5の価格IPCが読み込まれていません。</value></data>
+  <data name="Initial Emptor price lookup is deferred until login." xml:space="preserve"><value>初回のEmptor価格照会はログインまで延期されます。</value></data>
+  <data name="Loaded {0} city choices from Emptor v{1}." xml:space="preserve"><value>Emptor v{1}から{0}件の都市候補を読み込みました。</value></data>
+  <data name="Price hints unavailable: no marketable known maps were found." xml:space="preserve"><value>価格情報を利用できません：マーケット取引可能な既知の地図がありません。</value></data>
+  <data name="Requesting {0} Emptor price hint(s) for {1}..." xml:space="preserve"><value>{1}のEmptor価格情報を{0}件要求中...</value></data>
+  <data name="Price hints unavailable: Emptor lookup failed ({0})." xml:space="preserve"><value>価格情報を利用できません：Emptor照会に失敗しました ({0})。</value></data>
+  <data name="Emptor price follow-up failed for {0} map(s): {1}" xml:space="preserve"><value>{0}件の地図のEmptor価格再照会に失敗しました：{1}</value></data>
+  <data name="Price hints unavailable: {0}" xml:space="preserve"><value>価格情報を利用できません：{0}</value></data>
+  <data name="Emptor price lookup pending for {0} map(s); one follow-up is scheduled." xml:space="preserve"><value>{0}件の地図のEmptor価格照会が処理中です。再照会を1回予定しています。</value></data>
+  <data name="Price hints unavailable: malformed Emptor response ({0})." xml:space="preserve"><value>価格情報を利用できません：Emptor応答の形式が不正です ({0})。</value></data>
+  <data name="Loaded {0} Emptor price hint(s) for {1}." xml:space="preserve"><value>{1}のEmptor価格情報を{0}件読み込みました。</value></data>
+  <data name="Loaded {0} Emptor price hint(s) for {1}; {2} unavailable." xml:space="preserve"><value>{1}のEmptor価格情報を{0}件読み込みました。{2}件は利用できません。</value></data>
+  <data name="Using built-in city choices because Emptor v4 city IPC is unavailable." xml:space="preserve"><value>Emptor v4の都市IPCを利用できないため、内蔵の都市候補を使用します。</value></data>
+  <data name="Using built-in city choices because Emptor city IPC is unavailable." xml:space="preserve"><value>Emptorの都市IPCを利用できないため、内蔵の都市候補を使用します。</value></data>
+  <data name="Using built-in city choices because Emptor.GetCities returned invalid data: {0}" xml:space="preserve"><value>Emptor.GetCitiesが不正なデータを返したため、内蔵の都市候補を使用します：{0}</value></data>
+  <data name="Emptor price lookup failed: {0}" xml:space="preserve"><value>Emptor価格照会に失敗しました：{0}</value></data>
+  <data name="Emptor price follow-up failed: {0}" xml:space="preserve"><value>Emptor価格再照会に失敗しました：{0}</value></data>
+  <data name="Malformed Emptor price response: {0}" xml:space="preserve"><value>Emptor価格応答の形式が不正です：{0}</value></data>
+  <data name="Emptor price lookup is pending." xml:space="preserve"><value>Emptor価格照会は処理中です。</value></data>
+  <data name="Emptor price lookup was still pending after the required follow-up." xml:space="preserve"><value>必要な再照会後もEmptor価格照会が処理中でした。</value></data>
+  <data name="Emptor returned no price data for this item." xml:space="preserve"><value>Emptorがこのアイテムの価格データを返しませんでした。</value></data>
+  <data name="Emptor returned no price levels for this item." xml:space="preserve"><value>Emptorがこのアイテムの価格範囲を返しませんでした。</value></data>
+  <data name="Emptor returned no {0} price level." xml:space="preserve"><value>Emptorが{0}の価格範囲を返しませんでした。</value></data>
+  <data name="No NQ listings were returned for this scope." xml:space="preserve"><value>この検索範囲のNQ出品が返されませんでした。</value></data>
+  <data name="No positive NQ minimum listing was returned for this scope." xml:space="preserve"><value>この検索範囲の正のNQ最低出品価格が返されませんでした。</value></data>
+  <data name="The NQ minimum listing exceeds Loot Goblin's maximum ceiling." xml:space="preserve"><value>NQ最低出品価格がLoot Goblinの最大上限を超えています。</value></data>
+  <data name="Lost connection - not logged in." xml:space="preserve"><value>接続が切れました - ログインしていません。</value></data>
+  <data name="Timeout in state {0} after {1}s." xml:space="preserve"><value>状態{0}が{1}秒でタイムアウトしました。</value></data>
+  <data name="Holding teleport while {0} ({1:F0}s)..." xml:space="preserve"><value>{0}のためテレポを保留中 ({1:F0}秒)...</value></data>
+  <data name="Outdoor map flow paused while {0} ({1:F0}s)..." xml:space="preserve"><value>{0}のため屋外の地図処理を一時停止中 ({1:F0}秒)...</value></data>
+  <data name="Joined FATE {0} active - landing/dismounting before level sync..." xml:space="preserve"><value>参加中のFATE {0}が進行中 - レベルシンク前に着地／降りています...</value></data>
+  <data name="Teleport blocked by combat - retrying..." xml:space="preserve"><value>戦闘のためテレポできません - 再試行中...</value></data>
+  <data name="Restarting after accepted party teleport offer..." xml:space="preserve"><value>パーティーテレポの承諾後に再開中...</value></data>
+  <data name="Cannot start LootGoblin from Main Menu. Log in first." xml:space="preserve"><value>メインメニューではLootGoblinを開始できません。先にログインしてください。</value></data>
+  <data name="Start preflight: cleared map flag, attempted dismount, waiting 1s..." xml:space="preserve"><value>開始前確認：地図フラグ消去、降りる操作を試行、1秒待機中...</value></data>
+  <data name="Start preflight: waiting {0:0.0}s before start flow..." xml:space="preserve"><value>開始前確認：処理開始まで{0:0.0}秒待機中...</value></data>
+  <data name="Alexandrite: closing purchase UI ({0})..." xml:space="preserve"><value>アレキサンドライト：購入UIを閉じています ({0})...</value></data>
+  <data name="Alexandrite: waiting to open Mysterious Map ({0})..." xml:space="preserve"><value>アレキサンドライト：謎めいた地図を開く処理を待機中 ({0})...</value></data>
+  <data name="Map duty active outside treasure dungeon - recovering coffer/portal..." xml:space="preserve"><value>トレジャーダンジョン外で地図コンテンツ中 - 宝箱／ポータルを復旧中...</value></data>
+  <data name="ADS handoff active - waiting for dungeon to finish..." xml:space="preserve"><value>ADSへ引き継ぎ中 - ダンジョン完了を待機中...</value></data>
+  <data name="Starting in dungeon - looking for chests within 80y..." xml:space="preserve"><value>ダンジョン内から開始 - 80y以内の宝箱を検索中...</value></data>
+  <data name="Repairing gear before starting map run..." xml:space="preserve"><value>地図周回の開始前に装備を修理中...</value></data>
+  <data name="Alexandrite: selecting purchased Mysterious Map..." xml:space="preserve"><value>アレキサンドライト：購入した謎めいた地図を選択中...</value></data>
+  <data name="Selecting one-shot {0}..." xml:space="preserve"><value>単発周回用の{0}を選択中...</value></data>
+  <data name="Starting map run - refreshing saddlebag maps..." xml:space="preserve"><value>地図周回を開始 - チョコボかばんの地図を更新中...</value></data>
+  <data name="Dismounting before combat job switch to {0}..." xml:space="preserve"><value>戦闘ジョブを{0}へ変更する前に降りています...</value></data>
+  <data name="Waiting to switch to combat job: {0}" xml:space="preserve"><value>戦闘ジョブへの変更を待機中：{0}</value></data>
+  <data name="FATE/combat cleared - resuming chest recovery..." xml:space="preserve"><value>FATE／戦闘による中断解除 - 宝箱の復旧を再開中...</value></data>
+  <data name="FATE/combat cleared - returning to known coffer..." xml:space="preserve"><value>FATE／戦闘による中断解除 - 既知の宝箱へ戻っています...</value></data>
+  <data name="FATE/combat cleared - looking for treasure coffer..." xml:space="preserve"><value>FATE／戦闘による中断解除 - 宝箱を検索中...</value></data>
+  <data name="FATE/combat cleared - landing at map target..." xml:space="preserve"><value>FATE／戦闘による中断解除 - 地図の目的地に着地中...</value></data>
+  <data name="FATE/combat cleared - teleporting back to map zone..." xml:space="preserve"><value>FATE／戦闘による中断解除 - 地図のエリアへテレポで帰還中...</value></data>
+  <data name="FATE/combat cleared - flying to active map target..." xml:space="preserve"><value>FATE／戦闘による中断解除 - 進行中の地図の目的地へ飛行中...</value></data>
+  <data name="FATE/combat cleared - remounting for active map target..." xml:space="preserve"><value>FATE／戦闘による中断解除 - 進行中の地図の目的地に向けて再騎乗中...</value></data>
+  <data name="Accepted party teleport - waiting for loading to finish..." xml:space="preserve"><value>パーティーテレポ承諾済み - ロード完了を待機中...</value></data>
+  <data name="Accepted party teleport - waiting for arrival to settle..." xml:space="preserve"><value>パーティーテレポ承諾済み - 到着後の安定を待機中...</value></data>
+  <data name="Accepted party teleport - waiting for teleport handoff..." xml:space="preserve"><value>パーティーテレポ承諾済み - テレポの引き継ぎを待機中...</value></data>
+  <data name="Accepted party teleport - waiting for player to become available..." xml:space="preserve"><value>パーティーテレポ承諾済み - プレイヤーが利用可能になるまで待機中...</value></data>
+  <data name="Could not switch to configured combat job: {0}" xml:space="preserve"><value>設定した戦闘ジョブへ変更できません：{0}</value></data>
+  <data name="Waiting for combat job switch to {0}..." xml:space="preserve"><value>戦闘ジョブの{0}への変更を待機中...</value></data>
+  <data name="Stopped by user ({0})." xml:space="preserve"><value>ユーザーが停止しました ({0})。</value></data>
+  <data name="Full reset by user ({0})." xml:space="preserve"><value>ユーザーが完全リセットしました ({0})。</value></data>
+  <data name="Recovering active map target for {0}..." xml:space="preserve"><value>{0}の進行中の地図の目的地を復旧中...</value></data>
+  <data name="Opening active key-item map '{0}'... ({1:F0}/{2:F0}s)" xml:space="preserve"><value>進行中のキーアイテム地図'{0}'を開いています... ({1:F0}/{2:F0}秒)</value></data>
+  <data name="Ignoring stale completed active key item for {0}..." xml:space="preserve"><value>{0}の完了済みの古いキーアイテムを無視中...</value></data>
+  <data name="Recovered active map target from {0}; teleporting to {1}..." xml:space="preserve"><value>{0}から進行中の地図の目的地を復旧しました。{1}へテレポ中...</value></data>
+  <data name="Skipping market purchase for map {0}: {1}" xml:space="preserve"><value>地図{0}のマーケット購入をスキップ：{1}</value></data>
+  <data name="Skipping market purchase for map {0}: configured city '{1}' requires Emptor API v4 or newer; detected v{2}." xml:space="preserve"><value>地図{0}のマーケット購入をスキップ：設定都市'{1}'にはEmptor API v4以降が必要です。検出：v{2}。</value></data>
+  <data name="Skipping market purchase for map {0}: current world is unavailable." xml:space="preserve"><value>地図{0}のマーケット購入をスキップ：現在のワールドを取得できません。</value></data>
+  <data name="Skipping market purchase for map {0}: no eligible public worlds were found." xml:space="preserve"><value>地図{0}のマーケット購入をスキップ：利用可能な公開ワールドがありません。</value></data>
+  <data name="Lifestream is required for off-world map purchasing: {0}" xml:space="preserve"><value>別ワールドでの地図購入にはLifestreamが必要です：{0}</value></data>
+  <data name="No unlocked World Visit city aetheryte was available (Ul'dah, Gridania, or Limsa Lominsa)." xml:space="preserve"><value>ワールド間テレポ用の開放済み都市エーテライトがありません（ウルダハ、グリダニア、リムサ・ロミンサ）。</value></data>
+  <data name="Waiting to arrive at the World Visit city aetheryte..." xml:space="preserve"><value>ワールド間テレポ用の都市エーテライトへの到着を待機中...</value></data>
+  <data name="Timed out teleporting the party to a World Visit city aetheryte." xml:space="preserve"><value>パーティーのワールド間テレポ用都市エーテライトへのテレポがタイムアウトしました。</value></data>
+  <data name="Party cannot be safely disbanded for world travel: {0}" xml:space="preserve"><value>ワールド移動のためにパーティーを安全に解散できません：{0}</value></data>
+  <data name="Could not issue the party disband command." xml:space="preserve"><value>パーティー解散コマンドを送信できませんでした。</value></data>
+  <data name="Party disband could not be verified; off-world purchasing was not started." xml:space="preserve"><value>パーティー解散を確認できません。別ワールドでの購入は開始していません。</value></data>
+  <data name="Lifestream could not start travel to {0}." xml:space="preserve"><value>Lifestreamが{0}への移動を開始できませんでした。</value></data>
+  <data name="Arrived on {0}; waiting for world travel to settle..." xml:space="preserve"><value>{0}へ到着しました。ワールド移動後の安定を待機中...</value></data>
+  <data name="Timed out traveling to {0}." xml:space="preserve"><value>{0}への移動がタイムアウトしました。</value></data>
+  <data name="Purchase settings for {0} are no longer valid." xml:space="preserve"><value>{0}の購入設定が無効になりました。</value></data>
+  <data name="Emptor returned unknown order state '{0}'." xml:space="preserve"><value>Emptorが不明な注文状態'{0}'を返しました。</value></data>
+  <data name="Emptor order {0} is {1}..." xml:space="preserve"><value>Emptor注文{0}の状態：{1}...</value></data>
+  <data name="Emptor terminal order data was lost." xml:space="preserve"><value>Emptor注文の終了データが失われました。</value></data>
+  <data name="Waiting to verify {0} in inventory..." xml:space="preserve"><value>所持品の{0}の確認を待機中...</value></data>
+  <data name="Emptor purchase failed operationally: {0}." xml:space="preserve"><value>Emptor購入処理に失敗しました：{0}。</value></data>
+  <data name="Emptor purchase failed operationally: {0}. {1}" xml:space="preserve"><value>Emptor購入処理に失敗しました：{0}。{1}</value></data>
+  <data name="Waiting to open saddlebag for map batching: {0}" xml:space="preserve"><value>地図のまとめ準備のためチョコボかばんを開く処理を待機中：{0}</value></data>
+  <data name="Waiting for saddlebag UI during map batching: {0}" xml:space="preserve"><value>地図のまとめ準備中にチョコボかばんUIを待機中：{0}</value></data>
+  <data name="Waiting for stable saddlebag UI during map batching: {0}" xml:space="preserve"><value>地図のまとめ準備中にチョコボかばんUIの安定を待機中：{0}</value></data>
+  <data name="Waiting to store the purchased map: {0}" xml:space="preserve"><value>購入した地図を預ける処理を待機中：{0}</value></data>
+  <data name="Restoring party: {0} captured member(s) still missing..." xml:space="preserve"><value>パーティー再結成中：記録したメンバー{0}人が未加入...</value></data>
+  <data name="Waiting to open saddlebag: {0}" xml:space="preserve"><value>チョコボかばんを開く処理を待機中：{0}</value></data>
+  <data name="Waiting for saddlebag UI: {0}" xml:space="preserve"><value>チョコボかばんUIを待機中：{0}</value></data>
+  <data name="Waiting for saddlebag UI for {0}..." xml:space="preserve"><value>{0}のためチョコボかばんUIを待機中...</value></data>
+  <data name="Waiting for stable saddlebag UI: {0}" xml:space="preserve"><value>チョコボかばんUIの安定を待機中：{0}</value></data>
+  <data name="Waiting for saddlebag UI to stabilize for {0}..." xml:space="preserve"><value>{0}のためチョコボかばんUIの安定を待機中...</value></data>
+  <data name="Waiting for loaded saddlebag source for {0}..." xml:space="preserve"><value>{0}のチョコボかばん内の取得元読み込みを待機中...</value></data>
+  <data name="Waiting to move saddlebag map: {0}" xml:space="preserve"><value>チョコボかばんの地図移動を待機中：{0}</value></data>
+  <data name="Retrieved {0} from saddlebag. Rechecking inventory..." xml:space="preserve"><value>チョコボかばんから{0}を取り出しました。所持品を再確認中...</value></data>
+  <data name="Waiting for {0} saddlebag move confirmation..." xml:space="preserve"><value>{0}のチョコボかばん移動確認を待機中...</value></data>
+  <data name="Could not retrieve {0} from saddlebag: {1}" xml:space="preserve"><value>チョコボかばんから{0}を取り出せません：{1}</value></data>
+  <data name="Waiting to refresh saddlebags: player unavailable..." xml:space="preserve"><value>チョコボかばんの更新を待機中：プレイヤーを取得できません...</value></data>
+  <data name="Opening saddlebag to refresh map sources..." xml:space="preserve"><value>地図の取得元を更新するためチョコボかばんを開いています...</value></data>
+  <data name="Waiting for saddlebag map refresh..." xml:space="preserve"><value>チョコボかばんの地図更新を待機中...</value></data>
+  <data name="Saddlebag map refresh complete." xml:space="preserve"><value>チョコボかばんの地図更新が完了しました。</value></data>
+  <data name="Retainer map retrieved. Rechecking inventory..." xml:space="preserve"><value>リテイナーから地図を取り出しました。所持品を再確認中...</value></data>
+  <data name="Could not retrieve retainer map: {0}" xml:space="preserve"><value>リテイナーから地図を取り出せません：{0}</value></data>
+  <data name="Waiting to gather {0}: {1}" xml:space="preserve"><value>{0}の採集を待機中：{1}</value></data>
+  <data name="Cannot gather {0}: {1}." xml:space="preserve"><value>{0}を採集できません：{1}。</value></data>
+  <data name="Skipping map gathering for {0}: {1}" xml:space="preserve"><value>{0}の地図採集をスキップ：{1}</value></data>
+  <data name="Cannot gather {0}: {1}" xml:space="preserve"><value>{0}を採集できません：{1}</value></data>
+  <data name="Gathering {0}..." xml:space="preserve"><value>{0}を採集中...</value></data>
+  <data name="Gathering missing {0}..." xml:space="preserve"><value>不足している{0}を採集中...</value></data>
+  <data name="Waiting for gather job switch to {0}; current job {1}..." xml:space="preserve"><value>採集ジョブの{0}への変更を待機中。現在のジョブ：{1}...</value></data>
+  <data name="Waiting to switch to gather job: {0}" xml:space="preserve"><value>採集ジョブへの変更を待機中：{0}</value></data>
+  <data name="Waiting for gather job to settle before starting GatherBuddy Reborn for {0}..." xml:space="preserve"><value>{0}のGatherBuddy Reborn開始前に採集ジョブの安定を待機中...</value></data>
+  <data name="Waiting to start GatherBuddy Reborn: {0}" xml:space="preserve"><value>GatherBuddy Rebornの開始を待機中：{0}</value></data>
+  <data name="Gathering {0}: {1}" xml:space="preserve"><value>{0}を採集中：{1}</value></data>
+  <data name="Closing gathering window for {0}..." xml:space="preserve"><value>{0}の採集ウィンドウを閉じています...</value></data>
+  <data name="Waiting to switch back after gathering: {0}" xml:space="preserve"><value>採集後のジョブ復帰を待機中：{0}</value></data>
+  <data name="Gathered {0}, but could not switch back to combat job: {1}" xml:space="preserve"><value>{0}を採集しましたが、戦闘ジョブへ戻せません：{1}</value></data>
+  <data name="player unavailable" xml:space="preserve"><value>プレイヤーを取得できません</value></data>
+  <data name="casting" xml:space="preserve"><value>詠唱中</value></data>
+  <data name="loading" xml:space="preserve"><value>ロード中</value></data>
+  <data name="occupied" xml:space="preserve"><value>操作制限中</value></data>
+  <data name="in combat" xml:space="preserve"><value>戦闘中</value></data>
+  <data name="in combat during joined FATE {0}" xml:space="preserve"><value>参加中のFATE {0}で戦闘中</value></data>
+  <data name="map target" xml:space="preserve"><value>地図の目的地</value></data>
+  <data name="coffer" xml:space="preserve"><value>宝箱</value></data>
+  <data name="displaced coffer" xml:space="preserve"><value>位置がずれた宝箱</value></data>
+  <data name="captured coffer" xml:space="preserve"><value>記録済みの宝箱</value></data>
+  <data name="missing coffer flag" xml:space="preserve"><value>見つからない宝箱のフラグ</value></data>
+  <data name="combat recovery flag" xml:space="preserve"><value>戦闘復旧用フラグ</value></data>
+  <data name="coffer flag fallback" xml:space="preserve"><value>宝箱フラグへの代替処理</value></data>
+  <data name="portal flag fallback" xml:space="preserve"><value>ポータルフラグへの代替処理</value></data>
+  <data name="Gathered {0}; starting one-shot map run..." xml:space="preserve"><value>{0}を採集しました。単発の地図周回を開始中...</value></data>
+  <data name="Gathered {0}." xml:space="preserve"><value>{0}を採集しました。</value></data>
+  <data name="Gathered {0}; rechecking maps..." xml:space="preserve"><value>{0}を採集しました。地図を再確認中...</value></data>
+  <data name="Could not gather {0}: {1}" xml:space="preserve"><value>{0}を採集できませんでした：{1}</value></data>
+  <data name="Nudging forward after repeated vnav path failures..." xml:space="preserve"><value>vnav経路失敗が続いたため少し前進中...</value></data>
+  <data name="Nudging forward after repeated vnav path failures... ({0:F1}s)" xml:space="preserve"><value>vnav経路失敗が続いたため少し前進中... ({0:F1}秒)</value></data>
+  <data name="Coffer was too far to open - re-approaching..." xml:space="preserve"><value>宝箱が遠すぎて開けません - 再接近中...</value></data>
+  <data name="Portal was too far - waiting for targetable portal..." xml:space="preserve"><value>ポータルが遠すぎます - 選択可能なポータルを待機中...</value></data>
+  <data name="Portal was too far - approaching targetable portal..." xml:space="preserve"><value>ポータルが遠すぎます - 選択可能なポータルへ接近中...</value></data>
+  <data name="Portal was too far - ground-approaching closer..." xml:space="preserve"><value>ポータルが遠すぎます - 地上から接近中...</value></data>
+  <data name="Flying to current map flag after vnav flyto failure..." xml:space="preserve"><value>vnav flyto失敗後、現在の地図フラグへ飛行中...</value></data>
+  <data name="Reissuing explicit XYZ after vnav flyto failure..." xml:space="preserve"><value>vnav flyto失敗後、明示的なXYZ座標を再送中...</value></data>
+  <data name="vnav flyto failed and no current map flag or explicit XYZ target is available." xml:space="preserve"><value>vnav flytoが失敗し、現在の地図フラグも明示的なXYZ目標もありません。</value></data>
+  <data name="Recovering {0}: re-pathing ({1:F1}y)..." xml:space="preserve"><value>{0}を復旧中：経路を再計算 ({1:F1}y)...</value></data>
+  <data name="{0}: stuck {1} - teleporting to nearest aetheryte..." xml:space="preserve"><value>{0}：{1}で停止 - 最寄りのエーテライトへテレポ中...</value></data>
+  <data name="Landing by /mount toggle... ({0:F0}s)" xml:space="preserve"><value>/mountの切り替えで着地中... ({0:F0}秒)</value></data>
+  <data name="Waiting for treasure coffer after dig... ({0:F1}s)" xml:space="preserve"><value>採掘後の宝箱を待機中... ({0:F1}秒)</value></data>
+  <data name="Looking for treasure coffer to interact..." xml:space="preserve"><value>操作する宝箱を検索中...</value></data>
+  <data name="Porta Praetoria takeoff nudge waiting for map target..." xml:space="preserve"><value>Porta Praetoriaの離陸補助で地図の目的地を待機中...</value></data>
+  <data name="Porta Praetoria takeoff nudge waiting for mounted player readiness..." xml:space="preserve"><value>Porta Praetoriaの離陸補助で騎乗中プレイヤーの準備を待機中...</value></data>
+  <data name="Porta Praetoria takeoff nudge toward {0} ({1:F1}s)..." xml:space="preserve"><value>Porta Praetoriaの離陸補助で{0}へ移動中 ({1:F1}秒)...</value></data>
+  <data name="Porta Praetoria takeoff nudge complete; preparing vnav flight..." xml:space="preserve"><value>Porta Praetoriaの離陸補助完了。vnav飛行を準備中...</value></data>
+  <data name="Thief-map water travel: remounting before far target..." xml:space="preserve"><value>盗賊の地図の水上移動：遠い目標に向けて再騎乗中...</value></data>
+  <data name="Thief-map water recovery: remounting before travel..." xml:space="preserve"><value>盗賊の地図の水上復旧：移動前に再騎乗中...</value></data>
+  <data name="Holding Lochs thief-map dive entry... (entry {0:F1}y, target {1:F1}y)" xml:space="preserve"><value>Lochsの盗賊の地図の潜水開始位置を維持中... (入口{0:F1}y、目標{1:F1}y)</value></data>
+  <data name="Waiting for Lochs thief-map dive recovery... (entry {0:F1}y, target {1:F1}y)" xml:space="preserve"><value>Lochsの盗賊の地図の潜水復旧を待機中... (入口{0:F1}y、目標{1:F1}y)</value></data>
+  <data name="Descending for underwater thief-map trigger..." xml:space="preserve"><value>盗賊の地図の水中トリガーに向けて下降中...</value></data>
+  <data name="Moving to surfaced thief-map flag X/Z... ({0:F1}y)" xml:space="preserve"><value>水面の盗賊の地図フラグX/Zへ移動中... ({0:F1}y)</value></data>
+  <data name="Waiting for mount state before thief-map dig... ({0:F1}y XZ)" xml:space="preserve"><value>盗賊の地図の採掘前に騎乗状態を待機中... ({0:F1}y XZ)</value></data>
+  <data name="Descending for non-diving thief-map landing... ({0:F1}y XZ)" xml:space="preserve"><value>潜水なしの盗賊の地図着地に向けて下降中... ({0:F1}y XZ)</value></data>
+  <data name="Waiting for thief-map landing to settle... (Y change {0:F1}y)" xml:space="preserve"><value>盗賊の地図の着地後の安定を待機中... (Y変化{0:F1}y)</value></data>
+  <data name="Confirming thief-map landing settle... ({0:F1}/{1:F1}s)" xml:space="preserve"><value>盗賊の地図の着地安定を確認中... ({0:F1}/{1:F1}秒)</value></data>
+  <data name="Waiting for safe non-diving thief-map landing before retry dig..." xml:space="preserve"><value>盗賊の地図で潜水せず安全に着地してから再度ディグします...</value></data>
+  <data name="Thief-map recovery: returning to landing before dig..." xml:space="preserve"><value>盗賊の地図の復帰：ディグ前に着地点へ戻っています...</value></data>
+  <data name="Waiting after underwater XYZ dig retry" xml:space="preserve"><value>水中XYZディグ再試行後の待機中</value></data>
+  <data name="Waiting before underwater XYZ dig retry" xml:space="preserve"><value>水中XYZディグ再試行前の待機中</value></data>
+  <data name="Underwater XYZ dig retry {0}/{1}..." xml:space="preserve"><value>水中XYZディグ再試行 {0}/{1}...</value></data>
+  <data name="Waiting for underwater thief-map player position..." xml:space="preserve"><value>水中の盗賊の地図でプレイヤー位置を待っています...</value></data>
+  <data name="Waiting for underwater thief-map flag target..." xml:space="preserve"><value>水中の盗賊の地図でフラッグの目的地を待っています...</value></data>
+  <data name="Swimming to underwater flag X/Z... ({0:F1}y)" xml:space="preserve"><value>水中フラッグのX/Zへ泳いでいます... ({0:F1}y)</value></data>
+  <data name="Holding underwater thief-map trigger..." xml:space="preserve"><value>水中の盗賊の地図のトリガーを維持しています...</value></data>
+  <data name="Resetting camera before interacting with &apos;{0}&apos;..." xml:space="preserve"><value>「{0}」への操作前にカメラをリセットしています...</value></data>
+  <data name="Waiting briefly for camera reset before interacting with &apos;{0}&apos;..." xml:space="preserve"><value>「{0}」への操作前にカメラのリセットを少し待っています...</value></data>
+  <data name="In combat - waiting to return to coffer XYZ ({0:F1}y)..." xml:space="preserve"><value>戦闘中 - 宝箱のXYZへ戻るまで待機しています ({0:F1}y)...</value></data>
+  <data name="Returning to captured coffer XYZ ({0:F1}y)..." xml:space="preserve"><value>記録した宝箱のXYZへ戻っています ({0:F1}y)...</value></data>
+  <data name="Waiting for player during {0} flag fallback..." xml:space="preserve"><value>{0}のフラッグ代替移動でプレイヤーを待っています...</value></data>
+  <data name="In combat - pausing {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>戦闘中 - {0}のフラッグ代替移動を一時停止しています ({1:F1}y)...</value></data>
+  <data name="Mounting for {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>{0}のフラッグ代替移動のためマウントしています ({1:F1}y)...</value></data>
+  <data name="Flying to {0} flag fallback ({1:F1}y)..." xml:space="preserve"><value>{0}の代替フラッグへ飛行しています ({1:F1}y)...</value></data>
+  <data name="Dismounting near &apos;{0}&apos; for ground approach ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>「{0}」付近で地上接近のため降りています ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Ground-approaching nearby coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>近くの宝箱「{0}」へ地上で接近しています ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Ground approach failed for &apos;{0}&apos; ({1:F1}y) - preparing mounted recovery..." xml:space="preserve"><value>「{0}」への地上接近に失敗 ({1:F1}y) - マウントでの復帰を準備しています...</value></data>
+  <data name="Ground-approaching nearby coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y, {3:F0}s)..." xml:space="preserve"><value>近くの宝箱「{0}」へ地上で接近しています ({1:F1}y, Y {2:F1}y, {3:F0}s)...</value></data>
+  <data name="Waiting for combat to end before coffer recovery ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>宝箱の復帰前に戦闘終了を待っています ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Mounting before coffer recovery ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>宝箱の復帰前にマウントしています ({0:F1}y, Y {1:F1}y)...</value></data>
+  <data name="Dismounting near &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>「{0}」付近で降りています ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Landing at &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>「{0}」へ着地しています ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Waiting to interact with &apos;{0}&apos; ({1})..." xml:space="preserve"><value>「{0}」への操作を待っています ({1})...</value></data>
+  <data name="Interacting with &apos;{0}&apos; after recovery ({1:F1}y)..." xml:space="preserve"><value>復帰後に「{0}」へ操作しています ({1:F1}y)...</value></data>
+  <data name="Flying to displaced coffer &apos;{0}&apos; ({1:F1}y, Y {2:F1}y)..." xml:space="preserve"><value>位置がずれた宝箱「{0}」へ飛行しています ({1:F1}y, Y {2:F1}y)...</value></data>
+  <data name="Waiting for coffer to become targetable ({0:F1}y)..." xml:space="preserve"><value>宝箱がターゲット可能になるまで待っています ({0:F1}y)...</value></data>
+  <data name="In combat - waiting to recover missing coffer ({0:F1}y from flag)..." xml:space="preserve"><value>戦闘中 - 消えた宝箱の復帰を待っています (フラッグから{0:F1}y)...</value></data>
+  <data name="In combat - waiting to recover missing coffer..." xml:space="preserve"><value>戦闘中 - 消えた宝箱の復帰を待っています...</value></data>
+  <data name="Mounting to return to flag and recover coffer ({0:F1}y XZ)..." xml:space="preserve"><value>フラッグへ戻り宝箱を復帰するためマウントしています ({0:F1}y XZ)...</value></data>
+  <data name="({0:F0}s, moved {1:F1}y)..." xml:space="preserve"><value>（{0:F0}秒、移動{1:F1}y）...</value></data>
+  <data name="[{0}] Flying to {1} ({2}) XYZ: {3}" xml:space="preserve"><value>［{0}］{1}へ飛行（{2}）XYZ：{3}</value></data>
+  <data name="[Ground] Location {0}/{1}: {2} ({3:F0}y)" xml:space="preserve"><value>［地上］地点{0}/{1}：{2}（{3:F0}y）</value></data>
+  <data name="[Ground] Teleporting to {0}..." xml:space="preserve"><value>［地上］{0}へテレポ...</value></data>
+  <data name="[Underwater {0}] Flying to {1} XYZ: {2}" xml:space="preserve"><value>［水中{0}］{1}へ移動、XYZ：{2}</value></data>
+  <data name="{0} Durability {1}%/{2}%." xml:space="preserve"><value>{0} 耐久度{1}%/{2}%。</value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s" xml:space="preserve"><value>{0} ADS修理を{1:F1}秒後に再試行</value></data>
+  <data name="{0}/{1} mounted, {2:F0}s elapsed)..." xml:space="preserve"><value>騎乗{0}/{1}、{2:F0}秒経過）...</value></data>
+  <data name="ADS handoff pending - waiting for ownership... ({0:F0}s, {1}/{2})" xml:space="preserve"><value>ADS引き継ぎ、制御取得待機（{0:F0}秒、{1}/{2}）...</value></data>
+  <data name="ADS handoff pending - waiting for ownership... ({0:F0}s, status unavailable)" xml:space="preserve"><value>ADS引き継ぎ、制御取得待機（{0:F0}秒、状態取得不可）...</value></data>
+  <data name="ADS leave requested - waiting for duty exit..." xml:space="preserve"><value>ADS退出要求済み、退出を待機...</value></data>
+  <data name="ADS leave requested - waiting for duty exit... ({0:F0}s, {1})" xml:space="preserve"><value>ADS退出要求済み、退出を待機 ({0:F0}s, {1})...</value></data>
+  <data name="ADS ownership was seen - waiting for readable status... ({0:F0}s)" xml:space="preserve"><value>ADS制御を確認、状態取得待機（{0:F0}秒）...</value></data>
+  <data name="ADS owns the duty - waiting for completion... ({0:F0}s, {1})" xml:space="preserve"><value>ADS進行中、完了待機（{0:F0}秒、{1}）...</value></data>
+  <data name="ADS released ownership - stopping ADS and leaving duty..." xml:space="preserve"><value>ADS制御終了、ADSを停止して退出...</value></data>
+  <data name="ADS repair requested ({0}) - waiting for ADS status... ({1:F0}s)" xml:space="preserve"><value>ADS修理（{0}）要求済み、状態待機（{1:F0}秒）...</value></data>
+  <data name="ADS repair requested ({0}) - waiting for utility start... ({1:F0}s)" xml:space="preserve"><value>ADS修理（{0}）要求済み、ツール開始待機（{1:F0}秒）...</value></data>
+  <data name="ADS repair requested ({0}); durability {1}% below threshold {2}%..." xml:space="preserve"><value>ADS修理（{0}）、耐久度{1}%は基準{2}%未満...</value></data>
+  <data name="ADS repair running ({0})... ({1:F0}s, {2})" xml:space="preserve"><value>ADS修理中（{0}）...（{1:F0}秒、{2}）</value></data>
+  <data name="Alexandrite {0}/{1}: Confirming map purchase..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：地図購入を確認中...</value></data>
+  <data name="Alexandrite {0}/{1}: Dismounting at Auriana..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：オーリアナ前で降りる...</value></data>
+  <data name="Alexandrite {0}/{1}: Mounting for Auriana..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：オーリアナへ移動するため騎乗...</value></data>
+  <data name="Alexandrite {0}/{1}: Returning to Revenant's Toll..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：レヴナンツトールへ帰還...</value></data>
+  <data name="Alexandrite {0}/{1}: Riding to Auriana..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：オーリアナへ騎乗移動...</value></data>
+  <data name="Alexandrite {0}/{1}: Talking to Auriana..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：オーリアナと会話...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for area load..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：エリア読込待機...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for arrival settle..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：到着の安定を待機...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for cast lock..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：詠唱ロック解除待機...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for Mor Dhona..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：モードゥナ到着待機...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for mount..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：騎乗待機...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player position..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：プレイヤー座標待機...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player readiness..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：プレイヤー準備待機...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for player..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：プレイヤー待機...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for purchase confirmation..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：購入確認待機...</value></data>
+  <data name="Alexandrite {0}/{1}: Waiting for purchased map..." xml:space="preserve"><value>アレキサンドライト{0}/{1}：購入した地図を待機...</value></data>
+  <data name="All party members mounted!" xml:space="preserve"><value>全員騎乗完了！</value></data>
+  <data name="Approaching '{0}' ({1:F1}y away)..." xml:space="preserve"><value>「{0}」へ接近（{1:F1}y）...</value></data>
+  <data name="Approaching captured portal XYZ {0} ({1:F1}y)..." xml:space="preserve"><value>記録済みポータル座標{0}へ接近（{1:F1}y）...</value></data>
+  <data name="Approaching portal XYZ {0} ({1:F1}y)..." xml:space="preserve"><value>ポータル座標{0}へ接近（{1:F1}y）...</value></data>
+  <data name="Approaching+interacting '{0}' ({1:F1}y, attempt #{2})..." xml:space="preserve"><value>「{0}」に接近して操作（{1:F1}y、試行{2}）...</value></data>
+  <data name="At captured portal XYZ - waiting for targetable portal... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>記録済みポータル座標、選択可能まで待機（{0:F0}/{1:F0}秒）...</value></data>
+  <data name="Combat detected, waiting aborted." xml:space="preserve"><value>戦闘を検出、待機中止。</value></data>
+  <data name="Combat ended - waiting for despawn... ({0:F1}/2.0s)" xml:space="preserve"><value>戦闘終了、消滅待機（{0:F1}/2.0秒）...</value></data>
+  <data name="Combat ended - waiting to retry dig... ({0:F1}/3.0s)" xml:space="preserve"><value>戦闘終了、再発掘待機（{0:F1}/3.0秒）...</value></data>
+  <data name="Confirming dungeon entry..." xml:space="preserve"><value>ダンジョン入場を確認...</value></data>
+  <data name="Cycling aetherytes ({0}/{1}): {2}" xml:space="preserve"><value>エーテライト巡回（{0}/{1}）：{2}</value></data>
+  <data name="danger detected outside outdoor flow" xml:space="preserve"><value>屋外進行以外で危険を検出</value></data>
+  <data name="Descent mode... (Y change: {0:F1}y, {1:F0}s)" xml:space="preserve"><value>降下モード（Y変化{0:F1}y、{1:F0}秒）...</value></data>
+  <data name="Dismounting at '{0}' ({1:F1}y)..." xml:space="preserve"><value>「{0}」で降りる（{1:F1}y）...</value></data>
+  <data name="Dismounting for portal close nudge ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>ポータル微調整のため降りる（{0:F1}y、Y {1:F1}y）...</value></data>
+  <data name="Dismounting for portal ground approach ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>地上からポータルへ接近するため降りる（{0:F1}y、Y {1:F1}y）...</value></data>
+  <data name="Door opened - settling before walk-through..." xml:space="preserve"><value>扉が開きました、通過前に待機...</value></data>
+  <data name="Door transition ready - settling briefly..." xml:space="preserve"><value>扉の遷移準備完了、少し待機...</value></data>
+  <data name="Duty completed - {0} exit in {1:F0}s..." xml:space="preserve"><value>コンテンツ完了、{0}で退出まで{1:F0}秒...</value></data>
+  <data name="Duty completed - party exit grace period ({0:F0}s)..." xml:space="preserve"><value>コンテンツ完了、パーティ退出猶予（{0:F0}秒）...</value></data>
+  <data name="Duty completed - preparing configured exit..." xml:space="preserve"><value>コンテンツ完了、設定した退出を準備...</value></data>
+  <data name="Duty completed - waiting for {0} other party member(s) to leave..." xml:space="preserve"><value>コンテンツ完了、他{0}人の退出を待機...</value></data>
+  <data name="Duty completed - waiting for combat to end before exit..." xml:space="preserve"><value>コンテンツ完了、退出前に戦闘終了を待機...</value></data>
+  <data name="Duty completed - waiting for manual exit..." xml:space="preserve"><value>コンテンツ完了、手動退出を待機...</value></data>
+  <data name="Duty completed - waiting for party status..." xml:space="preserve"><value>コンテンツ完了、パーティ状態を待機...</value></data>
+  <data name="Duty exit requested - waiting to leave duty..." xml:space="preserve"><value>退出要求済み、コンテンツ退出待機...</value></data>
+  <data name="Fallback descent... ({0:F0}s)" xml:space="preserve"><value>代替降下（{0:F0}秒）...</value></data>
+  <data name="Floor {0} - scanning for objects... ({1:F0}s)" xml:space="preserve"><value>第{0}層、オブジェクト探索（{1:F0}秒）...</value></data>
+  <data name="Gear durability {0}% below {1}% - teleporting to {2} for ADS repair..." xml:space="preserve"><value>耐久度{0}%が{1}%未満、ADS修理で{2}へテレポ...</value></data>
+  <data name="Ground-approaching portal ({0:F1}y, XZ {1:F1}y, Y {2:F1}y, {3:F0}s)..." xml:space="preserve"><value>ポータルへ地上接近（{0:F1}y、XZ {1:F1}y、Y {2:F1}y、{3:F0}秒）...</value></data>
+  <data name="Ground-approaching portal ({0:F1}y, Y {1:F1}y)..." xml:space="preserve"><value>ポータルへ地上接近（{0:F1}y、Y {1:F1}y）...</value></data>
+  <data name="Ground-nudging closer to portal ({0:F1}y, XZ {1:F1}y)..." xml:space="preserve"><value>地上でポータルへ微接近（{0:F1}y、XZ {1:F1}y）...</value></data>
+  <data name="In combat - waiting ({0:F1}y from '{1}')..." xml:space="preserve"><value>戦闘中、待機（「{1}」から{0:F1}y）...</value></data>
+  <data name="In combat - waiting before portal ground approach ({0:F1}y)..." xml:space="preserve"><value>戦闘中、地上ポータル接近を待機（{0:F1}y）...</value></data>
+  <data name="In combat - waiting to recover chest ({0:F1}y XZ from flag)..." xml:space="preserve"><value>戦闘中、宝箱復旧待機（旗から{0:F1}y XZ）...</value></data>
+  <data name="In combat - waiting to recover chest..." xml:space="preserve"><value>戦闘中、宝箱復旧待機...</value></data>
+  <data name="In combat on floor {0} - BMR handling..." xml:space="preserve"><value>第{0}層で戦闘中、BMRが処理...</value></data>
+  <data name="In combat on floor {0} - waiting..." xml:space="preserve"><value>第{0}層で戦闘中、待機...</value></data>
+  <data name="Interacting with '{0}' - waiting for portal..." xml:space="preserve"><value>「{0}」を操作、ポータル待機...</value></data>
+  <data name="Interacting with '{0}' ({1:F1}y, attempt #{2})..." xml:space="preserve"><value>「{0}」を操作（{1:F1}y、試行{2}）...</value></data>
+  <data name="Interacting with portal ({0:F1}y)..." xml:space="preserve"><value>ポータルを操作（{0:F1}y）...</value></data>
+  <data name="Joined FATE {0} active - holding chest recovery during {1} ({2:F0}s)..." xml:space="preserve"><value>参加FATE {0}進行中、{1}で宝箱復旧保留（{2:F0}秒）...</value></data>
+  <data name="Joined FATE {0} active - holding portal recovery during {1} ({2:F0}s)..." xml:space="preserve"><value>参加FATE {0}進行中、{1}でポータル復旧保留（{2:F0}秒）...</value></data>
+  <data name="joined FATE {0} combat automation active" xml:space="preserve"><value>参加FATE {0}の戦闘自動化中</value></data>
+  <data name="Joined FATE cleared - settling before chest/portal recovery..." xml:space="preserve"><value>参加FATE終了、宝箱・ポータル復旧前に安定待機...</value></data>
+  <data name="Landing at portal ({0:F1}y)..." xml:space="preserve"><value>ポータルで着地（{0:F1}y）...</value></data>
+  <data name="Lifestream rejected repair teleport to {0}: {1}. Retrying ({2})..." xml:space="preserve"><value>Lifestreamが修理テレポ先{0}を拒否：{1}。再試行（{2}）...</value></data>
+  <data name="Loading dungeon room..." xml:space="preserve"><value>ダンジョンの部屋を読込中...</value></data>
+  <data name="Loading..." xml:space="preserve"><value>読込中...</value></data>
+  <data name="Location {0}/{1}: {2} ({3:F0}s)" xml:space="preserve"><value>地点{0}/{1}：{2}（{3:F0}秒）</value></data>
+  <data name="Looking for door/progression on floor {0}... ({1:F0}s)" xml:space="preserve"><value>第{0}層で扉・進行先探索（{1:F0}秒）...</value></data>
+  <data name="MANUAL CONTROL - Location {0}/{1}: {2}" xml:space="preserve"><value>手動操作、地点{0}/{1}：{2}</value></data>
+  <data name="Map duty active in territory {0} - continuing portal interaction..." xml:space="preserve"><value>エリア{0}で地図コンテンツ進行中、ポータル操作継続...</value></data>
+  <data name="Map duty active in territory {0} - recovering coffer/portal..." xml:space="preserve"><value>エリア{0}で地図コンテンツ進行中、宝箱・ポータル復旧...</value></data>
+  <data name="Map duty active in territory {0} - waiting for duty to clear..." xml:space="preserve"><value>エリア{0}で地図コンテンツ進行中、終了待機...</value></data>
+  <data name="Map duty active in territory {0} - waiting for treasure dungeon territory..." xml:space="preserve"><value>エリア{0}で地図コンテンツ進行中、宝物庫エリア待機...</value></data>
+  <data name="Mounting (attempt {0}/5)..." xml:space="preserve"><value>騎乗（試行{0}/5）...</value></data>
+  <data name="Mounting before portal fly approach..." xml:space="preserve"><value>ポータルへ飛行するため騎乗...</value></data>
+  <data name="Mounting to return to flag after combat ({0:F1}y XZ)..." xml:space="preserve"><value>戦闘後、旗へ戻るため騎乗（{0:F1}y XZ）...</value></data>
+  <data name="Moving forward to trigger area shift... ({0:F0}/10s)" xml:space="preserve"><value>エリア遷移のため前進（{0:F0}/10秒）...</value></data>
+  <data name="Navigating through door transition ({0:F1}y)..." xml:space="preserve"><value>扉の遷移を通過（{0:F1}y）...</value></data>
+  <data name="Navigating to '{0}' ({1:F1}y, {2:F0}s)..." xml:space="preserve"><value>「{0}」へ経路移動（{1:F1}y、{2:F0}秒）...</value></data>
+  <data name="Navigating to dungeon start ({0:F1}y)..." xml:space="preserve"><value>ダンジョン開始位置へ移動（{0:F1}y）...</value></data>
+  <data name="No nearby repair NPC for ADS {0}; continuing map flow." xml:space="preserve"><value>ADS {0}の近くに修理NPCなし、地図進行継続。</value></data>
+  <data name="Normal dismount... ({0:F0}s)" xml:space="preserve"><value>通常降車（{0:F0}秒）...</value></data>
+  <data name="Observing Higher/Lower puzzle..." xml:space="preserve"><value>ハイ＆ローを観察中...</value></data>
+  <data name="Opening Duty Finder to leave duty..." xml:space="preserve"><value>退出のためコンテンツファインダーを開く...</value></data>
+  <data name="Party snapshot unavailable." xml:space="preserve"><value>パーティ情報取得不可。</value></data>
+  <data name="Playing Higher/Lower stage {0}: {1}..." xml:space="preserve"><value>ハイ＆ロー第{0}段階：{1}...</value></data>
+  <data name="Portal accepted - loading treasure dungeon territory from {0}..." xml:space="preserve"><value>ポータル受諾、{0}から宝物庫エリア読込...</value></data>
+  <data name="Portal accepted - waiting for loading to finish..." xml:space="preserve"><value>ポータル受諾、読込完了待機...</value></data>
+  <data name="Portal accepted - waiting for treasure dungeon territory..." xml:space="preserve"><value>ポータル受諾、宝物庫エリア待機...</value></data>
+  <data name="Portal close nudge waiting for local player..." xml:space="preserve"><value>ポータル微接近、ローカルプレイヤー待機...</value></data>
+  <data name="Portal ground approach failed ({0:F1}y) - preparing mounted recovery..." xml:space="preserve"><value>ポータル地上接近失敗（{0:F1}y）、騎乗復旧を準備...</value></data>
+  <data name="Portal still active - continuing portal interaction..." xml:space="preserve"><value>ポータル有効、操作継続...</value></data>
+  <data name="Preparing to mount ({0}s)..." xml:space="preserve"><value>騎乗準備（{0}秒）...</value></data>
+  <data name="Pushing through door transition ({0:F0}s)..." xml:space="preserve"><value>扉の遷移を通過するため前進（{0:F0}秒）...</value></data>
+  <data name="Recovering missing coffer (retry {0}/{1})..." xml:space="preserve"><value>消えた宝箱を復旧（再試行{0}/{1}）...</value></data>
+  <data name="Recovering missing coffer near flag ({0:F1}y XZ, retry {1}/{2})..." xml:space="preserve"><value>旗付近で消えた宝箱を復旧（{0:F1}y XZ、再試行{1}/{2}）...</value></data>
+  <data name="Reopening Higher/Lower puzzle (attempt {0})..." xml:space="preserve"><value>ハイ＆ローを再度開く（試行{0}）...</value></data>
+  <data name="restored: {0}" xml:space="preserve"><value>復元：{0}</value></data>
+  <data name="Retrying dig after combat ({0:F1}y XZ from flag)..." xml:space="preserve"><value>戦闘後に再発掘（旗から{0:F1}y XZ）...</value></data>
+  <data name="Retrying dig for missing coffer ({0}/{1})..." xml:space="preserve"><value>消えた宝箱のため再発掘（{0}/{1}）...</value></data>
+  <data name="Retrying in {0:F1}s" xml:space="preserve"><value>{0:F1}秒後に再試行</value></data>
+  <data name="Returning to flag after combat ({0:F1}y XZ)..." xml:space="preserve"><value>戦闘後、旗へ戻る（{0:F1}y XZ）...</value></data>
+  <data name="Returning to flag to recover coffer ({0:F1}y XZ)..." xml:space="preserve"><value>旗へ戻って宝箱復旧（{0:F1}y XZ）...</value></data>
+  <data name="Running Loot Goblin Leave Duty sequence..." xml:space="preserve"><value>Loot Goblin退出手順を実行...</value></data>
+  <data name="Searching for portal... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>ポータル探索（{0:F0}/{1:F0}秒）...</value></data>
+  <data name="Still trying to land by /mount toggle... ({0:F0}s)" xml:space="preserve"><value>/mountで着地を継続試行（{0:F0}秒）...</value></data>
+  <data name="Teleporting to {0} for ADS repair..." xml:space="preserve"><value>ADS修理で{0}へテレポ...</value></data>
+  <data name="Teleporting to {0} for ADS repair... ({1:F0}s)" xml:space="preserve"><value>ADS修理で{0}へテレポ ({1:F0}s)...</value></data>
+  <data name="Teleporting to {0}..." xml:space="preserve"><value>{0}へテレポ...</value></data>
+  <data name="Teleporting... ({0:F0}s)" xml:space="preserve"><value>テレポ中（{0:F0}秒）...</value></data>
+  <data name="Teleporting... settling ({0:F0}s)" xml:space="preserve"><value>テレポ、到着安定待機（{0:F0}秒）...</value></data>
+  <data name="Teleporting... waiting for area load ({0:F0}s)" xml:space="preserve"><value>テレポ、エリア読込待機（{0:F0}秒）...</value></data>
+  <data name="Teleporting... waiting for cast lock to clear ({0:F0}s)" xml:space="preserve"><value>テレポ、詠唱ロック解除待機（{0:F0}秒）...</value></data>
+  <data name="Teleporting... waiting for player after load ({0:F0}s)" xml:space="preserve"><value>テレポ、読込後のプレイヤー待機（{0:F0}秒）...</value></data>
+  <data name="Teleporting... waiting for target territory ({0:F0}s)" xml:space="preserve"><value>テレポ、目的エリア待機（{0:F0}秒）...</value></data>
+  <data name="Thief-map remount: waiting for party to mount ({0}/{1} required mounted others, {2:F0}s elapsed)..." xml:space="preserve"><value>盗賊地図の再騎乗、パーティ騎乗待機（必要な他メンバー{0}/{1}、{2:F0}秒）...</value></data>
+  <data name="Thief-map remount: waiting for party zone load ({0}/{1} mounted, {2:F0}s elapsed{3})..." xml:space="preserve"><value>盗賊地図の再騎乗、パーティエリア読込待機（騎乗{0}/{1}、{2:F0}秒{3}）...</value></data>
+  <data name="Timeout waiting for mounts after {0}s." xml:space="preserve"><value>騎乗待機が{0}秒で時間切れ。</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff seam..." xml:space="preserve"><value>宝物庫エリア{0}を検出、安全なADS引き継ぎ点待機...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff seam... ({1})" xml:space="preserve"><value>宝物庫エリア{0}を検出、安全なADS引き継ぎ点待機 ({1})...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for ADS-safe handoff settle..." xml:space="preserve"><value>宝物庫エリア{0}を検出、ADS引き継ぎ安定待機...</value></data>
+  <data name="Treasure dungeon territory {0} detected - waiting for loading to finish before ADS handoff..." xml:space="preserve"><value>宝物庫エリア{0}を検出、ADS引き継ぎ前に読込完了待機...</value></data>
+  <data name="Trying Higher/Lower callback attempt {0}..." xml:space="preserve"><value>ハイ＆ローのコールバック試行{0}...</value></data>
+  <data name="Waiting {0:F1}s before repair teleport {1} to {2}..." xml:space="preserve"><value>修理テレポ{1}で{2}へ移動前に{0:F1}秒待機...</value></data>
+  <data name="Waiting before teleporting... ({0:F0}s / {1}s)" xml:space="preserve"><value>テレポ前に待機（{0:F0}秒／{1}秒）...</value></data>
+  <data name="Waiting for all {0} members to mount..." xml:space="preserve"><value>全{0}人の騎乗待機...</value></data>
+  <data name="Waiting for captured portal approach... ({0:F0}/{1:F0}s)" xml:space="preserve"><value>記録済みポータル接近待機（{0:F0}/{1:F0}秒）...</value></data>
+  <data name="Waiting for character ready (dungeon start)..." xml:space="preserve"><value>ダンジョン開始時の準備待機...</value></data>
+  <data name="Waiting for chest after combat dig... ({0:F1}/5.0s)" xml:space="preserve"><value>戦闘後の発掘で宝箱待機（{0:F1}/5.0秒）...</value></data>
+  <data name="Waiting for chest after combat... ({0:F1}/5.0s)" xml:space="preserve"><value>戦闘後の宝箱待機（{0:F1}/5.0秒）...</value></data>
+  <data name="Waiting for chest to reappear... ({0:F1}/5.0s)" xml:space="preserve"><value>宝箱の再出現待機（{0:F1}/5.0秒）...</value></data>
+  <data name="Waiting for coffer after dig... ({0:F1}/{1:F1}s)" xml:space="preserve"><value>発掘後の宝箱待機（{0:F1}/{1:F1}秒）...</value></data>
+  <data name="Waiting for combat to end before portal fly approach..." xml:space="preserve"><value>ポータルへ飛行する前に戦闘終了待機...</value></data>
+  <data name="Waiting for door cutscene/loading to clear..." xml:space="preserve"><value>扉のカットシーン・読込終了待機...</value></data>
+  <data name="Waiting for door transition cutscene/loading to clear..." xml:space="preserve"><value>扉の遷移カットシーン・読込終了待機...</value></data>
+  <data name="Waiting for dungeon objects to activate ({0:F0}/30s)..." xml:space="preserve"><value>ダンジョンオブジェクト有効化待機（{0:F0}/30秒）...</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen," xml:space="preserve"><value>完全なパーティ情報待機（他メンバー{0}/{1}人確認、</value></data>
+  <data name="Waiting for Higher/Lower puzzle after exhausting callback attempts..." xml:space="preserve"><value>コールバック試行終了後、ハイ＆ロー待機...</value></data>
+  <data name="Waiting for Higher/Lower puzzle UI ({0})..." xml:space="preserve"><value>ハイ＆ロー画面待機（{0}）...</value></data>
+  <data name="Waiting for Higher/Lower puzzle UI to settle (attempt {0})..." xml:space="preserve"><value>ハイ＆ロー画面安定待機（試行{0}）...</value></data>
+  <data name="Waiting for Higher/Lower solver UI to settle..." xml:space="preserve"><value>ハイ＆ローソルバー画面安定待機...</value></data>
+  <data name="Waiting for Higher/Lower UI to change after solver callback..." xml:space="preserve"><value>ソルバー操作後、ハイ＆ロー画面変更待機...</value></data>
+  <data name="Waiting for map location... ({0:F0}s / {1}s)" xml:space="preserve"><value>地図位置待機（{0:F0}秒／{1}秒）...</value></data>
+  <data name="Waiting for party snapshot ({0:F0}s elapsed, expecting {1} other players)..." xml:space="preserve"><value>パーティ情報待機（{0:F0}秒経過、他{1}人を待機）...</value></data>
+  <data name="Waiting for party snapshot before next map..." xml:space="preserve"><value>次の地図の前にパーティ情報待機...</value></data>
+  <data name="Waiting for party to load after dungeon ({0}/{1} in zone; missing: {2})..." xml:space="preserve"><value>ダンジョン後のパーティ読込待機（エリア内{0}/{1}、不在：{2}）...</value></data>
+  <data name="Waiting for party to load after dungeon ({0}/{1} required other players in zone)..." xml:space="preserve"><value>ダンジョン後のパーティ読込待機（必要な他メンバー{0}/{1}人がエリア内）...</value></data>
+  <data name="Waiting for party to mount ({0}/{1} required mounted others, {2:F0}s elapsed)..." xml:space="preserve"><value>パーティ騎乗待機（必要な他メンバー{0}/{1}、{2:F0}秒経過）...</value></data>
+  <data name="Waiting for party zone load ({0}/{1} mounted, {2:F0}s elapsed{3})..." xml:space="preserve"><value>パーティエリア読込待機（騎乗{0}/{1}、{2:F0}秒{3}）...</value></data>
+  <data name="Waiting for player before coffer interaction..." xml:space="preserve"><value>宝箱操作前にプレイヤー待機...</value></data>
+  <data name="Waiting for player before portal ground approach..." xml:space="preserve"><value>ポータル地上接近前にプレイヤー待機...</value></data>
+  <data name="Waiting for player to be available..." xml:space="preserve"><value>プレイヤー操作可能まで待機...</value></data>
+  <data name="Waiting for progression objects to activate ({0:F0}/30s)..." xml:space="preserve"><value>進行オブジェクト有効化待機（{0:F0}/30秒）...</value></data>
+  <data name="Waiting for reliable Higher/Lower solver snapshot..." xml:space="preserve"><value>信頼できるハイ＆ロー情報待機...</value></data>
+  <data name="Waiting for repair teleport settle proof at {0}" xml:space="preserve"><value>修理テレポ先{0}の到着安定確認待機</value></data>
+  <data name="Waiting for targetable High/Low world objects..." xml:space="preserve"><value>選択可能なハイ＆ローのワールドオブジェクト待機...</value></data>
+  <data name="Waiting for targetable Higher/Lower world object for {0}..." xml:space="preserve"><value>{0}の選択可能なハイ＆ローオブジェクト待機...</value></data>
+  <data name="Waiting to interact with portal ({0})..." xml:space="preserve"><value>ポータル操作待機（{0}）...</value></data>
+  <data name="Waiting to retry Higher/Lower world interaction for {0}..." xml:space="preserve"><value>{0}のハイ＆ローワールド操作再試行待機...</value></data>
+  <data name="Waiting to retry portal after close nudge ({0})..." xml:space="preserve"><value>微接近後、ポータル再試行待機（{0}）...</value></data>
+  <data name="Walking through opened door ({0:F1}y)..." xml:space="preserve"><value>開いた扉を歩いて通過（{0:F1}y）...</value></data>
+  <data name="Treasure coffer recovery failed after dig. Manual intervention required." xml:space="preserve"><value>ディグ後の宝箱の復帰に失敗しました。手動操作が必要です。</value></data>
+  <data name="Opening {0}..." xml:space="preserve"><value>{0}を開いています...</value></data>
+  <data name="[Alexandrite] Expected {0} in inventory for normal map handoff, but it was not found." xml:space="preserve"><value>[アレキサンドライト] 通常の地図引き継ぎに必要な{0}が所持品に見つかりません。</value></data>
+  <data name="Map opened, reading location..." xml:space="preserve"><value>地図を開きました。場所を読み取っています...</value></data>
+  <data name="In zone but aetheryte closer ({0:F0}y vs {1:F0}y) - teleporting..." xml:space="preserve"><value>ゾーン内ですがエーテライトの方が近いため ({0:F0}y対{1:F0}y) テレポしています...</value></data>
+  <data name="Already diving near thief-map target - swimming to flag..." xml:space="preserve"><value>盗賊の地図の目的地付近で潜水中 - フラッグへ泳いでいます...</value></data>
+  <data name="Retrying map opening..." xml:space="preserve"><value>地図を開き直しています...</value></data>
+  <data name="Map opening failed - map count didn&apos;t decrease" xml:space="preserve"><value>地図の展開に失敗 - 地図の数が減っていません</value></data>
+  <data name="No aetheryte ID for teleport." xml:space="preserve"><value>テレポ先のエーテライトIDがありません。</value></data>
+  <data name="Teleport to {0} failed: {1}" xml:space="preserve"><value>{0}へのテレポに失敗：{1}</value></data>
+  <data name="No target territory after teleport." xml:space="preserve"><value>テレポ後の目的地テリトリーがありません。</value></data>
+  <data name="Wrong territory after teleport: {0} (expected {1})." xml:space="preserve"><value>テレポ後のテリトリーが違います：{0} (想定{1})。</value></data>
+  <data name="Arrived! Mounting up..." xml:space="preserve"><value>到着しました！マウントしています...</value></data>
+  <data name="Thief-map remount: waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>盗賊の地図の再マウント：パーティを待っています (必要な他メンバーの騎乗{0}/{1})...</value></data>
+  <data name="Joined-FATE recovery mounted - flying to location..." xml:space="preserve"><value>参加FATEの復帰で騎乗完了 - 目的地へ飛行しています...</value></data>
+  <data name="Recovery teleport complete - party mount wait satisfied! Flying to location..." xml:space="preserve"><value>復帰テレポ完了 - パーティの騎乗待ち完了！目的地へ飛行しています...</value></data>
+  <data name="Party mount wait satisfied! Flying to location..." xml:space="preserve"><value>パーティの騎乗待ち完了！目的地へ飛行しています...</value></data>
+  <data name="Recovery teleport complete - waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>復帰テレポ完了 - パーティの騎乗を待っています (必要な他メンバー{0}/{1})...</value></data>
+  <data name="Waiting for party to mount ({0}/{1} required mounted others)..." xml:space="preserve"><value>パーティの騎乗を待っています (必要な他メンバー{0}/{1})...</value></data>
+  <data name="Mounted! Flying to location..." xml:space="preserve"><value>騎乗しました！目的地へ飛行しています...</value></data>
+  <data name="Thief-map water remount recovery failed after 5 attempts. Manual intervention required." xml:space="preserve"><value>盗賊の地図の水中再マウント復帰に5回失敗しました。手動操作が必要です。</value></data>
+  <data name="Mount failed - please restart" xml:space="preserve"><value>マウントに失敗 - 再開始してください</value></data>
+  <data name="Joined-FATE recovery - flying to location..." xml:space="preserve"><value>参加FATEの復帰 - 目的地へ飛行しています...</value></data>
+  <data name="Joined-FATE recovery - remounting for map target..." xml:space="preserve"><value>参加FATEの復帰 - 地図の目的地へ向け再マウントしています...</value></data>
+  <data name="Wait for party disabled - flying to location..." xml:space="preserve"><value>パーティ待ち無効 - 目的地へ飛行しています...</value></data>
+  <data name="Required party members mounted! Flying..." xml:space="preserve"><value>必要なパーティメンバーが騎乗しました！飛行しています...</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen, " xml:space="preserve"><value>完全なパーティ情報を待っています (他プレイヤー確認{0}/{1}、</value></data>
+  <data name="No location data for navigation." xml:space="preserve"><value>ナビゲーション用の場所データがありません。</value></data>
+  <data name="No location data for underwater navigation." xml:space="preserve"><value>水中ナビゲーション用の場所データがありません。</value></data>
+  <data name="Navigation error: {0}" xml:space="preserve"><value>ナビゲーションエラー：{0}</value></data>
+  <data name="No location data for underwater chest navigation." xml:space="preserve"><value>水中の宝箱へのナビゲーション用の場所データがありません。</value></data>
+  <data name="Combat recovery: landing at map target..." xml:space="preserve"><value>戦闘からの復帰：地図の目的地へ着地しています...</value></data>
+  <data name="Outdoor map complete - skipping portal search..." xml:space="preserve"><value>屋外の地図が完了 - ポータル探索をスキップしています...</value></data>
+  <data name="Searching for portal..." xml:space="preserve"><value>ポータルを探しています...</value></data>
+  <data name="Recovered overworld treasure coffer - opening chest..." xml:space="preserve"><value>屋外の宝箱を復帰 - 宝箱を開いています...</value></data>
+  <data name="Resuming chest interaction loop..." xml:space="preserve"><value>宝箱への操作ループを再開しています...</value></data>
+  <data name="Portal found - searching for portal..." xml:space="preserve"><value>ポータルを発見 - ポータル探索中...</value></data>
+  <data name="Dungeon complete (reached floor {0})" xml:space="preserve"><value>ダンジョン完了 ({0}階に到達)</value></data>
+  <data name="Combat detected on floor {0}..." xml:space="preserve"><value>{0}階で戦闘を検出しました...</value></data>
+  <data name="Looting floor {0} (sweep then progression)..." xml:space="preserve"><value>{0}階の戦利品回収 (探索後に進行)...</value></data>
+  <data name="Found {0} chest object(s) on floor {1}..." xml:space="preserve"><value>{1}階で宝箱オブジェクトを{0}個発見しました...</value></data>
+  <data name="Found {0} progression object(s) on floor {1}..." xml:space="preserve"><value>{1}階で進行オブジェクトを{0}個発見しました...</value></data>
+  <data name="Dungeon complete (wiped on floor {0})" xml:space="preserve"><value>ダンジョン終了 ({0}階で全滅)</value></data>
+  <data name="Returning to chest after combat on floor {0}..." xml:space="preserve"><value>{0}階の戦闘後に宝箱へ戻っています...</value></data>
+  <data name="Looting after combat on floor {0}..." xml:space="preserve"><value>{0}階の戦闘後に戦利品を回収しています...</value></data>
+  <data name="No loot after combat - continuing dungeon on floor {0}..." xml:space="preserve"><value>戦闘後の戦利品なし - {0}階でダンジョンを続行しています...</value></data>
+  <data name="Combat ended - scanning floor {0}..." xml:space="preserve"><value>戦闘終了 - {0}階を探索しています...</value></data>
+  <data name="Finding doors on floor {0}..." xml:space="preserve"><value>{0}階の扉を探しています...</value></data>
+  <data name="All objectives cleared - heading to exit" xml:space="preserve"><value>すべての目標を達成 - 出口へ向かっています</value></data>
+  <data name="Entering floor {0}..." xml:space="preserve"><value>{0}階に入っています...</value></data>
+  <data name="Dungeon complete (floor {0})" xml:space="preserve"><value>ダンジョン完了 ({0}階)</value></data>
+  <data name="Combat on floor {0}..." xml:space="preserve"><value>{0}階で戦闘中...</value></data>
+  <data name="More loot found on floor {0}..." xml:space="preserve"><value>{0}階で追加の戦利品を発見しました...</value></data>
+  <data name="Rescanning floor {0}..." xml:space="preserve"><value>{0}階を再探索しています...</value></data>
+  <data name="Still in dungeon - cannot start next map. Manual intervention required." xml:space="preserve"><value>まだダンジョン内です。次の地図を開始できません。手動操作が必要です。</value></data>
+  <data name="Auto-starting next map..." xml:space="preserve"><value>次の地図を自動開始しています...</value></data>
+  <data name="Auto-starting next retainer map..." xml:space="preserve"><value>次のリテイナーの地図を自動開始しています...</value></data>
+  <data name="Purchasing the next configured map through Emptor..." xml:space="preserve"><value>Emptorで次の設定済み地図を購入しています...</value></data>
+  <data name="Run complete." xml:space="preserve"><value>実行が完了しました。</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is still active. Retrying the map instead of marking it complete." xml:space="preserve"><value>宝の地図のキーアイテム「{0}」がまだ有効です。完了扱いにせず地図を再試行します。</value></data>
+  <data name="Entering dungeon instance..." xml:space="preserve"><value>ダンジョンのインスタンスに入っています...</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but ADS is not loaded." xml:space="preserve"><value>装備の耐久度{0}%が修理しきい値{1}%未満ですが、ADSが読み込まれていません。</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but player position is unavailable for ADS repair recovery." xml:space="preserve"><value>装備の耐久度{0}%が修理しきい値{1}%未満ですが、ADS修理復帰用のプレイヤー位置を取得できません。</value></data>
+  <data name="Equipped gear durability is {0}% below repair threshold {1}%, but no unlocked aetheryte was found in current territory {2} for ADS NPC no-inn repair." xml:space="preserve"><value>装備の耐久度{0}%が修理しきい値{1}%未満ですが、現在のテリトリー{2}にADSの宿屋なしNPC修理用の開放済みエーテライトがありません。</value></data>
+  <data name="Waiting for repair teleport settle proof at {0} " xml:space="preserve"><value>{0}で修理テレポの到着安定確認を待っています </value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s " xml:space="preserve"><value>{0} {1:F1}s後にADS修理を再試行します </value></data>
+  <data name="Could not read equipped gear durability before ADS repair retry." xml:space="preserve"><value>ADS修理再試行前に装備の耐久度を取得できませんでした。</value></data>
+  <data name="ADS unloaded before repair retry. {0}" xml:space="preserve"><value>修理再試行前にADSがアンロードされました。{0}</value></data>
+  <data name="ADS repair finished, but equipped gear durability could not be read." xml:space="preserve"><value>ADS修理は終了しましたが、装備の耐久度を取得できませんでした。</value></data>
+  <data name="{0} Could not read equipped gear durability." xml:space="preserve"><value>{0} 装備の耐久度を取得できませんでした。</value></data>
+  <data name="{0} {1} ADS is not loaded." xml:space="preserve"><value>{0} {1} ADSが読み込まれていません。</value></data>
+  <data name="{0} Durability {1}%/{2}%. " xml:space="preserve"><value>{0} 耐久度{1}%/{2}%。</value></data>
+  <data name="Retrying in {0:F1}s " xml:space="preserve"><value>{0:F1}s後に再試行 </value></data>
+  <data name="ADS owns the duty - waiting for completion..." xml:space="preserve"><value>ADSがコンテンツを管理中 - 完了を待っています...</value></data>
+  <data name="[Warning] {0}" xml:space="preserve"><value>[警告] {0}</value></data>
+  <data name="[Dungeon] === Object Scan (floor {0}, {1} objects) ===" xml:space="preserve"><value>[ダンジョン] === オブジェクト探索 ({0}階、{1}個) ===</value></data>
+  <data name="Error #{0} (recovered): {1}" xml:space="preserve"><value>エラー#{0} (復帰済み)：{1}</value></data>
+  <data name="Error #{0}: recovering overworld portal search..." xml:space="preserve"><value>エラー#{0}：屋外ポータル探索を復帰しています...</value></data>
+  <data name="Error #{0}: recovering overworld coffer/portal..." xml:space="preserve"><value>エラー#{0}：屋外の宝箱/ポータルを復帰しています...</value></data>
+  <data name="Error #{0}: {1}" xml:space="preserve"><value>エラー#{0}：{1}</value></data>
+  <data name="Cycling aetherytes (0/{0})..." xml:space="preserve"><value>エーテライト巡回中 (0/{0})...</value></data>
+  <data name="Aetheryte cycling complete!" xml:space="preserve"><value>エーテライト巡回が完了しました！</value></data>
+  <data name="Map location cycling complete!" xml:space="preserve"><value>地図の場所の巡回が完了しました！</value></data>
+  <data name="Location {0}/{1}: {2}" xml:space="preserve"><value>場所{0}/{1}：{2}</value></data>
+  <data name="[CycleMapLocs] No location set" xml:space="preserve"><value>[CycleMapLocs] 場所が設定されていません</value></data>
+  <data name="Alexandrite run 1/{0}: Starting..." xml:space="preserve"><value>アレキサンドライト実行1/{0}：開始しています...</value></data>
+  <data name="Alexandrite farming complete!" xml:space="preserve"><value>アレキサンドライト収集が完了しました！</value></data>
+  <data name="[Alexandrite] Lifestream is not loaded; cannot return to Revenant&apos;s Toll." xml:space="preserve"><value>[アレキサンドライト] Lifestreamが読み込まれていないため、レヴナンツトールへ戻れません。</value></data>
+  <data name="[Alexandrite] Cannot return to Revenant&apos;s Toll while in combat." xml:space="preserve"><value>[アレキサンドライト] 戦闘中はレヴナンツトールへ戻れません。</value></data>
+  <data name="[Alexandrite] Failed to send /li rev." xml:space="preserve"><value>[アレキサンドライト] /li revの送信に失敗しました。</value></data>
+  <data name="[Alexandrite] /li rev return to Mor Dhona timed out" xml:space="preserve"><value>[アレキサンドライト] /li revによるモードゥナへの帰還がタイムアウトしました</value></data>
+  <data name="[Alexandrite] Mount before Auriana approach timed out" xml:space="preserve"><value>[アレキサンドライト] オーリアナ接近前の騎乗がタイムアウトしました</value></data>
+  <data name="[Alexandrite] Mounted approach to Auriana timed out" xml:space="preserve"><value>[アレキサンドライト] マウントでのオーリアナ接近がタイムアウトしました</value></data>
+  <data name="[Alexandrite] Auriana NPC not found. {0}" xml:space="preserve"><value>[アレキサンドライト] NPCオーリアナが見つかりません。{0}</value></data>
+  <data name="[Alexandrite] SelectIconString dialog not appearing. {0}" xml:space="preserve"><value>[アレキサンドライト] SelectIconStringダイアログが表示されません。{0}</value></data>
+  <data name="[Alexandrite] Purchase confirmation/map wait timed out. {0}" xml:space="preserve"><value>[アレキサンドライト] 購入確認/地図待ちがタイムアウトしました。{0}</value></data>
+  <data name="[Alexandrite] Expected Mysterious Map in inventory for normal map handoff, but it was not found. {0}" xml:space="preserve"><value>[アレキサンドライト] 通常の地図引き継ぎに必要な謎めいた地図が所持品に見つかりません。{0}</value></data>
+  <data name="Alexandrite: starting normal Mysterious Map flow..." xml:space="preserve"><value>アレキサンドライト：通常の謎めいた地図フローを開始しています...</value></data>
+  <data name="Alexandrite run {0}/{1}: Starting..." xml:space="preserve"><value>アレキサンドライト実行{0}/{1}：開始しています...</value></data>
+  <data name="current job unavailable" xml:space="preserve"><value>現在のジョブを取得できません</value></data>
+  <data name="no job snapshot captured" xml:space="preserve"><value>ジョブが記録されていません</value></data>
+  <data name="no job configured" xml:space="preserve"><value>ジョブが設定されていません</value></data>
+  <data name="gearset module unavailable" xml:space="preserve"><value>ギアセットモジュールを取得できません</value></data>
+  <data name="Already on {0}." xml:space="preserve"><value>すでに{0}です。</value></data>
+  <data name="Found {0} gearset {1}." xml:space="preserve"><value>{0}のギアセット{1}を発見しました。</value></data>
+  <data name="No gearset exists for configured job {0}." xml:space="preserve"><value>設定されたジョブ{0}のギアセットがありません。</value></data>
+  <data name="Could not inspect gearsets: {0}" xml:space="preserve"><value>ギアセットを確認できませんでした：{0}</value></data>
+  <data name="Gearset {0} is no longer valid." xml:space="preserve"><value>ギアセット{0}は無効になりました。</value></data>
+  <data name="EquipGearset({0}) failed with result {1}." xml:space="preserve"><value>EquipGearset({0})が結果{1}で失敗しました。</value></data>
+  <data name="Switching to {0} gearset {1}." xml:space="preserve"><value>{0}のギアセット{1}に切り替えています。</value></data>
+  <data name="Job switch failed: {0}" xml:space="preserve"><value>ジョブ変更に失敗しました：{0}</value></data>
+  <data name="Party roster is unavailable while loading or logged out." xml:space="preserve"><value>ロード中またはログアウト中はパーティ情報を取得できません。</value></data>
+  <data name="Local player is unavailable." xml:space="preserve"><value>ローカルプレイヤーを取得できません。</value></data>
+  <data name="Player is solo; no party roster needs restoration." xml:space="preserve"><value>ソロのためパーティを復元する必要はありません。</value></data>
+  <data name="Alliance rosters are not supported for market-board travel." xml:space="preserve"><value>マーケットへの移動はアライアンスに対応していません。</value></data>
+  <data name="Party leader identity is unavailable." xml:space="preserve"><value>パーティリーダーの情報を取得できません。</value></data>
+  <data name="Party member slot {0} is unavailable." xml:space="preserve"><value>パーティメンバー枠{0}を取得できません。</value></data>
+  <data name="Party member slot {0} has incomplete name, Content ID, or home-world identity." xml:space="preserve"><value>パーティメンバー枠{0}の名前、Content ID、ホームワールドの情報が不完全です。</value></data>
+  <data name="Local player was not found in the native party roster." xml:space="preserve"><value>ゲームのパーティ情報にローカルプレイヤーが見つかりません。</value></data>
+  <data name="Local player is not the party leader." xml:space="preserve"><value>ローカルプレイヤーはパーティリーダーではありません。</value></data>
+  <data name="Captured {0} complete native party identities." xml:space="preserve"><value>完全なゲームのパーティ情報を{0}件記録しました。</value></data>
+  <data name="Captured party roster is restored." xml:space="preserve"><value>記録したパーティを復元しました。</value></data>
+  <data name="Waiting for {0} captured party member(s)." xml:space="preserve"><value>記録したパーティメンバー{0}人を待っています。</value></data>
+  <data name="Timed out switching to configured combat job {0}." xml:space="preserve"><value>設定された戦闘ジョブ{0}への変更がタイムアウトしました。</value></data>
+  <data name="Could not switch to gather job: {0}" xml:space="preserve"><value>採集ジョブへ変更できませんでした：{0}</value></data>
+  <data name="unavailable (0)" xml:space="preserve"><value>取得不可 (0)</value></data>
+  <data name="{0}h {1:D2}m" xml:space="preserve"><value>{0}時間{1:D2}分</value></data>
+  <data name="{0}m" xml:space="preserve"><value>{0}分</value></data>
+  <data name="Map allowance cooldown: {0}" xml:space="preserve"><value>地図採集権の待ち時間：{0}</value></data>
+  <data name="Map allowance: {0}" xml:space="preserve"><value>地図採集権：{0}</value></data>
+  <data name="Map allowance: waiting for /timers data" xml:space="preserve"><value>地図採集権：/timersの情報を待っています</value></data>
+  <data name="[map can be gathered]" xml:space="preserve"><value>[地図を採集可能]</value></data>
+  <data name="Seedling: toggle missing-map gathering | Blue X: unavailable through gathering" xml:space="preserve"><value>芽：不足する地図の採集切り替え | 青いX：採集不可</value></data>
+  <data name="Map allowance locked for {0}." xml:space="preserve"><value>地図採集権は{0}後に利用可能です。</value></data>
+  <data name="Waiting for map allowance ({0} remaining)." xml:space="preserve"><value>地図採集権を待っています (残り{0})。</value></data>
+  <data name="Map allowance for {0} is locked for {1}, longer than the {2}m wait limit." xml:space="preserve"><value>{0}の地図採集権は{1}間利用できず、待機上限の{2}分を超えています。</value></data>
+  <data name="Map allowance status unavailable: {0}" xml:space="preserve"><value>地図採集権の状態を取得できません：{0}</value></data>
+  <data name="This map is unknown to LootGoblin and cannot be gathered." xml:space="preserve"><value>この地図はLootGoblinに未登録のため採集できません。</value></data>
+  <data name="This map is unavailable through gathering." xml:space="preserve"><value>この地図は採集できません。</value></data>
+  <data name="Configure Settings -&gt; Run -&gt; Gather Job to gather missing maps." xml:space="preserve"><value>不足する地図を採集するには設定 -&gt; 実行 -&gt; 採集ジョブを設定してください。</value></data>
+  <data name="Gathering enabled." xml:space="preserve"><value>採集は有効です。</value></data>
+  <data name="Gathering disabled." xml:space="preserve"><value>採集は無効です。</value></data>
+  <data name="{0} Map allowance status is unavailable." xml:space="preserve"><value>{0} 地図採集権の状態を取得できません。</value></data>
+  <data name="{0} Click the seedling to change the missing-map gather selection while allowance is ready." xml:space="preserve"><value>{0} 採集権が利用可能な間、芽をクリックすると不足する地図の採集設定を変更できます。</value></data>
+  <data name="{0} Allowance cooldown: {1} remaining. Selection is saved for the next allowance." xml:space="preserve"><value>{0} 採集権の待ち時間：残り{1}。設定は次の採集権に保存されます。</value></data>
+  <data name="PlayerNull" xml:space="preserve"><value>プレイヤーを取得できません</value></data>
+  <data name="OccupiedInCutSceneEvent" xml:space="preserve"><value>カットシーンイベント中</value></data>
+  <data name="Occupied33" xml:space="preserve"><value>操作不可 (33)</value></data>
+  <data name="WatchingCutscene" xml:space="preserve"><value>カットシーン視聴中</value></data>
+  <data name="OccupiedInQuestEvent" xml:space="preserve"><value>クエストイベント中</value></data>
+  <data name="Occupied39" xml:space="preserve"><value>操作不可 (39)</value></data>
+  <data name="BetweenAreas" xml:space="preserve"><value>エリア移動中</value></data>
+  <data name="BetweenAreas51" xml:space="preserve"><value>エリア移動中 (51)</value></data>
+  <data name="Unknown" xml:space="preserve"><value>不明</value></data>
+  <data name="PlayHigher" xml:space="preserve"><value>ハイを選択</value></data>
+  <data name="PlayLower" xml:space="preserve"><value>ローを選択</value></data>
+  <data name="CashOut" xml:space="preserve"><value>報酬を受け取る</value></data>
+  <data name="SolveExpectedValue" xml:space="preserve"><value>期待値で解く</value></data>
+  <data name="ObserveOnly" xml:space="preserve"><value>観察のみ</value></data>
+  <data name="PlayerCasting" xml:space="preserve"><value>プレイヤー詠唱中</value></data>
+  <data name="; not loaded in same zone: {0}" xml:space="preserve"><value>；同じエリアで未ロード：{0}</value></data>
+  <data name="Waiting for full party snapshot ({0}/{1} other players seen, {2}/{3} mounted, {4:F0}s elapsed)..." xml:space="preserve"><value>完全なパーティ情報を待っています (他プレイヤー確認{0}/{1}、騎乗{2}/{3}、経過{4:F0}s)...</value></data>
+  <data name="Thief-map remount: waiting for party zone load ({0}/{1} loaded in same zone; missing: {2})..." xml:space="preserve"><value>盗賊の地図の再マウント：パーティのロードを待っています (同エリアでロード{0}/{1}、未確認：{2})...</value></data>
+  <data name="Waiting for valid party snapshot before map content (expecting {0} other players)..." xml:space="preserve"><value>地図コンテンツ前に有効なパーティ情報を待っています (他プレイヤー{0}人を想定)...</value></data>
+  <data name="Waiting for valid party snapshot before map content..." xml:space="preserve"><value>地図コンテンツ前に有効なパーティ情報を待っています...</value></data>
+  <data name="Party wait timeout reached; waiting for at least one resolved same-territory party member..." xml:space="preserve"><value>パーティ待機がタイムアウトしました。同テリトリーで確認できるメンバーを1人以上待っています...</value></data>
+  <data name="Waiting for party ({0}/{1} nearby within {2:F0}y, need {3} before map content{4})..." xml:space="preserve"><value>パーティを待っています ({2:F0}y以内{0}/{1}、地図コンテンツ前に{3}人必要{4})...</value></data>
+  <data name=", {0} same-territory far" xml:space="preserve"><value>、同テリトリーで遠い{0}人</value></data>
+  <data name=", {0} unresolved" xml:space="preserve"><value>、未確認{0}人</value></data>
+  <data name=", {0} out-of-territory" xml:space="preserve"><value>、別テリトリー{0}人</value></data>
+  <data name=", guarded recovery active" xml:space="preserve"><value>、保護付き復帰が有効</value></data>
+  <data name="Waiting for party before takeoff ({0}/{1} required mounted others)..." xml:space="preserve"><value>離陸前にパーティを待っています (必要な他メンバーの騎乗{0}/{1})...</value></data>
+  <data name="{0} {1}/{2}... ({3:F1}s)" xml:space="preserve"><value>{0} {1}/{2}... ({3:F1}s)</value></data>
+  <data name="Waiting after underwater XYZ dig retry {0}/{1}... ({2:F1}s)" xml:space="preserve"><value>水中XYZディグ再試行{0}/{1}後の待機中... ({2:F1}s)</value></data>
+  <data name="Waiting before underwater XYZ dig retry {0}/{1}... ({2:F1}s)" xml:space="preserve"><value>水中XYZディグ再試行{0}/{1}前の待機中... ({2:F1}s)</value></data>
+  <data name="Waiting for repair teleport settle proof at {0} ({1:F0}s, moved {2:F1}y)..." xml:space="preserve"><value>{0}で修理テレポの到着安定確認を待っています ({1:F0}s、移動{2:F1}y)...</value></data>
+  <data name="{0} Retrying ADS repair in {1:F1}s ({2}/{3})..." xml:space="preserve"><value>{0} {1:F1}s後にADS修理を再試行します ({2}/{3})...</value></data>
+  <data name="{0} Durability {1}%/{2}%. Retrying in {3:F1}s ({4}/{5})..." xml:space="preserve"><value>{0} 耐久度{1}%/{2}%。{3:F1}s後に再試行 ({4}/{5})...</value></data>
+  <data name="ADS unavailable; reflection hacks pending." xml:space="preserve"><value>ADSを利用できません。リフレクション設定の適用待ちです。</value></data>
+  <data name="ADS unavailable/pending: {0}." xml:space="preserve"><value>ADS利用不可/待機中：{0}。</value></data>
+  <data name="ADS returned false" xml:space="preserve"><value>ADSがfalseを返しました</value></data>
+  <data name="range ({0})" xml:space="preserve"><value>範囲 ({0})</value></data>
+  <data name="range reset ({0})" xml:space="preserve"><value>範囲リセット ({0})</value></data>
+  <data name="hunts ({0})" xml:space="preserve"><value>モブハント ({0})</value></data>
+  <data name="hunts reset ({0})" xml:space="preserve"><value>モブハントリセット ({0})</value></data>
+  <data name="No ADS utility status." xml:space="preserve"><value>ADSユーティリティの状態がありません。</value></data>
+  <data name="status unavailable" xml:space="preserve"><value>状態を取得できません</value></data>
+  <data name="utility status unavailable" xml:space="preserve"><value>ユーティリティの状態を取得できません</value></data>
+  <data name="failure: {0}" xml:space="preserve"><value>失敗：{0}</value></data>
+  <data name="status: {0}" xml:space="preserve"><value>状態：{0}</value></data>
+  <data name="last success: {0}" xml:space="preserve"><value>前回の成功：{0}</value></data>
+  <data name="ADS repair stopped before durability reached threshold; ADS {0}." xml:space="preserve"><value>耐久度がしきい値に達する前にADS修理が停止しました。ADS {0}。</value></data>
+  <data name="ADS repair failed." xml:space="preserve"><value>ADS修理に失敗しました。</value></data>
+  <data name="ADS unloaded during repair recovery; cannot start ADS repair." xml:space="preserve"><value>修理復帰中にADSがアンロードされ、ADS修理を開始できません。</value></data>
+  <data name="Lifestream is not loaded; cannot teleport to aetheryte for ADS NPC no-inn repair." xml:space="preserve"><value>Lifestreamが読み込まれていないため、ADSの宿屋なしNPC修理用エーテライトへテレポできません。</value></data>
+  <data name="Cannot teleport to aetheryte for ADS NPC no-inn repair while in combat." xml:space="preserve"><value>戦闘中はADSの宿屋なしNPC修理用エーテライトへテレポできません。</value></data>
+  <data name="Player position is unavailable while resolving ADS repair recovery aetheryte." xml:space="preserve"><value>ADS修理復帰用エーテライトの検索中にプレイヤー位置を取得できません。</value></data>
+  <data name="Could not teleport to {0} for ADS repair: {1}" xml:space="preserve"><value>ADS修理のため{0}へテレポできませんでした：{1}</value></data>
+  <data name="Teleport to {0} for ADS repair failed: {1}" xml:space="preserve"><value>ADS修理用の{0}へのテレポに失敗しました：{1}</value></data>
+  <data name="Lifestream rejected ADS repair teleport to {0} (ID {1}) after {2} command attempt(s): {3}" xml:space="preserve"><value>Lifestreamが{0} (ID {1})へのADS修理テレポを{2}回のコマンド試行後に拒否しました：{3}</value></data>
+  <data name="InventoryManager is null" xml:space="preserve"><value>InventoryManagerがnullです</value></data>
+  <data name="Selected map was not found in loaded saddlebags. Open saddlebags once this session and retry." xml:space="preserve"><value>選択した地図が読み込み済みのチョコボかばんにありません。このセッション中に一度かばんを開いて再試行してください。</value></data>
+  <data name="No empty inventory slot is available for saddlebag retrieval." xml:space="preserve"><value>チョコボかばんから取得するための所持品空き枠がありません。</value></data>
+  <data name="Selected {0}[{1}] -&gt; {2}[{3}]" xml:space="preserve"><value>選択済み {0}[{1}] -&gt; {2}[{3}]</value></data>
+  <data name="Purchased map was not found in normal inventory." xml:space="preserve"><value>購入した地図が通常の所持品に見つかりません。</value></data>
+  <data name="Expected one purchased map in {0}[{1}], found quantity {2}." xml:space="preserve"><value>{0}[{1}]に購入した地図1枚を想定していましたが、数量{2}でした。</value></data>
+  <data name="No empty loaded saddlebag slot is available." xml:space="preserve"><value>読み込み済みのチョコボかばんに空き枠がありません。</value></data>
+  <data name="Expected exactly one purchased map in normal inventory before storage, found {0}." xml:space="preserve"><value>保管前に通常の所持品に購入した地図1枚を想定していましたが、{0}枚でした。</value></data>
+  <data name="Selected {0}[{1}] -&gt; {2}[{3}] (inventory={4}, saddlebag={5})" xml:space="preserve"><value>選択済み {0}[{1}] -&gt; {2}[{3}] (所持品={4}、かばん={5})</value></data>
+  <data name="Source slot changed before move. Expected {0} x{1} in {2}[{3}]." xml:space="preserve"><value>移動前に元の枠が変わりました。{2}[{3}]に{0} x{1}を想定していました。</value></data>
+  <data name="Destination slot changed before move. {0}[{1}] is no longer empty." xml:space="preserve"><value>移動前に移動先の枠が変わりました。{0}[{1}]は空ではありません。</value></data>
+  <data name="Map counts changed before move. Expected inventory/saddlebag {0}/{1}, found {2}/{3}." xml:space="preserve"><value>移動前に地図数が変わりました。所持品/かばんは想定{0}/{1}、実際{2}/{3}です。</value></data>
+  <data name="Move issued for map {0}: {1}[{2}] -&gt; {3}[{4}]" xml:space="preserve"><value>地図{0}の移動を発行しました：{1}[{2}] -&gt; {3}[{4}]</value></data>
+  <data name="Waiting for exact move confirmation: source={0}, destination={1} x{2}, inventory/saddlebag={3}/{4}, expected=0 and {5} x{6}, {7}/{8}." xml:space="preserve"><value>正確な移動確認を待っています：元={0}、先={1} x{2}、所持品/かばん={3}/{4}、想定=0と{5} x{6}、{7}/{8}。</value></data>
+  <data name="Confirmed {0} moved to {1}[{2}]; inventory {3}-&gt;{4}, saddlebag {5}-&gt;{6}." xml:space="preserve"><value>{0}の{1}[{2}]への移動を確認しました。所持品{3}-&gt;{4}、かばん{5}-&gt;{6}。</value></data>
+  <data name="Source container {0} is not loaded." xml:space="preserve"><value>元のコンテナ{0}が読み込まれていません。</value></data>
+  <data name="Destination container {0} is not loaded." xml:space="preserve"><value>移動先コンテナ{0}が読み込まれていません。</value></data>
+  <data name="Source slot {0} is out of range for {1}." xml:space="preserve"><value>元の枠{0}は{1}の範囲外です。</value></data>
+  <data name="Destination slot {0} is out of range for {1}." xml:space="preserve"><value>移動先の枠{0}は{1}の範囲外です。</value></data>
+  <data name="Source slot changed before move. Expected {0} in {1}[{2}]." xml:space="preserve"><value>移動前に元の枠が変わりました。{1}[{2}]に{0}を想定していました。</value></data>
+  <data name="Moved map {0} from {1}[{2}] to {3}[{4}]" xml:space="preserve"><value>地図{0}を{1}[{2}]から{3}[{4}]へ移動しました</value></data>
+  <data name="Retainer inventory containers are not loaded: {0}." xml:space="preserve"><value>リテイナーの所持品コンテナが読み込まれていません：{0}。</value></data>
+  <data name="Selected map {0} was not found in loaded retainer inventory. Scanned {1} ({2} slots, matched quantity {3})." xml:space="preserve"><value>地図{0}が読み込み済みのリテイナー所持品にありません。{1}を調査 ({2}枠、一致数{3})。</value></data>
+  <data name="No empty player inventory slot is available for retainer retrieval." xml:space="preserve"><value>リテイナーから取得するための所持品空き枠がありません。</value></data>
+  <data name="Selected retainer map move {0}[{1}] -&gt; {2}[{3}]" xml:space="preserve"><value>リテイナーの地図移動を選択 {0}[{1}] -&gt; {2}[{3}]</value></data>
+  <data name="Source retainer container {0} is not loaded." xml:space="preserve"><value>リテイナーの元コンテナ{0}が読み込まれていません。</value></data>
+  <data name="Moved retainer map {0} from {1}[{2}] to {3}[{4}]" xml:space="preserve"><value>リテイナーの地図{0}を{1}[{2}]から{3}[{4}]へ移動しました</value></data>
+  <data name="A planned inventory slot is unavailable." xml:space="preserve"><value>予定した所持品の枠を取得できません。</value></data>
+  <data name="GatherBuddy Reborn gathering one {0}." xml:space="preserve"><value>GatherBuddy Rebornが{0}を1枚採集しています。</value></data>
+  <data name="GatherBuddy Reborn start failed: {0}" xml:space="preserve"><value>GatherBuddy Rebornの開始に失敗しました：{0}</value></data>
+  <data name="GatherBuddy Reborn one-shot target is not active." xml:space="preserve"><value>GatherBuddy Rebornの単発目標が有効ではありません。</value></data>
+  <data name="GatherBuddy Reborn does not expose gatherable item {0} ({1})." xml:space="preserve"><value>GatherBuddy Rebornに採集可能なアイテム{0} ({1})が公開されていません。</value></data>
+  <data name="GatherBuddy Reborn already reports {0:N0} total {1}; cannot request one more." xml:space="preserve"><value>GatherBuddy Rebornはすでに{1}が合計{0:N0}と報告しており、追加で1枚を要求できません。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList type not found." xml:space="preserve"><value>GatherBuddy RebornのAutoGatherList型が見つかりません。</value></data>
+  <data name="Could not create GatherBuddy Reborn auto-gather list." xml:space="preserve"><value>GatherBuddy Rebornの自動採集リストを作成できませんでした。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList.Add method not found." xml:space="preserve"><value>GatherBuddy RebornのAutoGatherList.Addメソッドが見つかりません。</value></data>
+  <data name="GatherBuddy Reborn did not add {0} to the auto-gather list." xml:space="preserve"><value>GatherBuddy Rebornが{0}を自動採集リストに追加しませんでした。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager.AddList method not found." xml:space="preserve"><value>GatherBuddy RebornのAutoGatherListsManager.AddListメソッドが見つかりません。</value></data>
+  <data name="Created GatherBuddy Reborn one-shot list for {0}." xml:space="preserve"><value>{0}用のGatherBuddy Reborn単発リストを作成しました。</value></data>
+  <data name="Suppressed {0} enabled GatherBuddy Reborn list(s) for LootGoblin one-shot." xml:space="preserve"><value>LootGoblinの単発採集のため、有効なGatherBuddy Rebornリストを{0}件抑制しました。</value></data>
+  <data name="GatherBuddy Reborn one-shot exclusivity failed; enabled non-LootGoblin lists: {0}." xml:space="preserve"><value>GatherBuddy Rebornの単発採集の排他制御に失敗しました。有効な非LootGoblinリスト：{0}。</value></data>
+  <data name="GatherBuddy Reborn active target mismatch; expected item={0} quantity={1}; active={2}." xml:space="preserve"><value>GatherBuddy Rebornの有効目標が不一致です。想定アイテム={0} 数量={1}、有効={2}。</value></data>
+  <data name="GatherBuddy Reborn active target verified; item={0}; quantity={1}; suppressedLists={2}." xml:space="preserve"><value>GatherBuddy Rebornの有効目標を確認しました。アイテム={0}、数量={1}、抑制リスト={2}。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager.SetActiveItems method not found." xml:space="preserve"><value>GatherBuddy RebornのAutoGatherListsManager.SetActiveItemsメソッドが見つかりません。</value></data>
+  <data name="GatherBuddy Reborn active items rebuilt." xml:space="preserve"><value>GatherBuddy Rebornの有効アイテムを再構築しました。</value></data>
+  <data name="GatherBuddy Reborn loaded, but plugin instance reflection failed." xml:space="preserve"><value>GatherBuddy Rebornは読み込み済みですが、プラグインインスタンスのリフレクションに失敗しました。</value></data>
+  <data name="GatherBuddy Reborn AutoGatherListsManager reflection failed." xml:space="preserve"><value>GatherBuddy RebornのAutoGatherListsManagerリフレクションに失敗しました。</value></data>
+  <data name="GatherBuddy Reborn gatherable count method not found." xml:space="preserve"><value>GatherBuddy Rebornの採集数メソッドが見つかりません。</value></data>
+  <data name="GatherBuddy Reborn count read by {0}." xml:space="preserve"><value>{0}でGatherBuddy Rebornの数量を取得しました。</value></data>
+  <data name="GatherBuddy Reborn gatherable count failed: {0}" xml:space="preserve"><value>GatherBuddy Rebornの採集数取得に失敗しました：{0}</value></data>
+  <data name="GatherBuddy Reborn AutoGatherList.SetPreferredLocation method not found." xml:space="preserve"><value>GatherBuddy RebornのAutoGatherList.SetPreferredLocationメソッドが見つかりません。</value></data>
+  <data name="GatherBuddy Reborn preferred location set." xml:space="preserve"><value>GatherBuddy Rebornの優先場所を設定しました。</value></data>
+  <data name="GatherBuddy Reborn active item list not found." xml:space="preserve"><value>GatherBuddy Rebornの有効アイテムリストが見つかりません。</value></data>
+  <data name="GatherBuddy Reborn active item entry could not be read: {0}." xml:space="preserve"><value>GatherBuddy Rebornの有効アイテム項目を取得できません：{0}。</value></data>
+  <data name="GatherBuddy Reborn active item list read." xml:space="preserve"><value>GatherBuddy Rebornの有効アイテムリストを取得しました。</value></data>
+  <data name="Log in before refreshing Emptor price hints." xml:space="preserve"><value>Emptorの参考価格を更新する前にログインしてください。</value></data>
+  <data name="An Emptor price refresh is already pending." xml:space="preserve"><value>Emptorの価格更新はすでに待機中です。</value></data>
+  <data name="Manual price refresh is available in {0}." xml:space="preserve"><value>価格の手動更新は{0}後に利用できます。</value></data>
+  <data name="The map item ID and maximum gil must both be positive." xml:space="preserve"><value>地図のアイテムIDと最大ギルは両方とも正の値が必要です。</value></data>
+  <data name="Emptor API v4 or newer is required for the configured marketboard city; detected v{0}. Select Ul&apos;dah (Emptor default) to keep using Emptor v1-v3." xml:space="preserve"><value>設定されたマーケット都市にはEmptor API v4以上が必要です。検出v{0}。Emptor v1-v3を使うにはウルダハ (Emptor既定) を選択してください。</value></data>
+  <data name="Emptor order submission failed: {0}" xml:space="preserve"><value>Emptorの注文送信に失敗しました：{0}</value></data>
+  <data name="No LootGoblin-owned Emptor order ID is active." xml:space="preserve"><value>LootGoblinが管理する有効なEmptor注文IDがありません。</value></data>
+  <data name="Emptor returned a different order ID ({0})." xml:space="preserve"><value>Emptorが異なる注文ID ({0})を返しました。</value></data>
+  <data name="Emptor order polling failed: {0}" xml:space="preserve"><value>Emptorの注文照会に失敗しました：{0}</value></data>
+  <data name="Emptor did not accept cancellation for LootGoblin order {0}." xml:space="preserve"><value>EmptorがLootGoblinの注文{0}のキャンセルを受け付けませんでした。</value></data>
+  <data name="Could not cancel LootGoblin Emptor order {0}: {1}" xml:space="preserve"><value>LootGoblinのEmptor注文{0}をキャンセルできませんでした：{1}</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is active, but no AgentMap flag, TreasureSpot capture, or cached target was available after {1:F0}s. Manual intervention required." xml:space="preserve"><value>地図のキーアイテム「{0}」は有効ですが、{1:F0}s後もAgentMapフラッグ、TreasureSpot記録、キャッシュ済み目標を取得できません。手動操作が必要です。</value></data>
+  <data name="Active map target recovered from {0}, but no aetheryte is available for {1}. Manual intervention required." xml:space="preserve"><value>{0}から有効な地図の目標を復帰しましたが、{1}用のエーテライトがありません。手動操作が必要です。</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s); continuing with secured stock." xml:space="preserve"><value>予定した{2}の地図{1}枚中{0}枚を確保しました。確保済みの在庫で続行します。</value></data>
+  <data name="Market batch warning: {0} Continuing with {1} secured {2} map(s)." xml:space="preserve"><value>マーケット一括処理の警告：{0} 確保済みの{2}の地図{1}枚で続行します。</value></data>
+  <data name="{0} Manual world return and party restoration may be required." xml:space="preserve"><value>{0} 手動でのワールド帰還とパーティ復元が必要になる場合があります。</value></data>
+  <data name="Party restoration timed out; continuing without: {0}." xml:space="preserve"><value>パーティ復元がタイムアウトしました。{0}を除いて続行します。</value></data>
+  <data name="Party restoration timed out; stopped with missing members: {0}." xml:space="preserve"><value>パーティ復元がタイムアウトしました。未復帰メンバーがいるため停止します：{0}。</value></data>
+  <data name="Cannot gather a map from Main Menu. Log in first." xml:space="preserve"><value>メインメニューでは地図を採集できません。先にログインしてください。</value></data>
+  <data name="Cannot gather a map while LootGoblin is busy ({0})." xml:space="preserve"><value>LootGoblinが処理中 ({0}) のため地図を採集できません。</value></data>
+  <data name="Gather job not configured." xml:space="preserve"><value>採集ジョブが設定されていません。</value></data>
+  <data name="No gatherable map configured." xml:space="preserve"><value>採集可能な地図が設定されていません。</value></data>
+  <data name="in duty" xml:space="preserve"><value>コンテンツ中</value></data>
+  <data name="Treasure coffer was expected after /dig but could not be resolved after {0:F0}s and {1}/{2} dig retries. Manual intervention required." xml:space="preserve"><value>/dig後に宝箱を想定していましたが、{0:F0}sとディグ再試行{1}/{2}回後も確認できません。手動操作が必要です。</value></data>
+  <data name="Expected {0} in inventory for one-shot map run, but it was not found." xml:space="preserve"><value>単発の地図実行に必要な{0}が所持品に見つかりません。</value></data>
+  <data name="No unlocked aetheryte was found in current territory {0} for ADS NPC no-inn repair retry." xml:space="preserve"><value>現在のテリトリー{0}にADSの宿屋なしNPC修理再試行用の開放済みエーテライトがありません。</value></data>
+  <data name="Treasure map key item &apos;{0}&apos; is active after error &apos;{1}&apos;, but no AgentMap flag, TreasureSpot capture, or cached target is available. Manual intervention required." xml:space="preserve"><value>エラー「{1}」後も地図のキーアイテム「{0}」は有効ですが、AgentMapフラッグ、TreasureSpot記録、キャッシュ済み目標がありません。手動操作が必要です。</value></data>
+  <data name="Map gathering timed out after {0}s." xml:space="preserve"><value>地図の採集が{0}s後にタイムアウトしました。</value></data>
+  <data name="Searching {0} for {1}..." xml:space="preserve"><value>{0}で{1}を探しています...</value></data>
+  <data name="Preparing party for travel to {0}..." xml:space="preserve"><value>{0}への移動に向けパーティを準備しています...</value></data>
+  <data name="Teleporting the party to {0} before world travel..." xml:space="preserve"><value>ワールド移動前にパーティを{0}へテレポしています...</value></data>
+  <data name="Disbanding party before world travel..." xml:space="preserve"><value>ワールド移動前にパーティを解散しています...</value></data>
+  <data name="Traveling to {0} for {1}..." xml:space="preserve"><value>{1}のため{0}へ移動しています...</value></data>
+  <data name="Emptor is searching for {0}..." xml:space="preserve"><value>Emptorが{0}を探しています...</value></data>
+  <data name="Emptor order finished ({0}); waiting for market-board cleanup..." xml:space="preserve"><value>Emptorの注文が終了 ({0})。マーケット操作の終了処理を待っています...</value></data>
+  <data name="Buying map {0} of {1}: {2}..." xml:space="preserve"><value>地図{0}/{1}を購入しています：{2}...</value></data>
+  <data name="Opening saddlebag to store {0} before the next order..." xml:space="preserve"><value>次の注文前に{0}を保管するためチョコボかばんを開いています...</value></data>
+  <data name="Waiting for saddlebag UI to stabilize before storing {0}..." xml:space="preserve"><value>{0}の保管前にチョコボかばん画面の安定を待っています...</value></data>
+  <data name="Waiting for InventoryBuddy before storing {0}..." xml:space="preserve"><value>{0}の保管前にInventoryBuddyを待っています...</value></data>
+  <data name="Reopening saddlebag to store {0}..." xml:space="preserve"><value>{0}を保管するためチョコボかばんを開き直しています...</value></data>
+  <data name="Could not plan safe saddlebag storage: {0}" xml:space="preserve"><value>安全なチョコボかばん保管を計画できませんでした：{0}</value></data>
+  <data name="Moving {0} into the saddlebag..." xml:space="preserve"><value>{0}をチョコボかばんに移しています...</value></data>
+  <data name="The inventory-to-saddlebag move plan was lost." xml:space="preserve"><value>所持品からチョコボかばんへの移動計画が失われました。</value></data>
+  <data name="InventoryBuddy closed before the planned saddlebag move." xml:space="preserve"><value>予定したチョコボかばん移動前にInventoryBuddyが閉じました。</value></data>
+  <data name="The guarded saddlebag move was not issued: {0}" xml:space="preserve"><value>保護付きチョコボかばん移動が発行されませんでした：{0}</value></data>
+  <data name="Confirming {0} moved into the saddlebag..." xml:space="preserve"><value>{0}のチョコボかばんへの移動を確認しています...</value></data>
+  <data name="The inventory-to-saddlebag confirmation plan was lost." xml:space="preserve"><value>所持品からチョコボかばんへの移動確認計画が失われました。</value></data>
+  <data name="InventoryBuddy closed before move confirmation: {0}" xml:space="preserve"><value>移動確認前にInventoryBuddyが閉じました：{0}</value></data>
+  <data name="Timed out {0} after {1:F0} seconds." xml:space="preserve"><value>{0}が{1:F0}秒後にタイムアウトしました。</value></data>
+  <data name="Cannot decipher a batch map because key item &apos;{0}&apos; is already occupied." xml:space="preserve"><value>キーアイテム「{0}」が使用中のため一括購入の地図をディサイファーできません。</value></data>
+  <data name="Cannot decipher {0} because it is no longer in normal inventory." xml:space="preserve"><value>{0}が通常の所持品にないためディサイファーできません。</value></data>
+  <data name="Deciphering {0} into the key-item slot before the next order..." xml:space="preserve"><value>次の注文前に{0}をディサイファーしてキーアイテム枠へ入れています...</value></data>
+  <data name="Could not confirm {0} in the key-item slot within {1:F0} seconds." xml:space="preserve"><value>{0}をキーアイテム枠で{1:F0}秒以内に確認できませんでした。</value></data>
+  <data name="Stopping the owned Emptor order and waiting for market-board cleanup..." xml:space="preserve"><value>管理中のEmptor注文を停止しマーケット操作の終了処理を待っています...</value></data>
+  <data name="Returning to {0} before restoring the party..." xml:space="preserve"><value>パーティ復元前に{0}へ戻っています...</value></data>
+  <data name="Could not return to {0}: {1}" xml:space="preserve"><value>{0}へ戻れませんでした：{1}</value></data>
+  <data name="Timed out returning to {0}. Party invites were not sent from the wrong world." xml:space="preserve"><value>{0}への帰還がタイムアウトしました。異なるワールドからパーティ招待は送っていません。</value></data>
+  <data name="Party restoration was blocked because the player is not on the captured starting world." xml:space="preserve"><value>記録した開始ワールドにいないためパーティ復元がブロックされました。</value></data>
+  <data name="Restoring the captured party roster..." xml:space="preserve"><value>記録したパーティを復元しています...</value></data>
+  <data name="Party restoration stopped because the player left the captured starting world." xml:space="preserve"><value>記録した開始ワールドから離れたためパーティ復元が停止しました。</value></data>
+  <data name="Switching to gather job for {0}..." xml:space="preserve"><value>{0}のため採集ジョブに変更しています...</value></data>
+  <data name="No map gather target is active." xml:space="preserve"><value>有効な地図採集目標がありません。</value></data>
+  <data name="Gather job was cleared while gathering." xml:space="preserve"><value>採集中に採集ジョブの設定が解除されました。</value></data>
+  <data name="Starting GatherBuddy Reborn for {0}..." xml:space="preserve"><value>{0}用にGatherBuddy Rebornを開始しています...</value></data>
+  <data name="Current job changed before GatherBuddy start; currentJob={0}; expectedJob={1}." xml:space="preserve"><value>GatherBuddy開始前に現在のジョブが変わりました。現在={0}、想定={1}。</value></data>
+  <data name="Waiting for GatherBuddy Reborn to gather {0}..." xml:space="preserve"><value>GatherBuddy Rebornが{0}を採集するまで待っています...</value></data>
+  <data name="GatherBuddy Reborn auto-gather stopped before {0} was obtained." xml:space="preserve"><value>{0}取得前にGatherBuddy Rebornの自動採集が停止しました。</value></data>
+  <data name="Gathering window closed for {0}; switching back..." xml:space="preserve"><value>{0}の採集画面を閉じました。ジョブを戻しています...</value></data>
+  <data name="Thief-map remount recovered - flying to location..." xml:space="preserve"><value>盗賊の地図の再マウント復帰完了 - 目的地へ飛行しています...</value></data>
+  <data name="Wait for party disabled - flying to thief-map location..." xml:space="preserve"><value>パーティ待ち無効 - 盗賊の地図の目的地へ飛行しています...</value></data>
+  <data name="Required party members mounted - flying to thief-map location..." xml:space="preserve"><value>必要なパーティメンバーが騎乗 - 盗賊の地図の目的地へ飛行しています...</value></data>
+  <data name="Could not start ADS repair ({0}) at {1}% durability." xml:space="preserve"><value>耐久度{1}%でADS修理 ({0})を開始できませんでした。</value></data>
+  <data name="ADS repair recovery timed out after {0:F0}s while teleporting to {1} (ID {2})." xml:space="preserve"><value>{1} (ID {2})へのテレポ中にADS修理復帰が{0:F0}s後にタイムアウトしました。</value></data>
+  <data name="Wrong territory during ADS repair recovery: {0} (expected {1})." xml:space="preserve"><value>ADS修理復帰中のテリトリーが違います：{0} (想定{1})。</value></data>
+  <data name="opening InventoryBuddy" xml:space="preserve"><value>InventoryBuddyの展開</value></data>
+  <data name="waiting for InventoryBuddy" xml:space="preserve"><value>InventoryBuddyの待機</value></data>
+  <data name="waiting for stable InventoryBuddy" xml:space="preserve"><value>InventoryBuddyの安定待機</value></data>
+  <data name="moving the purchased map into the saddlebag" xml:space="preserve"><value>購入した地図のチョコボかばんへの移動</value></data>
+  <data name="confirming the saddlebag move" xml:space="preserve"><value>チョコボかばん移動の確認</value></data>
+  <data name="SwitchingToGatherJob" xml:space="preserve"><value>採集ジョブへの変更</value></data>
+  <data name="StartingGatherBuddy" xml:space="preserve"><value>GatherBuddyの開始</value></data>
+  <data name="WaitingForMap" xml:space="preserve"><value>地図の待機</value></data>
+  <data name="ClosingGatherWindow" xml:space="preserve"><value>採集画面を閉じる</value></data>
+  <data name="SwitchingBack" xml:space="preserve"><value>ジョブを戻す</value></data>
+  <data name="An additional batch step failed: {0}" xml:space="preserve"><value>追加の一括処理ステップに失敗しました：{0}</value></data>
+  <data name="{0} Market batch warning: {1} Continuing with {2} secured {3} map(s)." xml:space="preserve"><value>{0} マーケット一括処理の警告：{1} 確保済みの{3}の地図{2}枚で続行します。</value></data>
+  <data name="{0} timed out while gathering {1}; targetMap={2} ({3}); currentJob={4}; expectedJob={5}; GatherBuddy={6}." xml:space="preserve"><value>{1}採集中に{0}がタイムアウトしました。目標地図={2} ({3})、現在のジョブ={4}、想定ジョブ={5}、GatherBuddy={6}。</value></data>
+  <data name="{0} timed out while gathering {1}; targetMap={2} ({3}); currentJob={4}; expectedJob={5}; GatherBuddy={6}; closeGate={7}; closeAttempts={8}; cancelIssued={9}." xml:space="preserve"><value>{1}採集中に{0}がタイムアウトしました。目標地図={2} ({3})、現在のジョブ={4}、想定ジョブ={5}、GatherBuddy={6}、終了条件={7}、終了試行={8}、中止発行={9}。</value></data>
+  <data name="Emptor API v5 or newer is required for price hints; detected v{0}." xml:space="preserve"><value>参考価格にはEmptor API v5以上が必要です。検出v{0}。</value></data>
+  <data name="Emptor API v5 price IPC is unavailable." xml:space="preserve"><value>Emptor API v5の価格IPCを利用できません。</value></data>
+  <data name="Emptor rejected the order ({0})." xml:space="preserve"><value>Emptorが注文を拒否しました ({0})。</value></data>
+  <data name="unknown state" xml:space="preserve"><value>不明な状態</value></data>
+  <data name="Indeterminate without a verified inventory map" xml:space="preserve"><value>所持品の地図が未確認のため未確定</value></data>
+  <data name="FATE/combat cleared - resuming portal after {0}..." xml:space="preserve"><value>FATE/戦闘終了 - {0}後にポータルを再開しています...</value></data>
+  <data name="FATE/combat cleared - resuming captured portal after {0}..." xml:space="preserve"><value>FATE/戦闘終了 - {0}後に記録したポータルを再開しています...</value></data>
+  <data name="No acceptable {0} listing remained on any enabled world." xml:space="preserve"><value>有効なワールドに許容範囲の{0}の出品が残っていません。</value></data>
+  <data name="{0} appeared in inventory before an Emptor order was submitted." xml:space="preserve"><value>Emptorの注文送信前に{0}が所持品に入りました。</value></data>
+  <data name="Prepared {0} {1} map(s); the configured remaining run count no longer allows another order." xml:space="preserve"><value>{1}の地図{0}枚を確保しました。設定された残り実行回数では追加注文できません。</value></data>
+  <data name="Purchased and verified one {0} on {1}." xml:space="preserve"><value>{1}で{0}を1枚購入し確認しました。</value></data>
+  <data name="Emptor reported Indeterminate, but {0} is present in inventory; no order will be resubmitted." xml:space="preserve"><value>EmptorはIndeterminateと報告しましたが、{0}が所持品にあるため再注文しません。</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s). {3}" xml:space="preserve"><value>予定した{2}の地図{1}枚中{0}枚を確保しました。{3}</value></data>
+  <data name="No safe storage slot remained for another map order." xml:space="preserve"><value>追加の地図注文用の安全な保管枠がありません。</value></data>
+  <data name="Prepared {0} of {1} planned {2} map(s)." xml:space="preserve"><value>予定した{2}の地図{1}枚中{0}枚を確保しました。</value></data>
+  <data name="Normal inventory still contains {0} {1} map(s), so another quantity-one order was not submitted." xml:space="preserve"><value>通常の所持品に{1}の地図が{0}枚あるため、追加の1枚注文は送信しませんでした。</value></data>
+  <data name="Opening saddlebag for {0}..." xml:space="preserve"><value>{0}のためチョコボかばんを開いています...</value></data>
+  <data name="{0} timed out for {1}." xml:space="preserve"><value>{1}の{0}がタイムアウトしました。</value></data>
+  <data name="Reopening saddlebag for {0}..." xml:space="preserve"><value>{0}のためチョコボかばんを開き直しています...</value></data>
+  <data name="Moving {0} from saddlebag..." xml:space="preserve"><value>{0}をチョコボかばんから移しています...</value></data>
+  <data name="No saddlebag move plan." xml:space="preserve"><value>チョコボかばん移動計画がありません。</value></data>
+  <data name="InventoryBuddy hidden before saddlebag move." xml:space="preserve"><value>チョコボかばん移動前にInventoryBuddyが非表示になりました。</value></data>
+  <data name="Confirming {0} moved from saddlebag..." xml:space="preserve"><value>{0}のチョコボかばんからの移動を確認しています...</value></data>
+  <data name="Saddlebag visible; refreshed loaded map sources." xml:space="preserve"><value>チョコボかばんが表示され、読み込み済みの地図取得元を更新しました。</value></data>
+  <data name="Saddlebag did not open before timeout; refreshed currently loaded map sources." xml:space="preserve"><value>タイムアウトまでにチョコボかばんが開かなかったため、現在読み込み済みの地図取得元を更新しました。</value></data>
+  <data name="ADS repair timed out after {0:F0}s." xml:space="preserve"><value>ADS修理が{0:F0}s後にタイムアウトしました。</value></data>
+  <data name="Lowest durability {0}%, threshold {1}%, ADS mode {2}, ADS {3}, retry count {4}/{5}, territory {6}." xml:space="preserve"><value>最低耐久度 {0}%、しきい値 {1}%、ADSモード {2}、ADS {3}、再試行 {4}/{5}、エリア {6}。</value></data>
+  <data name="Opening" xml:space="preserve"><value>開く</value></data>
+  <data name="WaitingForAddon" xml:space="preserve"><value>UI待機</value></data>
+  <data name="WaitingStable" xml:space="preserve"><value>UI安定待機</value></data>
+  <data name="Moving" xml:space="preserve"><value>移動中</value></data>
+  <data name="Confirming" xml:space="preserve"><value>確認中</value></data>
+  <data name="map allowance timer not loaded" xml:space="preserve"><value>地図取得タイマー未読み込み</value></data>
+  <data name="map allowance detail not loaded" xml:space="preserve"><value>地図取得の詳細未読み込み</value></data>
+  <data name="map allowance detail not recognized" xml:space="preserve"><value>地図取得の詳細を認識できません</value></data>
+  <data name="No unlocked aetheryte was found in current territory {0} for ADS NPC no-inn repair retry. Last Lifestream error: {1}" xml:space="preserve"><value>現在のエリア {0} に、宿屋を使わないADSのNPC修理を再試行できる開放済みエーテライトがありません。直近のLifestreamエラー: {1}</value></data>
+  <data name="{0} Lowest durability {1}%, threshold {2}%, ADS mode {3}, ADS {4}, retry count {5}/{6}, territory {7}." xml:space="preserve"><value>{0} 最低耐久度 {1}%、しきい値 {2}%、ADSモード {3}、ADS {4}、再試行 {5}/{6}、エリア {7}。</value></data>
+  <data name="{0} Lowest durability {1}%, threshold {2}%, ADS mode {3}, ADS {4}, retry count {5}/{6}, territory {7}. ADS is not loaded." xml:space="preserve"><value>{0} 最低耐久度 {1}%、しきい値 {2}%、ADSモード {3}、ADS {4}、再試行 {5}/{6}、エリア {7}。 ADSが読み込まれていません。</value></data>
+  <data name="addons={0}; conditions=Gathering:{1}, ExecutingGatheringAction:{2}" xml:space="preserve"><value>UI={0}、状態=Gathering:{1}, ExecutingGatheringAction:{2}</value></data>
+  <data name="Window appearance" xml:space="preserve"><value>ウィンドウの外観</value></data>
+  <data name="Compact visible on main window" xml:space="preserve"><value>メインウィンドウにコンパクト切替を表示</value></data>
+  <data name="Language visible on main window" xml:space="preserve"><value>メインウィンドウに言語選択を表示</value></data>
+  <data name="Transparency" xml:space="preserve"><value>透明度</value></data>
+  <data name="Opacity (%)" xml:space="preserve"><value>不透明度 (%)</value></data>
+  <data name="Auto-fade when unfocused" xml:space="preserve"><value>フォーカスがないときに自動で薄くする</value></data>
+  <data name="Unfocused opacity (%)" xml:space="preserve"><value>非フォーカス時の不透明度 (%)</value></data>
+  <data name="Unfocused delay (seconds)" xml:space="preserve"><value>非フォーカス時の待機時間 (秒)</value></data>
+</root>

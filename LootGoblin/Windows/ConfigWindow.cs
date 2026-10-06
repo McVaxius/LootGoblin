@@ -7,11 +7,13 @@ using Dalamud.Bindings.ImGui;
 using LootGoblin.Models;
 using LootGoblin.Services;
 using Lumina.Excel.Sheets;
+using AethertekUI;
 
 namespace LootGoblin.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
+    private readonly AethertekUI.Dalamud.MaterialWindowMotion windowMotion = new();
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
@@ -56,7 +58,8 @@ public class ConfigWindow : Window, IDisposable
             "ADS BMR Adjustments BossMod Reborn reduce activation range for outdoor areas MaxLoadDistance Disable Hunt Modules reflection; " +
             "Command Triggers slash commands Landing Duty Entry Finish Defaults add remove slots global profile " +
             "Use current-character command trigger override /rotation auto manual cancel /bmrai /vbmai VBM /fr /cbt follow combat factory defaults",
-        ["Interface"] = "Show Main Window on Login visibility behavior; Movable Settings Window move lock position; " +
+        ["Interface"] = "Appearance Language Color Compact mode Teal Blue Pink Custom RGB; " +
+            "Show Main Window on Login visibility behavior; Movable Settings Window move lock position; " +
             "Krangle Names name obfuscation privacy player party server world display factory defaults",
         ["Advanced"] = "Obstacle maps on BossMod Reborn BMR; Debug Mode Enable State Logging Map Diagnostics location data aetheryte collection tools " +
             "Ground-only map diagnostics; Write dedicated LootGoblin diagnostic log Open Log Folder Write Snapshot Now " +
@@ -90,7 +93,7 @@ public class ConfigWindow : Window, IDisposable
 
     public ConfigWindow(Plugin plugin) : base("Loot Goblin Settings###LootGoblinConfig")
     {
-        Flags = ImGuiWindowFlags.None;
+        Flags = ImGuiWindowFlags.HorizontalScrollbar;
 
         Size = new Vector2(560, 560);
         SizeCondition = ImGuiCond.FirstUseEver;
@@ -155,43 +158,53 @@ public class ConfigWindow : Window, IDisposable
         {
             Flags |= ImGuiWindowFlags.NoMove;
         }
+        windowMotion.Prepare(this, reducedMotion: false, roundedCorners: true);
     }
+
+    public override void PostDraw()
+        => windowMotion.Restore(this);
 
     public override void Draw()
     {
+        windowMotion.DrawChrome();
+        UiGui.Title("Loot Goblin Settings", UiText.T("Loot Goblin Settings"));
         if (!commandTriggerDraftsInitialized || ImGui.IsWindowAppearing() || CommandTriggerDraftSourceChanged())
         {
             SaveCommandTriggerDraftsIfDirty("draft source refresh");
             RefreshCommandTriggerDrafts();
         }
 
-        ImGui.Text("Loot Goblin Settings");
+        UiGui.Text("Loot Goblin Settings");
         ImGui.Separator();
         ImGui.Spacing();
 
-        ImGui.SetNextItemWidth(220);
-        ImGui.InputText("Search settings", ref settingsSearch, 128);
+        ImGui.SetNextItemWidth(Math.Min(220 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        UiGui.InputText("Search settings", ref settingsSearch, 128);
         ImGui.SameLine();
-        if (ImGui.SmallButton("Clear##SettingsSearch"))
+        if (UiGui.SmallButton("Clear##SettingsSearch"))
             settingsSearch = string.Empty;
 
         var searchWords = settingsSearch.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         var matchingTabs = searchWords.Length == 0
             ? Array.Empty<string>()
             : SettingsTabSearchTerms
-                .Where(tab => searchWords.All(word =>
-                    tab.Key.Contains(word, StringComparison.OrdinalIgnoreCase) ||
-                    tab.Value.Contains(word, StringComparison.OrdinalIgnoreCase)))
+                .Where(tab =>
+                {
+                    var terms = UiText.SearchTerms(tab.Key + " " + tab.Value);
+                    return searchWords.All(word => terms.Contains(word, StringComparison.OrdinalIgnoreCase));
+                })
                 .Select(tab => tab.Key)
                 .ToArray();
 
         if (searchWords.Length > 0 && matchingTabs.Length == 0)
-            ImGui.TextDisabled("No matching tabs.");
+            UiGui.TextDisabled("No matching tabs.");
         else
-            ImGui.TextDisabled("Matching tabs are highlighted. Select a tab to view settings.");
+            UiGui.TextDisabled("Matching tabs are highlighted. Select a tab to view settings.");
         ImGui.Spacing();
 
-        if (ImGui.BeginTabBar("##LootGoblinSettingsTabs"))
+        using var tabs = MaterialTabs.Begin("##LootGoblinSettingsTabs",
+            new[] { "Run", "Maps", "Marketboard", "Travel", "Party", "Dungeon/Loot", "Integrations", "Interface", "Advanced" }.Select(UiText.T).ToArray(), ImGuiTabBarFlags.FittingPolicyScroll);
+        if (tabs.Visible)
         {
             if (BeginSettingsTab("Run", matchingTabs))
             {
@@ -251,7 +264,6 @@ public class ConfigWindow : Window, IDisposable
                 ImGui.EndTabItem();
             }
 
-            ImGui.EndTabBar();
         }
     }
 
@@ -261,7 +273,7 @@ public class ConfigWindow : Window, IDisposable
         if (matches)
             ImGui.PushStyleColor(ImGuiCol.Text, ColorYellow);
 
-        var selected = ImGui.BeginTabItem(label, flags);
+        var selected = UiGui.BeginTabItem(label, flags);
         if (matches)
             ImGui.PopStyleColor();
 
@@ -270,8 +282,8 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawRunTab()
     {
-        ImGui.TextWrapped("Choose a combat job, or keep Current job. Gathering needs GatherBuddyReborn, an unlocked gather job with a gearset, and a gatherable map enabled for gathering in Map Queue.");
-        ImGui.TextWrapped("Factory defaults: current combat job; gathering off. The controls below show your current selections.");
+        UiGui.TextWrapped("Choose a combat job, or keep Current job. Gathering needs GatherBuddyReborn, an unlocked gather job with a gearset, and a gatherable map enabled for gathering in Map Queue.");
+        UiGui.TextWrapped("Factory defaults: current combat job; gathering off. The controls below show your current selections.");
         ImGui.Spacing();
 
         DrawJobCombo(
@@ -292,28 +304,28 @@ public class ConfigWindow : Window, IDisposable
             saveAfterSet: false);
 
         var maxMapAllowanceWaitMinutes = Math.Clamp(configuration.MaxMapAllowanceWaitMinutes, 0, 1440);
-        ImGui.SetNextItemWidth(120);
-        if (ImGui.InputInt("Max map allowance wait (min)", ref maxMapAllowanceWaitMinutes))
+        ImGui.SetNextItemWidth(Math.Min(120 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.InputInt("Max map allowance wait (min)", ref maxMapAllowanceWaitMinutes))
         {
             configuration.MaxMapAllowanceWaitMinutes = Math.Clamp(maxMapAllowanceWaitMinutes, 0, 1440);
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("When missing-map gathering is the only remaining action, wait this long for a map allowance before finishing the run.");
+            UiGui.SetTooltip("When missing-map gathering is the only remaining action, wait this long for a map allowance before finishing the run.");
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
-        ImGui.TextWrapped("Return when done optionally uses Lifestream once enabled map sources are exhausted. Factory default: off.");
+        UiGui.TextWrapped("Return when done optionally uses Lifestream once enabled map sources are exhausted. Factory default: off.");
         var returnWhenDone = configuration.ReturnWhenDoneEnabled;
-        if (ImGui.Checkbox("Return when done", ref returnWhenDone))
+        if (UiGui.Checkbox("Return when done", ref returnWhenDone))
         {
             configuration.ReturnWhenDoneEnabled = returnWhenDone;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Runs the selected Lifestream return only after no enabled inventory, saddlebag, or retainer maps remain.");
+            UiGui.SetTooltip("Runs the selected Lifestream return only after no enabled inventory, saddlebag, or retainer maps remain.");
 
         var returnDestinations = new[] { "FC", "Personal", "Inn" };
         var returnDestinationIndex = configuration.ReturnWhenDoneDestination switch
@@ -322,8 +334,8 @@ public class ConfigWindow : Window, IDisposable
             ReturnWhenDoneDestination.Inn => 2,
             _ => 0,
         };
-        ImGui.SetNextItemWidth(180);
-        if (ImGui.Combo("Return destination", ref returnDestinationIndex, returnDestinations, returnDestinations.Length))
+        ImGui.SetNextItemWidth(Math.Min(180 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.Combo("Return destination", ref returnDestinationIndex, returnDestinations, returnDestinations.Length))
         {
             configuration.ReturnWhenDoneDestination = returnDestinationIndex switch
             {
@@ -335,15 +347,15 @@ public class ConfigWindow : Window, IDisposable
         }
 
         ImGui.Spacing();
-        ImGui.TextWrapped("Repair uses ADS; a 0% threshold disables it. Factory defaults: 75%, NPC no inn.");
+        UiGui.TextWrapped("Repair uses ADS; a 0% threshold disables it. Factory defaults: 75%, NPC no inn.");
         var repairThreshold = Math.Clamp(configuration.RepairThresholdPercent, 0, 100);
-        if (ImGui.SliderInt("Repair threshold %", ref repairThreshold, 0, 100))
+        if (UiGui.SliderInt("Repair threshold %", ref repairThreshold, 0, 100))
         {
             configuration.RepairThresholdPercent = repairThreshold;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing.");
+            UiGui.SetTooltip("0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing.");
 
         var repairModes = new[] { "Self", "NPC no inn", "NPC No Inn + No TP" };
         var repairModeIndex = configuration.RepairMode switch
@@ -352,8 +364,8 @@ public class ConfigWindow : Window, IDisposable
             RepairMode.NpcNoInnNoTeleport => 2,
             _ => 1,
         };
-        ImGui.SetNextItemWidth(180);
-        if (ImGui.Combo("Repair mode", ref repairModeIndex, repairModes, repairModes.Length))
+        ImGui.SetNextItemWidth(Math.Min(180 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.Combo("Repair mode", ref repairModeIndex, repairModes, repairModes.Length))
         {
             configuration.RepairMode = repairModeIndex switch
             {
@@ -389,8 +401,8 @@ public class ConfigWindow : Window, IDisposable
         for (var i = 0; i < options.Count; i++)
             comboLabels[i + 1] = options[i].Name;
 
-        ImGui.SetNextItemWidth(220);
-        if (ImGui.Combo(label, ref currentIndex, comboLabels, comboLabels.Length))
+        ImGui.SetNextItemWidth(Math.Min(220 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.Combo(label, ref currentIndex, comboLabels, comboLabels.Length))
         {
             setter(currentIndex == 0 ? 0 : options[currentIndex - 1].Id);
             if (saveAfterSet)
@@ -398,13 +410,13 @@ public class ConfigWindow : Window, IDisposable
         }
 
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip(tooltip);
+            UiGui.SetTooltip(tooltip);
     }
 
     private void DrawMapsTab()
     {
-        ImGui.TextWrapped("Use Map Queue in the main window to select maps and run counts. Retrieval below supplies enabled maps when inventory runs out.");
-        ImGui.TextWrapped("Retainers need XA Database (XADB) and a reachable retainer bell. Saddlebag retrieval uses /saddlebag. Both retrieval options are on by factory default.");
+        UiGui.TextWrapped("Use Map Queue in the main window to select maps and run counts. Retrieval below supplies enabled maps when inventory runs out.");
+        UiGui.TextWrapped("Retainers need XA Database (XADB) and a reachable retainer bell. Saddlebag retrieval uses /saddlebag. Both retrieval options are on by factory default.");
         ImGui.Spacing();
 
         DrawConfigCheckbox("Fetch maps from retainers", configuration.EnableRetainerMapRetrieval, value => configuration.EnableRetainerMapRetrieval = value,
@@ -421,26 +433,26 @@ public class ConfigWindow : Window, IDisposable
         var db = plugin.MapLocationDatabase;
         if (db.IsDownloading)
         {
-            ImGui.TextColored(ColorYellow, "Downloading...");
+            UiGui.TextColored(ColorYellow, "Downloading...");
         }
         else
         {
-            if (ImGui.Button("Download Updated Locs"))
+            if (UiGui.Button("Download Updated Locs"))
                 _ = plugin.DownloadCommunityLocationsForCurrentVersionAsync();
             if (!string.IsNullOrEmpty(db.LastDownloadResult))
             {
                 ImGui.SameLine();
                 var dlColor = db.LastDownloadResult.StartsWith("OK") ? ColorGreen :
                               db.LastDownloadResult.StartsWith("Error") ? ColorRed : ColorGrey;
-                ImGui.TextColored(dlColor, db.LastDownloadResult);
+                UiGui.TextColored(dlColor, db.LastDownloadResult);
             }
         }
     }
 
     private void DrawTravelTab()
     {
-        ImGui.TextWrapped("Map travel uses Lifestream for teleports and vnavmesh for movement. Choose an unlocked mount below for manual mounting.");
-        ImGui.TextWrapped("Factory defaults: Auto Teleport and Require vnavmesh on; Company Chocobo selected.");
+        UiGui.TextWrapped("Map travel uses Lifestream for teleports and vnavmesh for movement. Choose an unlocked mount below for manual mounting.");
+        UiGui.TextWrapped("Factory defaults: Auto Teleport and Require vnavmesh on; Company Chocobo selected.");
         ImGui.Spacing();
 
         DrawConfigCheckbox("Auto Teleport", configuration.AutoTeleport, value => configuration.AutoTeleport = value);
@@ -449,7 +461,7 @@ public class ConfigWindow : Window, IDisposable
             "Skips Tamamizu when choosing the map teleport destination.");
 
         var navTimeout = configuration.NavigationTimeout;
-        if (ImGui.SliderFloat("Nav Timeout (s)", ref navTimeout, 30f, 600f, "%.0f"))
+        if (UiGui.SliderFloat("Nav Timeout (s)", ref navTimeout, 30f, 600f, "%.0f"))
         {
             configuration.NavigationTimeout = navTimeout;
             configuration.Save();
@@ -474,11 +486,11 @@ public class ConfigWindow : Window, IDisposable
             ImGui.Spacing();
         }
 
-        ImGui.Text("Purchase requirements");
-        ImGui.BulletText("Enable a cart on a marketable map row and set a positive maximum gil price.");
-        ImGui.BulletText("LootGoblin submits quantity-one orders and can prepare up to three maps per trip.");
-        ImGui.BulletText("Limsa Lominsa is the default. City selection requires Emptor v4+; blank Ul'dah remains compatible with v1-v3.");
-        ImGui.BulletText("Emptor v5+ supplies session-only NQ minimum-listing price hints for known marketable maps.");
+        UiGui.Text("Purchase requirements");
+        UiGui.BulletText("Enable a cart on a marketable map row and set a positive maximum gil price.");
+        UiGui.BulletText("LootGoblin submits quantity-one orders and can prepare up to three maps per trip.");
+        UiGui.BulletText("Limsa Lominsa is the default. City selection requires Emptor v4+; blank Ul'dah remains compatible with v1-v3.");
+        UiGui.BulletText("Emptor v5+ supplies session-only NQ minimum-listing price hints for known marketable maps.");
 
         var configuredCityKey = configuration.EmptorMarketboardCityKey?.Trim() ?? string.Empty;
         var cityNeedsV4 = !string.IsNullOrEmpty(configuredCityKey) &&
@@ -486,11 +498,11 @@ public class ConfigWindow : Window, IDisposable
         var emptorStatus = cityNeedsV4
             ? $"Configured city '{configuredCityKey}' requires Emptor API v4 or newer; detected v{plugin.EmptorIPC.ApiVersion}."
             : plugin.EmptorIPC.StatusText;
-        ImGui.TextColored(
+        UiGui.TextColored(
             plugin.EmptorIPC.IsAvailable && !cityNeedsV4 ? ColorGreen : ColorRed,
             emptorStatus);
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Blank/default city omits the city request field for Emptor v1-v3 compatibility. A selected city is sent only through Emptor API v4 or newer.");
+            UiGui.SetTooltip("Blank/default city omits the city request field for Emptor v1-v3 compatibility. A selected city is sent only through Emptor API v4 or newer.");
 
         var cityOptions = plugin.EmptorIPC.CityOptions;
         var currentCityLabel = cityOptions
@@ -498,12 +510,12 @@ public class ConfigWindow : Window, IDisposable
             ?.Label;
         if (string.IsNullOrWhiteSpace(currentCityLabel))
             currentCityLabel = $"Unknown ({configuredCityKey})";
-        if (ImGui.BeginCombo("Emptor marketboard city", currentCityLabel))
+        if (UiGui.BeginCombo("Emptor marketboard city", currentCityLabel))
         {
             foreach (var city in cityOptions)
             {
                 var selected = string.Equals(city.Key, configuredCityKey, StringComparison.OrdinalIgnoreCase);
-                if (ImGui.Selectable(city.Label, selected))
+                if (UiGui.Selectable(city.Label, selected))
                 {
                     configuration.EmptorMarketboardCityKey = city.Key;
                     configuration.Save();
@@ -517,8 +529,8 @@ public class ConfigWindow : Window, IDisposable
             ImGui.EndCombo();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Chooses where Emptor travels for its marketboard. Ul'dah stores a blank key and keeps Emptor's default behavior.");
-        ImGui.TextColored(ColorGrey, plugin.EmptorIPC.CityOptionsStatusText);
+            UiGui.SetTooltip("Chooses where Emptor travels for its marketboard. Ul'dah stores a blank key and keeps Emptor's default behavior.");
+        UiGui.TextColored(ColorGrey, plugin.EmptorIPC.CityOptionsStatusText);
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -534,51 +546,51 @@ public class ConfigWindow : Window, IDisposable
             ImGui.BeginDisabled();
 
         var rotate = configuration.MarketWorldStartMode == MarketWorldStartMode.Rotate;
-        if (ImGui.RadioButton("Rotate", rotate))
+        if (UiGui.RadioButton("Rotate", rotate))
         {
             configuration.MarketWorldStartMode = MarketWorldStartMode.Rotate;
             configuration.Save();
         }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("For the next map search, start after the world where the previous search ended, wrapping to the beginning when needed.");
+            UiGui.SetTooltip("For the next map search, start after the world where the previous search ended, wrapping to the beginning when needed.");
 
         var sticky = configuration.MarketWorldStartMode == MarketWorldStartMode.StickySuccess;
-        if (ImGui.RadioButton("Sticky success", sticky))
+        if (UiGui.RadioButton("Sticky success", sticky))
         {
             configuration.MarketWorldStartMode = MarketWorldStartMode.StickySuccess;
             configuration.Save();
         }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Start on the last world that successfully sold a map, then try each remaining unvisited enabled world if it has no acceptable listing. This is the default.");
+            UiGui.SetTooltip("Start on the last world that successfully sold a map, then try each remaining unvisited enabled world if it has no acceptable listing. This is the default.");
 
         if (!configuration.EnableSameDataCenterMapTravel)
             ImGui.EndDisabled();
 
-        ImGui.TextColored(
+        UiGui.TextColored(
             plugin.LifestreamIPC.IsAvailable ? ColorGreen : ColorGrey,
             plugin.LifestreamIPC.StatusText);
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Lifestream is required for off-world searches. LootGoblin verifies arrival and returns to the starting world before restoring the party.");
+            UiGui.SetTooltip("Lifestream is required for off-world searches. LootGoblin verifies arrival and returns to the starting world before restoring the party.");
 
         ImGui.Spacing();
         var continueAfterTimeout = configuration.ContinueAfterPartialPartyRestore;
-        if (ImGui.Checkbox("Continue if not all party members rejoin after", ref continueAfterTimeout))
+        if (UiGui.Checkbox("Continue if not all party members rejoin after", ref continueAfterTimeout))
         {
             configuration.ContinueAfterPartialPartyRestore = continueAfterTimeout;
             configuration.Save();
         }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Invite missing captured members immediately and every 30 seconds after returning. Checked continues with whoever rejoined after timeout; unchecked stops.");
+            UiGui.SetTooltip("Invite missing captured members immediately and every 30 seconds after returning. Checked continues with whoever rejoined after timeout; unchecked stops.");
         ImGui.SameLine();
         var restoreTimeout = Math.Clamp(configuration.PartyRestoreTimeoutSeconds, 30, 3600);
-        ImGui.SetNextItemWidth(90f);
-        if (ImGui.InputInt("seconds##MarketPartyRestoreTimeout", ref restoreTimeout))
+        ImGui.SetNextItemWidth(Math.Min(90f * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.InputInt("seconds##MarketPartyRestoreTimeout", ref restoreTimeout))
         {
             configuration.PartyRestoreTimeoutSeconds = Math.Clamp(restoreTimeout, 30, 3600);
             configuration.Save();
         }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Maximum time to wait for the captured roster to rejoin. Allowed range is 30–3600 seconds; default is 300.");
+            UiGui.SetTooltip("Maximum time to wait for the captured roster to rejoin. Allowed range is 30–3600 seconds; default is 300.");
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -611,7 +623,7 @@ public class ConfigWindow : Window, IDisposable
 
         if (blocked)
             ImGui.BeginDisabled();
-        if (ImGui.SmallButton("Refresh Emptor Prices"))
+        if (UiGui.SmallButton("Refresh Emptor Prices"))
             emptor.RequestManualPriceRefresh(Plugin.ClientState.IsLoggedIn, out _);
         if (blocked)
             ImGui.EndDisabled();
@@ -625,35 +637,35 @@ public class ConfigWindow : Window, IDisposable
                     : remaining > TimeSpan.Zero
                         ? $"Manual refresh is available in {FormatPriceCountdown(remaining)}."
                         : "Queue one global refresh for all marketable known maps using the current travel scope.";
-            ImGui.SetTooltip(tooltip);
+            UiGui.SetTooltip(tooltip);
         }
 
         if (remaining > TimeSpan.Zero)
         {
             ImGui.SameLine();
-            ImGui.TextColored(ColorGrey, $"Next manual refresh: {FormatPriceCountdown(remaining)}");
+            UiGui.TextColored(ColorGrey, UiText.F($"Next manual refresh: {FormatPriceCountdown(remaining)}"));
         }
 
-        ImGui.TextColored(ColorGrey, $"  {emptor.PriceStatusText}");
+        UiGui.TextColored(ColorGrey, UiText.F($"  {emptor.PriceStatusText}"));
     }
 
     private static string FormatPriceCountdown(TimeSpan remaining)
-        => $"{Math.Max(0, (int)remaining.TotalMinutes):00}:{Math.Max(0, remaining.Seconds):00}";
+        => UiText.F($"{Math.Max(0, (int)remaining.TotalMinutes):00}:{Math.Max(0, remaining.Seconds):00}");
 
     private static void DrawEmptorInstallGuidance()
     {
         ImGui.SetWindowFontScale(1.35f);
-        ImGui.TextColored(ColorRed, "EMPTOR IS NOT INSTALLED OR LOADED");
+        UiGui.TextColored(ColorRed, "EMPTOR IS NOT INSTALLED OR LOADED");
         ImGui.SetWindowFontScale(1f);
-        ImGui.TextWrapped("Add Emptor's custom repository in Dalamud Settings, then install Emptor from the plugin installer.");
+        UiGui.TextWrapped("Add Emptor's custom repository in Dalamud Settings, then install Emptor from the plugin installer.");
 
-        if (ImGui.Button("Copy Emptor repo URL"))
+        if (UiGui.Button("Copy Emptor repo URL"))
             ImGui.SetClipboardText(EmptorRepositoryUrl);
         ImGui.SameLine();
-        if (ImGui.Button("Open /xlsettings"))
+        if (UiGui.Button("Open /xlsettings"))
             CommandHelper.SendCommand("/xlsettings");
         ImGui.SameLine();
-        if (ImGui.Button("Open /xlplugins"))
+        if (UiGui.Button("Open /xlplugins"))
             CommandHelper.SendCommand("/xlplugins");
 
         ImGui.Spacing();
@@ -663,12 +675,12 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawPartyTab()
     {
-        ImGui.TextWrapped("Party waits coordinate takeoff, remounting and arrival; thief-map underwater waits have their own switch. Player-count thresholds count other players, excluding you.");
-        ImGui.TextWrapped("The optional chocobo companion needs Gysahl Greens. Factory defaults: party and all-mounted waits on; companion summon off.");
+        UiGui.TextWrapped("Party waits coordinate takeoff, remounting and arrival; thief-map underwater waits have their own switch. Player-count thresholds count other players, excluding you.");
+        UiGui.TextWrapped("The optional chocobo companion needs Gysahl Greens. Factory defaults: party and all-mounted waits on; companion summon off.");
         ImGui.Spacing();
 
         var waitForParty = configuration.WaitForParty;
-        if (ImGui.Checkbox("Wait for Party", ref waitForParty))
+        if (UiGui.Checkbox("Wait for Party", ref waitForParty))
         {
             Plugin.Log.Info($"[Config] Wait for Party changed from {configuration.WaitForParty} to {waitForParty}");
             configuration.WaitForParty = waitForParty;
@@ -676,7 +688,7 @@ public class ConfigWindow : Window, IDisposable
             Plugin.Log.Info($"[Config] Wait for Party saved as: {configuration.WaitForParty}");
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("When enabled, the bot waits for party members before takeoff, remount recovery, and map travel handoffs.");
+            UiGui.SetTooltip("When enabled, the bot waits for party members before takeoff, remount recovery, and map travel handoffs.");
 
         DrawConfigCheckbox("Wait for Party for thief maps / underwater", configuration.WaitForPartyForThiefMapsUnderwater, value => configuration.WaitForPartyForThiefMapsUnderwater = value,
             "Overrides the general Wait for Party setting for thief-map underwater travel, remount recovery, and descent/dig waits.");
@@ -684,29 +696,29 @@ public class ConfigWindow : Window, IDisposable
             "When count threshold is off, takeoff and remount waits require every other party member mounted. Turn off to continue when any other same-zone party member is mounted.");
 
         var partyTimeout = configuration.PartyWaitTimeout;
-        if (ImGui.SliderInt("Party Wait Timeout (s)", ref partyTimeout, 30, 300))
+        if (UiGui.SliderInt("Party Wait Timeout (s)", ref partyTimeout, 30, 300))
         {
             configuration.PartyWaitTimeout = partyTimeout;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
         {
-            ImGui.SetTooltip(
+            UiGui.SetTooltip(
                 "Applies to all party waits. In count-threshold mode, timeout does not lower the configured player count. " +
                 "In full-party proximity waits, timeout can allow guarded recovery when unresolved or out-of-territory members are the only blockers.");
         }
 
         var teleportDelay = Math.Clamp(configuration.PartyTeleportDelaySeconds, 0, 300);
-        ImGui.SetNextItemWidth(80f);
-        if (ImGui.InputInt("Time to wait before teleporting (s)##PartyTeleportDelaySeconds", ref teleportDelay))
+        ImGui.SetNextItemWidth(Math.Min(80f * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.InputInt("Time to wait before teleporting (s)##PartyTeleportDelaySeconds", ref teleportDelay))
         {
             configuration.PartyTeleportDelaySeconds = Math.Clamp(teleportDelay, 0, 300);
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Extra delay before sending the map teleport command after the map target is resolved.");
+            UiGui.SetTooltip("Extra delay before sending the map teleport command after the map target is resolved.");
 
-        if (ImGui.Button("OPEN ADS LOOT OPTIONS"))
+        if (UiGui.Button("OPEN ADS LOOT OPTIONS"))
             OpenAdsLootOptions();
 
         ImGui.Spacing();
@@ -722,14 +734,14 @@ public class ConfigWindow : Window, IDisposable
             if (configuration.PartyWaitBeforeDismountUseCountThreshold)
             {
                 var requiredOthers = Math.Clamp(configuration.PartyWaitBeforeDismountRequiredOthers, 1, 7);
-                ImGui.SetNextItemWidth(80f);
-                if (ImGui.InputInt("Players to wait for##PartyWaitBeforeDismountRequiredOthers", ref requiredOthers))
+                ImGui.SetNextItemWidth(Math.Min(80f * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+                if (UiGui.InputInt("Players to wait for##PartyWaitBeforeDismountRequiredOthers", ref requiredOthers))
                 {
                     configuration.PartyWaitBeforeDismountRequiredOthers = Math.Clamp(requiredOthers, 1, 7);
                     configuration.Save();
                 }
                 if (ImGui.IsItemHovered())
-                    ImGui.SetTooltip("Number of other party members required for every party wait. Local player is not counted.");
+                    UiGui.SetTooltip("Number of other party members required for every party wait. Local player is not counted.");
             }
         }
 
@@ -761,21 +773,21 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawDungeonLootTab()
     {
-        ImGui.TextWrapped("ADS handoff runs /ads inside after confirmed duty entry. Completed-duty exit chooses a local delay, party departure, ADS delay or manual exit; chest and solver options are below.");
-        ImGui.TextWrapped("Factory defaults: ADS handoff on; ADS exit after 20 seconds; Auto Loot Chest on; Gambler's Lure set to Solve EV (expected value).");
+        UiGui.TextWrapped("ADS handoff runs /ads inside after confirmed duty entry. Completed-duty exit chooses a local delay, party departure, ADS delay or manual exit; chest and solver options are below.");
+        UiGui.TextWrapped("Factory defaults: ADS handoff on; ADS exit after 20 seconds; Auto Loot Chest on; Gambler's Lure set to Solve EV (expected value).");
         ImGui.Spacing();
 
         var useAdsDungeonSolver = configuration.UseAdsInsteadOfLegacyDungeonSolver;
-        if (ImGui.Checkbox("Use ADS for dungeon phase", ref useAdsDungeonSolver))
+        if (UiGui.Checkbox("Use ADS for dungeon phase", ref useAdsDungeonSolver))
         {
             configuration.UseAdsInsteadOfLegacyDungeonSolver = useAdsDungeonSolver;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("After a portal is accepted and duty entry is confirmed, LootGoblin sends /ads inside and waits for ADS to finish the dungeon instead of running its legacy dungeon solver.");
+            UiGui.SetTooltip("After a portal is accepted and duty entry is confirmed, LootGoblin sends /ads inside and waits for ADS to finish the dungeon instead of running its legacy dungeon solver.");
 
         if (configuration.UseAdsInsteadOfLegacyDungeonSolver && !plugin.IsAdsAvailable)
-            ImGui.TextColored(ColorRed, "ADS is not loaded. Install ADS or disable this setting.");
+            UiGui.TextColored(ColorRed, "ADS is not loaded. Install ADS or disable this setting.");
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -790,14 +802,14 @@ public class ConfigWindow : Window, IDisposable
         DrawConfigCheckbox("Auto Loot Chest", configuration.AutoLootChest, value => configuration.AutoLootChest = value);
 
         var chestRange = configuration.ChestInteractionRange;
-        if (ImGui.SliderFloat("Interaction Range (y)", ref chestRange, 1f, 15f))
+        if (UiGui.SliderFloat("Interaction Range (y)", ref chestRange, 1f, 15f))
         {
             configuration.ChestInteractionRange = chestRange;
             configuration.Save();
         }
 
         var chestTimeout = configuration.ChestOpenTimeout;
-        if (ImGui.SliderInt("Chest Open Timeout (s)", ref chestTimeout, 5, 30))
+        if (UiGui.SliderInt("Chest Open Timeout (s)", ref chestTimeout, 5, 30))
         {
             configuration.ChestOpenTimeout = chestTimeout;
             configuration.Save();
@@ -808,43 +820,43 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawDutyExitBehaviour()
     {
-        ImGui.Text("Completed-duty exit");
+        UiGui.Text("Completed-duty exit");
 
-        if (ImGui.RadioButton("Loot Goblin: exit after delay", configuration.CompletedDutyExitMode == DutyExitMode.LocalAfterDelay))
+        if (UiGui.RadioButton("Loot Goblin: exit after delay", configuration.CompletedDutyExitMode == DutyExitMode.LocalAfterDelay))
         {
             configuration.CompletedDutyExitMode = DutyExitMode.LocalAfterDelay;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Use Loot Goblin's local Leave Duty flow after the configured delay.");
+            UiGui.SetTooltip("Use Loot Goblin's local Leave Duty flow after the configured delay.");
 
-        if (ImGui.RadioButton("Loot Goblin: exit when all others have left", configuration.CompletedDutyExitMode == DutyExitMode.LocalWhenPartyLeaves))
+        if (UiGui.RadioButton("Loot Goblin: exit when all others have left", configuration.CompletedDutyExitMode == DutyExitMode.LocalWhenPartyLeaves))
         {
             configuration.CompletedDutyExitMode = DutyExitMode.LocalWhenPartyLeaves;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Use Loot Goblin's local Leave Duty flow once no other loaded party members remain in the duty territory.");
+            UiGui.SetTooltip("Use Loot Goblin's local Leave Duty flow once no other loaded party members remain in the duty territory.");
 
-        if (ImGui.RadioButton("ADS: exit after delay", configuration.CompletedDutyExitMode == DutyExitMode.AdsAfterDelay))
+        if (UiGui.RadioButton("ADS: exit after delay", configuration.CompletedDutyExitMode == DutyExitMode.AdsAfterDelay))
         {
             configuration.CompletedDutyExitMode = DutyExitMode.AdsAfterDelay;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Send /ads leave once after the configured delay.");
+            UiGui.SetTooltip("Send /ads leave once after the configured delay.");
 
-        if (ImGui.RadioButton("No automatic exit", configuration.CompletedDutyExitMode == DutyExitMode.None))
+        if (UiGui.RadioButton("No automatic exit", configuration.CompletedDutyExitMode == DutyExitMode.None))
         {
             configuration.CompletedDutyExitMode = DutyExitMode.None;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Stop dungeon progression after completion and wait for a manual duty exit.");
+            UiGui.SetTooltip("Stop dungeon progression after completion and wait for a manual duty exit.");
 
         var exitDelaySeconds = Math.Max(1, configuration.DutyExitDelaySeconds);
-        ImGui.SetNextItemWidth(80f);
-        if (ImGui.InputInt("Duty-end delay (s)", ref exitDelaySeconds))
+        ImGui.SetNextItemWidth(Math.Min(80f * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.InputInt("Duty-end delay (s)", ref exitDelaySeconds))
         {
             configuration.DutyExitDelaySeconds = Math.Max(1, exitDelaySeconds);
             configuration.Save();
@@ -853,7 +865,7 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawIntegrationsTab()
     {
-        ImGui.TextWrapped("Configure optional food, discard and combat automation here. Command Triggers run slash commands at Landing / Duty Entry and Finish; review them for the plugins you use.");
+        UiGui.TextWrapped("Configure optional food, discard and combat automation here. Command Triggers run slash commands at Landing / Duty Entry and Finish; review them for the plugins you use.");
         ImGui.Spacing();
 
         DrawFoodSection();
@@ -864,27 +876,27 @@ public class ConfigWindow : Window, IDisposable
 
         DrawConfigCheckbox("Auto Discard (/ays discard)", configuration.EnableAutoDiscard, value => configuration.EnableAutoDiscard = value,
             "While Loot Goblin is enabled, runs /ays discard every 30s during safe mounted windows. Defers in combat, loading or cutscenes. Requires AutoRetainer and a configured discard list.");
-        ImGui.TextWrapped("Auto Discard needs AutoRetainer with a configured discard list. When selected, it runs while Loot Goblin is enabled, during safe mounted windows. Factory default: off.");
+        UiGui.TextWrapped("Auto Discard needs AutoRetainer with a configured discard list. When selected, it runs while Loot Goblin is enabled, during safe mounted windows. Factory default: off.");
         ImGui.Spacing();
         DrawConfigCheckbox("Auto Sync FATE", configuration.AutoSyncFate, value => configuration.AutoSyncFate = value,
             "Runs /levelsync on after joining a FATE and pauses coffer/portal recovery for joined-FATE handling. Turn off to ignore joined FATEs during map coffer flow.");
 
         var rsrTargetHostileTypeIndex = (int)configuration.RsrTargetHostileType;
-        ImGui.SetNextItemWidth(240f);
-        if (ImGui.Combo("RSR hostile targeting", ref rsrTargetHostileTypeIndex, RsrTargetHostileTypeLabels, RsrTargetHostileTypeLabels.Length))
+        ImGui.SetNextItemWidth(Math.Min(240f * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.Combo("RSR hostile targeting", ref rsrTargetHostileTypeIndex, RsrTargetHostileTypeLabels, RsrTargetHostileTypeLabels.Length))
         {
             configuration.RsrTargetHostileType = (RsrTargetHostileType)rsrTargetHostileTypeIndex;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Applied through RSR IPC immediately before /rotation auto or /rotation manual command triggers.");
+            UiGui.SetTooltip("Applied through RSR IPC immediately before /rotation auto or /rotation manual command triggers.");
 
         DrawAdsBmrAdjustmentsSection();
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
-        ImGui.Text("Command Triggers");
+        UiGui.Text("Command Triggers");
         DrawCommandTriggerScopeSelector();
         ImGui.Spacing();
 
@@ -893,13 +905,21 @@ public class ConfigWindow : Window, IDisposable
         DrawCommandTriggerList("Finish", finishCommandTriggerDrafts, Configuration.FinishCommandTriggerDefaults);
 
         if (!string.IsNullOrWhiteSpace(commandTriggerStatus))
-            ImGui.TextDisabled(commandTriggerStatus);
+            UiGui.TextDisabled(commandTriggerStatus);
     }
 
     private void DrawInterfaceTab()
     {
-        ImGui.TextWrapped("Control login visibility and settings-window movement. Krangle Names obfuscates player and server names displayed by Loot Goblin.");
-        ImGui.TextWrapped("Factory defaults: show the main window on login and allow settings movement; name obfuscation off.");
+        UiGui.Text("Window appearance");
+        ImGui.Separator();
+        plugin.DrawAppearanceSelector();
+        if (ImGui.GetItemRectMax().X + ImGui.GetStyle().ItemSpacing.X + 48 * MaterialTheme.Metrics.Scale
+            <= ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X) ImGui.SameLine();
+        using (MaterialControls.Push(LootGoblinPresentation.Controls(22))) plugin.DrawCompactSelector();
+        plugin.DrawWindowSettings();
+        ImGui.Separator();
+        UiGui.TextWrapped("Control login visibility and settings-window movement. Krangle Names obfuscates player and server names displayed by Loot Goblin.");
+        UiGui.TextWrapped("Factory defaults: show the main window on login and allow settings movement; name obfuscation off.");
         ImGui.Spacing();
 
         DrawConfigCheckbox("Show Main Window on Login", configuration.ShowMainWindow, value => configuration.ShowMainWindow = value);
@@ -913,8 +933,8 @@ public class ConfigWindow : Window, IDisposable
             "Controls BossMod Reborn only. Default: off. Applies on Start and after each configured command batch, regardless of combat provider.");
         ImGui.Spacing();
 
-        ImGui.TextWrapped("Use these controls for diagnostics and troubleshooting. The snapshot button needs dedicated logging; Test ADS Repair Mode starts a repair using the mode selected in Run.");
-        ImGui.TextWrapped("Factory defaults: state logging on; Debug Mode, map diagnostics and dedicated file logging off.");
+        UiGui.TextWrapped("Use these controls for diagnostics and troubleshooting. The snapshot button needs dedicated logging; Test ADS Repair Mode starts a repair using the mode selected in Run.");
+        UiGui.TextWrapped("Factory defaults: state logging on; Debug Mode, map diagnostics and dedicated file logging off.");
         ImGui.Spacing();
 
         DrawConfigCheckbox("Debug Mode", configuration.DebugMode, value => configuration.DebugMode = value);
@@ -925,28 +945,28 @@ public class ConfigWindow : Window, IDisposable
 
         ImGui.Spacing();
         var dedicatedDiagnosticLog = configuration.EnableDedicatedDiagnosticLog;
-        if (ImGui.Checkbox("Write dedicated LootGoblin diagnostic log", ref dedicatedDiagnosticLog))
+        if (UiGui.Checkbox("Write dedicated LootGoblin diagnostic log", ref dedicatedDiagnosticLog))
             plugin.SetDedicatedDiagnosticLogEnabled(dedicatedDiagnosticLog);
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Writes high-signal events and state snapshots. Rotates at 20 MB and retains the newest 10 files.");
+            UiGui.SetTooltip("Writes high-signal events and state snapshots. Rotates at 20 MB and retains the newest 10 files.");
 
-        ImGui.TextDisabled(plugin.DedicatedDiagnosticLog.DirectoryPath);
-        if (ImGui.Button("Open Log Folder"))
+        UiGui.TextDisabled(plugin.DedicatedDiagnosticLog.DirectoryPath);
+        if (UiGui.Button("Open Log Folder"))
             plugin.OpenDiagnosticLogFolder();
 
         ImGui.SameLine();
         if (!configuration.EnableDedicatedDiagnosticLog)
             ImGui.BeginDisabled();
-        if (ImGui.Button("Write Snapshot Now"))
+        if (UiGui.Button("Write Snapshot Now"))
             plugin.WriteDiagnosticSnapshotNow();
         if (!configuration.EnableDedicatedDiagnosticLog)
             ImGui.EndDisabled();
 
         ImGui.Spacing();
-        if (ImGui.Button("Disable Pandora's Box"))
+        if (UiGui.Button("Disable Pandora's Box"))
             CommandHelper.TrySendCommand("/xldisableplugin Pandora's Box");
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Disable Pandora's Box through Dalamud.");
+            UiGui.SetTooltip("Disable Pandora's Box through Dalamud.");
 
         ImGui.Spacing();
         DrawAdsRepairTestButton();
@@ -955,14 +975,14 @@ public class ConfigWindow : Window, IDisposable
     private void DrawConfigCheckbox(string label, bool currentValue, Action<bool> setter, string? tooltip = null)
     {
         var value = currentValue;
-        if (ImGui.Checkbox(label, ref value))
+        if (UiGui.Checkbox(label, ref value))
         {
             setter(value);
             configuration.Save();
         }
 
         if (!string.IsNullOrWhiteSpace(tooltip) && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip(tooltip);
+            UiGui.SetTooltip(tooltip);
     }
 
     private void DrawCompanionStanceCombo()
@@ -970,8 +990,8 @@ public class ConfigWindow : Window, IDisposable
         var stances = new[] { "Free Stance", "Defender Stance", "Attacker Stance", "Healer Stance", "Follow" };
         var stanceIdx = Array.IndexOf(stances, configuration.CompanionStance);
         if (stanceIdx < 0) stanceIdx = 0;
-        ImGui.SetNextItemWidth(220);
-        if (ImGui.Combo("Companion Stance", ref stanceIdx, stances, stances.Length))
+        ImGui.SetNextItemWidth(Math.Min(220 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.Combo("Companion Stance", ref stanceIdx, stances, stances.Length))
         {
             configuration.CompanionStance = stances[stanceIdx];
             configuration.Save();
@@ -987,8 +1007,8 @@ public class ConfigWindow : Window, IDisposable
             TreasureHighLowMode.ObserveOnly => 2,
             _ => 0,
         };
-        ImGui.SetNextItemWidth(180);
-        if (ImGui.Combo("Gambler's Lure Solver", ref treasureHighLowModeIndex, treasureHighLowModes, treasureHighLowModes.Length))
+        ImGui.SetNextItemWidth(Math.Min(180 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.Combo("Gambler's Lure Solver", ref treasureHighLowModeIndex, treasureHighLowModes, treasureHighLowModes.Length))
         {
             configuration.TreasureHighLowMode = treasureHighLowModeIndex switch
             {
@@ -999,25 +1019,25 @@ public class ConfigWindow : Window, IDisposable
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Solve EV clicks only after it reads a reliable card/stage; otherwise it holds and retries. Skip keeps current skip/close behavior. Observe logs readable state only and never clicks.");
+            UiGui.SetTooltip("Solve EV clicks only after it reads a reliable card/stage; otherwise it holds and retries. Skip keeps current skip/close behavior. Observe logs readable state only and never clicks.");
     }
 
     private void DrawMountSelection()
     {
-        ImGui.Text("Mount Selection");
+        UiGui.Text("Mount Selection");
         ImGui.SameLine();
-        ImGui.TextDisabled("(Used for manual mounting)");
+        UiGui.TextDisabled("(Used for manual mounting)");
 
         var mountNames = plugin.MountNames;
         var currentMount = configuration.SelectedMount;
-        ImGui.SetNextItemWidth(320);
-        if (ImGui.BeginCombo("##MountSelect", string.IsNullOrEmpty(currentMount) ? "(none)" : currentMount))
+        ImGui.SetNextItemWidth(Math.Min(320 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.BeginCombo("##MountSelect", string.IsNullOrEmpty(currentMount) ? UiText.T("(none)") : currentMount, translatePreview: false))
         {
             ImGui.SetNextItemWidth(-1);
-            ImGui.InputText("##MountSearch", ref mountSearch, 64);
+            UiGui.InputText("##MountSearch", ref mountSearch, 64);
             ImGui.Separator();
 
-            ImGui.BeginChild("##MountList", new Vector2(0, 200), false);
+            ImGui.BeginChild("##MountList", new Vector2(0, 200), false, ImGuiWindowFlags.HorizontalScrollbar);
             for (var i = 0; i < mountNames.Length; i++)
             {
                 if (!string.IsNullOrEmpty(mountSearch) &&
@@ -1025,7 +1045,7 @@ public class ConfigWindow : Window, IDisposable
                     continue;
 
                 var isSelected = mountNames[i] == currentMount;
-                if (ImGui.Selectable(mountNames[i], isSelected))
+                if (UiGui.Selectable(mountNames[i], isSelected, mountNames[i]))
                 {
                     configuration.SelectedMount = mountNames[i];
                     configuration.Save();
@@ -1042,7 +1062,7 @@ public class ConfigWindow : Window, IDisposable
     {
         var repairMode = ResolveAdsRepairMode(configuration.RepairMode);
         var repairModeLabel = GetRepairModeLabel(configuration.RepairMode);
-        if (ImGui.Button("Test ADS Repair Mode"))
+        if (UiGui.Button("Test ADS Repair Mode"))
         {
             if (!plugin.IsAdsAvailable)
             {
@@ -1074,7 +1094,7 @@ public class ConfigWindow : Window, IDisposable
             }
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip($"Debug-only IPC test: ADS.StartRepair(\"{repairMode}\").");
+            UiGui.SetTooltip(UiText.F($"Debug-only IPC test: ADS.StartRepair(\"{repairMode}\")."));
     }
 
     private static string ResolveAdsRepairMode(RepairMode repairMode)
@@ -1098,28 +1118,28 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
-        ImGui.Text("ADS / BMR Adjustments");
+        UiGui.Text("ADS / BMR Adjustments");
         ImGui.Spacing();
 
         var reduceRange = configuration.BmrReduceActivationRangeForOutdoorAreas;
-        if (ImGui.Checkbox("BMR reduce activation range for outdoor areas", ref reduceRange))
+        if (UiGui.Checkbox("BMR reduce activation range for outdoor areas", ref reduceRange))
         {
             configuration.BmrReduceActivationRangeForOutdoorAreas = reduceRange;
             configuration.Save();
             plugin.AdsReflectionIpcService.QueueImmediateUpdate();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip($"When enabled, LootGoblin asks ADS to set BMR MaxLoadDistance to {AdsReflectionIpcService.ReducedOutdoorMaxLoadDistance:0}.");
+            UiGui.SetTooltip(UiText.F($"When enabled, LootGoblin asks ADS to set BMR MaxLoadDistance to {AdsReflectionIpcService.ReducedOutdoorMaxLoadDistance:0}."));
 
         var disableHunts = configuration.BmrDisableHuntModules;
-        if (ImGui.Checkbox("BMR Disable Hunt Modules", ref disableHunts))
+        if (UiGui.Checkbox("BMR Disable Hunt Modules", ref disableHunts))
         {
             configuration.BmrDisableHuntModules = disableHunts;
             configuration.Save();
             plugin.AdsReflectionIpcService.QueueImmediateUpdate();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("When enabled, LootGoblin asks ADS to disable BMR hunt modules.");
+            UiGui.SetTooltip("When enabled, LootGoblin asks ADS to disable BMR hunt modules.");
 
         var reflection = plugin.AdsReflectionIpcService;
         var statusColor = !reflection.IsAdsAvailable && reflection.HasPendingActions
@@ -1127,12 +1147,12 @@ public class ConfigWindow : Window, IDisposable
             : reflection.StatusText.Contains("unavailable", StringComparison.OrdinalIgnoreCase)
                 ? ColorYellow
                 : ColorGreen;
-        ImGui.TextColored(statusColor, $"ADS reflection: {reflection.StatusText}");
+        UiGui.TextColored(statusColor, UiText.F($"ADS reflection: {UiText.T(reflection.StatusText)}"));
 
         if (reflection.NextAttemptAtUtc is { } nextAttempt && nextAttempt > DateTime.UtcNow)
         {
             var seconds = Math.Max(0, (int)Math.Ceiling((nextAttempt - DateTime.UtcNow).TotalSeconds));
-            ImGui.TextColored(ColorGrey, $"  Next retry/reassert in {seconds}s.");
+            UiGui.TextColored(ColorGrey, UiText.F($"  Next retry/reassert in {seconds}s."));
         }
     }
 
@@ -1141,7 +1161,7 @@ public class ConfigWindow : Window, IDisposable
         EnsureFoodItemsLoaded();
         BackfillLegacyFoodSelection();
 
-        ImGui.Text("Food");
+        UiGui.Text("Food");
 
         var foodId = configuration.FeedMeItemId;
         var foodName = configuration.FeedMeItem;
@@ -1156,17 +1176,17 @@ public class ConfigWindow : Window, IDisposable
         if (configuration.FeedMeItemId > 0)
         {
             var qualityLabel = configuration.FeedMeUseHighQuality ? "HQ" : "NQ";
-            ImGui.Text($"  Selected: {configuration.FeedMeItem} [{qualityLabel}] ({configuration.FeedMeItemId})");
+            UiGui.Text(UiText.F($"  Selected: {configuration.FeedMeItem} [{qualityLabel}] ({configuration.FeedMeItemId})"));
 
             var useHighQuality = configuration.FeedMeUseHighQuality;
-            if (ImGui.Checkbox("Use HQ food", ref useHighQuality))
+            if (UiGui.Checkbox("Use HQ food", ref useHighQuality))
             {
                 configuration.FeedMeUseHighQuality = useHighQuality;
                 plugin.FoodService.InvalidateFoodCache();
                 configuration.Save();
             }
 
-            if (ImGui.SmallButton("Clear Food"))
+            if (UiGui.SmallButton("Clear Food"))
             {
                 configuration.FeedMeItemId = 0;
                 configuration.FeedMeItem = "";
@@ -1178,17 +1198,17 @@ public class ConfigWindow : Window, IDisposable
         }
         else
         {
-            ImGui.TextDisabled("  No food selected.");
+            UiGui.TextDisabled("  No food selected.");
         }
 
         var feedMeSearch = configuration.FeedMeSearch;
-        if (ImGui.Checkbox("Search for Food if Depleted", ref feedMeSearch))
+        if (UiGui.Checkbox("Search for Food if Depleted", ref feedMeSearch))
         {
             configuration.FeedMeSearch = feedMeSearch;
             configuration.Save();
         }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("If selected food runs out, search inventory for a fallback food from the FrenRider priority list.");
+            UiGui.SetTooltip("If selected food runs out, search inventory for a fallback food from the FrenRider priority list.");
     }
 
     private void BackfillLegacyFoodSelection()
@@ -1232,13 +1252,13 @@ public class ConfigWindow : Window, IDisposable
         ref string selectedName)
     {
         var changed = false;
-        var displayText = selectedId > 0 ? $"{selectedName} ({selectedId})" : $"Select {label}...";
+        var displayText = selectedId > 0 ? UiText.F("{0} ({1})", selectedName, selectedId) : UiText.F("Select {0}...", UiText.T(label));
 
-        ImGui.SetNextItemWidth(300);
-        if (ImGui.BeginCombo($"##{label}Select", displayText))
+        ImGui.SetNextItemWidth(Math.Min(300 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+        if (UiGui.BeginCombo($"##{label}Select", displayText, translatePreview: false))
         {
-            ImGui.SetNextItemWidth(280);
-            ImGui.InputText($"Search##{label}", ref search, 128);
+            ImGui.SetNextItemWidth(Math.Min(280 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+            UiGui.InputText($"Search##{label}", ref search, 128);
             ImGui.Separator();
 
             const int maxResults = 20;
@@ -1261,7 +1281,7 @@ public class ConfigWindow : Window, IDisposable
                     shown++;
 
                     var isSelected = (int)item.Id == selectedId;
-                    if (ImGui.Selectable($"{item.Name} ({item.Id})##{label}{i}", isSelected))
+                    if (UiGui.Selectable($"{item.Name} ({item.Id})##{label}{i}", isSelected, UiText.F("{0} ({1})", item.Name, item.Id)))
                     {
                         selectedId = (int)item.Id;
                         selectedName = item.Name;
@@ -1270,11 +1290,11 @@ public class ConfigWindow : Window, IDisposable
                 }
 
                 if (shown == 0)
-                    ImGui.TextDisabled("No results.");
+                    UiGui.TextDisabled("No results.");
             }
             else
             {
-                ImGui.TextDisabled("Type at least 2 characters to search.");
+                UiGui.TextDisabled("Type at least 2 characters to search.");
             }
 
             ImGui.EndCombo();
@@ -1287,12 +1307,12 @@ public class ConfigWindow : Window, IDisposable
     {
         if (plugin.ActiveMapGatherContentId == 0)
         {
-            ImGui.TextDisabled("Editing global command triggers. Log in to edit a character override.");
+            UiGui.TextDisabled("Editing global command triggers. Log in to edit a character override.");
             return;
         }
 
         var useCharacterOverride = plugin.ActiveMapGatherConfig.OverrideCommandTriggers;
-        if (ImGui.Checkbox("Use current-character command trigger override", ref useCharacterOverride))
+        if (UiGui.Checkbox("Use current-character command trigger override", ref useCharacterOverride))
         {
             SaveCommandTriggerDraftsIfDirty("command trigger override toggle");
             plugin.ActiveMapGatherConfig.SetCommandTriggerOverride(
@@ -1303,7 +1323,7 @@ public class ConfigWindow : Window, IDisposable
             RefreshCommandTriggerDrafts();
         }
 
-        ImGui.TextDisabled(useCharacterOverride
+        UiGui.TextDisabled(useCharacterOverride
             ? $"Editing character profile {plugin.ActiveMapGatherCharacterKey}."
             : "Editing global command triggers.");
     }
@@ -1312,9 +1332,9 @@ public class ConfigWindow : Window, IDisposable
     {
         EnsureCommandTriggerDraftRows(drafts);
 
-        ImGui.Text(label);
+        UiGui.Text(label);
         ImGui.SameLine();
-        if (ImGui.SmallButton($"Defaults##{label}"))
+        if (UiGui.SmallButton($"Defaults##{label}"))
         {
             ReplaceCommandTriggerValues(drafts, defaults);
             commandTriggerDraftsDirty = true;
@@ -1323,10 +1343,10 @@ public class ConfigWindow : Window, IDisposable
 
         for (var i = 0; i < drafts.Count; i++)
         {
-            ImGui.SetNextItemWidth(300);
+            ImGui.SetNextItemWidth(Math.Min(300 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
             var command = drafts[i];
             var inputLabel = $"##{label}_{i}";
-            if (ImGui.InputText(inputLabel, ref command, 128, ImGuiInputTextFlags.EnterReturnsTrue))
+            if (UiGui.InputText(inputLabel, ref command, 128, ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 drafts[i] = command;
                 commandTriggerDraftsDirty = true;
@@ -1344,7 +1364,7 @@ public class ConfigWindow : Window, IDisposable
                 SaveCommandTriggerDraftsIfDirty($"{label} slot {i + 1} edit");
 
             ImGui.SameLine();
-            if (ImGui.SmallButton($"+##{label}_{i}"))
+            if (UiGui.SmallButton($"+##{label}_{i}"))
             {
                 drafts.Insert(i + 1, string.Empty);
                 commandTriggerDraftsDirty = true;
@@ -1352,7 +1372,7 @@ public class ConfigWindow : Window, IDisposable
             }
 
             ImGui.SameLine();
-            if (ImGui.SmallButton($"-##{label}_{i}"))
+            if (UiGui.SmallButton($"-##{label}_{i}"))
             {
                 if (drafts.Count > 1)
                 {
