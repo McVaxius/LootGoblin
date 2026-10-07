@@ -1313,7 +1313,7 @@ public class MainWindow : Window, IDisposable
             using var font = UiText.Font(UiFontRole.Action);
             var sm = plugin.StateManager;
             var buttonWidth = Scale(110);
-            var buttonHeight = Scale(plugin.Configuration.UiCompact ? 40 : 52);
+            var buttonHeight = MaterialControlMetrics.Measure(MaterialTheme.Metrics, ImGui.GetTextLineHeight(), MaterialControlContext.Toolbar).Height;
             NextGroup(Math.Max(buttonWidth, UiGui.ButtonWidth("Start", MaterialIcon.Play)));
 
             var canStart = CanStartFromUi;

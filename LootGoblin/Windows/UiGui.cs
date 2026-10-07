@@ -120,12 +120,15 @@ internal static class UiGui
     internal static bool Button(string label, Vector2 size, MaterialIcon icon = MaterialIcon.None, string? display = null)
     {
         var translated = display ?? UiText.T(Visible(label));
-        var foreground = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
+        using var controls = ImGui.GetStyle().FramePadding.Y == 0 || MaterialControls.Context == MaterialControlContext.Dense
+            ? default(MaterialControls.ControlScope) : MaterialControls.Push(MaterialControlContext.Toolbar);
         var padding = ImGui.GetStyle().FramePadding;
+        using var height = MaterialText.PushLineHeight(translated);
+        var foreground = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
         var iconWidth = icon == MaterialIcon.None ? 0 : 28 * MaterialTheme.Metrics.Scale;
         size.X = MaterialLayout.FitNextItemWidth(size.X, Math.Max(size.X > 0 ? size.X : 0, ButtonWidth(label, icon, translated)));
         var textSize = MaterialText.Measure(translated);
-        size.Y = Math.Max(size.Y, textSize.Y + padding.Y * 2);
+        size.Y = Math.Max(size.Y, Math.Max(ImGui.GetTextLineHeight(), textSize.Y) + padding.Y * 2);
         ImGui.PushStyleColor(ImGuiCol.Text, Vector4.Zero);
         var clicked = ImGui.Button(label, size);
         ImGui.PopStyleColor();
@@ -273,6 +276,8 @@ internal static class UiGui
     internal static bool Button(string label,string? display=null)
     {
         var translated=display ?? UiText.T(label.Split("##",2)[0]);
+        using var controls = ImGui.GetStyle().FramePadding.Y == 0 || MaterialControls.Context == MaterialControlContext.Dense
+            ? default(MaterialControls.ControlScope) : MaterialControls.Push(MaterialControlContext.Toolbar);
         using var height = MaterialText.PushLineHeight(translated);
         var width=MaterialText.Measure(translated).X+2*ImGui.GetStyle().FramePadding.X;
         width = MaterialLayout.FitNextItemWidth(0, width);
