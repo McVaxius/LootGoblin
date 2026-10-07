@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using AethertekUI;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Windowing;
 
 namespace LootGoblin.Windows;
 
@@ -423,6 +424,34 @@ internal static class UiGui
     internal static void Title(string original,string translated)
         => Title(original, translated, MaterialIcon.None);
     internal static void Title(string original,string translated,MaterialIcon icon)
+        => PaintTitle(original, translated, icon, null);
+    internal static void TitleWithButtons(string original, string translated, Window owner)
+        => PaintTitle(original, translated, MaterialIcon.None, owner);
+
+    internal static void ReserveTitleSpace(Window owner, string visible, float minimumWidth)
+    {
+        var style = ImGui.GetStyle();
+        var fontSize = ImGui.GetFontSize();
+        var collapse = (owner.Flags & (ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal)) == 0
+            && style.WindowMenuButtonPosition != ImGuiDir.None;
+        var controls = AdditionalTitleButtonWidth(owner, fontSize)
+            + ((owner.ShowCloseButton ? 1 : 0) + (collapse ? 1 : 0)) * (fontSize + style.ItemInnerSpacing.X);
+        using var font = UiText.Font(UiFontRole.Body);
+        var required = (MaterialText.Measure(visible).X * fontSize / ImGui.GetFontSize()
+            + controls + style.FramePadding.X * 2 + style.ItemInnerSpacing.X) / ImGui.GetIO().FontGlobalScale;
+        var bounds = owner.SizeConstraints ?? new WindowSizeConstraints();
+        bounds.MinimumSize = new(Math.Max(minimumWidth, required), bounds.MinimumSize.Y);
+        owner.SizeConstraints = bounds;
+    }
+
+    private static float AdditionalTitleButtonWidth(Window owner, float fontSize)
+    {
+        var count = owner.TitleBarButtons.Count(button => !owner.IsClickthrough || button.AvailableClickthrough);
+        if (owner.AllowPinning || owner.AllowClickthrough || owner.AllowBackgroundBlur) count++;
+        return count * (fontSize + ImGui.GetStyle().ItemInnerSpacing.X);
+    }
+
+    private static void PaintTitle(string original, string translated, MaterialIcon icon, Window? owner)
     {
         var s=ImGui.GetStyle(); var size=ImGui.GetFontSize();var height=ImGui.GetFrameHeight();
         var window=ImGuiP.GetCurrentWindow();
@@ -434,7 +463,8 @@ internal static class UiGui
         var translatedWidth=MaterialText.Measure(translated).X*size/ImGui.GetFontSize();
         var iconWidth=icon==MaterialIcon.None?0:size+s.ItemInnerSpacing.X;
         var dl=ImGui.GetWindowDrawList();
-        var rightButtons = size + s.FramePadding.X * 2;
+        var rightButtons = (owner == null || owner.ShowCloseButton ? size : 0) + s.FramePadding.X * 2
+            + (owner == null ? 0 : AdditionalTitleButtonWidth(owner, size));
         if ((flags & ImGuiWindowFlags.NoCollapse) == 0 && s.WindowMenuButtonPosition == ImGuiDir.Right)
             rightButtons += size + s.ItemInnerSpacing.X;
         var titleMin=Vector2.Max(window.OuterRectClipped.Min,new Vector2(ImGui.GetWindowPos().X,position.Y));

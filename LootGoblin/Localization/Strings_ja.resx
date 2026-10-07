@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
+  <data name="Duty completed - waiting for ADS final-coffer sweep..." xml:space="preserve"><value>コンテンツ完了 - ADSによる最後の宝箱の確認を待機中...</value></data>
+  <data name="Duty completed - ADS sweep completion unavailable; automatic exit held." xml:space="preserve"><value>コンテンツ完了 - ADSの宝箱確認完了を取得できないため、自動退出を保留しています。</value></data>
+  <data name="ADS released ownership - waiting for duty completion and sweep confirmation." xml:space="preserve"><value>ADSが制御を返しました - コンテンツ完了と宝箱確認の完了を待機中です。</value></data>
   <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>

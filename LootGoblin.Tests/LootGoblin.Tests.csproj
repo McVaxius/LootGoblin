@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\LootGoblin\Services\AdsStatusSnapshot.cs" Link="Services\AdsStatusSnapshot.cs" />
     <Compile Include="..\LootGoblin\Services\DedicatedDiagnosticLog.cs" Link="Services\DedicatedDiagnosticLog.cs" />
     <Compile Include="..\LootGoblin\Services\DiagnosticSnapshotPolicy.cs" Link="Services\DiagnosticSnapshotPolicy.cs" />
     <Compile Include="..\LootGoblin\Services\AlexandritePolicy.cs" Link="Services\AlexandritePolicy.cs" />

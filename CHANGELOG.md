@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased - CJK atlas construction
+
+- Request a 4096 x 4096 managed atlas and merge one bundled Noto CJK face per font role for the selected language, including Simplified and Traditional Chinese aliases. Preserve existing font sizes, glyph ranges, Windows and symbol fonts, and font lifecycle.
+
+## Unreleased - Native titlebar shortcuts
+
+- Add Settings, Alexandrite, Start, state-dependent Pause/Resume and Stop shortcuts while retaining every body control. Share the existing run admission and compound handlers, including Start's enable step and paused Stop's configuration semantics, with live checks and translated state/blocker feedback.
+- Reserve the current title and native button width before window motion, and clip custom title painting before the real controls. Debug/x64 compilation passes; native rendering and game acceptance remain separate.
+
+## Unreleased - ADS final-coffer handoff
+
+- Keep ADS running when a handed-off treasure duty completes and select its transient sweep-without-exit option through the existing operator API. Require an acknowledged current-duty sweep result before automatic LootGoblin or ADS exits, preserve completion/party timing and all four exit settings, and hold visibly on cancellation or unavailable results. Remove the ownership-loss Stop/Leave bypass and clear handoff/exit state for the next run.
+
 ## Unreleased - GitHub Actions dependency alignment
 
 - Pin the existing AethertekUI Actions checkout to published revision `6c193cf06ac67f954c549cafc2033ac0efdd630a`, which includes the Hindi text host and renderer. This fixes missing-text-API compilation after a consumer is published before its library; local workflow validation and hosted build results are separate.

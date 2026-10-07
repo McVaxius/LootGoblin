@@ -662,9 +662,13 @@ public class StateManager : IDisposable
     private bool adsOwnershipObserved;
     private DateTime adsInsideSentAt = DateTime.MinValue;
     private bool adsInsideRetrySent;
-    private bool adsLeaveIssued;
+    private bool adsSweepHandoffAccepted;
+    private uint adsSweepHandoffTerritoryId;
+    private uint adsSweepHandoffContentId;
     private bool adsUnreadableStatusLogged;
     private bool completedDutyExitActive;
+    private uint completedDutyExitTerritoryId;
+    private uint completedDutyExitContentId;
     private DateTime completedDutyExitAt = DateTime.MinValue;
     private DateTime completedDutyEnteredAt = DateTime.MinValue;
     private bool completedDutyExitActionIssued;
@@ -2414,7 +2418,7 @@ public class StateManager : IDisposable
                 ResetAdsHandoffTracking(resetStatus: true);
                 adsDutyHandoffActive = true;
                 adsDutyHandoffStarted = DateTime.Now;
-                SendAdsInsideCommand("[Start][ADS] Sent /ads inside for already-active treasure dungeon.", includeAssistCommands: true);
+                StartAdsInsideHandoff("[Start][ADS] Started sweep-only ownership for already-active treasure dungeon.", includeAssistCommands: true);
                 TransitionTo(BotState.Completed, "ADS handoff active - waiting for dungeon to finish...");
                 return;
             }
@@ -15927,7 +15931,7 @@ public class StateManager : IDisposable
             ResetAdsHandoffTracking(resetStatus: true);
             adsDutyHandoffActive = true;
             adsDutyHandoffStarted = DateTime.Now;
-            SendAdsInsideCommand($"{source}[ADS] Sent initial /ads inside after duty entry settled.", includeAssistCommands: true);
+            StartAdsInsideHandoff($"{source}[ADS] Started initial sweep-only ownership after duty entry settled.", includeAssistCommands: true);
             TransitionTo(BotState.Completed, "ADS handoff active - waiting for dungeon to finish...");
             return true;
         }
@@ -16898,6 +16902,8 @@ public class StateManager : IDisposable
         }
 
         completedDutyExitActive = true;
+        completedDutyExitTerritoryId = territoryId;
+        completedDutyExitContentId = args.ContentFinderCondition.RowId;
         completedDutyExitAt = DateTime.Now;
         completedDutyExitActionIssued = false;
         completedDutyExitLastPartyCheckAt = DateTime.MinValue;
@@ -16912,8 +16918,7 @@ public class StateManager : IDisposable
 
         if (adsDutyHandoffActive)
         {
-            CommandHelper.SendCommand("/ads stop");
-            _plugin.AddDebugLog($"[DutyExit] DutyCompleted for territory {territoryId}; stopped ADS progression immediately.");
+            _plugin.AddDebugLog($"[DutyExit] DutyCompleted for territory {territoryId}; retaining ADS ownership for its final treasure sweep.");
         }
         else
         {
@@ -16928,20 +16933,49 @@ public class StateManager : IDisposable
         if (!completedDutyExitActive)
             return false;
 
+        if (!Plugin.ClientState.IsLoggedIn)
+        {
+            ResetAdsHandoffTracking(resetStatus: true);
+            return false;
+        }
+        if (IsAreaTransitionActive())
+            return true;
+        var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] || Plugin.Condition[ConditionFlag.BoundByDuty56];
+        if (!inDuty)
+        {
+            ResetCompletedDutyExitAfterLeavingDuty();
+            return false;
+        }
+        if (Plugin.ClientState.TerritoryType != completedDutyExitTerritoryId)
+        {
+            ResetAdsHandoffTracking();
+            return false;
+        }
+
         if (Plugin.Condition[ConditionFlag.InCombat])
         {
             StateDetail = "Duty completed - waiting for combat to end before exit...";
             return true;
         }
 
-        TickDutyExitLeaveSequence();
         if (completedDutyExitActionIssued)
         {
+            if (dutyExitLeaveStep != DutyExitLeaveStep.None && DateTime.UtcNow >= dutyExitLeaveStepDueAt
+                && !IsCompletedDutySweepReady(force: true))
+            {
+                CancelDutyExitLeaveSequence("ADS sweep confirmation lost");
+                completedDutyExitActionIssued = false;
+                return true;
+            }
+            TickDutyExitLeaveSequence();
             StateDetail = dutyExitLeaveStep == DutyExitLeaveStep.None
                 ? "Duty exit requested - waiting to leave duty..."
                 : "Running Loot Goblin Leave Duty sequence...";
             return true;
         }
+
+        if (!IsCompletedDutySweepReady())
+            return true;
 
         var mode = _plugin.Configuration.CompletedDutyExitMode;
         if (mode == DutyExitMode.None)
@@ -16996,6 +17030,8 @@ public class StateManager : IDisposable
 
         if (mode == DutyExitMode.AdsAfterDelay)
         {
+            if (!IsCompletedDutySweepReady(force: true))
+                return true;
             completedDutyExitActionIssued = true;
             CommandHelper.SendCommand("/ads leave");
             _plugin.AddDebugLog($"[DutyExit] Sent /ads leave once after {elapsed:F1}s (configured {delaySeconds}s).");
@@ -17007,8 +17043,28 @@ public class StateManager : IDisposable
         return true;
     }
 
+    private bool IsCompletedDutySweepReady(bool force = false)
+    {
+        // Legacy local solving needs no ADS result. Inferred ownership cannot acknowledge a sweep-only handoff.
+        if (!adsDutyHandoffActive && adsInsideSentAt == DateTime.MinValue)
+            return true;
+
+        var status = _plugin.AdsStatusService.Refresh(force);
+        if (adsSweepHandoffAccepted && adsSweepHandoffTerritoryId == completedDutyExitTerritoryId
+            && adsSweepHandoffContentId == completedDutyExitContentId
+            && status.HasCompletedTreasureSweepFor(completedDutyExitTerritoryId, completedDutyExitContentId))
+            return true;
+
+        StateDetail = adsSweepHandoffAccepted && status.StatusReadable && status.IsOwned
+            ? "Duty completed - waiting for ADS final-coffer sweep..."
+            : "Duty completed - ADS sweep completion unavailable; automatic exit held.";
+        return false;
+    }
+
     private void ResetCompletedDutyExitAfterLeavingDuty()
     {
+        if (IsAreaTransitionActive())
+            return;
         var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                      Plugin.Condition[ConditionFlag.BoundByDuty56];
         if (inDuty)
@@ -17031,6 +17087,8 @@ public class StateManager : IDisposable
 
     private void BeginLocalDutyExit(string reason)
     {
+        if (!IsCompletedDutySweepReady(force: true))
+            return;
         completedDutyExitActionIssued = true;
         dutyExitConfirmationAttemptCount = 0;
         CommandHelper.SendCommand("/dutyfinder");
@@ -17099,6 +17157,9 @@ public class StateManager : IDisposable
         if (!adsDutyHandoffActive)
             return false;
 
+        if (IsAreaTransitionActive())
+            return true;
+
         var inDuty = Plugin.Condition[ConditionFlag.BoundByDuty] ||
                      Plugin.Condition[ConditionFlag.BoundByDuty56];
         var elapsed = adsDutyHandoffStarted == DateTime.MinValue
@@ -17131,7 +17192,7 @@ public class StateManager : IDisposable
             if (!adsStatus.StatusReadable && !adsUnreadableStatusLogged)
             {
                 adsUnreadableStatusLogged = true;
-                _plugin.AddDebugLog("[ADS] Handoff pending, but ADS status is unreadable - waiting for ownership before retrying /ads inside.");
+                _plugin.AddDebugLog("[ADS] Handoff pending, but ADS status is unreadable - waiting for ownership before retrying the sweep-only handoff.");
             }
 
             if (!adsInsideRetrySent
@@ -17139,7 +17200,7 @@ public class StateManager : IDisposable
                 && (DateTime.Now - adsInsideSentAt).TotalSeconds >= 5.0)
             {
                 adsInsideRetrySent = true;
-                SendAdsInsideCommand("[ADS] Ownership was not confirmed after the initial handoff - sending one bounded /ads inside retry.", includeAssistCommands: false);
+                StartAdsInsideHandoff("[ADS] One bounded sweep-only handoff retry was accepted.", includeAssistCommands: false);
             }
 
             StateDetail = adsStatus.StatusReadable
@@ -17153,25 +17214,14 @@ public class StateManager : IDisposable
             if (!adsUnreadableStatusLogged)
             {
                 adsUnreadableStatusLogged = true;
-                _plugin.AddDebugLog("[ADS] Ownership was seen earlier, but ADS status is currently unreadable - waiting for readable status before issuing /ads leave.");
+                _plugin.AddDebugLog("[ADS] Ownership was seen earlier, but ADS status is currently unreadable - holding automatic exit.");
             }
 
             StateDetail = $"ADS ownership was seen - waiting for readable status... ({elapsed:F0}s)";
             return true;
         }
 
-        if (!adsLeaveIssued)
-        {
-            adsLeaveIssued = true;
-            CommandHelper.SendCommand("/ads stop");
-            _plugin.AddDebugLog($"[ADS] ADS no longer owns the duty ({adsStatus.OwnershipMode}/{adsStatus.ExecutionPhase}) - sending /ads stop before leave.");
-            CommandHelper.SendCommand("/ads leave");
-            _plugin.AddDebugLog($"[ADS] ADS no longer owns the duty ({adsStatus.OwnershipMode}/{adsStatus.ExecutionPhase}) - sending /ads leave.");
-            StateDetail = "ADS released ownership - stopping ADS and leaving duty...";
-            return true;
-        }
-
-        StateDetail = $"ADS leave requested - waiting for duty exit... ({elapsed:F0}s, {adsStatus.ExecutionPhase})";
+        StateDetail = "ADS released ownership - waiting for duty completion and sweep confirmation.";
         return true;
     }
 
@@ -17184,13 +17234,22 @@ public class StateManager : IDisposable
         adsOwnershipObserved = false;
         adsInsideSentAt = DateTime.MinValue;
         adsInsideRetrySent = false;
-        adsLeaveIssued = false;
+        adsSweepHandoffAccepted = false;
+        adsSweepHandoffTerritoryId = 0;
+        adsSweepHandoffContentId = 0;
         adsUnreadableStatusLogged = false;
+        completedDutyExitActive = false;
+        completedDutyExitTerritoryId = 0;
+        completedDutyExitContentId = 0;
+        completedDutyExitAt = DateTime.MinValue;
+        completedDutyExitActionIssued = false;
+        completedDutyExitLastPartyCheckAt = DateTime.MinValue;
+        CancelDutyExitLeaveSequence("ADS handoff reset");
         if (resetStatus)
             _plugin.AdsStatusService.Reset();
     }
 
-    private void SendAdsInsideCommand(string logMessage, bool includeAssistCommands)
+    private void StartAdsInsideHandoff(string logMessage, bool includeAssistCommands)
     {
         RestoreBossModOutdoorSuppressionIfActive("[ADS] duty handoff");
 
@@ -17201,8 +17260,16 @@ public class StateManager : IDisposable
 
         adsInsideSentAt = DateTime.Now;
         adsUnreadableStatusLogged = false;
-        CommandHelper.SendCommand("/ads inside");
-        _plugin.AddDebugLog(logMessage);
+        adsSweepHandoffAccepted = _plugin.AdsStatusService.StartDutyInsideWithoutExit(
+            out adsSweepHandoffTerritoryId, out adsSweepHandoffContentId)
+            && adsSweepHandoffTerritoryId == Plugin.ClientState.TerritoryType;
+        if (adsSweepHandoffAccepted)
+        {
+            adsOwnershipObserved = true;
+            _plugin.AddDebugLog(logMessage);
+        }
+        else
+            _plugin.AddDebugLog("[ADS] Sweep-only handoff was not acknowledged; automatic duty exit will remain held.");
     }
 
     private void UpdateBossModOutdoorSuppression()

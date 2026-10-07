@@ -61,7 +61,7 @@ Loot Goblin uses managed host fonts for the selected language and the fourteen n
 7. Party waits can delay teleporting, mounting, underwater descent, or dismounting until party members are ready or nearby.
 8. Chest handling targets and opens overworld treasure coffers, handles combat waits, loots, and solves or skips the Higher/Lower minigame based on config.
 9. Portal handling approaches the portal, clears old map flags, accepts the portal dialog, and waits for duty state or a treasure dungeon territory.
-10. Dungeon handling either sends `/ads inside` and waits for ADS ownership, or falls back to Loot Goblin's legacy dungeon solver.
+10. Dungeon handling either starts an acknowledged ADS sweep-without-exit handoff, or falls back to Loot Goblin's legacy dungeon solver.
 11. Completion runs finish commands, checks for remaining enabled inventory/saddlebag/retainer maps, optionally retrieves another map, and loops when auto-start is enabled.
 
 When a character loads during an active **Moogle Treasure Trove** event, Loot Goblin shows one normal reminder toast. Event timing is checked dynamically against Eventy's public event feed, cached for six hours, and failures remain silent.
@@ -80,7 +80,7 @@ Each Emptor order requests exactly one map at the configured per-map gil cap. A 
 
 Party settings control wait-for-party behavior, thief-map underwater waits, mounted-party checks, teleport delay, dismount waits, and optional required-party-count thresholds.
 
-Dungeon settings control ADS handoff. When enabled and ADS is loaded, Loot Goblin sends `/ads inside` after a treasure dungeon is confirmed and waits for ADS to finish. If ADS is missing, Loot Goblin warns and can fall back to its legacy solver.
+Dungeon settings control ADS handoff. When enabled and ADS is loaded, Loot Goblin starts the confirmed treasure duty through ADS's existing operator API and selects a final-coffer sweep without exit. It keeps ADS running at duty completion and waits for a positive matching sweep result before applying the existing manual, delay or party-leave exit setting. The original delay runs from duty completion; sweeping does not restart it. Missing, unsupported, cancelled or unreadable sweep completion visibly holds automatic exit. Explicit manual ADS Stop/Leave remains available. The result confirms ADS's sweep checks, not inventory receipt. If ADS is missing before handoff, Loot Goblin warns and can fall back to its legacy solver.
 
 Return-when-done can send the selected Lifestream return only after no enabled inventory, loaded saddlebag, or retainer maps remain. Destinations are FC, personal house, or inn.
 

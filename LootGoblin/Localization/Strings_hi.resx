@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
+  <data name="Duty completed - waiting for ADS final-coffer sweep..." xml:space="preserve"><value>ड्यूटी पूरी हुई - ADS द्वारा अंतिम खज़ाने के बक्सों की जाँच की प्रतीक्षा...</value></data>
+  <data name="Duty completed - ADS sweep completion unavailable; automatic exit held." xml:space="preserve"><value>ड्यूटी पूरी हुई - ADS की जाँच पूरी होने की पुष्टि उपलब्ध नहीं है; स्वचालित निकास रोक दिया गया है।</value></data>
+  <data name="ADS released ownership - waiting for duty completion and sweep confirmation." xml:space="preserve"><value>ADS ने नियंत्रण लौटा दिया - ड्यूटी पूरी होने और बक्सों की जाँच की पुष्टि की प्रतीक्षा है।</value></data>
   <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>

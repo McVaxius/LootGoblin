@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
+  <data name="Duty completed - waiting for ADS final-coffer sweep..." xml:space="preserve"><value>Đã hoàn thành nhiệm vụ - đang chờ ADS kiểm tra các rương cuối...</value></data>
+  <data name="Duty completed - ADS sweep completion unavailable; automatic exit held." xml:space="preserve"><value>Đã hoàn thành nhiệm vụ - chưa xác nhận ADS kiểm tra xong; tạm giữ việc thoát tự động.</value></data>
+  <data name="ADS released ownership - waiting for duty completion and sweep confirmation." xml:space="preserve"><value>ADS đã trả quyền điều khiển - đang chờ nhiệm vụ hoàn thành và xác nhận kiểm tra rương.</value></data>
   <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>

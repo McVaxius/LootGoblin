@@ -5,30 +5,6 @@ using Dalamud.Plugin.Services;
 
 namespace LootGoblin.Services;
 
-public sealed class AdsStatusSnapshot
-{
-    public static AdsStatusSnapshot Empty { get; } = new();
-
-    public bool IsAvailable { get; init; }
-    public bool StatusReadable { get; init; }
-    public string OwnershipMode { get; init; } = string.Empty;
-    public string ExecutionPhase { get; init; } = string.Empty;
-    public string ExecutionStatus { get; init; } = string.Empty;
-    public bool UtilityRunning { get; init; }
-    public string UtilityTask { get; init; } = string.Empty;
-    public string UtilityMode { get; init; } = string.Empty;
-    public string UtilityStatus { get; init; } = string.Empty;
-    public string UtilityLastSuccess { get; init; } = string.Empty;
-    public string UtilityLastFailure { get; init; } = string.Empty;
-    public DateTime? UtilityCompletedAtUtc { get; init; }
-    public bool InDuty { get; init; }
-    public bool SupportedDuty { get; init; }
-    public DateTime CapturedAtUtc { get; init; }
-
-    public bool IsOwned
-        => OwnershipMode is "OwnedStartOutside" or "OwnedStartInside" or "OwnedResumeInside" or "Leaving";
-}
-
 public sealed class AdsStatusService : IDisposable
 {
     private readonly Plugin _plugin;
@@ -83,26 +59,7 @@ public sealed class AdsStatusService : IDisposable
                 return Current;
             }
 
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-            Current = new AdsStatusSnapshot
-            {
-                IsAvailable = true,
-                StatusReadable = true,
-                OwnershipMode = GetString(root, "ownershipMode"),
-                ExecutionPhase = GetString(root, "executionPhase"),
-                ExecutionStatus = GetString(root, "executionStatus"),
-                UtilityRunning = GetBool(root, "utilityRunning"),
-                UtilityTask = GetString(root, "utilityTask"),
-                UtilityMode = GetString(root, "utilityMode"),
-                UtilityStatus = GetString(root, "utilityStatus"),
-                UtilityLastSuccess = GetString(root, "utilityLastSuccess"),
-                UtilityLastFailure = GetString(root, "utilityLastFailure"),
-                UtilityCompletedAtUtc = GetDateTime(root, "utilityCompletedAtUtc"),
-                InDuty = GetBool(root, "inDuty") || GetBool(root, "inInstancedDuty"),
-                SupportedDuty = GetBool(root, "supportedDuty"),
-                CapturedAtUtc = now,
-            };
+            Current = AdsStatusSnapshot.Parse(json, now);
             return Current;
         }
         catch (Exception ex)
@@ -135,23 +92,38 @@ public sealed class AdsStatusService : IDisposable
         }
     }
 
-    private static string GetString(JsonElement root, string propertyName)
-        => root.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
-            ? property.GetString() ?? string.Empty
-            : string.Empty;
-
-    private static bool GetBool(JsonElement root, string propertyName)
-        => root.TryGetProperty(propertyName, out var property)
-            && property.ValueKind is JsonValueKind.True or JsonValueKind.False
-            && property.GetBoolean();
-
-    private static DateTime? GetDateTime(JsonElement root, string propertyName)
+    public bool StartDutyInsideWithoutExit(out uint territoryId, out uint contentId)
     {
-        if (!root.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
-            return null;
+        territoryId = contentId = 0;
+        if (!_plugin.IsAdsAvailable)
+            return false;
 
-        return DateTime.TryParse(property.GetString(), out var value)
-            ? value
-            : null;
+        try
+        {
+            var capabilities = _pluginInterface.GetIpcSubscriber<string>("ADS.GetCapabilitiesJson").InvokeFunc();
+            using var capabilityDocument = JsonDocument.Parse(capabilities);
+            if (!capabilityDocument.RootElement.TryGetProperty("dutyCompletionSweepWithoutExit", out var capability)
+                || capability.ValueKind != JsonValueKind.Number || !capability.TryGetInt32(out var version) || version < 1)
+                return false;
+
+            var response = _pluginInterface.GetIpcSubscriber<string, string, string>("ADS.Invoke")
+                .InvokeFunc("duty.start-inside", "{\"sweepWithoutExit\":true}");
+            using var document = JsonDocument.Parse(response);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("success", out var success) || success.ValueKind != JsonValueKind.True
+                || !root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object
+                || !data.TryGetProperty("sweepWithoutExit", out var choice) || choice.ValueKind != JsonValueKind.True
+                || !data.TryGetProperty("territoryTypeId", out var territory) || !territory.TryGetUInt32(out territoryId)
+                || !data.TryGetProperty("contentFinderConditionId", out var content) || !content.TryGetUInt32(out contentId))
+                return false;
+
+            return territoryId != 0 && contentId != 0;
+        }
+        catch (Exception ex)
+        {
+            _log.Debug($"[ADS] Failed to select duty-completion sweep without exit via IPC: {ex.Message}");
+            territoryId = contentId = 0;
+            return false;
+        }
     }
 }

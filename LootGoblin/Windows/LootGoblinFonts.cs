@@ -17,20 +17,19 @@ internal sealed class LootGoblinFonts : IDisposable
     {
         handles=LootGoblinPresentation.FontSizes.Select((size,index)=>atlas.NewDelegateFontHandle(toolkit=>toolkit.OnPreBuild(build=>
         {
+            build.NewImAtlas.TexDesiredWidth=4096;
+            build.NewImAtlas.TexDesiredHeight=4096;
             size=LootGoblinPresentation.AtlasHeight((UiFontRole)index);
             var config=new SafeFontConfig { SizePx=size, GlyphRanges=ranges };
             build.Font=build.AddFontFromFile(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts),LootGoblinPresentation.FontFiles[index]),config);
             build.AddFontFromFile(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "seguisym.ttf"),
                 new SafeFontConfig { SizePx = size, MergeFont = build.Font, GlyphRanges = ranges });
-            // The language selector always displays all fourteen native names. Host-managed merges cover these too.
-            foreach(var locale in UiText.CjkLanguages(language))
-                build.AddDalamudAssetFont(DalamudAsset.NotoSansCjkRegular,new SafeFontConfig
-                {
-                    SizePx=size, MergeFont=build.Font, GlyphRanges=ranges,
-                    // Verified bundled TTC order: Japanese, Korean,
-                    // Simplified Chinese, Traditional Chinese. Keep the selected locale first.
-                    FontNo=locale switch { "ja"=>0, "zh-Hans"=>2, "ko"=>1, _=>0 },
-                });
+            // Verified bundled TTC faces: JP=0, KR=1, SC=2, TC=3.
+            build.AddDalamudAssetFont(DalamudAsset.NotoSansCjkRegular,new SafeFontConfig
+            {
+                SizePx=size, MergeFont=build.Font, GlyphRanges=ranges,
+                FontNo=language switch { "ko"=>1, "zh-Hans" or "zh-CN"=>2, "zh-Hant" or "zh-TW"=>3, _=>0 },
+            });
             build.AttachExtraGlyphsForDalamudLanguage(new SafeFontConfig { SizePx=size, MergeFont=build.Font });
             build.AddGameSymbol(new SafeFontConfig { SizePx=size,MergeFont=build.Font });
         }))).ToArray();

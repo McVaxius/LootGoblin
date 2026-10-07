@@ -64,6 +64,36 @@ public class MainWindow : Window, IDisposable
         Size = new Vector2(1080, 950);
         SizeCondition = ImGuiCond.FirstUseEver;
         Flags |= ImGuiWindowFlags.HorizontalScrollbar;
+        TitleBarButtons.Add(new()
+        {
+            Icon = FontAwesomeIcon.Cog, Priority = 0, IconOffset = new(2, 1),
+            Click = button => { if (button == ImGuiMouseButton.Left) plugin.ToggleConfigUi(); },
+            ShowTooltip = () => UiGui.SetTooltip("Settings"),
+        });
+        TitleBarButtons.Add(new()
+        {
+            Icon = FontAwesomeIcon.Gem, Priority = -10, IconOffset = new(2, 1),
+            Click = button => { if (button == ImGuiMouseButton.Left) plugin.AlexandriteMapWindow.IsOpen = !plugin.AlexandriteMapWindow.IsOpen; },
+            ShowTooltip = () => UiGui.SetTooltip("Alexandrite"),
+        });
+        TitleBarButtons.Add(new()
+        {
+            Icon = FontAwesomeIcon.Play, Priority = -20, IconOffset = new(2, 1),
+            Click = button => { if (button == ImGuiMouseButton.Left) StartFromUi(); },
+            ShowTooltip = () => ShowRunTitleTooltip("Start", CanStartFromUi),
+        });
+        TitleBarButtons.Add(new()
+        {
+            Icon = FontAwesomeIcon.Pause, Priority = -30, IconOffset = new(2, 1),
+            Click = button => { if (button == ImGuiMouseButton.Left) PauseOrResumeFromUi(); },
+            ShowTooltip = () => ShowRunTitleTooltip(plugin.StateManager.IsPaused ? "Resume" : "Pause", CanPauseOrResumeFromUi),
+        });
+        TitleBarButtons.Add(new()
+        {
+            Icon = FontAwesomeIcon.Stop, Priority = -40, IconOffset = new(2, 1),
+            Click = button => { if (button == ImGuiMouseButton.Left) StopFromUi(); },
+            ShowTooltip = () => ShowRunTitleTooltip("Stop", CanStopFromUi),
+        });
     }
 
     public void Dispose() { }
@@ -72,6 +102,8 @@ public class MainWindow : Window, IDisposable
 
     public override void PreDraw()
     {
+        TitleBarButtons[3].Icon = plugin.StateManager.IsPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
+        UiGui.ReserveTitleSpace(this, MainTitle, 420);
         windowMotion.Prepare(this, reducedMotion: false, roundedCorners: true);
     }
 
@@ -81,7 +113,7 @@ public class MainWindow : Window, IDisposable
     public override void Draw()
     {
         windowMotion.DrawChrome();
-        UiGui.Title("Loot Goblin", MainTitle);
+        UiGui.TitleWithButtons("Loot Goblin", MainTitle, this);
         using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(plugin.Configuration.UiCompact ? 32 : 40));
         DrawHeaderSection();
         ImGui.Separator();
@@ -1230,26 +1262,66 @@ public class MainWindow : Window, IDisposable
         }
     }
 
+    private bool CanStartFromUi => Plugin.ClientState.IsLoggedIn
+        && plugin.StateManager.State is BotState.Idle or BotState.Error;
+
+    private bool CanPauseOrResumeFromUi => Plugin.ClientState.IsLoggedIn
+        && (plugin.StateManager.IsPaused || plugin.StateManager.State is not (BotState.Idle or BotState.Error));
+
+    private bool CanStopFromUi => Plugin.ClientState.IsLoggedIn
+        && plugin.StateManager.State is not (BotState.Idle or BotState.Error);
+
+    private void StartFromUi()
+    {
+        if (!CanStartFromUi) return;
+        plugin.SetBotEnabled(true, "main-window:start");
+        plugin.StateManager.Start();
+    }
+
+    private void PauseOrResumeFromUi()
+    {
+        if (!CanPauseOrResumeFromUi) return;
+        var sm = plugin.StateManager;
+        if (sm.IsPaused) sm.Resume("main-window:resume");
+        else sm.Pause("main-window:pause");
+    }
+
+    private void StopFromUi()
+    {
+        if (!CanStopFromUi) return;
+        var sm = plugin.StateManager;
+        if (!sm.IsPaused) plugin.SetBotEnabled(false, "main-window:stop");
+        sm.Stop("main-window:stop");
+    }
+
+    private void ShowRunTitleTooltip(string action, bool available)
+    {
+        var sm = plugin.StateManager;
+        var status = UiText.T(action);
+        if (!available) status += "\n" + UiText.T(Plugin.ClientState.IsLoggedIn ? sm.State.ToString() : "not logged in");
+        status += "\n" + UiText.T("Bot State") + ": " + UiText.T(sm.State.ToString());
+        if (sm.IsPaused) status += " " + UiText.T("[PAUSED]");
+        if (!string.IsNullOrWhiteSpace(sm.StateDetail)) status += "\n" + UiText.T(sm.StateDetail);
+        if (!string.IsNullOrWhiteSpace(sm.WarningMessage)) status += "\n" + UiText.T(sm.WarningMessage);
+        MaterialText.SetTooltip(status);
+    }
+
     private void DrawBotControlSection()
     {
         {
             ImGui.BeginGroup(); DrawCompactWarnings(); ImGui.EndGroup();
             using var font = UiText.Font(UiFontRole.Action);
             var sm = plugin.StateManager;
-            var loggedIn = Plugin.ClientState.IsLoggedIn;
             var buttonWidth = Scale(110);
             var buttonHeight = Scale(plugin.Configuration.UiCompact ? 40 : 52);
             NextGroup(Math.Max(buttonWidth, UiGui.ButtonWidth("Start", MaterialIcon.Play)));
 
-            var canStart = loggedIn && (sm.State == BotState.Idle || sm.State == BotState.Error);
+            var canStart = CanStartFromUi;
             if (!canStart)
                 ImGui.BeginDisabled();
             ImGui.PushStyleColor(ImGuiCol.Button, MaterialTheme.Current.Colors.PrimaryContainer);
             if (UiGui.Button("Start", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Play))
-            {
-                plugin.SetBotEnabled(true, "main-window:start");
-                sm.Start();
-            }
+                StartFromUi();
             ImGui.PopStyleColor();
             if (!canStart)
                 ImGui.EndDisabled();
@@ -1258,37 +1330,32 @@ public class MainWindow : Window, IDisposable
 
             if (sm.IsPaused)
             {
-                var canResume = loggedIn;
+                var canResume = CanPauseOrResumeFromUi;
                 if (!canResume)
                     ImGui.BeginDisabled();
                 if (UiGui.Button("Resume", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Play))
-                    sm.Resume("main-window:resume");
+                    PauseOrResumeFromUi();
                 if (!canResume)
                     ImGui.EndDisabled();
             }
             else
             {
-                var canPause = loggedIn && sm.State != BotState.Idle && sm.State != BotState.Error;
+                var canPause = CanPauseOrResumeFromUi;
                 if (!canPause)
                     ImGui.BeginDisabled();
                 if (UiGui.Button("Pause", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Pause))
-                    sm.Pause("main-window:pause");
+                    PauseOrResumeFromUi();
                 if (!canPause)
                     ImGui.EndDisabled();
             }
 
             NextGroup(Math.Max(buttonWidth, UiGui.ButtonWidth("Stop", MaterialIcon.Stop)));
 
-            var canStop = loggedIn && sm.State != BotState.Idle && sm.State != BotState.Error;
+            var canStop = CanStopFromUi;
             if (!canStop)
                 ImGui.BeginDisabled();
             if (UiGui.Button("Stop", new Vector2(buttonWidth, buttonHeight), MaterialIcon.Stop))
-            {
-                if (!sm.IsPaused)
-                    plugin.SetBotEnabled(false, "main-window:stop");
-
-                sm.Stop("main-window:stop");
-            }
+                StopFromUi();
             if (!canStop)
                 ImGui.EndDisabled();
 
