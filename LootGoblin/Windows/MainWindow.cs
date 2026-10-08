@@ -108,12 +108,14 @@ public class MainWindow : Window, IDisposable
     }
 
     public override void PostDraw()
-        => windowMotion.Restore(this);
+    {
+        windowMotion.Restore(this);
+        UiGui.ImageTitle(this, MainTitle, plugin.OriginalIcon);
+    }
 
     public override void Draw()
     {
         windowMotion.DrawChrome();
-        UiGui.TitleWithButtons("Loot Goblin", MainTitle, this);
         using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(plugin.Configuration.UiCompact ? 32 : 40));
         DrawHeaderSection();
         ImGui.Separator();
@@ -218,7 +220,10 @@ public class MainWindow : Window, IDisposable
     {
         windowRootId = ImGui.GetID("");
         var compact = plugin.Configuration.UiCompact;
-        LootGoblinPresentation.Chest(ImGui.GetCursorScreenPos(), Scale(compact ? 34 : 44), MaterialTheme.Current.Colors.Primary);
+        var icon = plugin.OriginalIcon;
+        var imageMin = ImGui.GetCursorScreenPos();
+        MaterialCanvas.DrawImage(ImGui.GetWindowDrawList(), icon.Handle, icon.Size,
+            imageMin, imageMin + new Vector2(Scale(compact ? 34 : 44)));
         ImGui.Dummy(new Vector2(Scale(compact ? 38 : 48), Scale(compact ? 34 : 44)));
         ImGui.SameLine();
         ImGui.BeginGroup();

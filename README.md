@@ -42,13 +42,19 @@ Every `/lg` command also works with `/lootgoblin`. `/lg debug` toggles map diagn
 
 ## Interface
 
+**Transparency** applies to the complete plugin window, including its titlebar and popups. Settings provides normal opacity, automatic focus fade, faded opacity and delay; defaults are 100%, fading to 50% after 10 seconds without focus and restoring on focus. Compact and language controls can be hidden independently on Main while remaining available in Settings.
+
+Main's titlebar opens Settings or Alexandrite and provides Start, Pause/Resume and Stop with the same runtime readiness checks as the body controls. The packaged icon appears in Main branding and its titlebar, including when collapsed. Combat command triggers remain editable in Settings and run at their configured landing, duty-entry and finish points.
+
 The main window groups controls, a live Bot State/Party/Food summary, Map Queue, Current Run, Party Status, Navigation and Commands into panels. Current Run and Party Status appear side by side when the window is wide enough. Existing section disclosure controls keep their state, and map diagnostics remain available through the existing debug settings.
 
-Use **C** in the header for compact mode. It reduces padding, gaps, action heights and title size across the main, Settings and Alexandrite windows. The header colour swatch offers teal, blue, pink and custom RGB colours; the language selector offers English, German, French, Spanish, Italian, Russian, Japanese, Korean, Simplified Chinese, Vietnamese, Brazilian Portuguese, Indonesian, Polish and Turkish. The same appearance controls are in Settings → Interface. These choices save through the existing plugin configuration and apply to all three windows. Status colours retain their meaning when the decorative theme changes.
+Use **C** in the header for compact mode. It reduces padding, gaps, action heights and title size across the main, Settings and Alexandrite windows. The header colour swatch offers teal, blue, pink and custom RGB colours; the language selector offers English, German, French, Spanish, Italian, Russian, Japanese, Korean, Simplified Chinese, Vietnamese, Brazilian Portuguese, Indonesian, Polish, Turkish and Hindi. The same appearance controls are in Settings → Interface. These choices save through the existing plugin configuration and apply to all three windows. Status colours retain their meaning when the decorative theme changes.
 
 Settings search highlights tabs matching every search word, including conditional settings. Search accepts translated labels and the original English aliases. Clear or closing Settings resets it. Plugin names, game catalogue names, commands and diagnostic logs retain their original text; UI numbers use the selected language's formatting.
 
-Loot Goblin uses managed host fonts for the selected language and the fourteen native language names. A loading or error window appears when the required fonts are unavailable; details are written to the plugin log. Game font and screenshot acceptance remain pending.
+Loot Goblin uses managed host fonts for the selected language and the native language names. A loading or error window appears when the required fonts are unavailable; details are written to the plugin log. Game font and screenshot acceptance remain pending.
+
+Hindi is enabled only when the local font check passes. Otherwise the selector shows disabled **Hindi (unavailable)** while other languages remain usable. A saved Hindi choice that fails its required-font check shows an English status and **Use English**; that button explicitly saves English. Font failures never change the saved language automatically.
 
 ## Core Workflow
 

@@ -46,6 +46,10 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
     [PluginService] internal static IToastGui ToastGui { get; private set; } = null!;
     [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
+
+    internal Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap OriginalIcon
+        => TextureProvider.GetFromFile(System.IO.Path.Combine(
+            PluginInterface.AssemblyLocation.DirectoryName ?? "", "icon.png")).GetWrapOrEmpty();
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
     [PluginService] internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
     [PluginService] internal static IDutyState DutyState { get; private set; } = null!;
@@ -65,6 +69,7 @@ public sealed class Plugin : IDalamudPlugin
     private uint appliedAccent;
     private Vector3 accentDraft;
     private int checkedFontGeneration = -1;
+    private int checkedHindiGeneration = -1;
     private bool fontIssueLogged;
     internal MapGatherCharacterConfig ActiveMapGatherConfig { get; private set; } = new();
     internal ulong ActiveMapGatherContentId { get; private set; }
@@ -289,6 +294,16 @@ public sealed class Plugin : IDalamudPlugin
             DrawFontStatus(uiFonts.LoadException is null);
             return;
         }
+        if (checkedHindiGeneration != uiFonts.Generation)
+        {
+            var generation = uiFonts.Generation;
+            var hindiAvailable = true;
+            foreach (var role in Enum.GetValues<UiFontRole>())
+                hindiAvailable &= shapedText.Renderer.TryCheckGlyphs(["हिन्दी"], LootGoblinPresentation.AtlasHeight(role) * ImGuiHelpers.GlobalScale, out _);
+            languageOptions.Replace(UiText.Languages.Select(l => new MaterialOption<string>(l.Code, l.Code,
+                l.Code == "hi" && !hindiAvailable ? "Hindi (unavailable)" : l.Name, l.Code == "hi" && !hindiAvailable)).ToArray());
+            checkedHindiGeneration = generation;
+        }
         if (checkedFontGeneration != uiFonts.Generation)
         {
             try
@@ -340,7 +355,12 @@ public sealed class Plugin : IDalamudPlugin
             if (ImGui.Begin("Loot Goblin##FontStatus", ImGuiWindowFlags.AlwaysAutoResize))
             {
                 fontStatusDecorations.Paint();
-                MaterialText.TextWrapped(UiText.T(loading ? "Loading UI fonts..." : "UI fonts failed to load. See the plugin log."));
+                if (appliedLanguage == "hi")
+                {
+                    ImGui.TextWrapped(loading ? "Loading Hindi UI fonts..." : "Hindi UI fonts are unavailable. See the plugin log.");
+                    if (!loading && ImGui.Button("Use English")) { Configuration.UiLanguage = "en"; Configuration.Save(); }
+                }
+                else MaterialText.TextWrapped(UiText.T(loading ? "Loading UI fonts..." : "UI fonts failed to load. See the plugin log."));
             }
         }
         finally
@@ -364,6 +384,7 @@ public sealed class Plugin : IDalamudPlugin
             languageOptions = new(UiText.Languages.Select(l => new MaterialOption<string>(l.Code, l.Code, l.Name)).ToArray());
             appliedLanguage = language;
             checkedFontGeneration = -1;
+            checkedHindiGeneration = -1;
             fontIssueLogged = false;
         }
         if (uiTheme is null || (Configuration.UiAccentRgb & 0xFFFFFF) != appliedAccent)
