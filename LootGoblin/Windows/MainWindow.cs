@@ -248,7 +248,8 @@ public class MainWindow : Window, IDisposable
         }
         if (plugin.Configuration.UiLanguageVisibleOnMainWindow)
         { NextGroup(Scale(190)); plugin.DrawLanguageSelector(); }
-        NextGroup(UiGui.CheckboxWidth("Transparency")); plugin.DrawTransparencyToggle();
+        if (plugin.Configuration.UiTransparencyVisibleOnMainWindow)
+        { NextGroup(UiGui.CheckboxWidth("Transparency")); plugin.DrawTransparencyToggle(); }
     }
 
     private void DrawCompactWarnings()

@@ -1197,7 +1197,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private static bool ApplyConfigurationMigrations(Configuration configuration, bool isNewConfiguration)
     {
-        var changed = false;
+        var changed = configuration.ApplyCompactDefaults();
         if (configuration.Version < 1)
         {
             if (configuration.FinishCommandTriggers != null
@@ -1410,6 +1410,9 @@ public sealed class Plugin : IDalamudPlugin
         var compactVisible = config.UiCompactVisibleOnMainWindow;
         if (ImGui.Checkbox(UiText.T("Compact visible on main window") + "###window-compact-visible", ref compactVisible))
         { config.UiCompactVisibleOnMainWindow = compactVisible; changed = true; }
+        var transparencyVisible = config.UiTransparencyVisibleOnMainWindow;
+        if (ImGui.Checkbox(UiText.T("Transparency visible on main window") + "###window-transparency-visible", ref transparencyVisible))
+        { config.UiTransparencyVisibleOnMainWindow = transparencyVisible; changed = true; }
         var languageVisible = config.UiLanguageVisibleOnMainWindow;
         if (ImGui.Checkbox(UiText.T("Language visible on main window") + "###window-language-visible", ref languageVisible))
         { config.UiLanguageVisibleOnMainWindow = languageVisible; changed = true; }
