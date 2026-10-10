@@ -1,5 +1,6 @@
 2026-10-09 - Tight compact list grids (I503/I509)
 
+
 - Apply the adjacent-row style to the compact map queue and let its editors set row height, retaining run counts, inventory sources and gather/buy controls.
 
 2026-10-09 - Separate XA Slave log-tools shortcut (I512)
