@@ -2266,6 +2266,14 @@ public class StateManager : IDisposable
 
         _ = StopMarketPurchaseImmediately();
 
+        if (_plugin.RotationPluginIPC.IsBossModRebornAvailable
+            && !_plugin.RotationPluginIPC.RefreshPackagedPresets(out var presetDetail))
+        {
+            SetWarning(presetDetail);
+            _plugin.AddDebugLog($"[Start] {presetDetail}");
+            return false;
+        }
+
         _plugin.RotationPluginIPC.RestoreRsrHealing();
         Plugin.CommandManager.ProcessCommand(
             _plugin.Configuration.ObstacleMapsOn
@@ -7271,6 +7279,12 @@ public class StateManager : IDisposable
 
         if (string.Equals(command, "/bmrai on", StringComparison.OrdinalIgnoreCase))
         {
+            if (!_plugin.RotationPluginIPC.PreparePassivePreset(out var presetDetail))
+            {
+                SetWarning(presetDetail);
+                _plugin.AddDebugLog($"[CombatAutomation] BMR enable withheld for {reason}: {presetDetail}");
+                return false;
+            }
             CommandHelper.TrySendCommand("/bmrai prefdistance 1.5");
             CommandHelper.TrySendCommand("/bmrai forbidactions off");
         }
@@ -17528,15 +17542,15 @@ public class StateManager : IDisposable
         if (!force && combatAutomationEnabledState == inCombat)
             return;
 
-        SendCombatAutomationCommand(inCombat ? "/bmrai on" : "/bmrai off", reason);
-        SendCombatAutomationCommand(inCombat ? "/vbmai on" : "/vbmai off", reason);
-        combatAutomationEnabledState = inCombat;
+        var bmrSent = SendCombatAutomationCommand(inCombat ? "/bmrai on" : "/bmrai off", reason);
+        var vbmSent = SendCombatAutomationCommand(inCombat ? "/vbmai on" : "/vbmai off", reason);
+        combatAutomationEnabledState = inCombat && (bmrSent || vbmSent);
         if (!inCombat)
         {
             joinedFateCombatAutomationActive = false;
             joinedFateCombatAutomationFateId = 0;
         }
-        _plugin.AddDebugLog($"[CombatAutomation] BMR/VBM {(inCombat ? "enabled" : "disabled")} for {reason}.");
+        _plugin.AddDebugLog($"[CombatAutomation] {(inCombat ? "Enable" : "Disable")} for {reason}: BMR sent={bmrSent}; VBM sent={vbmSent}.");
     }
 
     private static OverworldLandingMode ResolveLandingMode(uint mapItemId)

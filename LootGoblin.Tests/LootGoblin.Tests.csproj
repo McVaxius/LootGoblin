@@ -21,6 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\LootGoblin\Services\BossModPresetService.cs" Link="Services\BossModPresetService.cs" />
+    <Content Include="..\LootGoblin\data\bm\*.json" Link="data\bm\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="..\LootGoblin\Services\AdsStatusSnapshot.cs" Link="Services\AdsStatusSnapshot.cs" />
     <Compile Include="..\LootGoblin\Services\DedicatedDiagnosticLog.cs" Link="Services\DedicatedDiagnosticLog.cs" />
     <Compile Include="..\LootGoblin\Services\DiagnosticSnapshotPolicy.cs" Link="Services\DiagnosticSnapshotPolicy.cs" />

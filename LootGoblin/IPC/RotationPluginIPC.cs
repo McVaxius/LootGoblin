@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using LootGoblin.Services;
 
 namespace LootGoblin.IPC;
 
@@ -30,6 +32,7 @@ public class RotationPluginIPC : IDisposable
     private readonly IDalamudPluginInterface _pluginInterface;
     private readonly IPluginLog _log;
     private readonly Plugin _plugin;
+    private readonly BossModPresetService _presets;
     private DateTime _lastBossModDangerRefreshUtc = DateTime.MinValue;
 
     public List<RotationPluginInfo> RotationPlugins { get; } = new()
@@ -92,6 +95,9 @@ public class RotationPluginIPC : IDisposable
     public RotationPluginIPC(Plugin plugin, IDalamudPluginInterface pluginInterface, IPluginLog log)
     {
         _plugin = plugin;
+        _presets = new BossModPresetService(
+            Path.Combine(pluginInterface.AssemblyLocation.DirectoryName ?? AppContext.BaseDirectory, "data", "bm"),
+            new BossModPresetIpc(pluginInterface));
         _pluginInterface = pluginInterface;
         _log = log;
 
@@ -138,6 +144,59 @@ public class RotationPluginIPC : IDisposable
     }
 
     public void Dispose() { }
+
+    internal bool RefreshPackagedPresets(out string detail)
+    {
+        if (!CanUseBmrPresetIpc(out detail))
+            return false;
+        var refreshed = _presets.Refresh(out detail);
+        _plugin.AddDebugLog($"[BossModPresets] {detail}");
+        return refreshed;
+    }
+
+    internal bool PreparePassivePreset(out string detail)
+    {
+        if (!CanUseBmrPresetIpc(out detail))
+            return false;
+        var jobId = Plugin.ObjectTable.LocalPlayer?.ClassJob.RowId ?? 0;
+        var prepared = _presets.PreparePassive(jobId, out detail);
+        _plugin.AddDebugLog($"[BossModPresets] {detail}");
+        return prepared;
+    }
+
+    private bool CanUseBmrPresetIpc(out string detail)
+    {
+        var loaded = _pluginInterface.InstalledPlugins.Where(plugin => plugin.IsLoaded
+            && (string.Equals(plugin.InternalName, "BossModReborn", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(plugin.InternalName, "BossMod", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(plugin.InternalName, "vbm", StringComparison.OrdinalIgnoreCase))).ToArray();
+        if (loaded.Length != 1 || !string.Equals(loaded[0].InternalName, "BossModReborn", StringComparison.OrdinalIgnoreCase))
+        {
+            detail = loaded.Length > 1 ? "Both BossMod providers are loaded; preset IPC is ambiguous."
+                : "BossModReborn is not loaded.";
+            return false;
+        }
+        detail = string.Empty;
+        return true;
+    }
+
+    private sealed class BossModPresetIpc(IDalamudPluginInterface pluginInterface) : IBossModPresetIpc
+    {
+        public string? GetPreset(string name)
+            => pluginInterface.GetIpcSubscriber<string, string>("BossMod.Presets.Get").InvokeFunc(name);
+        public bool DeletePreset(string name)
+            => pluginInterface.GetIpcSubscriber<string, bool>("BossMod.Presets.Delete").InvokeFunc(name);
+        public bool CreatePreset(string json)
+            => pluginInterface.GetIpcSubscriber<string, bool, bool>("BossMod.Presets.Create").InvokeFunc(json, true);
+        public string? GetActivePreset()
+            => pluginInterface.GetIpcSubscriber<string>("BossMod.Presets.GetActive").InvokeFunc();
+        public bool SetActivePreset(string name)
+            => pluginInterface.GetIpcSubscriber<string, bool>("BossMod.Presets.SetActive").InvokeFunc(name);
+        public string GetAiPreset()
+            => pluginInterface.GetIpcSubscriber<string>("BossMod.AI.GetPreset").InvokeFunc() ?? string.Empty;
+        public void SetAiPreset(string name)
+            => pluginInterface.GetIpcSubscriber<string, object>("BossMod.AI.SetPreset").InvokeAction(name);
+    }
 
     public void CheckAvailability(bool logStatus = true)
     {

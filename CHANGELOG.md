@@ -1,3 +1,7 @@
+2026-10-10 - Packaged BMR movement presets
+
+- Bundle FrenRider's six BossMod presets and refresh their named definitions when a map run starts. Before enabling BMR, confirm its saved AI and active selections use the current job's passive tank, melee or ranged preset, leaving combat actions to the existing rotation commands. Stop activation visibly if installation or selection fails; retain custom command lists and release version 1.0.0.5.
+
 2026-10-10 - Compact defaults and main appearance controls (I521)
 
 - Apply Compact on once, with main Compact and Transparency controls hidden. Keep density, transparency and independent visibility choices in Appearance settings; preserve later choices, opacity, automation and unknown saved fields. Advance the release from 1.0.0.4 to 1.0.0.5.

@@ -92,6 +92,8 @@ Return-when-done can send the selected Lifestream return only after no enabled i
 
 Command triggers run configured slash commands at landing/duty entry and at finish. Defaults include rotation/BossMod/FrenRider follow-control commands, but they are editable in settings.
 
+Loot Goblin bundles FrenRider's six BossMod presets in `data/bm` and refreshes those named definitions when a map run starts with BMR loaded. Before `/bmrai on`, it confirms both BMR's saved AI preset and its active preset use `passive - tank`, `passive - melee` or `passive - ranged` for the current job. The passive presets supply movement while the existing commands enable the combat rotation. Refreshing replaces custom edits under those six preset names. Keep the `data/bm` folder with the DLL when installing manually. Unavailable or rejected preset setup warns and withholds BMR activation; having both BossMod providers loaded prevents preset writes.
+
 Automation settings cover ADS repair threshold/mode, food selection and search, auto-discard through AutoRetainer `/ays discard`, chocobo companion summon/stance, combat automation, Krangle names, and diagnostics.
 
 Diagnostics include the main debug log, map diagnostics, and an optional dedicated LootGoblin diagnostic log under the plugin config directory.

@@ -2,9 +2,9 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Version>1.0.0.5</Version>
-    <FileVersion>1.0.0.5</FileVersion>
-    <AssemblyVersion>1.0.0.5</AssemblyVersion>
+    <Version>1.0.0.6</Version>
+    <FileVersion>1.0.0.6</FileVersion>
+    <AssemblyVersion>1.0.0.6</AssemblyVersion>
     <PackageProjectUrl>https://github.com/McVaxius/LootGoblin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
@@ -35,6 +35,7 @@
     <None Include="images\icon.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="images\icon.png" Link="icon.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="SpecialNavigation.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="data\bm\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="CopyPluginArtifacts" AfterTargets="Build">
@@ -51,6 +52,7 @@
       <PluginFiles Include="$(ProjectDir)$(AssemblyName).json" />
       <PluginFiles Include="$(ProjectDir)images\icon.png" />
       <PluginFiles Include="$(ProjectDir)SpecialNavigation.json" />
+      <PluginDataFiles Include="data\bm\**" />
     </ItemGroup>
 
     <ItemGroup>
@@ -59,5 +61,7 @@
 
     <Copy SourceFiles="@(PluginFiles)"
           DestinationFolder="$(PluginOutput)" />
+    <Copy SourceFiles="@(PluginDataFiles)"
+          DestinationFiles="@(PluginDataFiles->'$(PluginOutput)\data\bm\%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 </Project>
