@@ -1,3 +1,15 @@
+2026-10-09 - Tight compact list grids (I503/I509)
+
+- Apply the adjacent-row style to the compact map queue and let its editors set row height, retaining run counts, inventory sources and gather/buy controls.
+
+2026-10-09 - Separate XA Slave log-tools shortcut (I512)
+
+- Add Open XA Slave log tools beside the existing manual support exporter when XA Slave is loaded. The new action opens Utility > XA Mods only; preserve the Copy / ZIP button, its handler and cap warning. No automatic cleanup, provider loading or settings changes.
+
+2026-10-09 - Manual Dalamud support log export (I506)
+
+- Add Copy / ZIP Dalamud log and Open Export Folder to the existing settings/support interface. At 100 MiB or above, warn that logging may have stopped and recent activity may be missing; require another explicit click to export. Exports stay local and can be shared or removed manually. Preserve saved settings and release versions.
+
 2026-10-08 - GitHub Actions shared-library repair
 
 - Build against published AethertekUI main so current shared APIs are available. Retain repository-specific read-only SSH deploy keys, which do not expire, and disabled credential persistence. Publish library APIs before consumer changes.

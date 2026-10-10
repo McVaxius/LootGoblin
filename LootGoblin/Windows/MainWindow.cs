@@ -469,6 +469,7 @@ public class MainWindow : Window, IDisposable
                     var rowHeight = Scale(plugin.Configuration.UiCompact ? 36 : 44);
                     using var queueRows = new MaterialStyleScope();
                     queueRows.Style(ImGuiStyleVar.CellPadding, new Vector2(ImGui.GetStyle().CellPadding.X, Scale(2)));
+                    using var tightRows = plugin.Configuration.UiCompact ? MaterialTable.PushTightRows() : default;
                     var columnWidths = LootGoblinPresentation.QueueWidths(sortedMaps.Select(entry =>
                         itemSheet?.GetRow(entry.Key).Name.ToString()
                         ?? (TreasureMapData.KnownMaps.TryGetValue(entry.Key, out var info) ? info.Name : UiText.F("Unknown Map (ID: {0})", entry.Key))));
@@ -504,7 +505,7 @@ public class MainWindow : Window, IDisposable
                         
                         var desc = item?.Description.ToString() ?? "";
                         var (mapTier, mapLevel) = ParseMapTierAndLevel(desc);
-                        ImGui.TableNextRow(ImGuiTableRowFlags.None, rowHeight);
+                        ImGui.TableNextRow(ImGuiTableRowFlags.None, plugin.Configuration.UiCompact ? 0 : rowHeight);
                         ImGui.TableNextColumn();
                         using (UiText.Font(UiFontRole.BodyStrong)) MaterialText.Text(itemName);
                         if (ImGui.IsItemHovered())

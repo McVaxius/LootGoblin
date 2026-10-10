@@ -13,6 +13,7 @@ namespace LootGoblin.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
+    private readonly AethertekUI.Dalamud.MaterialSupportLog supportLog = new();
     private readonly AethertekUI.Dalamud.MaterialWindowMotion windowMotion = new();
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
@@ -929,6 +930,8 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawAdvancedTab()
     {
+        supportLog.Draw(Plugin.PluginInterface, key => UiText.T(key),
+            path => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = path, UseShellExecute = true }), ex => Plugin.Log.Error(ex, "Dalamud log export failed."), Plugin.CommandManager);
         DrawConfigCheckbox("Obstacle maps on", configuration.ObstacleMapsOn, value => configuration.ObstacleMapsOn = value,
             "Controls BossMod Reborn only. Default: off. Applies on Start and after each configured command batch, regardless of combat provider.");
         ImGui.Spacing();
