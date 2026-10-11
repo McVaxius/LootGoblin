@@ -163,7 +163,10 @@ public class ConfigWindow : Window, IDisposable
     }
 
     public override void PostDraw()
-        => windowMotion.Restore(this);
+    {
+        windowMotion.Restore(this);
+        UiGui.ImageTitleWithStatus(this, UiText.T("Loot Goblin Settings"), plugin.OriginalIcon, plugin.TitlebarStatus());
+    }
 
     public override void Draw()
     {

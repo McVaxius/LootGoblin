@@ -1,3 +1,8 @@
+2026-10-11 - Native titlebar runtime status (I536)
+
+- Show the current runtime stage and reason in native titlebars, including completed/target run counts while farming Alexandrite. Restore the packaged Settings icon.
+- Add default-on Show titlebar status and Detailed titlebar status controls in Appearance. Detailed off retains the concise state and available run counts; hover retains the full reasons and warnings. Preserve automation and current save routes. No release version change.
+
 2026-10-11 - Native titlebar appearance shortcuts (I532)
 
 - Add Language, Compact, Transparency and Colour to applicable native window titlebars through AethertekUI. Reuse current editors and save routes, retain main visibility preferences and grouped Settings, remove the moved body shortcuts and their unused spacing, and preserve existing action order, title clipping, motion, opacity and release versions.

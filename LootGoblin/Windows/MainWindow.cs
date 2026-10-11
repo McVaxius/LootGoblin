@@ -110,7 +110,7 @@ public class MainWindow : Window, IDisposable
     public override void PostDraw()
     {
         windowMotion.Restore(this);
-        UiGui.ImageTitle(this, MainTitle, plugin.OriginalIcon);
+        UiGui.ImageTitleWithStatus(this, MainTitle, plugin.OriginalIcon, plugin.TitlebarStatus());
     }
 
     public override void Draw()

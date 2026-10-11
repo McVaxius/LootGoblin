@@ -300,6 +300,22 @@ public sealed class Plugin : IDalamudPlugin
         foreach (var actions in appearanceTitleBars.Values) actions.DrawPopups();
     }
 
+    internal MaterialTitlebarStatus? TitlebarStatus()
+    {
+        if (!Configuration.UiShowTitlebarStatus) return null;
+        var runtime = StateManager;
+        var state = UiText.T(!ClientState.IsLoggedIn ? "Titlebar.NotLoggedIn" : runtime.IsPaused ? "Paused" : runtime.State.ToString());
+        var detail = UiText.T(runtime.StateDetail);
+        var counts = runtime.State == LootGoblin.Models.BotState.AlexandriteFarming
+            ? UiText.T("Runs") + $": {runtime.AlexandriteRunsCompleted}/{runtime.AlexandriteRunsCompleted + runtime.AlexandriteRunsRemaining}"
+            : string.Empty;
+        var concise = string.IsNullOrEmpty(counts) ? state : state + " | " + counts;
+        var tooltip = string.Join("\n", concise, detail, UiText.T(runtime.WarningMessage));
+        Vector4? color = runtime.State == BotState.Error ? MaterialTheme.Current.Colors.Error : null;
+        return new(Configuration.UiDetailedTitlebarStatus && !string.IsNullOrWhiteSpace(detail)
+            ? concise + " | " + detail : concise, state, tooltip, color);
+    }
+
     private void DrawTitleColour()
     {
         using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(Configuration.UiCompact ? 28 : 32, 18));
@@ -1445,6 +1461,12 @@ public sealed class Plugin : IDalamudPlugin
     {
         var config = Configuration;
         var changed = false;
+        var showStatus = config.UiShowTitlebarStatus;
+        if (ImGui.Checkbox(UiText.T("Show titlebar status") + "###UiShowTitlebarStatus", ref showStatus))
+        { config.UiShowTitlebarStatus = showStatus; changed = true; }
+        var detailedStatus = config.UiDetailedTitlebarStatus;
+        if (ImGui.Checkbox(UiText.T("Detailed titlebar status") + "###UiDetailedTitlebarStatus", ref detailedStatus))
+        { config.UiDetailedTitlebarStatus = detailedStatus; changed = true; }
         var compactVisible = config.UiCompactVisibleOnMainWindow;
         if (ImGui.Checkbox(UiText.T("Compact visible on main window") + "###window-compact-visible", ref compactVisible))
         { config.UiCompactVisibleOnMainWindow = compactVisible; changed = true; }

@@ -45,7 +45,10 @@ public class AlexandriteMapWindow : Window, IDisposable
     }
 
     public override void PostDraw()
-        => windowMotion.Restore(this);
+    {
+        windowMotion.Restore(this);
+        UiGui.ImageTitleWithStatus(this, UiText.T("Alexandrite Maps"), plugin.OriginalIcon, plugin.TitlebarStatus());
+    }
 
     public override void Draw()
     {

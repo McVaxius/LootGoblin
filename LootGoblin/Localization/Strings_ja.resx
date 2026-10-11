@@ -1397,4 +1397,8 @@
   <data name="Opens XA Slave&apos;s Utility &gt; XA Mods panel, which contains Dalamud Log Cleaner." xml:space="preserve"><value>Dalamud Log Cleanerを含むXA SlaveのUtility &gt; XA Modsパネルを開きます。</value></data>
   <data name="XA Slave log tools could not be opened." xml:space="preserve"><value>XA Slaveのログツールを開けませんでした。</value></data>
   <data name="Transparency visible on main window" xml:space="preserve"><value>メインウィンドウに透明度を表示</value></data>
+  <data name="Show titlebar status" xml:space="preserve"><value>タイトルバーに状態を表示</value></data>
+  <data name="Detailed titlebar status" xml:space="preserve"><value>タイトルバーに詳細な状態を表示</value></data>
+  <data name="Titlebar.NotLoggedIn" xml:space="preserve"><value>未ログイン</value></data>
+  <data name="Runs" xml:space="preserve"><value>実行回数</value></data>
 </root>
