@@ -1,3 +1,8 @@
+2026-10-11 - Culture-safe external settings and timestamps (I538)
+
+- Read ADS utility completion timestamps using the JSON timestamp contract so the same UTC instant is retained across system locales and calendars.
+- Format fractional healing settings for RSR's current-culture parser while retaining the same thresholds, settings and dispatch order.
+
 2026-10-11 - Native titlebar runtime status (I536)
 
 - Show the current runtime stage and reason in native titlebars, including completed/target run counts while farming Alexandrite. Restore the packaged Settings icon.

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using LootGoblin.Services;
@@ -12,6 +13,30 @@ public sealed class AdsStatusSnapshotTests
          "unsafeTransition":false,"territoryTypeId":1044,"contentFinderConditionId":831,
          "completionTreasureSweep":{"territoryTypeId":1044,"contentFinderConditionId":831,"withoutExit":true,"completed":true}}
         """;
+
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("de-DE")]
+    [InlineData("fr-FR")]
+    [InlineData("ar-SA")]
+    [InlineData("th-TH")]
+    public void UtilityCompletionTimestampRetainsUtcAcrossCultures(string cultureName)
+    {
+        var originalCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(cultureName);
+            var status = AdsStatusSnapshot.Parse(
+                """{"utilityCompletedAtUtc":"2026-10-11T19:20:21.1234567Z"}""", DateTime.UtcNow);
+            var expected = new DateTime(2026, 10, 11, 19, 20, 21, DateTimeKind.Utc).AddTicks(1234567);
+            Assert.Equal(expected, status.UtilityCompletedAtUtc);
+            Assert.Equal(DateTimeKind.Utc, status.UtilityCompletedAtUtc!.Value.Kind);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
+    }
 
     [Fact]
     public void MatchingNormalSweepReleaseIsTheOnlyPositiveResult()

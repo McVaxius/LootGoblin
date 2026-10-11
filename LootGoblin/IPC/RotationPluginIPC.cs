@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Dalamud.Plugin;
@@ -128,14 +129,15 @@ public class RotationPluginIPC : IDisposable
             subscriber.InvokeAction(RsrOtherCommandType.Settings, "AutoHeal true");
             subscriber.InvokeAction(RsrOtherCommandType.Settings, "UseGroundBeneficialAbility true");
             subscriber.InvokeAction(RsrOtherCommandType.Settings, "HealWhenNothingTodo true");
-            subscriber.InvokeAction(RsrOtherCommandType.Settings, "HealthAreaAbilityHot 0.70");
-            subscriber.InvokeAction(RsrOtherCommandType.Settings, "HealthAreaSpellHot 0.70");
-            subscriber.InvokeAction(RsrOtherCommandType.Settings, "HealthAreaAbility 0.90");
-            subscriber.InvokeAction(RsrOtherCommandType.Settings, "HealthAreaSpell 0.80");
-            subscriber.InvokeAction(RsrOtherCommandType.Settings, "HealthSingleAbilityHot 0.80");
-            subscriber.InvokeAction(RsrOtherCommandType.Settings, "HealthSingleSpellHot 0.70");
-            subscriber.InvokeAction(RsrOtherCommandType.Settings, "HealthSingleAbility 0.85");
-            subscriber.InvokeAction(RsrOtherCommandType.Settings, "HealthSingleSpell 0.80");
+            // RSR Settings parses numeric strings with the current culture.
+            subscriber.InvokeAction(RsrOtherCommandType.Settings, $"HealthAreaAbilityHot {0.70f.ToString("R", CultureInfo.CurrentCulture)}");
+            subscriber.InvokeAction(RsrOtherCommandType.Settings, $"HealthAreaSpellHot {0.70f.ToString("R", CultureInfo.CurrentCulture)}");
+            subscriber.InvokeAction(RsrOtherCommandType.Settings, $"HealthAreaAbility {0.90f.ToString("R", CultureInfo.CurrentCulture)}");
+            subscriber.InvokeAction(RsrOtherCommandType.Settings, $"HealthAreaSpell {0.80f.ToString("R", CultureInfo.CurrentCulture)}");
+            subscriber.InvokeAction(RsrOtherCommandType.Settings, $"HealthSingleAbilityHot {0.80f.ToString("R", CultureInfo.CurrentCulture)}");
+            subscriber.InvokeAction(RsrOtherCommandType.Settings, $"HealthSingleSpellHot {0.70f.ToString("R", CultureInfo.CurrentCulture)}");
+            subscriber.InvokeAction(RsrOtherCommandType.Settings, $"HealthSingleAbility {0.85f.ToString("R", CultureInfo.CurrentCulture)}");
+            subscriber.InvokeAction(RsrOtherCommandType.Settings, $"HealthSingleSpell {0.80f.ToString("R", CultureInfo.CurrentCulture)}");
         }
         catch (Exception ex)
         {

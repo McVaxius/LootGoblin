@@ -95,7 +95,7 @@ public sealed class AdsStatusSnapshot
 
     private static DateTime? GetDateTime(JsonElement root, string name)
         => root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
-           && DateTime.TryParse(value.GetString(), out var date) ? date : null;
+           && value.TryGetDateTime(out var date) ? date : null;
 }
 
 public sealed record AdsCompletionTreasureSweepSnapshot(
