@@ -445,6 +445,9 @@ internal static class UiGui
     internal static void TitleWithButtons(string original, string translated, Window owner)
         => PaintTitle(original, translated, MaterialIcon.None, owner);
 
+    internal static void TitleWithButtons(string original, string translated, Window owner, MaterialIcon icon)
+        => PaintTitle(original, translated, icon, owner);
+
     internal static void ReserveTitleSpace(Window owner, string visible, float minimumWidth)
     {
         var style = ImGui.GetStyle();

@@ -168,7 +168,7 @@ public class ConfigWindow : Window, IDisposable
     public override void Draw()
     {
         windowMotion.DrawChrome();
-        UiGui.Title("Loot Goblin Settings", UiText.T("Loot Goblin Settings"));
+        UiGui.TitleWithButtons("Loot Goblin Settings", UiText.T("Loot Goblin Settings"), this);
         if (!commandTriggerDraftsInitialized || ImGui.IsWindowAppearing() || CommandTriggerDraftSourceChanged())
         {
             SaveCommandTriggerDraftsIfDirty("draft source refresh");

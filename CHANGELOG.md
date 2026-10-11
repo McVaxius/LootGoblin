@@ -1,3 +1,7 @@
+2026-10-11 - Native titlebar appearance shortcuts (I532)
+
+- Add Language, Compact, Transparency and Colour to applicable native window titlebars through AethertekUI. Reuse current editors and save routes, retain main visibility preferences and grouped Settings, remove the moved body shortcuts and their unused spacing, and preserve existing action order, title clipping, motion, opacity and release versions.
+
 2026-10-10 - Packaged BMR movement presets
 
 - Bundle FrenRider's six BossMod presets and refresh their named definitions when a map run starts. Before enabling BMR, confirm its saved AI and active selections use the current job's passive tank, melee or ranged preset, leaving combat actions to the existing rotation commands. Stop activation visibly if installation or selection fails; retain custom command lists and release version 1.0.0.5.

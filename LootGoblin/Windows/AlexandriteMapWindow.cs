@@ -50,7 +50,7 @@ public class AlexandriteMapWindow : Window, IDisposable
     public override void Draw()
     {
         windowMotion.DrawChrome();
-        UiGui.Title("Alexandrite Maps", UiText.T("Alexandrite Maps"), MaterialIcon.Crystal);
+        UiGui.TitleWithButtons("Alexandrite Maps", UiText.T("Alexandrite Maps"), this, MaterialIcon.Crystal);
         using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(plugin.Configuration.UiCompact ? 30 : 36));
         var valueColumn = LootGoblinPresentation.DetailColumn("Poetics: ", "Runs: ", "Runnable: ", "Status: ", "Maps in inventory: ", "Active map: ");
         var sm = plugin.StateManager;

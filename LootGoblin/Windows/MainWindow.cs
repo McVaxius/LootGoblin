@@ -241,15 +241,6 @@ public class MainWindow : Window, IDisposable
         }
         if (ImGui.IsItemHovered())
             UiGui.SetTooltip("Support development on Ko-fi");
-        if (plugin.Configuration.UiCompactVisibleOnMainWindow)
-        {
-            NextGroup(Scale(42));
-            using (MaterialControls.Push(LootGoblinPresentation.Controls(22))) plugin.DrawCompactSelector();
-        }
-        if (plugin.Configuration.UiLanguageVisibleOnMainWindow)
-        { NextGroup(Scale(190)); plugin.DrawLanguageSelector(); }
-        if (plugin.Configuration.UiTransparencyVisibleOnMainWindow)
-        { NextGroup(UiGui.CheckboxWidth("Transparency")); plugin.DrawTransparencyToggle(); }
     }
 
     private void DrawCompactWarnings()
