@@ -1,3 +1,7 @@
+2026-10-20 - Independent UI colours
+
+- Add Auto (default) and Picker in Colour and Settings, with independent Background, Controls and Text choices. Preserve the existing automatic palette, saved manual choices, native controls and unrelated settings. Translate the editor in every supported language.
+
 2026-10-11 - Culture-safe external settings and timestamps (I538)
 
 - Read ADS utility completion timestamps using the JSON timestamp contract so the same UTC instant is retained across system locales and calendars.

@@ -74,7 +74,9 @@ internal static class LootGoblinPresentation
         ImGui.EndGroup();
         ImGui.EndGroup();
     }
-    internal static MaterialTheme Theme(uint accent)
+    internal static MaterialTheme Theme(uint accent) => Theme(accent, new MaterialColorSettings());
+
+    internal static MaterialTheme Theme(uint accent, MaterialColorSettings colorSettings)
     {
         accent &= 0xFFFFFF;
         var reference = MaterialColor.LabToLch(MaterialColor.SrgbToOklab(new Vector3(Rgb(ReferenceAccent).X, Rgb(ReferenceAccent).Y, Rgb(ReferenceAccent).Z)));
@@ -106,7 +108,7 @@ internal static class LootGoblinPresentation
             Tertiary = Relative(0xDDC99A), OnTertiary = background, TertiaryContainer = Relative(0x443B26), OnTertiaryContainer = foreground,
             InverseSurface = foreground, InverseOnSurface = background, InversePrimary = Relative(0x866913),
         };
-        return new(colors) { SurfaceOpacity = 1 };
+        return new(colorSettings.Apply(colors)) { SurfaceOpacity = 1 };
     }
 
     internal static void Chest(Vector2 origin, float size, Vector4 color)
