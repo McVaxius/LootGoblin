@@ -54,6 +54,7 @@ public class AlexandriteMapWindow : Window, IDisposable
     {
         windowMotion.DrawChrome();
         UiGui.TitleWithButtons("Alexandrite Maps", UiText.T("Alexandrite Maps"), this, MaterialIcon.Crystal);
+        if (MaterialTheme.Current.IsLcars) MaterialLcars.Header(UiText.T("Alexandrite Maps"));
         using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(plugin.Configuration.UiCompact ? 30 : 36));
         var valueColumn = LootGoblinPresentation.DetailColumn("Poetics: ", "Runs: ", "Runnable: ", "Status: ", "Maps in inventory: ", "Active map: ");
         var sm = plugin.StateManager;

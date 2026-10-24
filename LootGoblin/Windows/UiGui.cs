@@ -104,17 +104,19 @@ internal static class UiGui
     }
     internal static bool RadioButton(string label, bool active)
     {
-        var display = UiText.T(label);
+        var visible = Visible(label);
+        var display = UiText.T(visible);
         using var height = MaterialText.PushLineHeight(display);
         var gap = ImGui.GetStyle().ItemInnerSpacing;
         var foreground = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
         MaterialLayout.FitNextItemWidth(0, ImGui.GetFrameHeight() + gap.X + MaterialText.Measure(display).X);
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemInnerSpacing, new Vector2(gap.X + MaterialText.Measure(display).X - MaterialText.Measure(label).X, gap.Y));
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemInnerSpacing, new Vector2(gap.X + MaterialText.Measure(display).X - MaterialText.Measure(visible).X, gap.Y));
         ImGui.PushStyleColor(ImGuiCol.Text, Vector4.Zero);
         var clicked = ImGui.RadioButton(label, active);
         ImGui.PopStyleColor(); ImGui.PopStyleVar();
         foreground.W *= ImGui.GetStyle().Alpha;
         MaterialText.AddText(ImGui.GetWindowDrawList(), ImGui.GetItemRectMin() + new Vector2(ImGui.GetFrameHeight() + gap.X, ImGui.GetStyle().FramePadding.Y), ImGui.ColorConvertFloat4ToU32(foreground), display);
+        MaterialLcars.Feedback(clicked, MaterialUiSoundCue.Toggle);
         return clicked;
     }
     internal static bool Button(string label, Vector2 size, MaterialIcon icon = MaterialIcon.None, string? display = null)
@@ -124,6 +126,7 @@ internal static class UiGui
             ? default(MaterialControls.ControlScope) : MaterialControls.Push(MaterialControlContext.Toolbar);
         var padding = ImGui.GetStyle().FramePadding;
         using var height = MaterialText.PushLineHeight(translated);
+        using var nativeButtons = MaterialLcars.NativeButtonStyle();
         var foreground = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
         var iconWidth = icon == MaterialIcon.None ? 0 : 28 * MaterialTheme.Metrics.Scale;
         size.X = MaterialLayout.FitNextItemWidth(size.X, Math.Max(size.X > 0 ? size.X : 0, ButtonWidth(label, icon, translated)));
@@ -146,6 +149,7 @@ internal static class UiGui
                 icon == MaterialIcon.Heart ? new Vector4(1f, .42f, .46f, foreground.W) : foreground);
         }
         finally { dl.PopClipRect(); }
+        MaterialLcars.Feedback(clicked);
         return clicked;
     }
 
@@ -170,7 +174,7 @@ internal static class UiGui
         ImGui.PopStyleVar(2);
         var min = ImGui.GetItemRectMin();
         var track = min + new Vector2(width - 44 * s, Math.Max(0, (height - 26 * s) * .5f));
-        var fill = value ? c.Primary : c.Outline;
+        var fill = value ? MaterialTheme.Current.IsLcars ? MaterialLcars.ControlBlue : c.Primary : c.Outline;
         if (ImGui.IsItemHovered()) fill = MaterialColor.Layer(fill, c.OnSurface, .08f);
         if (ImGui.IsItemActive()) fill = MaterialColor.Layer(fill, c.OnSurface, .12f);
         var foreground = c.OnSurface;
@@ -181,6 +185,7 @@ internal static class UiGui
         dl.AddCircleFilled(track + new Vector2(value ? 31 : 13, 13) * s, 10 * s, MaterialCanvas.Color(foreground), 24);
         if (ImGui.IsItemFocused()) dl.AddRect(min, min + new Vector2(width, height), MaterialCanvas.Color(c.Primary), 4 * s);
         MaterialText.AddText(dl, min + new Vector2(0, Math.Max(0, (height - MaterialText.Measure(text).Y) * .5f)), MaterialCanvas.Color(foreground), text);
+        MaterialLcars.Feedback(changed, MaterialUiSoundCue.Toggle);
         return changed;
     }
 
@@ -210,6 +215,14 @@ internal static class UiGui
     }
     internal static bool CollapsingHeader(string label, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None, MaterialIcon icon = MaterialIcon.None)
     {
+        using var lcars = new MaterialStyleScope();
+        var lcarsAccent = label is "Map Queue" or "Current Run" or "Party Status" or "Commands" ? MaterialLcars.Lilac : MaterialLcars.Orange;
+        if (MaterialTheme.Current.IsLcars)
+        {
+            lcars.Color(ImGuiCol.Header, lcarsAccent);
+            lcars.Color(ImGuiCol.HeaderHovered, MaterialColor.Layer(lcarsAccent, MaterialLcars.Background, .08f));
+            lcars.Color(ImGuiCol.HeaderActive, MaterialColor.Layer(lcarsAccent, MaterialLcars.Background, .16f));
+        }
         using var font = UiText.Font(MaterialControls.Metrics.Height <= 32 * MaterialTheme.Metrics.Scale ? UiFontRole.BodyStrong : UiFontRole.PluginName);
         using var shapedHeight = MaterialText.PushLineHeight(UiText.T(label));
         var padding = ImGui.GetStyle().FramePadding;
@@ -222,14 +235,14 @@ internal static class UiGui
         ImGui.PushStyleColor(ImGuiCol.Text, Vector4.Zero);
         if (icon != MaterialIcon.None)
         {
-            ImGui.PushStyleColor(ImGuiCol.Header, Vector4.Zero);
+            ImGui.PushStyleColor(ImGuiCol.Header, MaterialTheme.Current.IsLcars ? lcarsAccent : Vector4.Zero);
             ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0);
         }
         var open = ImGui.CollapsingHeader(label, flags);
         if (icon != MaterialIcon.None) { ImGui.PopStyleColor(); ImGui.PopStyleVar(); }
         ImGui.PopStyleColor();
         var c = MaterialTheme.Current.Colors;
-        var foreground = c.OnSurface;
+        var foreground = MaterialTheme.Current.IsLcars ? MaterialLcars.Background : c.OnSurface;
         foreground.W *= ImGui.GetStyle().Alpha;
         var dl = ImGui.GetWindowDrawList();
         var scale = MaterialTheme.Metrics.Scale;
@@ -240,7 +253,7 @@ internal static class UiGui
         {
         if (icon != MaterialIcon.None)
         {
-            MaterialIcons.Draw(icon, new Vector2(textX, min.Y + (max.Y - min.Y - 24 * scale) * .5f), 24 * scale, c.Primary);
+            MaterialIcons.Draw(icon, new Vector2(textX, min.Y + (max.Y - min.Y - 24 * scale) * .5f), 24 * scale, MaterialTheme.Current.IsLcars ? MaterialLcars.Background : c.Primary);
             textX += 36 * scale;
         }
         else textX += ImGui.GetFontSize() + ImGui.GetStyle().FramePadding.X;
@@ -253,6 +266,7 @@ internal static class UiGui
         }
         finally { dl.PopClipRect(); }
         if (textX + MaterialText.Measure(UiText.T(label)).X + 28 * scale > max.X && ImGui.IsItemHovered()) SetTooltip(label);
+        MaterialLcars.Feedback(ImGui.IsItemActivated());
         return open;
         }
         finally { ImGui.PopStyleVar(); }
@@ -279,6 +293,7 @@ internal static class UiGui
         using var controls = ImGui.GetStyle().FramePadding.Y == 0 || MaterialControls.Context == MaterialControlContext.Dense
             ? default(MaterialControls.ControlScope) : MaterialControls.Push(MaterialControlContext.Toolbar);
         using var height = MaterialText.PushLineHeight(translated);
+        using var nativeButtons = MaterialLcars.NativeButtonStyle();
         var width=MaterialText.Measure(translated).X+2*ImGui.GetStyle().FramePadding.X;
         width = MaterialLayout.FitNextItemWidth(0, width);
         var foreground=ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
@@ -290,6 +305,7 @@ internal static class UiGui
         ImGui.GetWindowDrawList().PushClipRect(min,max,true);
         try { MaterialText.AddText(ImGui.GetWindowDrawList(), min+(max-min-MaterialText.Measure(translated))*.5f,ImGui.ColorConvertFloat4ToU32(foreground),translated); }
         finally { ImGui.GetWindowDrawList().PopClipRect(); }
+        MaterialLcars.Feedback(clicked);
         return clicked;
     }
     internal static bool SmallButton(string label,string? display=null)
@@ -317,6 +333,7 @@ internal static class UiGui
         var p=ImGui.GetItemRectMin()+new Vector2(ImGui.GetFrameHeight()+gap.X,ImGui.GetStyle().FramePadding.Y);
         foreground.W*=ImGui.GetStyle().Alpha;
         MaterialText.AddText(ImGui.GetWindowDrawList(), p,ImGui.ColorConvertFloat4ToU32(foreground),translated);
+        MaterialLcars.Feedback(changed, MaterialUiSoundCue.Toggle);
         return changed;
     }
     internal static bool Selectable(string original,bool selected = false,string? display=null)
@@ -337,6 +354,7 @@ internal static class UiGui
         try { MaterialText.AddText(dl, origin,ImGui.ColorConvertFloat4ToU32(foreground),translated); }
         finally { dl.PopClipRect(); }
         if(MaterialText.Measure(translated).X>width && ImGui.IsItemHovered()) MaterialText.SetTooltip(translated);
+        MaterialLcars.Feedback(clicked);
         return clicked;
     }
     private static float FitField(string label, float? minimumPixels = null)

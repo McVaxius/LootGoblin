@@ -172,13 +172,14 @@ public class ConfigWindow : Window, IDisposable
     {
         windowMotion.DrawChrome();
         UiGui.TitleWithButtons("Loot Goblin Settings", UiText.T("Loot Goblin Settings"), this);
+        if (MaterialTheme.Current.IsLcars) MaterialLcars.Header(UiText.T("Loot Goblin Settings"));
         if (!commandTriggerDraftsInitialized || ImGui.IsWindowAppearing() || CommandTriggerDraftSourceChanged())
         {
             SaveCommandTriggerDraftsIfDirty("draft source refresh");
             RefreshCommandTriggerDrafts();
         }
 
-        UiGui.Text("Loot Goblin Settings");
+        if (!MaterialTheme.Current.IsLcars) UiGui.Text("Loot Goblin Settings");
         ImGui.Separator();
         ImGui.Spacing();
 

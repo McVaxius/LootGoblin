@@ -120,9 +120,10 @@ public class MainWindow : Window, IDisposable
         DrawHeaderSection();
         ImGui.Separator();
         DrawBotControlSection();
+        if (MaterialTheme.Current.IsLcars) plugin.DrawLcarsQuickPreferences();
         DrawSummaryStrip();
         Panel("##MapQueuePanel", DrawMapInventorySection);
-        if (ImGui.GetContentRegionAvail().X >= 800 * MaterialTheme.Metrics.Scale && ImGui.BeginTable("##LootGoblinRunParty", 2, ImGuiTableFlags.SizingStretchSame))
+        if (!MaterialTheme.Current.IsLcars && ImGui.GetContentRegionAvail().X >= 800 * MaterialTheme.Metrics.Scale && ImGui.BeginTable("##LootGoblinRunParty", 2, ImGuiTableFlags.SizingStretchSame))
         {
             ImGui.TableNextColumn();
             Panel("##CurrentRunPanel", DrawCurrentRunSection);
@@ -167,14 +168,19 @@ public class MainWindow : Window, IDisposable
     private void Panel(string id, Action draw)
     {
         var c = MaterialTheme.Current.Colors;
-        var padding = Scale(plugin.Configuration.UiCompact ? 10 : 14);
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, c.Surface);
+        var padding = Scale(MaterialTheme.Current.IsLcars ? 18 : plugin.Configuration.UiCompact ? 10 : 14);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, MaterialTheme.Current.IsLcars ? Vector4.Zero : c.Surface);
         ImGui.PushStyleColor(ImGuiCol.Border, c.OutlineVariant);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Scale(4));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding));
         // API 15's binding predates child auto-resize flags. Measure native content
         // for the next frame, retaining each panel's own draw list and original ID root.
         var height = panelHeights.GetValueOrDefault(id, Scale(id == "##MapQueuePanel" ? 300 : 220));
+        if (MaterialTheme.Current.IsLcars)
+        {
+            var origin = ImGui.GetCursorScreenPos();
+            MaterialLcars.PanelFrame(origin, origin + new Vector2(ImGui.GetContentRegionAvail().X, height), 1);
+        }
         var visible = ImGui.BeginChild(id, new Vector2(0, height), true, ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.HorizontalScrollbar);
         try
         {
@@ -219,7 +225,10 @@ public class MainWindow : Window, IDisposable
     private void DrawHeaderSection()
     {
         windowRootId = ImGui.GetID("");
+        if (MaterialTheme.Current.IsLcars) MaterialLcars.Header("Loot Goblin");
         var compact = plugin.Configuration.UiCompact;
+        if (!MaterialTheme.Current.IsLcars)
+        {
         var icon = plugin.OriginalIcon;
         var imageMin = ImGui.GetCursorScreenPos();
         MaterialCanvas.DrawImage(ImGui.GetWindowDrawList(), icon.Handle, icon.Size,
@@ -230,6 +239,7 @@ public class MainWindow : Window, IDisposable
         using (UiText.Font(compact ? UiFontRole.PluginName : UiFontRole.Title)) MaterialText.Text("Loot Goblin");
         UiGui.TextDisabled("Automate your treasure map adventures.");
         ImGui.EndGroup();
+        }
         NextGroup(UiGui.ButtonWidth("\u2661 Ko-fi \u2661", MaterialIcon.Heart, UiText.T("Support development on Ko-fi")));
         if (UiGui.Button("\u2661 Ko-fi \u2661", new Vector2(0, Scale(compact ? 32 : 40)), MaterialIcon.Heart, UiText.T("Support development on Ko-fi")))
         {
