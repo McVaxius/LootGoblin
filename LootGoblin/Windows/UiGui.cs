@@ -53,7 +53,8 @@ internal static class UiGui
     }
     internal static void SetTooltip(string text)
     {
-        ImGui.BeginTooltip();
+        using (MaterialSkin.BackdropStyle(popup: true)) ImGui.BeginTooltip();
+        MaterialSkin.Backdrop();
         ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + 440 * MaterialTheme.Metrics.Scale);
         try { MaterialText.Text(UiText.T(text)); }
         finally { ImGui.PopTextWrapPos(); ImGui.EndTooltip(); }
@@ -67,11 +68,30 @@ internal static class UiGui
         var min = ImGui.GetCursorScreenPos(); var draw = ImGui.GetWindowDrawList();
         var window = ImGuiP.GetCurrentWindow(); var previousMax = window.DC.CursorMaxPos;
         var clipped = ClipFieldLabel(label, min, width, draw);
+        var material = LootGoblinPresentation.HasMaterial;
+        var padding = ImGui.GetStyle().FramePadding;
+        var frameHeight = ImGui.GetFrameHeight();
+        var font = ImGui.GetFont(); var fontSize = ImGui.GetFontSize();
+        var foreground = ImGui.GetColorU32(ImGuiCol.Text);
         var open = false;
         try
         {
-            try { open = MaterialText.BeginCombo(label, translated, flags); }
+            try
+            {
+                using var field = MaterialSkin.NativeFieldStyle();
+                using var backdrop = MaterialSkin.BackdropStyle(popup: true);
+                open = material ? ImGui.BeginCombo(label, "", flags) : MaterialText.BeginCombo(label, translated, flags);
+            }
             finally { if (clipped) draw.PopClipRect(); }
+            if (open) MaterialSkin.Backdrop();
+            if (material && (flags & ImGuiComboFlags.NoPreview) == 0)
+            {
+                var previewText = Visible(translated);
+                var right = (flags & ImGuiComboFlags.NoArrowButton) == 0 ? frameHeight : padding.X;
+                draw.PushClipRect(min, min + new Vector2(Math.Max(padding.X, width - right), frameHeight), true);
+                try { MaterialText.AddText(draw, font, fontSize, min + new Vector2(padding.X, (frameHeight - MaterialText.Measure(previewText).Y) * .5f), foreground, previewText); }
+                finally { draw.PopClipRect(); }
+            }
             FieldLabel(label, min, width, draw, window, previousMax);
             return open;
         }
@@ -88,13 +108,40 @@ internal static class UiGui
         using var height = MaterialText.PushLineHeight(display);
         var pad = ImGui.GetStyle().FramePadding;
         var foreground = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
+        var material = LootGoblinPresentation.HasMaterial;
+        var radius = ImGui.GetStyle().TabRounding;
+        var alpha = ImGui.GetStyle().Alpha;
+        var tab = ImGui.GetStyle().Colors[(int)ImGuiCol.Tab];
+        var selectedTab = ImGui.GetStyle().Colors[(int)ImGuiCol.TabActive];
+        var hoveredTab = ImGui.GetStyle().Colors[(int)ImGuiCol.TabHovered];
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(pad.X + Math.Max(0, (MaterialText.Measure(display).X - MaterialText.Measure(label).X) * .5f), pad.Y));
-        ImGui.PushStyleColor(ImGuiCol.Text, Vector4.Zero);
-        var open = ImGui.BeginTabItem(label, flags);
-        ImGui.PopStyleColor();
-        ImGui.PopStyleVar();
+        bool open;
+        try
+        {
+            using var face = new MaterialStyleScope();
+            face.Color(ImGuiCol.Text, Vector4.Zero);
+            if (material)
+            {
+                face.Color(ImGuiCol.Tab, Vector4.Zero);
+                face.Color(ImGuiCol.TabActive, Vector4.Zero);
+                face.Color(ImGuiCol.TabHovered, Vector4.Zero);
+                face.Color(ImGuiCol.TabUnfocused, Vector4.Zero);
+                face.Color(ImGuiCol.TabUnfocusedActive, Vector4.Zero);
+            }
+            open = ImGui.BeginTabItem(label, flags);
+        }
+        finally { ImGui.PopStyleVar(); }
         foreground.W *= ImGui.GetStyle().Alpha;
         var min = ImGui.GetItemRectMin(); var max = ImGui.GetItemRectMax();
+        if (material)
+        {
+            using var skin = MaterialSkin.NativeButtonStyle();
+            using var face = new MaterialStyleScope();
+            face.Color(ImGuiCol.Button, open ? selectedTab : tab);
+            face.Color(ImGuiCol.ButtonHovered, hoveredTab);
+            face.Color(ImGuiCol.ButtonActive, selectedTab);
+            MaterialSkin.PaintButton(min, max, alpha, radius);
+        }
         var dl = ImGui.GetWindowDrawList();
         dl.PushClipRect(min, max, true);
         try { MaterialText.AddText(dl, min + (max - min - MaterialText.Measure(display)) * .5f, ImGui.ColorConvertFloat4ToU32(foreground), display); }
@@ -111,9 +158,45 @@ internal static class UiGui
         var foreground = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
         MaterialLayout.FitNextItemWidth(0, ImGui.GetFrameHeight() + gap.X + MaterialText.Measure(display).X);
         ImGui.PushStyleVar(ImGuiStyleVar.ItemInnerSpacing, new Vector2(gap.X + MaterialText.Measure(display).X - MaterialText.Measure(visible).X, gap.Y));
-        ImGui.PushStyleColor(ImGuiCol.Text, Vector4.Zero);
-        var clicked = ImGui.RadioButton(label, active);
-        ImGui.PopStyleColor(); ImGui.PopStyleVar();
+        var material = LootGoblinPresentation.HasMaterial;
+        var alpha = ImGui.GetStyle().Alpha;
+        var draw = ImGui.GetWindowDrawList();
+        var splitter = material ? ImGui.ImDrawListSplitter() : default;
+        bool clicked;
+        try
+        {
+            if (material) { splitter.Split(draw, 2); splitter.SetCurrentChannel(draw, 1); }
+            using (var face = new MaterialStyleScope())
+            {
+                face.Color(ImGuiCol.Text, Vector4.Zero);
+                if (material)
+                {
+                    face.Color(ImGuiCol.FrameBg, Vector4.Zero);
+                    face.Color(ImGuiCol.FrameBgHovered, Vector4.Zero);
+                    face.Color(ImGuiCol.FrameBgActive, Vector4.Zero);
+                    face.Color(ImGuiCol.Border, Vector4.Zero);
+                }
+                clicked = ImGui.RadioButton(label, active);
+            }
+            if (material)
+            {
+                splitter.SetCurrentChannel(draw, 0);
+                using var skin = MaterialSkin.NativeButtonStyle();
+                using var face = new MaterialStyleScope();
+                face.Color(ImGuiCol.Button, ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBg]);
+                face.Color(ImGuiCol.ButtonHovered, ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBgHovered]);
+                face.Color(ImGuiCol.ButtonActive, ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBgActive]);
+                var min = ImGui.GetItemRectMin();
+                var side = ImGui.GetFrameHeight();
+                MaterialSkin.PaintButton(min, min + new Vector2(side), alpha, side * .5f);
+                splitter.SetCurrentChannel(draw, 1);
+            }
+        }
+        finally
+        {
+            if (material) { splitter.Merge(draw); splitter.Destroy(); }
+            ImGui.PopStyleVar();
+        }
         foreground.W *= ImGui.GetStyle().Alpha;
         MaterialText.AddText(ImGui.GetWindowDrawList(), ImGui.GetItemRectMin() + new Vector2(ImGui.GetFrameHeight() + gap.X, ImGui.GetStyle().FramePadding.Y), ImGui.ColorConvertFloat4ToU32(foreground), display);
         MaterialLcars.Feedback(clicked, MaterialUiSoundCue.Toggle);
@@ -126,16 +209,27 @@ internal static class UiGui
             ? default(MaterialControls.ControlScope) : MaterialControls.Push(MaterialControlContext.Toolbar);
         var padding = ImGui.GetStyle().FramePadding;
         using var height = MaterialText.PushLineHeight(translated);
-        using var nativeButtons = MaterialLcars.NativeButtonStyle();
+        var material = LootGoblinPresentation.HasMaterial;
+        var radius = ImGui.GetStyle().FrameRounding;
+        var alpha = ImGui.GetStyle().Alpha;
+        using var nativeButtons = material ? MaterialSkin.NativeButtonStyle() : MaterialLcars.NativeButtonStyle();
+        using var rounding = new MaterialStyleScope();
+        if (material) rounding.Style(ImGuiStyleVar.FrameRounding, radius);
         var foreground = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
         var iconWidth = icon == MaterialIcon.None ? 0 : 28 * MaterialTheme.Metrics.Scale;
         size.X = MaterialLayout.FitNextItemWidth(size.X, Math.Max(size.X > 0 ? size.X : 0, ButtonWidth(label, icon, translated)));
         var textSize = MaterialText.Measure(translated);
         size.Y = Math.Max(size.Y, Math.Max(ImGui.GetTextLineHeight(), textSize.Y) + padding.Y * 2);
         ImGui.PushStyleColor(ImGuiCol.Text, Vector4.Zero);
-        var clicked = ImGui.Button(label, size);
-        ImGui.PopStyleColor();
+        bool clicked;
+        try
+        {
+            using var face = material ? MaterialSkin.TransparentButtonFace() : new MaterialStyleScope();
+            clicked = ImGui.Button(label, size);
+        }
+        finally { ImGui.PopStyleColor(); }
         var min = ImGui.GetItemRectMin(); var max = ImGui.GetItemRectMax();
+        if (material) MaterialSkin.PaintButton(min, max, alpha, radius);
         var dl = ImGui.GetWindowDrawList();
         dl.PushClipRect(min, max, true);
         try
@@ -146,7 +240,7 @@ internal static class UiGui
             ImGui.ColorConvertFloat4ToU32(foreground), translated);
         if (icon != MaterialIcon.None)
             MaterialIcons.Draw(icon, new Vector2(content.X, min.Y + (max.Y - min.Y - 20 * MaterialTheme.Metrics.Scale) * .5f), 20 * MaterialTheme.Metrics.Scale,
-                icon == MaterialIcon.Heart ? new Vector4(1f, .42f, .46f, foreground.W) : foreground);
+                icon == MaterialIcon.Heart ? new Vector4(1f, .42f, .46f, foreground.W) : foreground, material ? 1f : null);
         }
         finally { dl.PopClipRect(); }
         MaterialLcars.Feedback(clicked);
@@ -178,10 +272,24 @@ internal static class UiGui
         if (ImGui.IsItemHovered()) fill = MaterialColor.Layer(fill, c.OnSurface, .08f);
         if (ImGui.IsItemActive()) fill = MaterialColor.Layer(fill, c.OnSurface, .12f);
         var foreground = c.OnSurface;
-        fill.W *= ImGui.GetStyle().Alpha;
-        foreground.W *= ImGui.GetStyle().Alpha;
+        var material = LootGoblinPresentation.HasMaterial;
+        var alpha = ImGui.GetStyle().Alpha;
         var dl = ImGui.GetWindowDrawList();
-        dl.AddRectFilled(track, track + new Vector2(44, 26) * s, MaterialCanvas.Color(fill), 13 * s);
+        if (material)
+        {
+            using var skin = MaterialSkin.NativeButtonStyle();
+            using var face = new MaterialStyleScope();
+            face.Color(ImGuiCol.Button, fill);
+            face.Color(ImGuiCol.ButtonHovered, fill);
+            face.Color(ImGuiCol.ButtonActive, fill);
+            MaterialSkin.PaintButton(track, track + new Vector2(44, 26) * s, alpha, 13 * s);
+        }
+        else
+        {
+            fill.W *= alpha;
+            foreground.W *= alpha;
+            dl.AddRectFilled(track, track + new Vector2(44, 26) * s, MaterialCanvas.Color(fill), 13 * s);
+        }
         dl.AddCircleFilled(track + new Vector2(value ? 31 : 13, 13) * s, 10 * s, MaterialCanvas.Color(foreground), 24);
         if (ImGui.IsItemFocused()) dl.AddRect(min, min + new Vector2(width, height), MaterialCanvas.Color(c.Primary), 4 * s);
         MaterialText.AddText(dl, min + new Vector2(0, Math.Max(0, (height - MaterialText.Measure(text).Y) * .5f)), MaterialCanvas.Color(foreground), text);
@@ -197,8 +305,9 @@ internal static class UiGui
             + ImGui.GetStyle().FramePadding.X * 2));
         var origin = ImGui.GetCursorScreenPos(); var draw = ImGui.GetWindowDrawList(); var window = ImGuiP.GetCurrentWindow();
         var previousMax = window.DC.CursorMaxPos; var clipped = ClipFieldLabel(label, origin, width, draw);
-        var changed = ImGui.SliderInt(label, ref value, min, max);
-        if (clipped) draw.PopClipRect();
+        bool changed;
+        try { using var field = MaterialSkin.NativeFieldStyle(); changed = ImGui.SliderInt(label, ref value, min, max); }
+        finally { if (clipped) draw.PopClipRect(); }
         FieldLabel(label, origin, width, draw, window, previousMax);
         return changed;
     }
@@ -208,8 +317,9 @@ internal static class UiGui
         var width = FitField(label, FloatMinimum(value, 0));
         var origin = ImGui.GetCursorScreenPos(); var draw = ImGui.GetWindowDrawList(); var window = ImGuiP.GetCurrentWindow();
         var previousMax = window.DC.CursorMaxPos; var clipped = ClipFieldLabel(label, origin, width, draw);
-        var changed = ImGui.SliderFloat(label, ref value, min, max, format);
-        if (clipped) draw.PopClipRect();
+        bool changed;
+        try { using var field = MaterialSkin.NativeFieldStyle(); changed = ImGui.SliderFloat(label, ref value, min, max, format); }
+        finally { if (clipped) draw.PopClipRect(); }
         FieldLabel(label, origin, width, draw, window, previousMax);
         return changed;
     }
@@ -226,27 +336,51 @@ internal static class UiGui
         using var font = UiText.Font(MaterialControls.Metrics.Height <= 32 * MaterialTheme.Metrics.Scale ? UiFontRole.BodyStrong : UiFontRole.PluginName);
         using var shapedHeight = MaterialText.PushLineHeight(UiText.T(label));
         var padding = ImGui.GetStyle().FramePadding;
+        var material = LootGoblinPresentation.HasMaterial;
+        var radius = ImGui.GetStyle().FrameRounding;
+        var alpha = ImGui.GetStyle().Alpha;
+        var header = ImGui.GetStyle().Colors[(int)ImGuiCol.Header];
+        var hoveredHeader = ImGui.GetStyle().Colors[(int)ImGuiCol.HeaderHovered];
+        var activeHeader = ImGui.GetStyle().Colors[(int)ImGuiCol.HeaderActive];
         var requiredHeight = MaterialText.RequiresShaping(UiText.T(label))
             ? Math.Max(MaterialControls.Metrics.Height, MaterialText.Measure(UiText.T(label)).Y + padding.Y * 2) : MaterialControls.Metrics.Height;
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(padding.X, Math.Max(0, (requiredHeight - ImGui.GetTextLineHeight()) * .5f)));
         try
         {
         var position = ImGui.GetCursorScreenPos();
-        ImGui.PushStyleColor(ImGuiCol.Text, Vector4.Zero);
-        if (icon != MaterialIcon.None)
+        bool open;
+        using (var face = new MaterialStyleScope())
         {
-            ImGui.PushStyleColor(ImGuiCol.Header, MaterialTheme.Current.IsLcars ? lcarsAccent : Vector4.Zero);
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0);
+            face.Color(ImGuiCol.Text, Vector4.Zero);
+            if (material)
+            {
+                face.Color(ImGuiCol.Header, Vector4.Zero);
+                face.Color(ImGuiCol.HeaderHovered, Vector4.Zero);
+                face.Color(ImGuiCol.HeaderActive, Vector4.Zero);
+                face.Style(ImGuiStyleVar.FrameBorderSize, 0);
+            }
+            else if (icon != MaterialIcon.None)
+            {
+                face.Color(ImGuiCol.Header, MaterialTheme.Current.IsLcars ? lcarsAccent : Vector4.Zero);
+                face.Style(ImGuiStyleVar.FrameBorderSize, 0);
+            }
+            open = ImGui.CollapsingHeader(label, flags);
         }
-        var open = ImGui.CollapsingHeader(label, flags);
-        if (icon != MaterialIcon.None) { ImGui.PopStyleColor(); ImGui.PopStyleVar(); }
-        ImGui.PopStyleColor();
         var c = MaterialTheme.Current.Colors;
         var foreground = MaterialTheme.Current.IsLcars ? MaterialLcars.Background : c.OnSurface;
-        foreground.W *= ImGui.GetStyle().Alpha;
+        if (!material) foreground.W *= ImGui.GetStyle().Alpha;
         var dl = ImGui.GetWindowDrawList();
         var scale = MaterialTheme.Metrics.Scale;
         var min = ImGui.GetItemRectMin(); var max = ImGui.GetItemRectMax();
+        if (material)
+        {
+            using var skin = MaterialSkin.NativeButtonStyle();
+            using var face = new MaterialStyleScope();
+            face.Color(ImGuiCol.Button, header);
+            face.Color(ImGuiCol.ButtonHovered, hoveredHeader);
+            face.Color(ImGuiCol.ButtonActive, activeHeader);
+            MaterialSkin.PaintButton(min, max, alpha, radius);
+        }
         var textX = position.X + ImGui.GetStyle().FramePadding.X;
         dl.PushClipRect(min, max, true);
         try
@@ -293,14 +427,25 @@ internal static class UiGui
         using var controls = ImGui.GetStyle().FramePadding.Y == 0 || MaterialControls.Context == MaterialControlContext.Dense
             ? default(MaterialControls.ControlScope) : MaterialControls.Push(MaterialControlContext.Toolbar);
         using var height = MaterialText.PushLineHeight(translated);
-        using var nativeButtons = MaterialLcars.NativeButtonStyle();
+        var material = LootGoblinPresentation.HasMaterial;
+        var radius = ImGui.GetStyle().FrameRounding;
+        var alpha = ImGui.GetStyle().Alpha;
+        using var nativeButtons = material ? MaterialSkin.NativeButtonStyle() : MaterialLcars.NativeButtonStyle();
+        using var rounding = new MaterialStyleScope();
+        if (material) rounding.Style(ImGuiStyleVar.FrameRounding, radius);
         var width=MaterialText.Measure(translated).X+2*ImGui.GetStyle().FramePadding.X;
         width = MaterialLayout.FitNextItemWidth(0, width);
         var foreground=ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
         ImGui.PushStyleColor(ImGuiCol.Text,Vector4.Zero);
-        var clicked=ImGui.Button(label,new Vector2(width,0));
-        ImGui.PopStyleColor();
+        bool clicked;
+        try
+        {
+            using var face = material ? MaterialSkin.TransparentButtonFace() : new MaterialStyleScope();
+            clicked = ImGui.Button(label,new Vector2(width,0));
+        }
+        finally { ImGui.PopStyleColor(); }
         var min=ImGui.GetItemRectMin(); var max=ImGui.GetItemRectMax();
+        if (material) MaterialSkin.PaintButton(min, max, alpha, radius);
         foreground.W*=ImGui.GetStyle().Alpha;
         ImGui.GetWindowDrawList().PushClipRect(min,max,true);
         try { MaterialText.AddText(ImGui.GetWindowDrawList(), min+(max-min-MaterialText.Measure(translated))*.5f,ImGui.ColorConvertFloat4ToU32(foreground),translated); }
@@ -326,10 +471,45 @@ internal static class UiGui
         // translated ink while keeping the native widget and its original ID.
         MaterialLayout.FitNextItemWidth(0, CheckboxWidth(label));
         ImGui.PushStyleVar(ImGuiStyleVar.ItemInnerSpacing,new Vector2(gap.X+MaterialText.Measure(translated).X-MaterialText.Measure(visible).X,gap.Y));
-        ImGui.PushStyleColor(ImGuiCol.Text,Vector4.Zero);
-        var changed=ImGui.Checkbox(label,ref value);
-        ImGui.PopStyleColor();
-        ImGui.PopStyleVar();
+        var material = LootGoblinPresentation.HasMaterial;
+        var radius = ImGui.GetStyle().FrameRounding;
+        var alpha = ImGui.GetStyle().Alpha;
+        var draw = ImGui.GetWindowDrawList();
+        var splitter = material ? ImGui.ImDrawListSplitter() : default;
+        bool changed;
+        try
+        {
+            if (material) { splitter.Split(draw, 2); splitter.SetCurrentChannel(draw, 1); }
+            using (var face = new MaterialStyleScope())
+            {
+                face.Color(ImGuiCol.Text, Vector4.Zero);
+                if (material)
+                {
+                    face.Color(ImGuiCol.FrameBg, Vector4.Zero);
+                    face.Color(ImGuiCol.FrameBgHovered, Vector4.Zero);
+                    face.Color(ImGuiCol.FrameBgActive, Vector4.Zero);
+                    face.Color(ImGuiCol.Border, Vector4.Zero);
+                }
+                changed = ImGui.Checkbox(label,ref value);
+            }
+            if (material)
+            {
+                splitter.SetCurrentChannel(draw, 0);
+                using var skin = MaterialSkin.NativeButtonStyle();
+                using var face = new MaterialStyleScope();
+                face.Color(ImGuiCol.Button, ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBg]);
+                face.Color(ImGuiCol.ButtonHovered, ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBgHovered]);
+                face.Color(ImGuiCol.ButtonActive, ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBgActive]);
+                var min = ImGui.GetItemRectMin();
+                MaterialSkin.PaintButton(min, min + new Vector2(ImGui.GetFrameHeight()), alpha, radius);
+                splitter.SetCurrentChannel(draw, 1);
+            }
+        }
+        finally
+        {
+            if (material) { splitter.Merge(draw); splitter.Destroy(); }
+            ImGui.PopStyleVar();
+        }
         var p=ImGui.GetItemRectMin()+new Vector2(ImGui.GetFrameHeight()+gap.X,ImGui.GetStyle().FramePadding.Y);
         foreground.W*=ImGui.GetStyle().Alpha;
         MaterialText.AddText(ImGui.GetWindowDrawList(), p,ImGui.ColorConvertFloat4ToU32(foreground),translated);
@@ -343,10 +523,30 @@ internal static class UiGui
         var width=Math.Max(ImGui.GetContentRegionAvail().X, MaterialText.Measure(translated).X);
         var height=MaterialText.RequiresShaping(translated) ? Math.Max(ImGui.GetTextLineHeight(), MaterialText.Measure(translated).Y) : ImGui.GetTextLineHeight();
         var foreground=ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
-        ImGui.PushStyleColor(ImGuiCol.Text,Vector4.Zero);
+        var material = LootGoblinPresentation.HasMaterial;
+        var radius = ImGui.GetStyle().FrameRounding;
+        var alpha = ImGui.GetStyle().Alpha;
         bool clicked;
-        try { clicked=ImGui.Selectable(original,selected,ImGuiSelectableFlags.None,new Vector2(width,height)); }
-        finally { ImGui.PopStyleColor(); }
+        using (var face = new MaterialStyleScope())
+        {
+            face.Color(ImGuiCol.Text, Vector4.Zero);
+            if (material)
+            {
+                face.Color(ImGuiCol.Header, Vector4.Zero);
+                face.Color(ImGuiCol.HeaderHovered, Vector4.Zero);
+                face.Color(ImGuiCol.HeaderActive, Vector4.Zero);
+            }
+            clicked = ImGui.Selectable(original,selected,ImGuiSelectableFlags.None,new Vector2(width,height));
+        }
+        if (material && (selected || ImGui.IsItemHovered()))
+        {
+            using var skin = MaterialSkin.NativeButtonStyle();
+            using var face = new MaterialStyleScope();
+            face.Color(ImGuiCol.Button, ImGui.GetStyle().Colors[(int)ImGuiCol.Header]);
+            face.Color(ImGuiCol.ButtonHovered, ImGui.GetStyle().Colors[(int)ImGuiCol.HeaderHovered]);
+            face.Color(ImGuiCol.ButtonActive, ImGui.GetStyle().Colors[(int)ImGuiCol.HeaderActive]);
+            MaterialSkin.PaintButton(ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), alpha, radius);
+        }
         foreground.W*=ImGui.GetStyle().Alpha;
         var dl=ImGui.GetWindowDrawList();
         var clip = ImGuiP.GetCurrentWindow().ClipRect;
@@ -400,7 +600,7 @@ internal static class UiGui
         var width = FitField(label); var min = ImGui.GetCursorScreenPos(); var draw = ImGui.GetWindowDrawList(); var window = ImGuiP.GetCurrentWindow();
         var previousMax = window.DC.CursorMaxPos; var clipped = ClipFieldLabel(label, min, width, draw);
         bool changed;
-        try { changed = MaterialShapedInput.SingleLine(label, string.Empty, ref value, length, flags); }
+        try { using var field = MaterialSkin.NativeFieldStyle(); changed = MaterialShapedInput.SingleLine(label, string.Empty, ref value, length, flags); }
         finally { if (clipped) draw.PopClipRect(); }
         FieldLabel(label, min, width, draw, window, previousMax); return changed;
     }
@@ -409,8 +609,9 @@ internal static class UiGui
         using var height = MaterialText.PushLineHeight(UiText.T(Visible(label)));
         var width = FitField(label, IntMinimum(value, step)); var min = ImGui.GetCursorScreenPos(); var draw = ImGui.GetWindowDrawList(); var window = ImGuiP.GetCurrentWindow();
         var previousMax = window.DC.CursorMaxPos; var clipped = ClipFieldLabel(label, min, width, draw);
-        var changed = ImGui.InputInt(label, ref value, step, fastStep);
-        if (clipped) draw.PopClipRect();
+        bool changed;
+        try { using var field = MaterialSkin.NativeFieldStyle(); changed = ImGui.InputInt(label, ref value, step, fastStep); }
+        finally { if (clipped) draw.PopClipRect(); }
         FieldLabel(label, min, width, draw, window, previousMax); return changed;
     }
     internal static bool InputFloat(string label,ref float value, float step = 0, float fastStep = 0, string format = "%.3f", ImGuiInputTextFlags flags = ImGuiInputTextFlags.None)
@@ -418,8 +619,9 @@ internal static class UiGui
         using var height = MaterialText.PushLineHeight(UiText.T(Visible(label)));
         var width = FitField(label, FloatMinimum(value, step)); var min = ImGui.GetCursorScreenPos(); var draw = ImGui.GetWindowDrawList(); var window = ImGuiP.GetCurrentWindow();
         var previousMax = window.DC.CursorMaxPos; var clipped = ClipFieldLabel(label, min, width, draw);
-        var changed = ImGui.InputFloat(label, ref value, step, fastStep, format, flags);
-        if (clipped) draw.PopClipRect();
+        bool changed;
+        try { using var field = MaterialSkin.NativeFieldStyle(); changed = ImGui.InputFloat(label, ref value, step, fastStep, format, flags); }
+        finally { if (clipped) draw.PopClipRect(); }
         FieldLabel(label, min, width, draw, window, previousMax); return changed;
     }
     internal static bool Combo(string label,ref int value,string[] options,int count)

@@ -11,6 +11,8 @@ internal enum UiFontRole { Body, BodyStrong, Title, PluginName, Counter, Action 
 
 internal static class LootGoblinPresentation
 {
+    internal static bool HasMaterial => MaterialTheme.Current.IsGlassmorphism || MaterialTheme.Current.IsSpatial || MaterialTheme.Current.IsCyberpunk;
+
     // Approved LootGoblin-review-v3: about 1054px regular envelope. Content uses
     // 52px actions, 38px queue headings, 44px rows and 12px panel gaps at 100%.
     // Compact actions/rows/gaps are 40/36/8px; body text remains 16px.
@@ -64,6 +66,15 @@ internal static class LootGoblinPresentation
     internal static void Summary(string label, string value, MaterialIcon icon, bool compact)
     {
         var s = MaterialTheme.Metrics.Scale;
+        var material = HasMaterial;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var padding = ImGui.GetStyle().CellPadding * .5f;
+        var draw = ImGui.GetWindowDrawList();
+        var splitter = material ? ImGui.ImDrawListSplitter() : default;
+        try
+        {
+        if (material) { splitter.Split(draw, 2); splitter.SetCurrentChannel(draw, 1); }
         ImGui.BeginGroup();
         MaterialIcons.Draw(icon, ImGui.GetCursorScreenPos(), 32 * s, MaterialTheme.Current.Colors.Secondary);
         ImGui.Dummy(new Vector2(36, 32) * s); ImGui.SameLine();
@@ -73,6 +84,15 @@ internal static class LootGoblinPresentation
         using (UiText.Font(UiFontRole.BodyStrong)) UiGui.TextUnformatted(value);
         ImGui.EndGroup();
         ImGui.EndGroup();
+        if (material)
+        {
+            var bottom = ImGui.GetItemRectMax().Y;
+            splitter.SetCurrentChannel(draw, 0);
+            MaterialSkin.PanelFrame(origin - padding, new Vector2(origin.X + width + padding.X, bottom + padding.Y));
+            splitter.SetCurrentChannel(draw, 1);
+        }
+        }
+        finally { if (material) { splitter.Merge(draw); splitter.Destroy(); } }
     }
     internal static MaterialTheme Theme(uint accent) => Theme(accent, new MaterialColorSettings());
 

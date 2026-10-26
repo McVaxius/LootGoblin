@@ -1,3 +1,9 @@
+2026-10-26 - 1.1.1.3 - Shared appearance materials
+
+- Add Glassmorphism, Spatial and Cyberpunk across Main, Settings, Alexandrite, appearance popups and font status while retaining Auto, Picker and LCARS, the six original font roles and native actions.
+- Add independent material palettes, individual/current-palette resets, four LCARS colour choices, and Glass animation, numeric speed and three separately editable wave colours. Preserve wave choices during palette resets and allow editing with animation off.
+- Translate the new controls in all fifteen catalogs. Preserve existing map, purchase, navigation, party, integration and configuration behavior.
+
 2026-10-23 - LCARS appearance (unreleased)
 
 - Add LCARS after Auto and Picker, with segmented Main/Settings/Alexandrite headers, inset framed panels, coloured collapsing sections, outlined actions and blue switches. Retain conditional Start/Stop/Pause/Resume, map columns and all existing settings tabs.

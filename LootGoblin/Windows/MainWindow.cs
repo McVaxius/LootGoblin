@@ -31,6 +31,7 @@ namespace LootGoblin.Windows;
 public class MainWindow : Window, IDisposable
 {
     private readonly AethertekUI.Dalamud.MaterialWindowMotion windowMotion = new();
+    private bool materialBackdropStylePushed;
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
@@ -104,17 +105,34 @@ public class MainWindow : Window, IDisposable
     {
         TitleBarButtons[3].Icon = plugin.StateManager.IsPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
         UiGui.ReserveTitleSpace(this, MainTitle, 420);
+        if (LootGoblinPresentation.HasMaterial)
+        {
+            // The native Begin spans owner hooks, so restore this colour at content entry or skipped PostDraw.
+            ImGui.PushStyleColor(ImGuiCol.WindowBg, Vector4.Zero);
+            materialBackdropStylePushed = true;
+        }
         windowMotion.Prepare(this, reducedMotion: false, roundedCorners: true);
     }
 
     public override void PostDraw()
     {
         windowMotion.Restore(this);
+        if (materialBackdropStylePushed)
+        {
+            ImGui.PopStyleColor();
+            materialBackdropStylePushed = false;
+        }
         UiGui.ImageTitleWithStatus(this, MainTitle, plugin.OriginalIcon, plugin.TitlebarStatus());
     }
 
     public override void Draw()
     {
+        if (materialBackdropStylePushed)
+        {
+            ImGui.PopStyleColor();
+            materialBackdropStylePushed = false;
+        }
+        MaterialSkin.Backdrop();
         windowMotion.DrawChrome();
         using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(plugin.Configuration.UiCompact ? 32 : 40));
         DrawHeaderSection();
@@ -168,18 +186,19 @@ public class MainWindow : Window, IDisposable
     private void Panel(string id, Action draw)
     {
         var c = MaterialTheme.Current.Colors;
+        var material = LootGoblinPresentation.HasMaterial;
         var padding = Scale(MaterialTheme.Current.IsLcars ? 18 : plugin.Configuration.UiCompact ? 10 : 14);
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, MaterialTheme.Current.IsLcars ? Vector4.Zero : c.Surface);
-        ImGui.PushStyleColor(ImGuiCol.Border, c.OutlineVariant);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, MaterialTheme.Current.IsLcars || material ? Vector4.Zero : c.Surface);
+        ImGui.PushStyleColor(ImGuiCol.Border, material ? Vector4.Zero : c.OutlineVariant);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Scale(4));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding));
         // API 15's binding predates child auto-resize flags. Measure native content
         // for the next frame, retaining each panel's own draw list and original ID root.
         var height = panelHeights.GetValueOrDefault(id, Scale(id == "##MapQueuePanel" ? 300 : 220));
-        if (MaterialTheme.Current.IsLcars)
+        if (MaterialTheme.Current.IsLcars || material)
         {
             var origin = ImGui.GetCursorScreenPos();
-            MaterialLcars.PanelFrame(origin, origin + new Vector2(ImGui.GetContentRegionAvail().X, height), 1);
+            MaterialSkin.PanelFrame(origin, origin + new Vector2(ImGui.GetContentRegionAvail().X, height), 1);
         }
         var visible = ImGui.BeginChild(id, new Vector2(0, height), true, ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.HorizontalScrollbar);
         try

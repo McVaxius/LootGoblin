@@ -11,6 +11,7 @@ namespace LootGoblin.Windows;
 public class AlexandriteMapWindow : Window, IDisposable
 {
     private readonly AethertekUI.Dalamud.MaterialWindowMotion windowMotion = new();
+    private bool materialBackdropStylePushed;
     private const uint MysteriousMapItemId = AlexandritePolicy.MysteriousMapItemId;
 
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
@@ -41,20 +42,38 @@ public class AlexandriteMapWindow : Window, IDisposable
 
     public override void PreDraw()
     {
+        if (LootGoblinPresentation.HasMaterial)
+        {
+            // The native Begin spans owner hooks, so restore this colour at content entry or skipped PostDraw.
+            ImGui.PushStyleColor(ImGuiCol.WindowBg, Vector4.Zero);
+            materialBackdropStylePushed = true;
+        }
         windowMotion.Prepare(this, reducedMotion: false, roundedCorners: true);
     }
 
     public override void PostDraw()
     {
         windowMotion.Restore(this);
+        if (materialBackdropStylePushed)
+        {
+            ImGui.PopStyleColor();
+            materialBackdropStylePushed = false;
+        }
         UiGui.ImageTitleWithStatus(this, UiText.T("Alexandrite Maps"), plugin.OriginalIcon, plugin.TitlebarStatus());
     }
 
     public override void Draw()
     {
+        if (materialBackdropStylePushed)
+        {
+            ImGui.PopStyleColor();
+            materialBackdropStylePushed = false;
+        }
+        MaterialSkin.Backdrop();
         windowMotion.DrawChrome();
         UiGui.TitleWithButtons("Alexandrite Maps", UiText.T("Alexandrite Maps"), this, MaterialIcon.Crystal);
         if (MaterialTheme.Current.IsLcars) MaterialLcars.Header(UiText.T("Alexandrite Maps"));
+        else if (LootGoblinPresentation.HasMaterial) MaterialSkin.Heading(UiText.T("Alexandrite Maps"));
         using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(plugin.Configuration.UiCompact ? 30 : 36));
         var valueColumn = LootGoblinPresentation.DetailColumn("Poetics: ", "Runs: ", "Runnable: ", "Status: ", "Maps in inventory: ", "Active map: ");
         var sm = plugin.StateManager;

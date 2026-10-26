@@ -346,7 +346,17 @@ public sealed class Plugin : IDalamudPlugin
         var changed = MaterialAppearanceSelector.DrawColors(id, ref colorDraft, ref accentDraft,
             new(UiText.T("Color"), UiText.T("Language"), UiText.T("Teal"), UiText.T("Blue"), UiText.T("Pink"), UiText.T("Custom RGB")),
             new(UiText.T("Auto"), UiText.T("Picker"), UiText.T("Default"), UiText.T("Background, controls and text follow your theme."), UiText.T("Theme colour"), UiText.T("Choose each colour independently."), UiText.T("Background"), UiText.T("Controls"), UiText.T("Text"), UiText.T("Aa  Preview text"), UiText.T("Control"), UiText.T("Switch to Picker to set each colour yourself."), UiText.T("Switch back to Auto to use the automatic theme."))
-            { Lcars = UiText.T("LCARS"), LcarsHelp = UiText.T("LCARS panels, bars and controls") }, Configuration.UiCompact ? 298 : 316);
+            {
+                Lcars = UiText.T("LCARS"), LcarsHelp = UiText.T("LCARS panels, bars and controls"),
+                LcarsBar1 = UiText.T("LCARS bar 1"), LcarsBar2 = UiText.T("LCARS bar 2"), LcarsBar3 = UiText.T("LCARS bar 3"),
+                Glassmorphism = UiText.T("Glassmorphism"), Spatial = UiText.T("Spatial"), Cyberpunk = UiText.T("Cyberpunk"),
+                Reset = UiText.T("Reset"), ResetColors = UiText.T("Reset colours"),
+                Animation = UiText.T("Animation"), AnimationSpeed = UiText.T("Animation speed (0.1–10x; default 1x)"),
+                WaveColors = UiText.T("Wave colours"), GlassWave1 = UiText.T("Wave colour 1"),
+                GlassWave2 = UiText.T("Wave colour 2"), GlassWave3 = UiText.T("Wave colour 3"), ResetWaveColors = UiText.T("Reset wave colours"),
+            },
+            new MaterialColorSettings(), MaterialColorSettings.Rgb(LootGoblinPresentation.ReferenceAccent),
+            Configuration.UiCompact ? 298 : 316);
         if (!changed) return false;
         Configuration.UiColors = colorDraft;
         Configuration.UiAccentRgb = MaterialColorSettings.ToRgb(accentDraft);
@@ -417,7 +427,7 @@ public sealed class Plugin : IDalamudPlugin
         geometry.Style(ImGuiStyleVar.ChildRounding, 4 * scale);
         using var body = uiFonts.Push(UiFontRole.Body);
         using var chrome = MaterialWindowChrome.Push();
-        using var nativeButtons = MaterialLcars.NativeButtonStyle();
+        using var nativeButtons = MaterialSkin.NativeButtonStyle();
         PrepareAppearanceTitleBars();
         foreach (var actions in appearanceTitleBars.Values) actions.RefreshVisibility();
         WindowSystem.Draw();
@@ -434,18 +444,50 @@ public sealed class Plugin : IDalamudPlugin
     {
         using var statusPalette = MaterialTheme.Push(uiTheme, ImGuiHelpers.GlobalScale, MaterialStyleMode.ColorsOnly);
         using var statusChrome = MaterialWindowChrome.Push();
+        using var statusButtons = MaterialSkin.NativeButtonStyle();
+        using var statusSpacing = new MaterialStyleScope();
+        var scale = ImGuiHelpers.GlobalScale;
+        statusSpacing.Style(ImGuiStyleVar.WindowPadding, new Vector2(Configuration.UiCompact ? 12 : 16) * scale);
+        statusSpacing.Style(ImGuiStyleVar.ItemSpacing, new Vector2(Configuration.UiCompact ? 8 : 12, Configuration.UiCompact ? 6 : 10) * scale);
+        statusSpacing.Style(ImGuiStyleVar.FramePadding, new Vector2(Configuration.UiCompact ? 8 : 12, Configuration.UiCompact ? 4 : 7) * scale);
         ImGui.SetNextWindowSize(new Vector2(460 * ImGuiHelpers.GlobalScale, 0), ImGuiCond.Always);
         fontStatusFold.PreDraw("Loot Goblin##FontStatus", null, null, reducedMotion: false,
             prepareDecorations: fontStatusDecorations.Prepare);
         try
         {
-            if (ImGui.Begin("Loot Goblin##FontStatus", ImGuiWindowFlags.AlwaysAutoResize))
+            bool visible;
+            using (MaterialSkin.BackdropStyle())
+                visible = ImGui.Begin("Loot Goblin##FontStatus", ImGuiWindowFlags.AlwaysAutoResize);
+            if (visible)
             {
+                MaterialSkin.Backdrop();
                 fontStatusDecorations.Paint();
                 if (appliedLanguage == "hi")
                 {
                     ImGui.TextWrapped(loading ? "Loading Hindi UI fonts..." : "Hindi UI fonts are unavailable. See the plugin log.");
-                    if (!loading && ImGui.Button("Use English")) { Configuration.UiLanguage = "en"; Configuration.Save(); }
+                    if (!loading)
+                    {
+                        var material = LootGoblinPresentation.HasMaterial;
+                        var drawing = ImGui.GetWindowDrawList();
+                        var splitter = material ? ImGui.ImDrawListSplitter() : default;
+                        var useEnglish = false;
+                        try
+                        {
+                            if (material) { splitter.Split(drawing, 2); splitter.SetCurrentChannel(drawing, 1); }
+                            {
+                                using var face = material ? MaterialSkin.TransparentButtonFace() : new MaterialStyleScope();
+                                useEnglish = ImGui.Button("Use English");
+                            }
+                            if (material)
+                            {
+                                var min = ImGui.GetItemRectMin(); var max = ImGui.GetItemRectMax();
+                                splitter.SetCurrentChannel(drawing, 0);
+                                MaterialSkin.PaintButton(min, max, ImGui.GetStyle().Alpha, ImGui.GetStyle().FrameRounding);
+                            }
+                        }
+                        finally { if (material) { splitter.Merge(drawing); splitter.Destroy(); } }
+                        if (useEnglish) { Configuration.UiLanguage = "en"; Configuration.Save(); }
+                    }
                 }
                 else MaterialText.TextWrapped(UiText.T(loading ? "Loading UI fonts..." : "UI fonts failed to load. See the plugin log."));
             }
@@ -490,7 +532,7 @@ public sealed class Plugin : IDalamudPlugin
             var rgb = LootGoblinPresentation.Rgb(appliedAccent);
             accentDraft = new(rgb.X, rgb.Y, rgb.Z);
         }
-        uiTheme.Density = uiTheme.IsLcars && Configuration.UiCompact ? MaterialDensity.Compact : MaterialDensity.Standard;
+        uiTheme.Density = Configuration.UiCompact ? MaterialDensity.Compact : MaterialDensity.Standard;
         if (appliedSoundsMuted != Configuration.UiLcarsSoundsMuted)
         {
             appliedSoundsMuted = Configuration.UiLcarsSoundsMuted;

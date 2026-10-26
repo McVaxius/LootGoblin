@@ -15,6 +15,7 @@ public class ConfigWindow : Window, IDisposable
 {
     private readonly AethertekUI.Dalamud.MaterialSupportLog supportLog = new();
     private readonly AethertekUI.Dalamud.MaterialWindowMotion windowMotion = new();
+    private bool materialBackdropStylePushed;
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
@@ -159,17 +160,34 @@ public class ConfigWindow : Window, IDisposable
         {
             Flags |= ImGuiWindowFlags.NoMove;
         }
+        if (LootGoblinPresentation.HasMaterial)
+        {
+            // The native Begin spans owner hooks, so restore this colour at content entry or skipped PostDraw.
+            ImGui.PushStyleColor(ImGuiCol.WindowBg, Vector4.Zero);
+            materialBackdropStylePushed = true;
+        }
         windowMotion.Prepare(this, reducedMotion: false, roundedCorners: true);
     }
 
     public override void PostDraw()
     {
         windowMotion.Restore(this);
+        if (materialBackdropStylePushed)
+        {
+            ImGui.PopStyleColor();
+            materialBackdropStylePushed = false;
+        }
         UiGui.ImageTitleWithStatus(this, UiText.T("Loot Goblin Settings"), plugin.OriginalIcon, plugin.TitlebarStatus());
     }
 
     public override void Draw()
     {
+        if (materialBackdropStylePushed)
+        {
+            ImGui.PopStyleColor();
+            materialBackdropStylePushed = false;
+        }
+        MaterialSkin.Backdrop();
         windowMotion.DrawChrome();
         UiGui.TitleWithButtons("Loot Goblin Settings", UiText.T("Loot Goblin Settings"), this);
         if (MaterialTheme.Current.IsLcars) MaterialLcars.Header(UiText.T("Loot Goblin Settings"));
@@ -179,8 +197,13 @@ public class ConfigWindow : Window, IDisposable
             RefreshCommandTriggerDrafts();
         }
 
-        if (!MaterialTheme.Current.IsLcars) UiGui.Text("Loot Goblin Settings");
-        ImGui.Separator();
+        if (LootGoblinPresentation.HasMaterial)
+            MaterialSkin.Heading(UiText.T("Loot Goblin Settings"));
+        else
+        {
+            if (!MaterialTheme.Current.IsLcars) UiGui.Text("Loot Goblin Settings");
+            ImGui.Separator();
+        }
         ImGui.Spacing();
 
         ImGui.SetNextItemWidth(Math.Min(220 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
