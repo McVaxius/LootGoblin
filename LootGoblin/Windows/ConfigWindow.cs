@@ -16,6 +16,7 @@ public class ConfigWindow : Window, IDisposable
     private readonly AethertekUI.Dalamud.MaterialSupportLog supportLog = new();
     private readonly AethertekUI.Dalamud.MaterialWindowMotion windowMotion = new();
     private bool materialBackdropStylePushed;
+    private readonly AethertekUI.Dalamud.MaterialWindowLock movementLock = new();
     private static readonly Vector4 ColorGrey = new(0.5f, 0.5f, 0.5f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
@@ -160,17 +161,19 @@ public class ConfigWindow : Window, IDisposable
         {
             Flags |= ImGuiWindowFlags.NoMove;
         }
-        if (LootGoblinPresentation.HasMaterial)
+        if (LootGoblinPresentation.HasMaterial || plugin.BackgroundBlurEnabled)
         {
             // The native Begin spans owner hooks, so restore this colour at content entry or skipped PostDraw.
             ImGui.PushStyleColor(ImGuiCol.WindowBg, Vector4.Zero);
             materialBackdropStylePushed = true;
         }
-        windowMotion.Prepare(this, reducedMotion: false, roundedCorners: true);
+        windowMotion.Prepare(this, reducedMotion: !plugin.Configuration.UiStylingEnabled, roundedCorners: plugin.Configuration.UiStylingEnabled);
+        movementLock.Apply(this, plugin.Configuration.UiWindowsLocked);
     }
 
     public override void PostDraw()
     {
+        movementLock.Restore(this);
         windowMotion.Restore(this);
         if (materialBackdropStylePushed)
         {
@@ -187,8 +190,9 @@ public class ConfigWindow : Window, IDisposable
             ImGui.PopStyleColor();
             materialBackdropStylePushed = false;
         }
-        MaterialSkin.Backdrop();
         windowMotion.DrawChrome();
+        plugin.DrawWindowBackdrop(this);
+        using var structuralBackgrounds = MaterialSkin.StructuralBackgroundStyle();
         UiGui.TitleWithButtons("Loot Goblin Settings", UiText.T("Loot Goblin Settings"), this);
         if (MaterialTheme.Current.IsLcars) MaterialLcars.Header(UiText.T("Loot Goblin Settings"));
         if (!commandTriggerDraftsInitialized || ImGui.IsWindowAppearing() || CommandTriggerDraftSourceChanged())

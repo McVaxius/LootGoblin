@@ -1,3 +1,9 @@
+2026-10-29 - Shared appearance and Glasswork backgrounds (1.1.1.4)
+
+- Add native styling and movement/resize lock controls to titlebars, Settings and /lg or /lootgoblin commands: style [on|off], lock and unlock. Preserve map profiles, native identities, fonts and opacity/fade.
+- Adopt shared Glasswork only on structural backgrounds. Retain independent style blur preferences, initially 75% Frost enabled for Glassmorphism. Add Waves, all three Lights effects, Image mode and the native image picker; screenshot pause starts off and is available in Colour and Transparency.
+- Ship the adapter Glasswork DLLs and MIT notice. Local checks remain separate from game/GPU, detached-window, picker and screenshot acceptance.
+
 2026-10-26 - 1.1.1.3 - Shared appearance materials
 
 - Add Glassmorphism, Spatial and Cyberpunk across Main, Settings, Alexandrite, appearance popups and font status while retaining Auto, Picker and LCARS, the six original font roles and native actions.

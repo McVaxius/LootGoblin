@@ -56,6 +56,8 @@ public class Configuration : IPluginConfiguration
     public string UiLanguage { get; set; } = "en";
     public uint UiAccentRgb { get; set; } = Windows.LootGoblinPresentation.ReferenceAccent;
     public AethertekUI.MaterialColorSettings UiColors { get; set; } = new();
+    public bool UiStylingEnabled { get; set; } = true;
+    public bool UiWindowsLocked { get; set; }
     public bool UiLcarsSoundsMuted { get; set; } = true;
     public bool UiCompact { get; set; } = true;
     public bool UiCompactVisibleOnMainWindow { get; set; }

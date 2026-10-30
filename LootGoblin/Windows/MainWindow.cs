@@ -32,6 +32,7 @@ public class MainWindow : Window, IDisposable
 {
     private readonly AethertekUI.Dalamud.MaterialWindowMotion windowMotion = new();
     private bool materialBackdropStylePushed;
+    private readonly AethertekUI.Dalamud.MaterialWindowLock movementLock = new();
     private static readonly Vector4 ColorGreen = new(0.3f, 1f, 0.3f, 1f);
     private static readonly Vector4 ColorRed = new(1f, 0.3f, 0.3f, 1f);
     private static readonly Vector4 ColorYellow = new(1f, 1f, 0.3f, 1f);
@@ -105,17 +106,19 @@ public class MainWindow : Window, IDisposable
     {
         TitleBarButtons[3].Icon = plugin.StateManager.IsPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
         UiGui.ReserveTitleSpace(this, MainTitle, 420);
-        if (LootGoblinPresentation.HasMaterial)
+        if (LootGoblinPresentation.HasMaterial || plugin.BackgroundBlurEnabled)
         {
             // The native Begin spans owner hooks, so restore this colour at content entry or skipped PostDraw.
             ImGui.PushStyleColor(ImGuiCol.WindowBg, Vector4.Zero);
             materialBackdropStylePushed = true;
         }
-        windowMotion.Prepare(this, reducedMotion: false, roundedCorners: true);
+        windowMotion.Prepare(this, reducedMotion: !plugin.Configuration.UiStylingEnabled, roundedCorners: plugin.Configuration.UiStylingEnabled);
+        movementLock.Apply(this, plugin.Configuration.UiWindowsLocked);
     }
 
     public override void PostDraw()
     {
+        movementLock.Restore(this);
         windowMotion.Restore(this);
         if (materialBackdropStylePushed)
         {
@@ -132,8 +135,9 @@ public class MainWindow : Window, IDisposable
             ImGui.PopStyleColor();
             materialBackdropStylePushed = false;
         }
-        MaterialSkin.Backdrop();
         windowMotion.DrawChrome();
+        plugin.DrawWindowBackdrop(this);
+        using var structuralBackgrounds = MaterialSkin.StructuralBackgroundStyle();
         using var controls = MaterialControls.Push(LootGoblinPresentation.Controls(plugin.Configuration.UiCompact ? 32 : 40));
         DrawHeaderSection();
         ImGui.Separator();
@@ -188,7 +192,7 @@ public class MainWindow : Window, IDisposable
         var c = MaterialTheme.Current.Colors;
         var material = LootGoblinPresentation.HasMaterial;
         var padding = Scale(MaterialTheme.Current.IsLcars ? 18 : plugin.Configuration.UiCompact ? 10 : 14);
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, MaterialTheme.Current.IsLcars || material ? Vector4.Zero : c.Surface);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, MaterialTheme.Current.IsLcars || material ? Vector4.Zero : MaterialSkin.BackgroundFill(c.Surface));
         ImGui.PushStyleColor(ImGuiCol.Border, material ? Vector4.Zero : c.OutlineVariant);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, Scale(4));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding));
