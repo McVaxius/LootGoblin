@@ -1,3 +1,7 @@
+2026-10-31 - Typed RSR activation triggers (unversioned)
+
+- Send exact /rotation Auto and /rotation Manual triggers through RSR's current operating-mode IPC after applying the configured targeting preference. Count activation only when IPC accepts it, without a chat fallback. Preserve custom commands, extra arguments, cancellation, command order and per-character overrides.
+
 2026-10-29 - Shared appearance and Glasswork backgrounds (1.1.1.4)
 
 - Add native styling and movement/resize lock controls to titlebars, Settings and /lg or /lootgoblin commands: style [on|off], lock and unlock. Preserve map profiles, native identities, fonts and opacity/fade.

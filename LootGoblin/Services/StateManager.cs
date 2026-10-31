@@ -7238,8 +7238,13 @@ public class StateManager : IDisposable
                 continue;
             }
 
-            if (IsRsrActivationCommand(trimmed))
+            if (IsRsrActivationCommand(trimmed, out var manual))
+            {
                 _plugin.RotationPluginIPC.TrySetRsrHostileType(_plugin.Configuration.RsrTargetHostileType);
+                if (_plugin.RotationPluginIPC.TrySetRsrMode(manual))
+                    sent++;
+                continue;
+            }
 
             if (CommandHelper.TrySendCommand(trimmed))
                 sent++;
@@ -7254,13 +7259,14 @@ public class StateManager : IDisposable
                 : "/bmrai obstaclemaps off");
     }
 
-    private static bool IsRsrActivationCommand(string command)
+    private static bool IsRsrActivationCommand(string command, out bool manual)
     {
         var parts = command.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        manual = parts.Length == 2 && string.Equals(parts[1], "manual", StringComparison.OrdinalIgnoreCase);
         return parts.Length == 2
             && string.Equals(parts[0], "/rotation", StringComparison.OrdinalIgnoreCase)
             && (string.Equals(parts[1], "auto", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(parts[1], "manual", StringComparison.OrdinalIgnoreCase));
+                || manual);
     }
 
     private static bool IsCombatAutomationCommand(string command) =>

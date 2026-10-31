@@ -20,6 +20,12 @@ public class RotationPluginInfo
 
 public class RotationPluginIPC : IDisposable
 {
+    private enum RsrStateCommandType : byte
+    {
+        Auto = 1,
+        Manual = 3,
+    }
+
     private enum RsrOtherCommandType : byte
     {
         Settings,
@@ -116,7 +122,24 @@ public class RotationPluginIPC : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Warning($"[RSR] Failed to apply hostile targeting {hostileType}; continuing with the rotation command: {ex.Message}");
+            _log.Warning($"[RSR] Failed to apply hostile targeting {hostileType}; continuing with mode activation: {ex.Message}");
+            return false;
+        }
+    }
+
+    public bool TrySetRsrMode(bool manual)
+    {
+        var mode = manual ? RsrStateCommandType.Manual : RsrStateCommandType.Auto;
+        try
+        {
+            _pluginInterface.GetIpcSubscriber<RsrStateCommandType, object>("RotationSolverReborn.ChangeOperatingMode")
+                .InvokeAction(mode);
+            _log.Debug($"[RSR] Applied operating mode via IPC: {mode}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log.Warning($"[RSR] Failed to apply operating mode {mode}: {ex.Message}");
             return false;
         }
     }
