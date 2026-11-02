@@ -7291,6 +7291,8 @@ public class StateManager : IDisposable
                 _plugin.AddDebugLog($"[CombatAutomation] BMR enable withheld for {reason}: {presetDetail}");
                 return false;
             }
+            if (!CommandHelper.TrySendCommand("/bmrai manualtarget off"))
+                return false;
             CommandHelper.TrySendCommand("/bmrai prefdistance 1.5");
             CommandHelper.TrySendCommand("/bmrai forbidactions off");
         }

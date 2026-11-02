@@ -1,3 +1,7 @@
+2026-11-01 - Automatic BMR targeting on combat activation (unversioned)
+
+- Clear BMR manual targeting before LootGoblin enables its passive combat AI so it can acquire enemies and approach them while RSR handles actions. Withhold activation if the targeting command cannot be dispatched; preserve later commands in custom batches.
+
 2026-10-31 - Typed RSR activation triggers (unversioned)
 
 - Send exact /rotation Auto and /rotation Manual triggers through RSR's current operating-mode IPC after applying the configured targeting preference. Count activation only when IPC accepts it, without a chat fallback. Preserve custom commands, extra arguments, cancellation, command order and per-character overrides.
