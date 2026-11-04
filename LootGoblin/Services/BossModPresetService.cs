@@ -7,6 +7,7 @@ namespace LootGoblin.Services;
 
 internal interface IBossModPresetIpc
 {
+    bool IsRotationModuleAvailable(string moduleName);
     string? GetPreset(string name);
     bool DeletePreset(string name);
     bool CreatePreset(string json);
@@ -26,6 +27,15 @@ internal sealed class BossModPresetService(string directory, IBossModPresetIpc i
     ];
 
     private bool installed;
+
+    internal static string? HealerModuleForJob(uint jobId) => jobId switch
+    {
+        6 or 24 => "BMRVariantModulePack.Autorotation.Dhog.DhogWHM",
+        28 => "BMRVariantModulePack.Autorotation.Dhog.DhogSCH",
+        33 => "BMRVariantModulePack.Autorotation.Dhog.DhogAST",
+        40 => "BMRVariantModulePack.Autorotation.Dhog.DhogSGE",
+        _ => null,
+    };
 
     internal static string? PassivePresetForJob(uint jobId) => jobId switch
     {
@@ -108,14 +118,34 @@ internal sealed class BossModPresetService(string directory, IBossModPresetIpc i
             detail = $"No BossMod combat preset for class/job {jobId}.";
             return false;
         }
+        var healerModule = useBmrRotation ? HealerModuleForJob(jobId) : null;
+        if (healerModule != null && !ipc.IsRotationModuleAvailable(healerModule))
+        {
+            detail = "Could not find God Mod Companion rotations for the equipped healer.";
+            return false;
+        }
         if (!installed && !Refresh(out detail))
             return false;
         try
         {
-            if (ipc.GetPreset(name) is null)
+            var loadedPreset = ipc.GetPreset(name);
+            if (loadedPreset is null)
             {
                 detail = $"BossMod preset '{name}' is unavailable.";
                 return false;
+            }
+            if (healerModule != null)
+            {
+                // BMR can accept a preset while dropping unregistered modules or strategies.
+                using var actual = JsonDocument.Parse(loadedPreset);
+                using var expected = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, name + ".json")));
+                if (!actual.RootElement.GetProperty("Modules").TryGetProperty(healerModule, out var actualModule)
+                    || !expected.RootElement.GetProperty("Modules").TryGetProperty(healerModule, out var expectedModule)
+                    || !JsonElement.DeepEquals(actualModule, expectedModule))
+                {
+                    detail = "Could not find God Mod Companion rotations with the expected healer strategies in the loaded preset.";
+                    return false;
+                }
             }
             if (ipc.GetAiPreset() != name)
                 ipc.SetAiPreset(name);

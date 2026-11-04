@@ -207,6 +207,25 @@ public class RotationPluginIPC : IDisposable
 
     private sealed class BossModPresetIpc(IDalamudPluginInterface pluginInterface) : IBossModPresetIpc
     {
+        public bool IsRotationModuleAvailable(string moduleName)
+        {
+            try
+            {
+                var assembly = AppDomain.CurrentDomain.GetAssemblies().SingleOrDefault(a => a.GetName().Name == "BossModReborn");
+                var registry = assembly?.GetType("BossMod.Autorotation.RotationModuleRegistry");
+                const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static;
+                if (registry?.GetMethod("FindType", flags)?.Invoke(null, [moduleName]) is not Type type
+                    || type.FullName != moduleName
+                    || registry.GetField("Modules", flags)?.GetValue(null) is not System.Collections.IDictionary modules
+                    || !modules.Contains(type) || modules[type] is not { } entry)
+                    return false;
+                const System.Reflection.BindingFlags memberFlags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance;
+                return (entry.GetType().GetProperty("Definition", memberFlags)?.GetValue(entry)
+                    ?? entry.GetType().GetField("Definition", memberFlags)?.GetValue(entry)) != null;
+            }
+            catch { return false; }
+        }
+
         public string? GetPreset(string name)
             => pluginInterface.GetIpcSubscriber<string, string>("BossMod.Presets.Get").InvokeFunc(name);
         public bool DeletePreset(string name)

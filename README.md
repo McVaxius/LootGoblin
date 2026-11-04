@@ -1,5 +1,7 @@
 # Loot Goblin
 
+Automatic BMR healer presets use the Dhog healer rotations supplied by God Mod Companion. If those rotations cannot be found or the loaded preset drops their strategies, activation reports a warning. Saved manual presets and optional providers remain available.
+
 Loot Goblin is a Dalamud plugin for automating FFXIV treasure-map runs. It selects configured maps, deciphers them, reads the local map flag, travels with Lifestream, moves with vnavmesh, opens coffers, handles portals, and can hand treasure dungeons to ADS.
 
 ## Install

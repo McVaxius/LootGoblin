@@ -1,3 +1,8 @@
+2026-11-04 - 1.1.1.8 - God Mod Companion Dhog healer rotations (I745)
+
+- Use Dhog WHM, SCH, AST and SGE in the distributed ranged preset; remove Xan healer modules and duplicate HealerAI while preserving other job strategies.
+- Require registered God Mod Companion rotations and matching loaded preset strategies for automatic BMR healer activation. Warn clearly when unavailable; preserve manual presets, movement-only presets and optional rotation providers.
+
 2026-11-04 - 1.1.1.7 - BMR factory commands and ADS repair cities (I724/I734-I737)
 
 - Make the factory landing/duty commands use BMR for attacks and movement, selecting the packaged role combat preset rather than its movement-only preset. Keep optional external rotations and custom command batches available.

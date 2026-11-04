@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using LootGoblin.Services;
 using Xunit;
 
@@ -7,6 +8,46 @@ namespace LootGoblin.Tests;
 public sealed class BossModPresetServiceTests
 {
     private static readonly string PresetDirectory = Path.Combine(AppContext.BaseDirectory, "data", "bm");
+
+    [Theory]
+    [InlineData(6u)]
+    [InlineData(24u)]
+    [InlineData(28u)]
+    [InlineData(33u)]
+    [InlineData(40u)]
+    public void HealerFactoryPresetUsesRegisteredDhogRotation(uint job)
+    {
+        var ipc = new FakeIpc();
+        var service = new BossModPresetService(PresetDirectory, ipc);
+        Assert.True(service.Prepare(job, true, out var detail), detail);
+        using var preset = JsonDocument.Parse(ipc.Presets["FRENRIDER - RANGED"]);
+        Assert.True(preset.RootElement.GetProperty("Modules").TryGetProperty(BossModPresetService.HealerModuleForJob(job)!, out _));
+        Assert.DoesNotContain(preset.RootElement.GetProperty("Modules").EnumerateObject(),
+            module => module.Name is "BossMod.Autorotation.xan.WHM" or "BossMod.Autorotation.xan.SCH"
+                or "BossMod.Autorotation.xan.AST" or "BossMod.Autorotation.xan.SGE" or "BossMod.Autorotation.xan.HealerAI");
+    }
+
+    [Fact]
+    public void MissingDhogRotationWarnsBeforeChangingProviderState()
+    {
+        var ipc = new FakeIpc { MissingRotation = BossModPresetService.HealerModuleForJob(24) };
+        var service = new BossModPresetService(PresetDirectory, ipc);
+        Assert.False(service.Prepare(24, true, out var detail));
+        Assert.Contains("Could not find God Mod Companion rotations", detail);
+        Assert.Empty(ipc.Calls);
+        Assert.True(service.PreparePassive(24, out _));
+    }
+
+    [Fact]
+    public void SilentlyDroppedDhogModuleDoesNotEnableCombat()
+    {
+        var ipc = new FakeIpc { DroppedRotation = BossModPresetService.HealerModuleForJob(24) };
+        var service = new BossModPresetService(PresetDirectory, ipc);
+        Assert.False(service.Prepare(24, true, out var detail));
+        Assert.Contains("Could not find God Mod Companion rotations", detail);
+        Assert.Null(ipc.Active);
+        Assert.Equal(string.Empty, ipc.Ai);
+    }
 
     [Theory]
     [InlineData(19u, "FRENRIDER - TANK")]
@@ -160,6 +201,10 @@ public sealed class BossModPresetServiceTests
         internal string? RejectCreate;
         internal bool IgnoreAiSelection;
         internal bool RejectActive;
+        internal string? MissingRotation;
+        internal string? DroppedRotation;
+
+        public bool IsRotationModuleAvailable(string moduleName) => moduleName != MissingRotation;
 
         public string? GetPreset(string name) => Presets.GetValueOrDefault(name);
         public bool DeletePreset(string name)
@@ -175,6 +220,12 @@ public sealed class BossModPresetServiceTests
             var name = definition.RootElement.GetProperty("Name").GetString()!;
             Calls.Add("Create " + name);
             if (name == RejectCreate) return false;
+            if (DroppedRotation != null)
+            {
+                var parsed = JsonNode.Parse(json)!;
+                parsed["Modules"]!.AsObject().Remove(DroppedRotation);
+                json = parsed.ToJsonString();
+            }
             Presets[name] = json;
             Created.Add(name);
             return true;
