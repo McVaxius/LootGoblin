@@ -8,6 +8,100 @@ public sealed class MapGatherCharacterConfigTests
 {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-06-16T10:00:00Z");
 
+    private static List<string> PreviousLandingDefaults() =>
+    [
+        "/rotation Auto", "/bmrai on", "/vbmai on", "/fr off",
+        "/cbt disable AutoFollow", "/bmrai followoutofcombat off",
+        "/bmrai followcombat off", "/vbmai follow Slot1", "", "",
+    ];
+
+    [Fact]
+    public void FactoryCombatCommandsMigrateGlobalAndCharacterListsWithoutChangingOverridesOrFinishCommands()
+    {
+        var global = PreviousLandingDefaults();
+        var factoryProfile = new MapGatherCharacterConfig
+        {
+            OverrideCommandTriggers = true,
+            LandingOrDutyCommandTriggers = PreviousLandingDefaults(),
+            FinishCommandTriggers = ["/custom finish"],
+        };
+        var custom = PreviousLandingDefaults();
+        custom[0] = "/rotation custom";
+        var customProfile = new MapGatherCharacterConfig { LandingOrDutyCommandTriggers = custom };
+
+        Assert.True(LandingCommandDefaults.MigratePreviousFactory(11, global, [factoryProfile, customProfile]));
+
+        string[] expected =
+        [
+            "/rotation cancel", "/bmrai on", "/vbmai off", "/fr off",
+            "/cbt disable AutoFollow", "/bmrai followoutofcombat off",
+            "/bmrai followcombat off", "", "", "",
+        ];
+        Assert.Equal(expected, LandingCommandDefaults.Values);
+        Assert.Equal(expected, global);
+        Assert.Equal(expected, factoryProfile.LandingOrDutyCommandTriggers);
+        Assert.True(factoryProfile.OverrideCommandTriggers);
+        Assert.Equal(new[] { "/custom finish" }, factoryProfile.FinishCommandTriggers);
+        Assert.Equal("/rotation custom", customProfile.LandingOrDutyCommandTriggers![0]);
+        Assert.False(customProfile.OverrideCommandTriggers);
+        Assert.False(LandingCommandDefaults.MigratePreviousFactory(11, global, [factoryProfile, customProfile]));
+    }
+
+    [Theory]
+    [InlineData(12)]
+    [InlineData(13)]
+    public void LaterSavedChoicesAreNeverRemigrated(int version)
+    {
+        var global = PreviousLandingDefaults();
+        var profile = new MapGatherCharacterConfig { LandingOrDutyCommandTriggers = PreviousLandingDefaults() };
+        Assert.False(LandingCommandDefaults.MigratePreviousFactory(version, global, [profile]));
+        Assert.Equal(PreviousLandingDefaults(), global);
+        Assert.Equal(PreviousLandingDefaults(), profile.LandingOrDutyCommandTriggers);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CharacterFactoryMigrationDoesNotDependOnGlobalDefaultsOrOverrideBeingActive(bool missingGlobal)
+    {
+        List<string>? global = missingGlobal ? null : ["/custom rotation"];
+        var profile = new MapGatherCharacterConfig
+        {
+            OverrideCommandTriggers = false,
+            LandingOrDutyCommandTriggers = PreviousLandingDefaults(),
+        };
+
+        Assert.True(LandingCommandDefaults.MigratePreviousFactory(11, global, [profile]));
+
+        Assert.Equal(missingGlobal ? null : new[] { "/custom rotation" }, global?.ToArray());
+        Assert.Equal(LandingCommandDefaults.Values, profile.LandingOrDutyCommandTriggers);
+        Assert.False(profile.OverrideCommandTriggers);
+    }
+
+    [Theory]
+    [InlineData("case")]
+    [InlineData("space")]
+    [InlineData("short")]
+    [InlineData("extra")]
+    [InlineData("empty")]
+    [InlineData("null")]
+    public void CustomizedOrMissingCommandListsRemainUntouched(string change)
+    {
+        List<string>? commands = PreviousLandingDefaults();
+        switch (change)
+        {
+            case "case": commands[0] = "/rotation auto"; break;
+            case "space": commands[0] += " "; break;
+            case "short": commands.RemoveAt(commands.Count - 1); break;
+            case "extra": commands.Add("/custom action"); break;
+            case "empty": commands.Clear(); break;
+            case "null": commands = null; break;
+        }
+        var before = commands?.ToArray();
+        Assert.False(LandingCommandDefaults.MigratePreviousFactory(11, commands));
+        Assert.Equal(before, commands?.ToArray());
+    }
+
     [Fact]
     public void LegacyGatherSettingsMigrateOnceToFirstBoundCharacter()
     {

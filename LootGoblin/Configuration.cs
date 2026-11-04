@@ -11,6 +11,12 @@ public enum RepairMode
     Self,
     NpcNoInn,
     NpcNoInnNoTeleport,
+    NpcWithInn,
+}
+
+public enum RepairCity
+{
+    Automatic, Uldah, Gridania, Limsa, Ishgard, Crystarium, Sharlayan, Tuliyollal,
 }
 
 public enum ReturnWhenDoneDestination
@@ -89,20 +95,6 @@ public class Configuration : IPluginConfiguration
     public const int DefaultCommandTriggerRowCount = 10;
     public const RsrTargetHostileType DefaultRsrTargetHostileType = RsrTargetHostileType.TargetsHaveTarget;
 
-    private static readonly string[] LandingOrDutyCommandTriggerDefaultValues =
-    {
-        "/rotation Auto",
-        "/bmrai on",
-        "/vbmai on",
-        "/fr off",
-        "/cbt disable AutoFollow",
-        "/bmrai followoutofcombat off",
-        "/bmrai followcombat off",
-        "/vbmai follow Slot1",
-        string.Empty,
-        string.Empty,
-    };
-
     private static readonly string[] FinishCommandTriggerDefaultValues =
     {
         "/rotation cancel",
@@ -117,9 +109,9 @@ public class Configuration : IPluginConfiguration
         string.Empty,
     };
 
-    public static IReadOnlyList<string> LandingOrDutyCommandTriggerDefaults => LandingOrDutyCommandTriggerDefaultValues;
+    public static IReadOnlyList<string> LandingOrDutyCommandTriggerDefaults => LandingCommandDefaults.Values;
     public static IReadOnlyList<string> FinishCommandTriggerDefaults => FinishCommandTriggerDefaultValues;
-    public static List<string> CreateDefaultLandingOrDutyCommandTriggers() => new(LandingOrDutyCommandTriggerDefaultValues);
+    public static List<string> CreateDefaultLandingOrDutyCommandTriggers() => new(LandingCommandDefaults.Values);
     public static List<string> CreateDefaultFinishCommandTriggers() => new(FinishCommandTriggerDefaultValues);
 
     private int partyTeleportDelaySeconds = 0;
@@ -168,6 +160,22 @@ public class Configuration : IPluginConfiguration
     public bool EnableSaddlebagMapRetrieval { get; set; } = true;
     public int RepairThresholdPercent { get; set; } = 75;
     public RepairMode RepairMode { get; set; } = RepairMode.NpcNoInn;
+    public RepairCity RepairCity { get; set; } = RepairCity.Automatic;
+
+    public string GetAdsRepairMode()
+    {
+        if (RepairMode == RepairMode.Self) return "self";
+        if (RepairMode == RepairMode.NpcNoInnNoTeleport) return "npc-no-teleport-no-inn";
+        var mode = RepairMode == RepairMode.NpcWithInn ? "npc-yes-inn" : "npc-no-inn";
+        var city = RepairCity switch
+        {
+            RepairCity.Uldah => "uldah", RepairCity.Gridania => "gridania", RepairCity.Limsa => "limsa",
+            RepairCity.Ishgard => "ishgard", RepairCity.Crystarium => "crystarium",
+            RepairCity.Sharlayan => "sharlayan", RepairCity.Tuliyollal => "tuliyollal",
+            _ => string.Empty,
+        };
+        return city.Length == 0 ? mode : $"{mode}-{city}";
+    }
     public bool ReturnWhenDoneEnabled { get; set; } = false;
     public ReturnWhenDoneDestination ReturnWhenDoneDestination { get; set; } = ReturnWhenDoneDestination.FC;
     public uint SelectedCombatJobId { get; set; } = 0;

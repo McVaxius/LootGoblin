@@ -94,11 +94,13 @@ Dungeon settings control ADS handoff. When enabled and ADS is loaded, Loot Gobli
 
 Return-when-done can send the selected Lifestream return only after no enabled inventory, loaded saddlebag, or retainer maps remain. Destinations are FC, personal house, or inn.
 
-Command triggers run configured slash commands at landing/duty entry and at finish. Defaults include rotation/BossMod/FrenRider follow-control commands, but they are editable in settings.
+Command triggers run configured slash commands at landing/duty entry and at finish. Factory defaults use BMR for attacks and movement. Exact previous factory lists migrate once, globally and per character; custom lists, override selections, finish commands and later choices are retained. Optional external rotations remain available through custom commands.
 
-Loot Goblin bundles FrenRider's six BossMod presets in `data/bm` and refreshes those named definitions when a map run starts with BMR loaded. Before `/bmrai on`, it confirms both BMR's saved AI preset and its active preset use `passive - tank`, `passive - melee` or `passive - ranged` for the current job. The passive presets supply movement while the existing commands enable the combat rotation. Refreshing replaces custom edits under those six preset names. Keep the `data/bm` folder with the DLL when installing manually. Unavailable or rejected preset setup warns and withholds BMR activation; having both BossMod providers loaded prevents preset writes.
+Loot Goblin bundles FrenRider's six BossMod presets in `data/bm` and refreshes those named definitions when a map run starts with BMR loaded. Before `/bmrai on`, it confirms BMR's saved AI preset and active preset. Exact factory landing/duty commands select `FRENRIDER - TANK`, `FRENRIDER - MELEE` or `FRENRIDER - RANGED` for attacks and movement. Custom command batches retain the existing `passive - tank`, `passive - melee` or `passive - ranged` selection so external rotations keep control of attacks. Refreshing replaces custom edits under those six preset names. Keep the `data/bm` folder with the DLL when installing manually. Unavailable or rejected preset setup warns and withholds BMR activation; having both BossMod providers loaded prevents preset writes.
 
 Automation settings cover ADS repair threshold/mode, food selection and search, auto-discard through AutoRetainer `/ays discard`, chocobo companion summon/stance, combat automation, Krangle names, and diagnostics.
+
+Both traveling NPC repair modes offer Automatic and all seven ADS cities. City-specific no-inn travel requires exact capability support from ADS; unsupported providers receive no substituted request. ADS owns native unlock validation and eligible starting-city fallback. Local repair remains unchanged.
 
 Diagnostics include the main debug log, map diagnostics, and an optional dedicated LootGoblin diagnostic log under the plugin config directory.
 

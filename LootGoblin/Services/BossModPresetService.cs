@@ -16,7 +16,7 @@ internal interface IBossModPresetIpc
     void SetAiPreset(string name);
 }
 
-/// <summary>Installs FrenRider's packaged presets and prepares BMR movement for external combat rotations.</summary>
+/// <summary>Installs FrenRider's packaged presets for BMR combat or external-rotation movement.</summary>
 internal sealed class BossModPresetService(string directory, IBossModPresetIpc ipc)
 {
     internal static readonly string[] PackagedNames =
@@ -96,11 +96,16 @@ internal sealed class BossModPresetService(string directory, IBossModPresetIpc i
     }
 
     internal bool PreparePassive(uint jobId, out string detail)
+        => Prepare(jobId, false, out detail);
+
+    internal bool Prepare(uint jobId, bool useBmrRotation, out string detail)
     {
         var name = PassivePresetForJob(jobId);
+        if (name != null && useBmrRotation)
+            name = "FRENRIDER - " + name["passive - ".Length..].ToUpperInvariant();
         if (name is null)
         {
-            detail = $"No passive BossMod combat preset for class/job {jobId}.";
+            detail = $"No BossMod combat preset for class/job {jobId}.";
             return false;
         }
         if (!installed && !Refresh(out detail))

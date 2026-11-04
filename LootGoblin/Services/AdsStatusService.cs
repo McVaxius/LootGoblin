@@ -76,9 +76,32 @@ public sealed class AdsStatusService : IDisposable
     }
 
     public bool StartRepair(string mode)
+        => StartRepair(mode, out _);
+
+    public bool StartRepair(string mode, out string unsupportedModeFailure)
     {
+        unsupportedModeFailure = string.Empty;
         if (!_plugin.IsAdsAvailable)
             return false;
+
+        if (AdsRepairCapabilities.RequiresAdvertisement(mode))
+        {
+            string? capabilities = null;
+            try
+            {
+                capabilities = _pluginInterface.GetIpcSubscriber<string>("ADS.GetCapabilitiesJson").InvokeFunc();
+            }
+            catch (Exception ex)
+            {
+                _log.Debug($"[ADS] Failed to read ADS repair capabilities: {ex.Message}");
+            }
+            if (!AdsRepairCapabilities.Supports(mode, capabilities))
+            {
+                unsupportedModeFailure = $"Installed ADS does not advertise repair mode {mode}; update ADS before using this repair city.";
+                _log.Debug($"[ADS] {unsupportedModeFailure}");
+                return false;
+            }
+        }
 
         try
         {

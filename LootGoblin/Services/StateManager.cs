@@ -7285,7 +7285,10 @@ public class StateManager : IDisposable
 
         if (string.Equals(command, "/bmrai on", StringComparison.OrdinalIgnoreCase))
         {
-            if (!_plugin.RotationPluginIPC.PreparePassivePreset(out var presetDetail))
+            var landingCommands = _plugin.ActiveMapGatherConfig.GetLandingOrDutyCommandTriggers(
+                _plugin.Configuration.LandingOrDutyCommandTriggers);
+            if (!_plugin.RotationPluginIPC.PrepareCombatPreset(
+                    LandingCommandDefaults.UsesBmrRotation(landingCommands), out var presetDetail))
             {
                 SetWarning(presetDetail);
                 _plugin.AddDebugLog($"[CombatAutomation] BMR enable withheld for {reason}: {presetDetail}");
@@ -16278,8 +16281,13 @@ public class StateManager : IDisposable
     {
         adsRepairSource = source;
 
-        if (!_plugin.AdsStatusService.StartRepair(repairMode))
+        if (!_plugin.AdsStatusService.StartRepair(repairMode, out var unsupportedModeFailure))
         {
+            if (!string.IsNullOrEmpty(unsupportedModeFailure))
+            {
+                TransitionTo(BotState.Error, unsupportedModeFailure);
+                return true;
+            }
             var adsStatus = _plugin.AdsStatusService.Refresh(force: true);
             if (IsNpcNoTeleportNoInnNoMenderSkip(repairMode, adsStatus))
             {
@@ -16746,12 +16754,7 @@ public class StateManager : IDisposable
         => string.IsNullOrWhiteSpace(adsRepairSource) ? "[Repair]" : adsRepairSource;
 
     private string ResolveAdsRepairMode()
-        => _plugin.Configuration.RepairMode switch
-        {
-            RepairMode.Self => AdsRepairModeSelf,
-            RepairMode.NpcNoInnNoTeleport => AdsRepairModeNpcNoTeleportNoInn,
-            _ => AdsRepairModeNpcNoInn,
-        };
+        => _plugin.Configuration.GetAdsRepairMode();
 
     private static bool IsNpcNoTeleportNoInnNoMenderSkip(string repairMode, AdsStatusSnapshot status)
     {

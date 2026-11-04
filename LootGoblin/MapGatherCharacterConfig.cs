@@ -6,6 +6,43 @@ using LootGoblin.Services;
 
 namespace LootGoblin;
 
+internal static class LandingCommandDefaults
+{
+    internal static readonly string[] Values =
+    [
+        "/rotation cancel", "/bmrai on", "/vbmai off", "/fr off",
+        "/cbt disable AutoFollow", "/bmrai followoutofcombat off",
+        "/bmrai followcombat off", "", "", "",
+    ];
+
+    internal static bool UsesBmrRotation(IReadOnlyList<string>? commands)
+        => commands != null && commands.SequenceEqual(Values, StringComparer.Ordinal);
+
+    internal static bool MigratePreviousFactory(int configurationVersion, List<string>? commands,
+        IEnumerable<MapGatherCharacterConfig>? profiles = null)
+    {
+        if (configurationVersion >= 12) return false;
+        string[] previous =
+        [
+            "/rotation Auto", "/bmrai on", "/vbmai on", "/fr off",
+            "/cbt disable AutoFollow", "/bmrai followoutofcombat off",
+            "/bmrai followcombat off", "/vbmai follow Slot1", "", "",
+        ];
+        var changed = Migrate(commands);
+        foreach (var profile in profiles ?? Array.Empty<MapGatherCharacterConfig>())
+            changed |= Migrate(profile?.LandingOrDutyCommandTriggers);
+        return changed;
+
+        bool Migrate(List<string>? values)
+        {
+            if (values == null || !values.SequenceEqual(previous, StringComparer.Ordinal)) return false;
+            values.Clear();
+            values.AddRange(Values);
+            return true;
+        }
+    }
+}
+
 [Serializable]
 public sealed class MapGatherCharacterConfig
 {

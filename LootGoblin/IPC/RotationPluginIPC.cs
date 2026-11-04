@@ -179,12 +179,12 @@ public class RotationPluginIPC : IDisposable
         return refreshed;
     }
 
-    internal bool PreparePassivePreset(out string detail)
+    internal bool PrepareCombatPreset(bool useBmrRotation, out string detail)
     {
         if (!CanUseBmrPresetIpc(out detail))
             return false;
         var jobId = Plugin.ObjectTable.LocalPlayer?.ClassJob.RowId ?? 0;
-        var prepared = _presets.PreparePassive(jobId, out detail);
+        var prepared = _presets.Prepare(jobId, useBmrRotation, out detail);
         _plugin.AddDebugLog($"[BossModPresets] {detail}");
         return prepared;
     }

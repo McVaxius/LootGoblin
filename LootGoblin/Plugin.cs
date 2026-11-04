@@ -1584,6 +1584,16 @@ public sealed class Plugin : IDalamudPlugin
             changed = true;
         }
 
+        if (configuration.Version < 12)
+        {
+            // Only an exact previous factory list is migrated. Custom lists and
+            // subsequent choices are retained, including per-character overrides.
+            LandingCommandDefaults.MigratePreviousFactory(configuration.Version, configuration.LandingOrDutyCommandTriggers,
+                configuration.MapGatherCharacterConfigs?.Characters?.Values);
+            configuration.Version = 12;
+            changed = true;
+        }
+
         configuration.NormalizeConfiguredMapRuns();
         configuration.NormalizeConfiguredJobAndGatherMaps();
         configuration.NormalizeMapPurchaseSettings();

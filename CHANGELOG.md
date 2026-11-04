@@ -1,3 +1,9 @@
+2026-11-04 - 1.1.1.7 - BMR factory commands and ADS repair cities (I724/I734-I737)
+
+- Make the factory landing/duty commands use BMR for attacks and movement, selecting the packaged role combat preset rather than its movement-only preset. Keep optional external rotations and custom command batches available.
+- Migrate exact previous factory lists once, globally and per character. Preserve custom lists, inactive overrides, finish commands and later choices.
+- Offer all seven cities for both traveling NPC repair modes, preserve saved mode IDs and local repair, and require the exact ADS capability before new no-inn city dispatch.
+
 2026-11-01 - Automatic BMR targeting on combat activation (unversioned)
 
 - Clear BMR manual targeting before LootGoblin enables its passive combat AI so it can acquire enemies and approach them while RSR handles actions. Withhold activation if the targeting command cannot be dispatched; preserve later commands in custom batches.

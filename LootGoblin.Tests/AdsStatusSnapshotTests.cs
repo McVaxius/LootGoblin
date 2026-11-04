@@ -8,6 +8,51 @@ namespace LootGoblin.Tests;
 
 public sealed class AdsStatusSnapshotTests
 {
+    [Theory]
+    [InlineData("uldah")]
+    [InlineData("gridania")]
+    [InlineData("limsa")]
+    [InlineData("ishgard")]
+    [InlineData("crystarium")]
+    [InlineData("sharlayan")]
+    [InlineData("tuliyollal")]
+    public void ExplicitNoInnCitiesRequireExactAdvertisedMode(string city)
+    {
+        var mode = $"npc-no-inn-{city}";
+        Assert.True(AdsRepairCapabilities.RequiresAdvertisement(mode));
+        Assert.True(AdsRepairCapabilities.Supports(mode,
+            JsonSerializer.Serialize(new { schemaVersion = 1, repairModes = new[] { mode } })));
+        Assert.False(AdsRepairCapabilities.Supports(mode,
+            JsonSerializer.Serialize(new { schemaVersion = 1, repairModes = new[] { "npc-no-inn", mode.ToUpperInvariant() } })));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("malformed")]
+    [InlineData("[]")]
+    [InlineData("null")]
+    [InlineData("{}")]
+    [InlineData("{\"schemaVersion\":1}")]
+    [InlineData("{\"schemaVersion\":1,\"repairModes\":\"npc-no-inn-limsa\"}")]
+    [InlineData("{\"schemaVersion\":1,\"repairModes\":[null,1,\"npc-no-inn\"]}")]
+    [InlineData("{\"schemaVersion\":2,\"repairModes\":[\"npc-no-inn-limsa\"]}")]
+    [InlineData("{\"schemaVersion\":\"1\",\"repairModes\":[\"npc-no-inn-limsa\"]}")]
+    public void OldMalformedOrUnknownCapabilitiesCannotAuthorizeCityNoInn(string? capabilities)
+        => Assert.False(AdsRepairCapabilities.Supports("npc-no-inn-limsa", capabilities));
+
+    [Theory]
+    [InlineData("self")]
+    [InlineData("npc-no-inn")]
+    [InlineData("npc-no-teleport-no-inn")]
+    [InlineData("npc-yes-inn")]
+    [InlineData("npc-yes-inn-limsa")]
+    public void ExistingRepairModesKeepTheirOldProviderPath(string mode)
+    {
+        Assert.False(AdsRepairCapabilities.RequiresAdvertisement(mode));
+        Assert.True(AdsRepairCapabilities.Supports(mode, null));
+    }
+
     private const string Complete = """
         {"ownershipMode":"Observing","executionPhase":"ObservingOnly","inInstancedDuty":true,
          "unsafeTransition":false,"territoryTypeId":1044,"contentFinderConditionId":831,

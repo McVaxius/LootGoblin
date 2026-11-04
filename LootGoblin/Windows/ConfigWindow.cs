@@ -389,11 +389,12 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
             UiGui.SetTooltip("0 disables repair. When equipped gear drops below this value, LootGoblin asks ADS to repair before continuing.");
 
-        var repairModes = new[] { "Self", "NPC no inn", "NPC No Inn + No TP" };
+        var repairModes = new[] { "Self", "NPC no inn", "NPC No Inn + No TP", "NPC with inn" };
         var repairModeIndex = configuration.RepairMode switch
         {
             RepairMode.Self => 0,
             RepairMode.NpcNoInnNoTeleport => 2,
+            RepairMode.NpcWithInn => 3,
             _ => 1,
         };
         ImGui.SetNextItemWidth(Math.Min(180 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
@@ -403,9 +404,23 @@ public class ConfigWindow : Window, IDisposable
             {
                 0 => RepairMode.Self,
                 2 => RepairMode.NpcNoInnNoTeleport,
+                3 => RepairMode.NpcWithInn,
                 _ => RepairMode.NpcNoInn,
             };
             configuration.Save();
+        }
+        if (configuration.RepairMode is RepairMode.NpcNoInn or RepairMode.NpcWithInn)
+        {
+            string[] cities = ["Automatic", "Ul'dah", "Gridania", "Limsa Lominsa", "Ishgard", "Crystarium", "Old Sharlayan", "Tuliyollal"];
+            var city = Math.Clamp((int)configuration.RepairCity, 0, cities.Length - 1);
+            ImGui.SetNextItemWidth(Math.Min(220 * MaterialTheme.Metrics.Scale, ImGui.GetContentRegionAvail().X));
+            if (UiGui.Combo("Repair city", ref city, cities, cities.Length))
+            {
+                configuration.RepairCity = (RepairCity)city;
+                configuration.Save();
+            }
+            if (ImGui.IsItemHovered())
+                UiGui.SetTooltip("ADS checks city access and uses an eligible starter-city fallback when needed.");
         }
     }
 
@@ -1094,7 +1109,7 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawAdsRepairTestButton()
     {
-        var repairMode = ResolveAdsRepairMode(configuration.RepairMode);
+        var repairMode = configuration.GetAdsRepairMode();
         var repairModeLabel = GetRepairModeLabel(configuration.RepairMode);
         if (UiGui.Button("Test ADS Repair Mode"))
         {
@@ -1104,13 +1119,13 @@ public class ConfigWindow : Window, IDisposable
                 plugin.PrintChat(message);
                 plugin.AddDebugLog($"[Repair] {message}");
             }
-            else if (configuration.RepairMode == RepairMode.NpcNoInn && !GameHelpers.IsInSanctuary())
+            else if (repairMode == "npc-no-inn" && !GameHelpers.IsInSanctuary())
             {
                 const string message = "ADS NPC no-inn repair can only start from a sanctuary.";
                 plugin.PrintChat(message);
                 plugin.AddDebugLog($"[Repair] {message}");
             }
-            else if (plugin.AdsStatusService.StartRepair(repairMode))
+            else if (plugin.AdsStatusService.StartRepair(repairMode, out var unsupportedModeFailure))
             {
                 var message = $"ADS {repairModeLabel} repair test requested.";
                 plugin.PrintChat(message);
@@ -1119,7 +1134,9 @@ public class ConfigWindow : Window, IDisposable
             else
             {
                 var adsStatus = plugin.AdsStatusService.Refresh(force: true);
-                var statusText = string.IsNullOrWhiteSpace(adsStatus.UtilityStatus)
+                var statusText = !string.IsNullOrEmpty(unsupportedModeFailure)
+                    ? unsupportedModeFailure
+                    : string.IsNullOrWhiteSpace(adsStatus.UtilityStatus)
                     ? "ADS did not accept the repair request."
                     : adsStatus.UtilityStatus;
                 var message = $"ADS {repairModeLabel} repair test failed: {statusText}";
@@ -1131,19 +1148,12 @@ public class ConfigWindow : Window, IDisposable
             UiGui.SetTooltip(UiText.F($"Debug-only IPC test: ADS.StartRepair(\"{repairMode}\")."));
     }
 
-    private static string ResolveAdsRepairMode(RepairMode repairMode)
-        => repairMode switch
-        {
-            RepairMode.Self => "self",
-            RepairMode.NpcNoInnNoTeleport => "npc-no-teleport-no-inn",
-            _ => "npc-no-inn",
-        };
-
     private static string GetRepairModeLabel(RepairMode repairMode)
         => repairMode switch
         {
             RepairMode.Self => "self",
             RepairMode.NpcNoInnNoTeleport => "NPC no-inn/no-teleport",
+            RepairMode.NpcWithInn => "NPC with inn",
             _ => "NPC no-inn",
         };
 

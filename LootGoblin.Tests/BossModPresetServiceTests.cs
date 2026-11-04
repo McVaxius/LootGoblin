@@ -9,6 +9,33 @@ public sealed class BossModPresetServiceTests
     private static readonly string PresetDirectory = Path.Combine(AppContext.BaseDirectory, "data", "bm");
 
     [Theory]
+    [InlineData(19u, "FRENRIDER - TANK")]
+    [InlineData(20u, "FRENRIDER - MELEE")]
+    [InlineData(24u, "FRENRIDER - RANGED")]
+    public void FactoryBmrCommandsSelectPresetsWithNativeDamageModules(uint job, string name)
+    {
+        var ipc = new FakeIpc();
+        var service = new BossModPresetService(PresetDirectory, ipc);
+        Assert.True(service.Prepare(job, LandingCommandDefaults.UsesBmrRotation(LandingCommandDefaults.Values), out var detail), detail);
+        Assert.Equal(name, ipc.Ai);
+        Assert.Equal(name, ipc.Active);
+        using var definition = JsonDocument.Parse(ipc.Presets[name]);
+        Assert.Contains(definition.RootElement.GetProperty("Modules").EnumerateObject(),
+            module => module.Name.StartsWith("BossMod.Autorotation.xan.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CustomExternalRotationCommandsRetainTheMovementOnlyPreset()
+    {
+        var commands = LandingCommandDefaults.Values.ToArray();
+        commands[0] = "/rotation Auto";
+        var ipc = new FakeIpc();
+        var service = new BossModPresetService(PresetDirectory, ipc);
+        Assert.True(service.Prepare(24, LandingCommandDefaults.UsesBmrRotation(commands), out var detail), detail);
+        Assert.Equal("passive - ranged", ipc.Active);
+    }
+
+    [Theory]
     [InlineData(19u, "passive - tank")]
     [InlineData(37u, "passive - tank")]
     [InlineData(20u, "passive - melee")]

@@ -100,3 +100,30 @@ public sealed class AdsStatusSnapshot
 
 public sealed record AdsCompletionTreasureSweepSnapshot(
     uint TerritoryTypeId, uint ContentFinderConditionId, bool WithoutExit, bool Completed);
+
+internal static class AdsRepairCapabilities
+{
+    internal static bool RequiresAdvertisement(string mode)
+        => mode.StartsWith("npc-no-inn-", StringComparison.Ordinal);
+
+    internal static bool Supports(string mode, string? json)
+    {
+        if (!RequiresAdvertisement(mode)) return true;
+        if (string.IsNullOrWhiteSpace(json)) return false;
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty("schemaVersion", out var schema)
+                || schema.ValueKind != JsonValueKind.Number || !schema.TryGetInt32(out var version) || version != 1
+                || !root.TryGetProperty("repairModes", out var modes) || modes.ValueKind != JsonValueKind.Array)
+                return false;
+            foreach (var value in modes.EnumerateArray())
+                if (value.ValueKind == JsonValueKind.String && value.GetString() == mode)
+                    return true;
+        }
+        catch (JsonException) { }
+        return false;
+    }
+}
