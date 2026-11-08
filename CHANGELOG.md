@@ -1,3 +1,8 @@
+2026-11-08 - 1.1.1.9 - Supported map-run IPC
+
+- Add supported map discovery, requested run counts, queued start/status and owned cancellation IPC around the existing normal map and Alexandrite runners, including Mysterious Maps. Preserve the separate gather IPC contract.
+- Scope optional automatic FATE-sync suppression to the admitted run. Keep saved map queues and settings untouched, preserve later manual changes, and report native rejection, failure and confirmed completion separately.
+
 2026-11-04 - 1.1.1.8 - God Mod Companion Dhog healer rotations (I745)
 
 - Use Dhog WHM, SCH, AST and SGE in the distributed ranged preset; remove Xan healer modules and duplicate HealerAI while preserving other job strategies.

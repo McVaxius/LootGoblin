@@ -113,6 +113,7 @@ public sealed class Plugin : IDalamudPlugin
     public MapAllowanceService MapAllowanceService { get; init; }
     public GatherBuddyRebornService GatherBuddyRebornService { get; init; }
     public LootGoblinMapGatherIpcService MapGatherIpcService { get; init; }
+    public LootGoblinMapRunIpcService MapRunIpcService { get; init; }
 
     // IPC
     public MapFlagService MapFlagService { get; init; }
@@ -255,6 +256,7 @@ public sealed class Plugin : IDalamudPlugin
         // Initialize state machine
         StateManager = new StateManager(this, Framework, Log);
         MapGatherIpcService = new LootGoblinMapGatherIpcService(this, PluginInterface, Log);
+        MapRunIpcService = new LootGoblinMapRunIpcService(StateManager, PluginInterface);
         pendingInitialDiagnosticSnapshot = DedicatedDiagnosticLog.IsEnabled;
         SubscribeChatObservers();
 
@@ -706,6 +708,7 @@ public sealed class Plugin : IDalamudPlugin
         RetainerMapRetrievalService.Dispose();
         GatherBuddyRebornService.Dispose();
         MapGatherIpcService.Dispose();
+        MapRunIpcService.Dispose();
         MapAllowanceService.Dispose();
         JobSwitchService.Dispose();
         Interlocked.Increment(ref mogtomeReminderGeneration);
@@ -985,7 +988,9 @@ public sealed class Plugin : IDalamudPlugin
             {
                 Measure("retainer-map", () =>
                 {
-                    var enabledMaps = GetCachedRetainerRunnableMapIds();
+                    var enabledMaps = StateManager.HasOwnedMapRun
+                        ? StateManager.GetRunnableMapIdsForCurrentRun()
+                        : GetCachedRetainerRunnableMapIds();
                     RetainerMapRetrievalService.StartOrTick(enabledMaps);
                 });
             }
@@ -1336,6 +1341,9 @@ public sealed class Plugin : IDalamudPlugin
 
     public void SetBotEnabled(bool enabled, string source, bool save = true)
     {
+        if (!enabled)
+            StateManager?.MapRunRequests.RequestCancelCurrent();
+
         var previous = Configuration.Enabled;
         if (previous == enabled)
         {
@@ -1445,7 +1453,10 @@ public sealed class Plugin : IDalamudPlugin
         var previous = observedEnabledState;
         observedEnabledState = Configuration.Enabled;
         if (!Configuration.Enabled)
+        {
+            StateManager.MapRunRequests.RequestCancelCurrent();
             StateManager.WritePreTerminalSnapshot("enabled-disable:unattributed");
+        }
 
         AddDebugLog($"[Control][WARN] Unattributed Enabled change {previous} -> {Configuration.Enabled}.");
         if (Configuration.Enabled)

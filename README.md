@@ -124,6 +124,22 @@ Optional:
 - **GatherBuddyReborn**: optional map gathering support.
 - **MapPartyAssist**: optional treasure-map statistics display.
 
+### Map-run IPC
+
+`LootGoblin.GetSupportedMapsJson` (`Func<string>`) lists implemented map types, including Mysterious Map item `7884`. This run API is separate from the existing gather API; `GetGatherableMapsJson` and `StartMapGatherJson` keep their gatherable-map and one-map contracts.
+
+| Endpoint | Dalamud signature | Input |
+| --- | --- | --- |
+| `LootGoblin.StartMapRunJson` | `Func<string, string>` | JSON request |
+| `LootGoblin.GetMapRunStatusJson` | `Func<string, string>` | Request ID |
+| `LootGoblin.CancelMapRunJson` | `Func<string, string>` | Request ID |
+
+For example: `{"requestId":"map-example","itemId":7884,"runCount":3,"suppressFateSync":true}`. `itemId` must identify a supported map and `runCount` must be a positive integer. Omit `requestId` to receive a generated ID. Reusing an ID with identical inputs returns its existing status; changing those inputs rejects the duplicate.
+
+Start validates and queues the request without running game actions on the IPC caller's thread. Its initial `Queued` response has `accepted:false` and `terminal:false`; poll status for native admission. `Running` means admitted. Busy or invalid starts return terminal `Busy` or `Rejected`; native failures return `Failed`. `Completed` with `success:true` means the requested number of native map completions was confirmed. Responses include `completedRuns`, `accepted`, `terminal`, `success`, `state` and `message`. Recent request statuses are retained in memory until plugin unload or history eviction.
+
+Ordinary maps reuse the normal inventory, saddlebag, retainer, gathering and purchasing flow with the existing source settings. Mysterious Maps reuse Alexandrite farming and reject counts beyond the current inventory, active map and Poetics allowance. A requested run uses its own map selection and count without editing or consuming the saved queue. `suppressFateSync:true` suppresses Loot Goblin's automatic FATE sync only while that request owns the runner; it does not change the saved FATE setting. Cancellation becomes `CancelRequested` until processed on the framework loop, then `Cancelled`. An unknown, finished or different request ID cannot stop another run. A queued request cancelled before admission starts no game action. Manual Off also queues cancellation, including when the saved Enabled setting was already off.
+
 ## Death Return And Party State
 
 FFXIV treats death Return differently depending on context. A normal overworld Return should not leave a party by itself.

@@ -30,6 +30,8 @@
     <Compile Include="..\LootGoblin\Models\ClassJobOptions.cs" Link="Models\ClassJobOptions.cs" />
     <Compile Include="..\LootGoblin\Models\TreasureMap.cs" Link="Models\TreasureMap.cs" />
     <Compile Include="..\LootGoblin\Models\MapGatherContracts.cs" Link="Models\MapGatherContracts.cs" />
+    <Compile Include="..\LootGoblin\Models\MapRunContracts.cs" Link="Models\MapRunContracts.cs" />
+    <Compile Include="..\LootGoblin\Services\MapRunRequestController.cs" Link="Services\MapRunRequestController.cs" />
     <Compile Include="..\LootGoblin\MapGatherCharacterConfig.cs" Link="MapGatherCharacterConfig.cs" />
     <Compile Include="..\LootGoblin\Services\MapAllowanceContentsInfoParser.cs" Link="Services\MapAllowanceContentsInfoParser.cs" />
     <Compile Include="..\LootGoblin\Services\MapAllowanceCooldownPolicy.cs" Link="Services\MapAllowanceCooldownPolicy.cs" />

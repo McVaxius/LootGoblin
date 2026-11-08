@@ -27,7 +27,7 @@ public sealed class FateSyncService
 
     public void Update()
     {
-        if (!plugin.Configuration.AutoSyncFate)
+        if (!plugin.Configuration.AutoSyncFate || plugin.StateManager.SuppressFateSyncForOwnedMapRun)
             return;
 
         if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)

@@ -140,9 +140,36 @@ public class StateManager : IDisposable
     public MapLocation? CurrentLocation { get; private set; }
     public bool BossModOutdoorSuppressionActive => bossModOutdoorSuppressionActive;
     public string BossModOutdoorSuppressionReason => bossModOutdoorSuppressionReason;
+    internal MapRunRequestController MapRunRequests { get; } = new();
+    private MapRunStartRequest? ownedMapRunRequest;
+    private int ownedMapRunsCompleted;
+    private bool ownedMapCompletionRecorded;
+    internal bool HasOwnedMapRun => ownedMapRunRequest != null;
+    internal bool SuppressFateSyncForOwnedMapRun =>
+        MapRunRequests.ActiveRequest?.SuppressFateSync == true;
+
+    internal IReadOnlyList<uint> GetRunnableMapIdsForCurrentRun()
+        => ownedMapRunRequest is { } request
+            ? new[] { request.ItemId }
+            : _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+
+    private bool IsMapEnabledForCurrentRun(uint itemId)
+        => ownedMapRunRequest is { } request
+            ? request.ItemId == itemId && ownedMapRunsCompleted < request.RunCount
+            : _plugin.Configuration.IsMapTypeEnabled(itemId);
+
+    private int GetMapRunCountForCurrentRun(uint itemId)
+        => ownedMapRunRequest is { } request
+            ? request.ItemId == itemId
+                ? Math.Max(0, request.RunCount - ownedMapRunsCompleted - (selectedMapRunCountDecremented ? 1 : 0))
+                : 0
+            : _plugin.Configuration.GetMapRunCount(itemId);
+
+    private bool ShouldStartNextMap => ownedMapRunRequest != null || _plugin.Configuration.AutoStartNextMap;
     public bool CanAcceptMapGatherRequest =>
         Plugin.ClientState.IsLoggedIn &&
         Plugin.ObjectTable.LocalPlayer != null &&
+        ownedMapRunRequest == null &&
         activeMapGatherRequest == null &&
         oneShotMapRunTargetItemId == 0 &&
         mapGatherStep == MapGatherStep.Idle &&
@@ -848,6 +875,7 @@ public class StateManager : IDisposable
 
     public void Dispose()
     {
+        CompleteOwnedMapRun(MapRunRequestStates.Cancelled, "LootGoblin unloaded.");
         _ = StopMarketPurchaseImmediately();
         CancelDutyExitLeaveSequence("dispose");
         Plugin.DutyState.DutyCompleted -= OnDutyCompleted;
@@ -881,6 +909,11 @@ public class StateManager : IDisposable
 
         try
         {
+        MapRunRequests.ProcessPending(TryStartOwnedMapRun, () =>
+        {
+            if (ownedMapRunRequest != null)
+                Stop("map-run IPC cancel");
+        });
         // Update delayed callbacks for SelectIconString
         GameHelpers.UpdateDelayedCallbacks();
 
@@ -982,7 +1015,7 @@ public class StateManager : IDisposable
         StartSection("state-tick");
         var allowWithoutEnabled = State is BotState.CyclingAetherytes or BotState.CyclingMapLocations or BotState.AlexandriteFarming ||
                                   (State == BotState.GatheringMap && mapGatherManualCommandActive) ||
-                                  oneShotMapRunTargetItemId != 0;
+                                  oneShotMapRunTargetItemId != 0 || ownedMapRunRequest != null;
         if (!_plugin.Configuration.Enabled && !allowWithoutEnabled)
         {
             ResetAreaMapAutoClose();
@@ -1020,8 +1053,16 @@ public class StateManager : IDisposable
         TickAreaMapAutoClose();
         Tick();
         }
+        catch (Exception ex) when (ownedMapRunRequest != null)
+        {
+            CompleteOwnedMapRun(MapRunRequestStates.Failed, "The native map runner failed during its update.");
+            Stop("map-run IPC update failed");
+            _log.Error(ex, "[MapRunIPC] Native runner update failed.");
+        }
         finally
         {
+            if (ownedMapRunRequest != null)
+                MapRunRequests.UpdateProgress(ownedMapRunsCompleted, IsPaused ? $"Paused: {StateDetail}" : StateDetail);
             try
             {
                 UpdateDiagnosticSnapshots();
@@ -1301,7 +1342,7 @@ public class StateManager : IDisposable
             or BotState.WaitingForParty
             or BotState.Flying
             or BotState.OpeningChest
-            || (State == BotState.Completed && _plugin.Configuration.AutoStartNextMap);
+            || (State == BotState.Completed && ShouldStartNextMap);
 
         if (!activeOutdoorState)
             return false;
@@ -2249,8 +2290,85 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("[BetweenAreas] Stopped LootGoblin movement/descent during load; preserving map flags.");
     }
 
+    private MapRunAdmission TryStartOwnedMapRun(MapRunStartRequest request)
+    {
+        if (!Plugin.ClientState.IsLoggedIn || Plugin.ObjectTable.LocalPlayer == null)
+            return new(false, MapRunRequestStates.Rejected, "Log in before starting a map run.");
+
+        if (!CanAcceptMapGatherRequest || State == BotState.Completed || IsPaused ||
+            alexandriteSessionActive || marketPurchaseStep != MarketPurchaseStep.Idle ||
+            _plugin.RetainerMapRetrievalService.IsRunning || acceptedPartyTeleportOfferRestartPending ||
+            _plugin.NavigationService.State != NavigationState.Idle || IsAreaTransitionActive())
+        {
+            return new(false, MapRunRequestStates.Busy, $"LootGoblin is busy ({State}).");
+        }
+
+        if (Plugin.Condition[ConditionFlag.BoundByDuty] || Plugin.Condition[ConditionFlag.BoundByDuty56])
+            return new(false, MapRunRequestStates.Busy, "Cannot admit a new map run while bound by duty.");
+
+        var hasActiveMap = _plugin.InventoryService.TryFindTreasureMapKeyItem(out var keyItem);
+        if (hasActiveMap && keyItem.KnownMapItemId != request.ItemId)
+            return new(false, MapRunRequestStates.Rejected, "A different or unidentified treasure map is already active.");
+
+        if (request.ItemId == MysteriousMapItemId)
+        {
+            var runLimit = AlexandritePolicy.EvaluateRunLimit(request.RunCount,
+                GameHelpers.GetInventoryItemCount(MysteriousMapItemId), hasActiveMap, GameHelpers.GetCurrentPoetics());
+            if (!runLimit.CanStart || runLimit.RequestedRuns != request.RunCount)
+                return new(false, MapRunRequestStates.Rejected,
+                    $"Requested Alexandrite runs exceed available maps and Poetics ({runLimit.MaxRunnableRuns} runnable).");
+        }
+
+        ownedMapRunRequest = request;
+        ownedMapRunsCompleted = 0;
+        ownedMapCompletionRecorded = false;
+        try
+        {
+            if (request.ItemId == MysteriousMapItemId)
+            {
+                StartAlexandriteFarming(request.RunCount);
+                if (alexandriteSessionActive && hasActiveMap)
+                    BeginAlexandriteInventoryMapRun("[MapRunIPC] active Mysterious Map");
+                if (alexandriteSessionActive && (State is BotState.AlexandriteFarming or BotState.StartPreflight))
+                    return new(true, MapRunRequestStates.Running, StateDetail);
+            }
+            else if (Start())
+            {
+                return new(true, MapRunRequestStates.Running, StateDetail);
+            }
+
+            ownedMapRunRequest = null;
+            return new(false, MapRunRequestStates.Rejected, string.IsNullOrWhiteSpace(WarningMessage)
+                ? "The native map runner did not admit the request."
+                : WarningMessage);
+        }
+        catch (Exception ex)
+        {
+            // Only this request acquired the runner; its own stop path releases partial startup.
+            Stop("map-run IPC startup failed");
+            _log.Warning($"[MapRunIPC] Native startup failed: {ex.Message}");
+            return new(false, MapRunRequestStates.Failed, "The native map runner failed during startup.");
+        }
+    }
+
+    private void CompleteOwnedMapRun(string state, string message)
+    {
+        if (ownedMapRunRequest == null)
+            return;
+
+        MapRunRequests.Complete(state, message, ownedMapRunsCompleted);
+        ownedMapRunRequest = null;
+        ownedMapCompletionRecorded = false;
+    }
+
     public bool Start()
     {
+        if (ownedMapRunRequest != null && State == BotState.Completed)
+        {
+            _plugin.AddDebugLog("[MapRunIPC] Owned map run is still completing.");
+            return false;
+        }
+
         if (State != BotState.Idle && State != BotState.Error && State != BotState.Completed)
         {
             _plugin.AddDebugLog("Bot already running.");
@@ -2593,6 +2711,7 @@ public class StateManager : IDisposable
 
     public void Stop([CallerMemberName] string source = "unattributed")
     {
+        CompleteOwnedMapRun(MapRunRequestStates.Cancelled, $"Map run stopped ({source}).");
         WritePreTerminalSnapshot($"stop:{source}");
         var marketStopWarning = StopMarketPurchaseImmediately();
         ClearPendingPartyTeleportOffer(null);
@@ -2633,6 +2752,7 @@ public class StateManager : IDisposable
 
     public void ResetAll([CallerMemberName] string source = "unattributed")
     {
+        CompleteOwnedMapRun(MapRunRequestStates.Cancelled, $"Map run reset ({source}).");
         WritePreTerminalSnapshot($"reset-all:{source}");
         var marketStopWarning = StopMarketPurchaseImmediately();
         ClearPendingPartyTeleportOffer(null);
@@ -2993,13 +3113,17 @@ public class StateManager : IDisposable
         selectedMapRunCountPendingDecrement = false;
         selectedMapRunCountDecremented = true;
 
+        // IPC run counts are in memory; never consume a saved/manual queue entry.
+        if (ownedMapRunRequest != null)
+            return;
+
         if (SelectedMapItemId == 0)
         {
             _plugin.AddDebugLog($"{source} Run count decrement skipped: no selected map ID.");
             return;
         }
 
-        var currentRunCount = _plugin.Configuration.GetMapRunCount(SelectedMapItemId);
+        var currentRunCount = GetMapRunCountForCurrentRun(SelectedMapItemId);
         if (currentRunCount == Configuration.MapRunCountMax)
         {
             _plugin.AddDebugLog($"{source} Run count is max for map ID {SelectedMapItemId}; not decrementing.");
@@ -3508,7 +3632,7 @@ public class StateManager : IDisposable
         return mapSources
             .Where(kvp =>
             {
-                if (!_plugin.Configuration.IsMapTypeEnabled(kvp.Key))
+                if (!IsMapEnabledForCurrentRun(kvp.Key))
                     return false;
 
                 var count = 0;
@@ -3590,7 +3714,7 @@ public class StateManager : IDisposable
         marketGilCap = _plugin.Configuration.GetMapPurchaseGilCap(targetItemId);
         marketInitialInventoryCount = _plugin.InventoryService.GetMapCount(targetItemId);
         marketEmptorCityKey = configuredCityKey;
-        var configuredRuns = _plugin.Configuration.GetMapRunCount(targetItemId);
+        var configuredRuns = GetMapRunCountForCurrentRun(targetItemId);
         marketBatchRequestedCount = configuredRuns == Configuration.MapRunCountMax
             ? 3
             : Math.Clamp(configuredRuns, 1, 3);
@@ -4178,7 +4302,7 @@ public class StateManager : IDisposable
         if (marketBatchSecuredCount >= marketBatchTargetCount)
             return false;
 
-        var configuredRuns = _plugin.Configuration.GetMapRunCount(marketTargetItemId);
+        var configuredRuns = GetMapRunCountForCurrentRun(marketTargetItemId);
         if (configuredRuns == Configuration.MapRunCountMax)
             return true;
 
@@ -5274,7 +5398,7 @@ public class StateManager : IDisposable
             return;
         }
 
-        var enabledMapIds = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+        var enabledMapIds = GetRunnableMapIdsForCurrentRun();
         var counts = _plugin.RetainerMapRetrievalService.GetRetainerMapCounts(enabledMapIds, refreshFirst: true);
         _plugin.AddDebugLog(
             $"[MapRefresh][Completed] Refreshed XADB retainer maps for {FormatMapIds(enabledMapIds)}; " +
@@ -5291,7 +5415,7 @@ public class StateManager : IDisposable
             if (allowGatherFallback && TryStartMarketPurchaseFallback(enabledMapIds, emptyInventoryError))
                 return true;
 
-            HandleError(emptyInventoryError);
+            HandleUnavailableMapSources(emptyInventoryError);
             return true;
         }
 
@@ -5323,11 +5447,23 @@ public class StateManager : IDisposable
                 if (allowGatherFallback && TryStartMarketPurchaseFallback(enabledMapIds, emptyInventoryError))
                     return true;
 
-                HandleError(emptyInventoryError);
+                HandleUnavailableMapSources(emptyInventoryError);
                 return true;
         }
 
         return false;
+    }
+
+    private void HandleUnavailableMapSources(string message)
+    {
+        if (ownedMapRunRequest == null)
+        {
+            HandleError(message);
+            return;
+        }
+
+        SetWarning(message);
+        TransitionTo(BotState.Error, message);
     }
 
     public void StartConfiguredMapGatherCommand()
@@ -5823,6 +5959,7 @@ public class StateManager : IDisposable
         RunFinishCommandsOnce("[Gather] map allowance cooldown exceeded wait limit");
         RunReturnWhenDoneOnce("[Gather] map allowance cooldown exceeded wait limit");
         RetryCount = 0;
+        CompleteOwnedMapRun(MapRunRequestStates.Failed, detail);
         TransitionTo(BotState.Idle, detail);
     }
 
@@ -6263,6 +6400,7 @@ public class StateManager : IDisposable
 
     private void ResetPerMapCommandTriggers()
     {
+        ownedMapCompletionRecorded = false;
         ResetVnavFlyFlagFallbackState();
         landingCommandsRanThisMap = false;
         dutyEntryCommandsRanThisMap = false;
@@ -11792,7 +11930,7 @@ public class StateManager : IDisposable
                 return;
             }
 
-            var enabledForRetainers = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+            var enabledForRetainers = GetRunnableMapIdsForCurrentRun();
             _plugin.AddDebugLog($"[SelectingMap] No inventory/saddlebag maps. Checking retainer maps via XADB for {FormatMapIds(enabledForRetainers)}.");
             if (TryRetrieveRetainerMap(enabledForRetainers, "No maps found in inventory, saddlebags, or retainers.", allowGatherFallback: true))
                 return;
@@ -11802,11 +11940,11 @@ public class StateManager : IDisposable
 
         ClearWarning();
 
-        var enabled = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+        var enabled = GetRunnableMapIdsForCurrentRun();
 
         // Filter to only enabled map types.
         var candidates = maps
-            .Where(kvp => _plugin.Configuration.IsMapTypeEnabled(kvp.Key) && kvp.Value > 0)
+            .Where(kvp => IsMapEnabledForCurrentRun(kvp.Key) && kvp.Value > 0)
             .Select(kvp => kvp.Key)
             .ToList();
 
@@ -15583,8 +15721,25 @@ public class StateManager : IDisposable
         if (TryResumeAlexandriteAfterCompleted())
             return;
 
+        if (ownedMapRunRequest != null && !ownedMapCompletionRecorded)
+        {
+            if (SelectedMapItemId != ownedMapRunRequest.ItemId || !HasCompletedKeyItemCompletionEvidence())
+            {
+                CompleteOwnedMapRun(MapRunRequestStates.Failed, "The native runner ended without completion evidence for the requested map.");
+                Stop("map-run IPC unconfirmed completion");
+                return;
+            }
+
+            ownedMapRunsCompleted++;
+            ownedMapCompletionRecorded = true;
+            ClearSelectedMapRunCountDecrement("[MapRunIPC] completed map");
+        }
+
+        var ownedMapRunCompleting = ownedMapRunRequest is { } ownedRequest &&
+            ownedMapRunsCompleted >= ownedRequest.RunCount;
         var oneShotMapRunCompleting = oneShotMapRunTargetItemId != 0;
-        if (!oneShotMapRunCompleting && _plugin.Configuration.AutoStartNextMap)
+        var stopAfterThisMap = oneShotMapRunCompleting || ownedMapRunCompleting;
+        if (!stopAfterThisMap && ShouldStartNextMap)
         {
             if (TryHoldCompletedNextMapStartup("[CompletedNextMap]"))
                 return;
@@ -15613,7 +15768,7 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog("[Completed] No runnable maps in inventory or loaded saddlebags. Checking retainers via XADB.");
             if (_plugin.Configuration.EnableRetainerMapRetrieval)
             {
-                var enabledForRetainers = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+                var enabledForRetainers = GetRunnableMapIdsForCurrentRun();
                 var retainerResult = _plugin.RetainerMapRetrievalService.StartOrTick(enabledForRetainers);
                 switch (retainerResult)
                 {
@@ -15640,7 +15795,7 @@ public class StateManager : IDisposable
                 _plugin.AddDebugLog("[Completed] Retainer map retrieval disabled.");
             }
 
-            var enabledForGather = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+            var enabledForGather = GetRunnableMapIdsForCurrentRun();
             if (TryStartMapGatherFallback(enabledForGather, "No runnable maps in inventory, saddlebags, or retainers."))
                 return;
             if (TryStartMarketPurchaseFallback(
@@ -15656,10 +15811,10 @@ public class StateManager : IDisposable
             }
         }
 
-        if (!oneShotMapRunCompleting && TryRunCompletedMapRefreshBeforeDecisions())
+        if (!stopAfterThisMap && TryRunCompletedMapRefreshBeforeDecisions())
             return;
 
-        var remainingMaps = !oneShotMapRunCompleting && HasRemainingEnabledMaps("[Completed]");
+        var remainingMaps = !stopAfterThisMap && HasRemainingEnabledMaps("[Completed]");
         RunFinishCommandsOnce("[Completed] run complete");
         if (!remainingMaps)
             RunReturnWhenDoneOnce("[Completed] no maps remaining");
@@ -15676,6 +15831,12 @@ public class StateManager : IDisposable
             _plugin.AddDebugLog($"[OneShotMap] Completed forced one-shot map run for {completedName}; AutoStartNextMap suppressed.");
             ClearOneShotMapRun();
         }
+
+        if (ownedMapRunRequest != null)
+            CompleteOwnedMapRun(ownedMapRunCompleting ? MapRunRequestStates.Completed : MapRunRequestStates.Failed,
+                ownedMapRunCompleting
+                    ? $"Completed {ownedMapRunsCompleted} requested map run(s)."
+                    : $"Map sources exhausted after {ownedMapRunsCompleted} run(s), before the requested count.");
 
         RetryCount = 0;
         TransitionTo(BotState.Idle, "Run complete.");
@@ -15854,7 +16015,7 @@ public class StateManager : IDisposable
             return true;
         }
 
-        var enabledForRetainers = _plugin.Configuration.GetRunnableMapIds(TreasureMapData.AllMapItemIds);
+        var enabledForRetainers = GetRunnableMapIdsForCurrentRun();
         var hasRetainerMap = _plugin.RetainerMapRetrievalService.HasRetainerMapCandidate(enabledForRetainers);
         if (hasRetainerMap)
             _plugin.AddDebugLog($"{source} Return deferred; enabled retainer map remains via XADB.");
@@ -17496,7 +17657,7 @@ public class StateManager : IDisposable
             or BotState.WaitingForParty
             or BotState.Flying
             or BotState.OpeningChest
-            || (State == BotState.Completed && _plugin.Configuration.AutoStartNextMap);
+            || (State == BotState.Completed && ShouldStartNextMap);
 
         return activeTreasureState
             || IsOverworldMapDutyActive()
@@ -18435,6 +18596,16 @@ public class StateManager : IDisposable
     private void TransitionTo(BotState newState, string detail, [CallerMemberName] string transitionSource = "")
     {
         var prev = State;
+        if (newState is BotState.CyclingAetherytes or BotState.CyclingMapLocations ||
+            (newState == BotState.AlexandriteFarming && ownedMapRunRequest?.ItemId != MysteriousMapItemId))
+        {
+            var replacingOwnedAlexandrite = ownedMapRunRequest?.ItemId == MysteriousMapItemId;
+            CompleteOwnedMapRun(MapRunRequestStates.Cancelled, "A manual operation replaced the map run.");
+            if (replacingOwnedAlexandrite)
+                ResetAlexandriteSessionState("[MapRunIPC] manual replacement");
+        }
+        if (newState is BotState.Error or BotState.Idle)
+            CompleteOwnedMapRun(newState == BotState.Error ? MapRunRequestStates.Failed : MapRunRequestStates.Cancelled, detail);
         var terminalTransition = newState is BotState.Idle or BotState.Error;
         if (terminalTransition)
             WritePreTerminalSnapshot($"transition:{transitionSource}:{prev}->{newState}");
@@ -19226,6 +19397,12 @@ public class StateManager : IDisposable
     /// </summary>
     public void StartAlexandriteFarming(int runCount)
     {
+        if (ownedMapRunRequest != null && State == BotState.Completed)
+        {
+            _plugin.AddDebugLog("[MapRunIPC] Owned map run is still completing.");
+            return;
+        }
+
         if (State != BotState.Idle && State != BotState.Error && State != BotState.Completed)
         {
             _plugin.AddDebugLog("[Alexandrite] Cannot start - bot is busy");
@@ -19653,7 +19830,8 @@ public class StateManager : IDisposable
 
     private void BeginAlexandriteInventoryMapRun(string source)
     {
-        _plugin.SetBotEnabled(true, "alexandrite:map-handoff");
+        if (ownedMapRunRequest == null)
+            _plugin.SetBotEnabled(true, "alexandrite:map-handoff");
         pendingAlexandriteMapTargetItemId = MysteriousMapItemId;
         ClearSelectedMapRunCountDecrement(source);
         CloseAlexandritePurchaseAddonsOnce(source);
@@ -19692,6 +19870,8 @@ public class StateManager : IDisposable
         alexandriteAwaitingMapCompletion = false;
         alexandriteRunsCompleted++;
         alexandriteRunsRemaining = Math.Max(0, alexandriteRunsRemaining - 1);
+        if (ownedMapRunRequest?.ItemId == MysteriousMapItemId)
+            ownedMapRunsCompleted = alexandriteRunsCompleted;
         _plugin.AddDebugLog($"[Alexandrite] Run {alexandriteRunsCompleted} complete. {alexandriteRunsRemaining} remaining.");
 
         RetryCount = 0;
@@ -19717,6 +19897,7 @@ public class StateManager : IDisposable
         }
 
         _plugin.PrintChat($"Alexandrite farming complete! {alexandriteRunsCompleted} runs done.");
+        CompleteOwnedMapRun(MapRunRequestStates.Completed, $"Completed {ownedMapRunsCompleted} Alexandrite map run(s).");
         ResetAlexandriteSessionState("[Alexandrite] complete");
         TransitionTo(BotState.Idle, "Alexandrite farming complete!");
         return true;
