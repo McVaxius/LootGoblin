@@ -1,3 +1,7 @@
+2026-11-08 - 1.1.1.10 - Shared UI refresh
+
+- Update the shared UI library with the reviewed text/control and glass-rendering changes while retaining existing controls and map-run behavior.
+
 2026-11-08 - 1.1.1.9 - Supported map-run IPC
 
 - Add supported map discovery, requested run counts, queued start/status and owned cancellation IPC around the existing normal map and Alexandrite runners, including Mysterious Maps. Preserve the separate gather IPC contract.
