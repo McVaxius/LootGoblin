@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LootGoblin.Models;
 using LootGoblin.Services;
 using Xunit;
@@ -11,6 +12,114 @@ public sealed class MapRunRequestControllerTests
 
     private static MapRunAdmission Admit(MapRunStartRequest _)
         => new(true, MapRunRequestStates.Running, "Native runner admitted the request.");
+
+    [Theory]
+    [InlineData(7884u, "", false)]
+    [InlineData(43556u, "", false)]
+    [InlineData(7884u, ",\"keepAutoDutyEnabled\":false", false)]
+    [InlineData(43556u, ",\"keepAutoDutyEnabled\":false", false)]
+    [InlineData(7884u, ",\"keepAutoDutyEnabled\":true", true)]
+    [InlineData(43556u, ",\"keepAutoDutyEnabled\":true", true)]
+    public void AutoDutyWireChoiceReachesOnlyItsQueuedAdmissionAndReportedState(
+        uint itemId, string optionJson, bool keepAutoDutyEnabled)
+    {
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var request = JsonSerializer.Deserialize<MapRunStartRequest>(
+            $"{{\"requestId\":\"fabricated-autoduty\",\"itemId\":{itemId},\"runCount\":3{optionJson}}}", jsonOptions)!;
+        var controller = new MapRunRequestController();
+        var queued = controller.Submit(request);
+        Assert.Equal(keepAutoDutyEnabled, queued.KeepAutoDutyEnabled);
+        Assert.Null(controller.ActiveRequest);
+        var starts = 0;
+        controller.ProcessPending(admitted =>
+        {
+            starts++;
+            Assert.Equal(itemId, admitted.ItemId);
+            Assert.Equal(keepAutoDutyEnabled, admitted.KeepAutoDutyEnabled);
+            return Admit(admitted);
+        }, () => Assert.Fail("Admission must not cancel a runner."));
+        Assert.Equal(1, starts);
+        Assert.NotNull(controller.ActiveRequest);
+        Assert.Equal(keepAutoDutyEnabled, controller.ActiveRequest!.KeepAutoDutyEnabled);
+        var running = controller.GetStatus(queued.RequestId);
+        Assert.True(running.Accepted);
+        Assert.Equal(keepAutoDutyEnabled, running.KeepAutoDutyEnabled);
+        using var reported = JsonDocument.Parse(JsonSerializer.Serialize(running, jsonOptions));
+        Assert.Equal(keepAutoDutyEnabled, reported.RootElement.GetProperty("keepAutoDutyEnabled").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DuplicateAutoDutyChoiceCannotReplaceQueuedOrAdmittedRequest(bool keepAutoDutyEnabled)
+    {
+        var controller = new MapRunRequestController();
+        var request = Request() with { KeepAutoDutyEnabled = keepAutoDutyEnabled };
+        var queued = controller.Submit(request);
+        Assert.Equal(queued, controller.Submit(request));
+        var conflicting = request with { KeepAutoDutyEnabled = !keepAutoDutyEnabled };
+        var rejected = controller.Submit(conflicting);
+        Assert.Equal(MapRunRequestStates.Rejected, rejected.State);
+        Assert.Equal(!keepAutoDutyEnabled, rejected.KeepAutoDutyEnabled);
+        Assert.Equal(queued, controller.GetStatus(request.RequestId));
+        controller.ProcessPending(Admit, () => Assert.Fail("Unexpected cancellation."));
+        var running = controller.GetStatus(request.RequestId);
+        Assert.Equal(MapRunRequestStates.Rejected, controller.Submit(conflicting).State);
+        Assert.Equal(running, controller.Submit(request));
+        Assert.Equal(keepAutoDutyEnabled, controller.ActiveRequest!.KeepAutoDutyEnabled);
+    }
+
+    [Theory]
+    [InlineData("queued-cancel", MapRunRequestStates.Cancelled)]
+    [InlineData("cancel", MapRunRequestStates.Cancelled)]
+    [InlineData("complete", MapRunRequestStates.Completed)]
+    [InlineData("failed", MapRunRequestStates.Failed)]
+    [InlineData("rejected", MapRunRequestStates.Rejected)]
+    [InlineData("throw", MapRunRequestStates.Failed)]
+    public void TerminalAutoDutyOptInCannotLeakToTheNextDefaultRequest(string ending, string expectedState)
+    {
+        var controller = new MapRunRequestController();
+        var original = controller.Submit(Request() with { KeepAutoDutyEnabled = true });
+        if (ending == "queued-cancel")
+        {
+            controller.RequestCancel(original.RequestId);
+            controller.ProcessPending(_ => throw new Exception("Cancelled request must not start."),
+                () => Assert.Fail("Queued cancellation must not stop a runner."));
+        }
+        else if (ending == "rejected")
+            controller.ProcessPending(_ => new(false, MapRunRequestStates.Rejected, "Native admission declined."),
+                () => Assert.Fail("Rejected admission must not stop a runner."));
+        else if (ending == "throw")
+            controller.ProcessPending(_ => throw new InvalidOperationException("Fabricated admission failure."),
+                () => Assert.Fail("Failed admission must not stop a runner."));
+        else
+        {
+            controller.ProcessPending(Admit, () => Assert.Fail("Unexpected cancellation."));
+            if (ending == "cancel")
+            {
+                controller.RequestCancel(original.RequestId);
+                controller.ProcessPending(Admit, () => { });
+            }
+            else
+                controller.Complete(ending == "complete" ? MapRunRequestStates.Completed : MapRunRequestStates.Failed,
+                    "Native runner ended.", 1);
+        }
+        var terminal = controller.GetStatus(original.RequestId);
+        Assert.Equal(expectedState, terminal.State);
+        Assert.True(terminal.Terminal);
+        Assert.True(terminal.KeepAutoDutyEnabled);
+        Assert.Null(controller.ActiveRequest);
+        var next = controller.Submit(Request("fabricated-next-autoduty", itemId: 43556));
+        Assert.False(next.KeepAutoDutyEnabled);
+        controller.ProcessPending(request =>
+        {
+            Assert.False(request.KeepAutoDutyEnabled);
+            return Admit(request);
+        }, () => Assert.Fail("New admission must not cancel a runner."));
+        Assert.False(controller.ActiveRequest!.KeepAutoDutyEnabled);
+        Assert.False(controller.GetStatus(next.RequestId).KeepAutoDutyEnabled);
+        Assert.True(controller.GetStatus(original.RequestId).KeepAutoDutyEnabled);
+    }
 
     [Fact]
     public void MysteriousMapIsQueuedBeforeNativeAdmissionAndSnapshotsStayImmutable()

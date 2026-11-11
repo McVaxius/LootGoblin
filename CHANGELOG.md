@@ -1,3 +1,9 @@
+2026-11-11 - 1.1.1.11 - Per-request AutoDuty control
+
+- **Added map-run IPC option:** Set keepAutoDutyEnabled to true to leave AutoDuty enabled for that request.
+- **Startup defaults:** Omitted or false continues disabling AutoDuty; manual starts and DAD retain that behavior.
+- **Request lifetime:** Keep the option within its admitted run; ReAction disabling remains unchanged.
+
 2026-11-08 - 1.1.1.10 - Shared UI refresh
 
 - Update the shared UI library with the reviewed text/control and glass-rendering changes while retaining existing controls and map-run behavior.

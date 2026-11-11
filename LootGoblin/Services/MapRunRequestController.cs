@@ -50,7 +50,8 @@ public sealed class MapRunRequestController
             if (requests.TryGetValue(request.RequestId, out var known))
                 return known.Request.ItemId == request.ItemId &&
                        known.Request.RunCount == request.RunCount &&
-                       known.Request.SuppressFateSync == request.SuppressFateSync
+                       known.Request.SuppressFateSync == request.SuppressFateSync &&
+                       known.Request.KeepAutoDutyEnabled == request.KeepAutoDutyEnabled
                     ? known.Status
                     : MapRunStatusResponse.Rejected(request, "Request ID already belongs to a different map-run request.");
 
@@ -70,6 +71,7 @@ public sealed class MapRunRequestController
                 ItemId = request.ItemId,
                 RunCount = request.RunCount,
                 SuppressFateSync = request.SuppressFateSync,
+                KeepAutoDutyEnabled = request.KeepAutoDutyEnabled,
                 State = MapRunRequestStates.Queued,
                 Message = "Queued for admission on LootGoblin's framework update.",
             };

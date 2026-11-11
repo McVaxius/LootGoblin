@@ -2499,9 +2499,13 @@ public class StateManager : IDisposable
         ResetPortalGroundApproachTracking(resetFailure: true);
         _plugin.TreasureMapLocationService.ClearCapturedLocation();
 
-        CommandHelper.TrySendCommand("/xldisableplugin AutoDuty");
+        var keepAutoDutyEnabled = ownedMapRunRequest?.KeepAutoDutyEnabled == true;
+        if (!keepAutoDutyEnabled)
+            CommandHelper.TrySendCommand("/xldisableplugin AutoDuty");
         CommandHelper.TrySendCommand("/xldisableplugin ReAction");
-        _plugin.AddDebugLog("[Start] Sent AutoDuty/ReAction disable commands.");
+        _plugin.AddDebugLog(keepAutoDutyEnabled
+            ? "[Start] Sent ReAction disable command; keeping AutoDuty enabled for this map-run request."
+            : "[Start] Sent AutoDuty/ReAction disable commands.");
 
         _plugin.RefreshDependencyStatus(logStatus: true);
 

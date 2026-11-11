@@ -6,6 +6,7 @@ public sealed record MapRunStartRequest
     public uint ItemId { get; init; }
     public int RunCount { get; init; }
     public bool SuppressFateSync { get; init; }
+    public bool KeepAutoDutyEnabled { get; init; }
 }
 
 public sealed record MapRunStatusResponse
@@ -14,6 +15,7 @@ public sealed record MapRunStatusResponse
     public uint ItemId { get; init; }
     public int RunCount { get; init; }
     public bool SuppressFateSync { get; init; }
+    public bool KeepAutoDutyEnabled { get; init; }
     public int CompletedRuns { get; init; }
     public bool Accepted { get; init; }
     public bool Terminal { get; init; }
@@ -28,6 +30,7 @@ public sealed record MapRunStatusResponse
             ItemId = request.ItemId,
             RunCount = request.RunCount,
             SuppressFateSync = request.SuppressFateSync,
+            KeepAutoDutyEnabled = request.KeepAutoDutyEnabled,
             Terminal = true,
             State = state,
             Message = message,
