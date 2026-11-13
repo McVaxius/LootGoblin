@@ -1472,4 +1472,6 @@
   <data name="Image could not be loaded." xml:space="preserve"><value>छवि लोड नहीं हो सकी।</value></data>
   <data name="Image backgrounds remain visible to screenshots." xml:space="preserve"><value>छवि पृष्ठभूमि स्क्रीनशॉट में दिखाई देती है।</value></data>
   <data name="Pause backdrop for screenshots" xml:space="preserve"><value>स्क्रीनशॉट के लिए पृष्ठभूमि रोकें</value></data>
+  <data name="Highlight contrast" xml:space="preserve"><value>हाइलाइट कंट्रास्ट</value></data>
+  <data name="Makes controls and selection states more distinct." xml:space="preserve"><value>नियंत्रणों और चयन स्थितियों को अधिक स्पष्ट बनाता है।</value></data>
 </root>

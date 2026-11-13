@@ -1472,4 +1472,6 @@
   <data name="Image could not be loaded." xml:space="preserve"><value>Resim yüklenemedi.</value></data>
   <data name="Image backgrounds remain visible to screenshots." xml:space="preserve"><value>Resim arka planları ekran görüntülerinde görünür kalır.</value></data>
   <data name="Pause backdrop for screenshots" xml:space="preserve"><value>Ekran görüntüleri için arka planı duraklat</value></data>
+  <data name="Highlight contrast" xml:space="preserve"><value>Vurgu karşıtlığı</value></data>
+  <data name="Makes controls and selection states more distinct." xml:space="preserve"><value>Denetimleri ve seçim durumlarını daha belirgin hâle getirir.</value></data>
 </root>

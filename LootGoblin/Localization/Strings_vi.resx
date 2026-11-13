@@ -1472,4 +1472,6 @@
   <data name="Image could not be loaded." xml:space="preserve"><value>Không thể tải hình ảnh.</value></data>
   <data name="Image backgrounds remain visible to screenshots." xml:space="preserve"><value>Nền hình ảnh vẫn hiển thị trong ảnh chụp màn hình.</value></data>
   <data name="Pause backdrop for screenshots" xml:space="preserve"><value>Tạm dừng nền để chụp ảnh màn hình</value></data>
+  <data name="Highlight contrast" xml:space="preserve"><value>Độ tương phản tô sáng</value></data>
+  <data name="Makes controls and selection states more distinct." xml:space="preserve"><value>Giúp phân biệt rõ hơn các điều khiển và trạng thái được chọn.</value></data>
 </root>

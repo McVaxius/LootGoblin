@@ -1472,4 +1472,6 @@
   <data name="Image could not be loaded." xml:space="preserve"><value>Impossibile caricare l’immagine.</value></data>
   <data name="Image backgrounds remain visible to screenshots." xml:space="preserve"><value>Gli sfondi immagine restano visibili negli screenshot.</value></data>
   <data name="Pause backdrop for screenshots" xml:space="preserve"><value>Metti in pausa lo sfondo per gli screenshot</value></data>
+  <data name="Highlight contrast" xml:space="preserve"><value>Contrasto delle evidenziazioni</value></data>
+  <data name="Makes controls and selection states more distinct." xml:space="preserve"><value>Rende più distinti i controlli e gli stati di selezione.</value></data>
 </root>

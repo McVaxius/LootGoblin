@@ -1472,4 +1472,6 @@
   <data name="Image could not be loaded." xml:space="preserve"><value>无法加载图片。</value></data>
   <data name="Image backgrounds remain visible to screenshots." xml:space="preserve"><value>图片背景仍会显示在截图中。</value></data>
   <data name="Pause backdrop for screenshots" xml:space="preserve"><value>暂停背景以便截图</value></data>
+  <data name="Highlight contrast" xml:space="preserve"><value>高亮对比度</value></data>
+  <data name="Makes controls and selection states more distinct." xml:space="preserve"><value>让控件与选中状态更容易区分。</value></data>
 </root>

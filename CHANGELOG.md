@@ -1,3 +1,8 @@
+2026-11-12 - 1.1.1.12 - Highlight contrast
+
+- Add Highlight contrast (0–100%) to Appearance and Colour, defaulting to 50% when absent. Preserve saved zero and custom values.
+- Use AethertekUI 0.3.2 for clearer controls and selection states while retaining palettes, native styling, opacity, language and existing plugin behavior.
+
 2026-11-11 - 1.1.1.11 - Per-request AutoDuty control
 
 - **Added map-run IPC option:** Set keepAutoDutyEnabled to true to leave AutoDuty enabled for that request.

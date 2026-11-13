@@ -1472,4 +1472,6 @@
   <data name="Image could not be loaded." xml:space="preserve"><value>Nie można wczytać obrazu.</value></data>
   <data name="Image backgrounds remain visible to screenshots." xml:space="preserve"><value>Tła z obrazem są widoczne na zrzutach ekranu.</value></data>
   <data name="Pause backdrop for screenshots" xml:space="preserve"><value>Wstrzymaj tło na czas zrzutów ekranu</value></data>
+  <data name="Highlight contrast" xml:space="preserve"><value>Kontrast wyróżnienia</value></data>
+  <data name="Makes controls and selection states more distinct." xml:space="preserve"><value>Wyraźniej rozróżnia elementy sterujące i stany zaznaczenia.</value></data>
 </root>
