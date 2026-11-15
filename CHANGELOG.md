@@ -1,3 +1,10 @@
+2026-11-14 - 1.1.1.13 - GodMod compatibility
+
+- **Added GodMod support:** Use a single compatible GodMod or BMR provider for automatic combat; multiple BossMod providers block preset activation.
+- **Updated combat commands:** Route default combat commands through `/gmai` when using GodMod; preserve custom lists, overrides and command order.
+- **Updated preset safety:** Verify preset modules and strategies before an AI on command, and require a new run after provider replacement.
+- **Updated danger detection:** Include GodMod hazards in outdoor combat suppression and the BossMod danger display.
+
 2026-11-12 - 1.1.1.12 - Highlight contrast
 
 - Add Highlight contrast (0–100%) to Appearance and Colour, defaulting to 50% when absent. Preserve saved zero and custom values.

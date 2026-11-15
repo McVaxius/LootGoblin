@@ -17,7 +17,7 @@ internal interface IBossModPresetIpc
     void SetAiPreset(string name);
 }
 
-/// <summary>Installs FrenRider's packaged presets for BMR combat or external-rotation movement.</summary>
+/// <summary>Installs FrenRider's packaged presets for BossMod combat or external-rotation movement.</summary>
 internal sealed class BossModPresetService(string directory, IBossModPresetIpc ipc)
 {
     internal static readonly string[] PackagedNames =
@@ -45,9 +45,14 @@ internal sealed class BossModPresetService(string directory, IBossModPresetIpc i
         _ => null,
     };
 
-    internal bool Refresh(out string detail)
+    internal bool Refresh(out string detail, bool install = true)
     {
         installed = false;
+        if (!install)
+        {
+            detail = string.Empty;
+            return true;
+        }
         try
         {
             // Read all six files before replacing any definitions. An incomplete bundle must not delete presets.
@@ -81,7 +86,7 @@ internal sealed class BossModPresetService(string directory, IBossModPresetIpc i
                     failures.Add(preset.Name + " (active selection)");
             }
 
-            // Rebind BMR's saved AI selection to the newly created object, rather than its deleted definition.
+            // Rebind the host's saved AI selection to the newly created object, rather than its deleted definition.
             if (!string.IsNullOrEmpty(previousAi))
             {
                 ipc.SetAiPreset(previousAi);
@@ -134,11 +139,11 @@ internal sealed class BossModPresetService(string directory, IBossModPresetIpc i
                 detail = $"BossMod preset '{name}' is unavailable.";
                 return false;
             }
+            using var actual = JsonDocument.Parse(loadedPreset);
+            using var expected = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, name + ".json")));
             if (healerModule != null)
             {
-                // BMR can accept a preset while dropping unregistered modules or strategies.
-                using var actual = JsonDocument.Parse(loadedPreset);
-                using var expected = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, name + ".json")));
+                // A host can accept a preset while dropping unregistered modules or strategies.
                 if (!actual.RootElement.GetProperty("Modules").TryGetProperty(healerModule, out var actualModule)
                     || !expected.RootElement.GetProperty("Modules").TryGetProperty(healerModule, out var expectedModule)
                     || !JsonElement.DeepEquals(actualModule, expectedModule))
@@ -147,11 +152,17 @@ internal sealed class BossModPresetService(string directory, IBossModPresetIpc i
                     return false;
                 }
             }
+            if (!actual.RootElement.TryGetProperty("Modules", out var actualModules)
+                || !JsonElement.DeepEquals(actualModules, expected.RootElement.GetProperty("Modules")))
+            {
+                detail = $"BossMod preset '{name}' did not retain its exact modules and strategies.";
+                return false;
+            }
             if (ipc.GetAiPreset() != name)
                 ipc.SetAiPreset(name);
             if (ipc.GetAiPreset() != name)
             {
-                detail = $"BMR AI preset '{name}' could not be confirmed.";
+                detail = $"BossMod AI preset '{name}' could not be confirmed.";
                 return false;
             }
             if ((ipc.GetActivePreset() != name && !ipc.SetActivePreset(name))
@@ -160,7 +171,7 @@ internal sealed class BossModPresetService(string directory, IBossModPresetIpc i
                 detail = $"BossMod active preset '{name}' could not be confirmed.";
                 return false;
             }
-            detail = $"BMR AI and active preset '{name}' confirmed for class/job {jobId}.";
+            detail = $"BossMod AI and active preset '{name}' confirmed for class/job {jobId}.";
             return true;
         }
         catch (Exception ex)

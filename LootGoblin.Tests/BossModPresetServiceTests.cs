@@ -49,6 +49,42 @@ public sealed class BossModPresetServiceTests
         Assert.Equal(string.Empty, ipc.Ai);
     }
 
+    [Fact]
+    public void SilentlyDroppedDamageModuleDoesNotEnableCombat()
+    {
+        var ipc = new FakeIpc { DroppedRotation = "BossMod.Autorotation.xan.BLM" };
+        var service = new BossModPresetService(PresetDirectory, ipc);
+        Assert.False(service.Prepare(25, true, out var detail));
+        Assert.Contains("did not retain its exact modules and strategies", detail);
+        Assert.Null(ipc.Active);
+        Assert.Equal(string.Empty, ipc.Ai);
+    }
+
+    [Fact]
+    public void SilentlyChangedDamageStrategyDoesNotEnableCombat()
+    {
+        var ipc = new FakeIpc { ChangedStrategy = true };
+        var service = new BossModPresetService(PresetDirectory, ipc);
+        Assert.False(service.Prepare(25, true, out var detail));
+        Assert.Contains("did not retain its exact modules and strategies", detail);
+        Assert.Null(ipc.Active);
+        Assert.Equal(string.Empty, ipc.Ai);
+    }
+
+    [Fact]
+    public void ResettingHostRequiresFreshPresetInstallation()
+    {
+        var ipc = new FakeIpc();
+        var service = new BossModPresetService(PresetDirectory, ipc);
+        Assert.True(service.PreparePassive(25, out var detail), detail);
+        Assert.True(service.Refresh(out detail, install: false), detail);
+        ipc.Presets.Clear();
+        ipc.Active = null;
+        ipc.Ai = string.Empty;
+        Assert.True(service.PreparePassive(25, out detail), detail);
+        Assert.Equal(BossModPresetService.PackagedNames.Length * 2, ipc.Created.Count);
+    }
+
     [Theory]
     [InlineData(19u, "FRENRIDER - TANK")]
     [InlineData(20u, "FRENRIDER - MELEE")]
@@ -203,6 +239,7 @@ public sealed class BossModPresetServiceTests
         internal bool RejectActive;
         internal string? MissingRotation;
         internal string? DroppedRotation;
+        internal bool ChangedStrategy;
 
         public bool IsRotationModuleAvailable(string moduleName) => moduleName != MissingRotation;
 
@@ -224,6 +261,14 @@ public sealed class BossModPresetServiceTests
             {
                 var parsed = JsonNode.Parse(json)!;
                 parsed["Modules"]!.AsObject().Remove(DroppedRotation);
+                json = parsed.ToJsonString();
+            }
+            if (ChangedStrategy)
+            {
+                var parsed = JsonNode.Parse(json)!;
+                if (parsed["Modules"]!["BossMod.Autorotation.xan.BLM"] is JsonArray { Count: > 0 } strategies
+                    && strategies[0] is JsonObject strategy)
+                    strategy["Option"] = "Changed";
                 json = parsed.ToJsonString();
             }
             Presets[name] = json;

@@ -1,6 +1,6 @@
 # Loot Goblin
 
-Automatic BMR healer presets use the Dhog healer rotations supplied by God Mod Companion. If those rotations cannot be found or the loaded preset drops their strategies, activation reports a warning. Saved manual presets and optional providers remain available.
+Automatic combat uses an available compatible BossMod Reborn or GodMod host. BMR healer presets use the Dhog healer rotations supplied by God Mod Companion; current GodMod includes those same rotations. Missing rotations or a loaded preset that drops modules or strategies withhold activation with a warning. Custom command lists and optional providers remain available.
 
 Loot Goblin is a Dalamud plugin for automating FFXIV treasure-map runs. It selects configured maps, deciphers them, reads the local map flag, travels with Lifestream, moves with vnavmesh, opens coffers, handles portals, and can hand treasure dungeons to ADS.
 
@@ -96,9 +96,11 @@ Dungeon settings control ADS handoff. When enabled and ADS is loaded, Loot Gobli
 
 Return-when-done can send the selected Lifestream return only after no enabled inventory, loaded saddlebag, or retainer maps remain. Destinations are FC, personal house, or inn.
 
-Command triggers run configured slash commands at landing/duty entry and at finish. Factory defaults use BMR for attacks and movement. Exact previous factory lists migrate once, globally and per character; custom lists, override selections, finish commands and later choices are retained. Optional external rotations remain available through custom commands.
+Command triggers run configured slash commands at landing/duty entry and at finish. Factory defaults use the compatible BMR or GodMod host for attacks and movement. Factory dispatch adapts its existing BMR commands to `/gmai` when GodMod is selected, without rewriting saved lists. Custom commands, per-character overrides and command order remain intact. Explicit `/gmai` commands receive the same activation checks as `/bmrai`. Optional external rotations remain available through custom commands.
 
-Loot Goblin bundles FrenRider's six BossMod presets in `data/bm` and refreshes those named definitions when a map run starts with BMR loaded. Before `/bmrai on`, it confirms BMR's saved AI preset and active preset. Exact factory landing/duty commands select `FRENRIDER - TANK`, `FRENRIDER - MELEE` or `FRENRIDER - RANGED` for attacks and movement. Custom command batches retain the existing `passive - tank`, `passive - melee` or `passive - ranged` selection so external rotations keep control of attacks. Refreshing replaces custom edits under those six preset names. Keep the `data/bm` folder with the DLL when installing manually. Unavailable or rejected preset setup warns and withholds BMR activation; having both BossMod providers loaded prevents preset writes.
+Loot Goblin bundles FrenRider's six BossMod presets in `data/bm` and refreshes those named definitions when a map run starts with a compatible BMR or GodMod host loaded. Before activation, it confirms the selected preset's modules and strategies, saved AI selection and active selection through the host's existing `BossMod.*` IPC. Exact factory landing/duty commands select `FRENRIDER - TANK`, `FRENRIDER - MELEE` or `FRENRIDER - RANGED` for attacks and movement. Custom command batches retain the existing `passive - tank`, `passive - melee` or `passive - ranged` selection so external rotations keep control of attacks. Refreshing replaces custom edits under those six preset names. Keep the `data/bm` folder with the DLL when installing manually. Unavailable or rejected preset setup warns and withholds activation. Multiple loaded BossMod providers, including VBM, make their shared IPC ambiguous and prevent preset writes. The chosen live AI-manager instance and assembly remain pinned through control and cleanup; a replacement requires a new run.
+
+GodMod danger detection uses its current active-module and forbidden-zone IPC. The Advanced obstacle-map switch and ADS reflection adjustments remain BMR-only. Pause and plugin-unload behavior are unchanged.
 
 Automation settings cover ADS repair threshold/mode, food selection and search, auto-discard through AutoRetainer `/ays discard`, chocobo companion summon/stance, combat automation, Krangle names, and diagnostics.
 

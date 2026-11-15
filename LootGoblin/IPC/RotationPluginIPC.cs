@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using LootGoblin.Services;
@@ -41,6 +42,9 @@ public class RotationPluginIPC : IDisposable
     private readonly Plugin _plugin;
     private readonly BossModPresetService _presets;
     private DateTime _lastBossModDangerRefreshUtc = DateTime.MinValue;
+    private object? _bossModInstance;
+    private Assembly? _bossModAssembly;
+    private string? _bossModInternalName;
 
     public List<RotationPluginInfo> RotationPlugins { get; } = new()
     {
@@ -57,6 +61,13 @@ public class RotationPluginIPC : IDisposable
             DisplayName = "BMR (BossMod Reborn)",
             HasTreasureMapSupport = true,
             Notes = "Has AI modules for treasure map dungeons",
+        },
+        new RotationPluginInfo
+        {
+            InternalName = "GodMod",
+            DisplayName = "GodMod",
+            HasTreasureMapSupport = true,
+            Notes = "Combat rotation and treasure map AI",
         },
         new RotationPluginInfo
         {
@@ -77,10 +88,20 @@ public class RotationPluginIPC : IDisposable
     public bool BmrHasActiveModule { get; private set; }
     public string BmrActiveModuleName { get; private set; } = string.Empty;
     public int VbmForbiddenZonesCount { get; private set; }
+    public int GodModForbiddenZonesCount { get; private set; }
     public bool IsBossModRebornAvailable => IsRotationPluginAvailable("BossModReborn");
+    public bool IsGodModAvailable => IsRotationPluginAvailable("GodMod");
     public bool IsVbmAvailable => IsRotationPluginAvailable("vbm");
+    internal bool HasPinnedBossModHost => _bossModInstance != null;
+    internal string? BossModAiCommand => _bossModInternalName switch
+    {
+        "GodMod" => "/gmai",
+        "BossModReborn" => "/bmrai",
+        _ => null,
+    };
+    public string BossModHostName => _bossModInternalName == "GodMod" || (_bossModInstance == null && IsGodModAvailable) ? "GodMod" : "BMR";
 
-    public bool BossModDangerDetected => BmrHasActiveModule || VbmForbiddenZonesCount > 0;
+    public bool BossModDangerDetected => BmrHasActiveModule || GodModForbiddenZonesCount > 0 || VbmForbiddenZonesCount > 0;
 
     public string BossModDangerReason
     {
@@ -89,9 +110,12 @@ public class RotationPluginIPC : IDisposable
             if (BmrHasActiveModule)
             {
                 return string.IsNullOrWhiteSpace(BmrActiveModuleName)
-                    ? "BMR active module"
-                    : $"BMR active module {BmrActiveModuleName}";
+                    ? $"{BossModHostName} active module"
+                    : $"{BossModHostName} active module {BmrActiveModuleName}";
             }
+
+            if (GodModForbiddenZonesCount > 0)
+                return $"GodMod forbidden zones {GodModForbiddenZonesCount}";
 
             return VbmForbiddenZonesCount > 0
                 ? $"VBM forbidden zones {VbmForbiddenZonesCount}"
@@ -104,7 +128,7 @@ public class RotationPluginIPC : IDisposable
         _plugin = plugin;
         _presets = new BossModPresetService(
             Path.Combine(pluginInterface.AssemblyLocation.DirectoryName ?? AppContext.BaseDirectory, "data", "bm"),
-            new BossModPresetIpc(pluginInterface));
+            new BossModPresetIpc(this, pluginInterface));
         _pluginInterface = pluginInterface;
         _log = log;
 
@@ -172,7 +196,17 @@ public class RotationPluginIPC : IDisposable
 
     internal bool RefreshPackagedPresets(out string detail)
     {
-        if (!CanUseBmrPresetIpc(out detail))
+        // A new accepted run may choose a host; control within that run never changes hosts.
+        _bossModInstance = null;
+        _bossModAssembly = null;
+        _bossModInternalName = null;
+        _presets.Refresh(out _, install: false);
+        if (!IsBossModRebornAvailable && !IsGodModAvailable)
+        {
+            detail = string.Empty;
+            return true;
+        }
+        if (!CanUseBossModPresetIpc(out detail))
             return false;
         var refreshed = _presets.Refresh(out detail);
         _plugin.AddDebugLog($"[BossModPresets] {detail}");
@@ -181,7 +215,7 @@ public class RotationPluginIPC : IDisposable
 
     internal bool PrepareCombatPreset(bool useBmrRotation, out string detail)
     {
-        if (!CanUseBmrPresetIpc(out detail))
+        if (!CanUseBossModPresetIpc(out detail))
             return false;
         var jobId = Plugin.ObjectTable.LocalPlayer?.ClassJob.RowId ?? 0;
         var prepared = _presets.Prepare(jobId, useBmrRotation, out detail);
@@ -189,29 +223,67 @@ public class RotationPluginIPC : IDisposable
         return prepared;
     }
 
-    private bool CanUseBmrPresetIpc(out string detail)
+    internal bool CanUseBossModPresetIpc(out string detail, bool pin = true)
     {
-        var loaded = _pluginInterface.InstalledPlugins.Where(plugin => plugin.IsLoaded
-            && (string.Equals(plugin.InternalName, "BossModReborn", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(plugin.InternalName, "BossMod", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(plugin.InternalName, "vbm", StringComparison.OrdinalIgnoreCase))).ToArray();
-        if (loaded.Length != 1 || !string.Equals(loaded[0].InternalName, "BossModReborn", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            detail = loaded.Length > 1 ? "Both BossMod providers are loaded; preset IPC is ambiguous."
-                : "BossModReborn is not loaded.";
+            var loaded = _pluginInterface.InstalledPlugins.Where(plugin => plugin.IsLoaded
+                && (string.Equals(plugin.InternalName, "BossModReborn", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(plugin.InternalName, "GodMod", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(plugin.InternalName, "BossMod", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(plugin.InternalName, "vbm", StringComparison.OrdinalIgnoreCase))).ToArray();
+            if (loaded.Length != 1 || (!string.Equals(loaded[0].InternalName, "BossModReborn", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(loaded[0].InternalName, "GodMod", StringComparison.OrdinalIgnoreCase)))
+            {
+                detail = loaded.Length > 1 ? "Multiple BossMod providers are loaded; their shared IPC is ambiguous."
+                    : "A compatible BossModReborn or GodMod host is not loaded.";
+                return false;
+            }
+
+            var name = string.Equals(loaded[0].InternalName, "GodMod", StringComparison.OrdinalIgnoreCase) ? "GodMod" : "BossModReborn";
+            var live = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.GetName().Name == name)
+                .Select(assembly => new
+                {
+                    Assembly = assembly,
+                    Instance = assembly.GetType("BossMod.AI.AIManager")?.GetField("Instance", BindingFlags.Public | BindingFlags.Static)?.GetValue(null),
+                })
+                .Where(host => host.Instance != null && ReferenceEquals(host.Instance.GetType().Assembly, host.Assembly)).ToArray();
+            if (live.Length != 1)
+            {
+                detail = $"{name}'s live AI host is unavailable or ambiguous.";
+                return false;
+            }
+            if (_bossModInstance != null && (_bossModInternalName != name
+                || !ReferenceEquals(_bossModInstance, live[0].Instance) || !ReferenceEquals(_bossModAssembly, live[0].Assembly)))
+            {
+                detail = "The selected BossMod host changed; start a new run before using its preset or AI controls.";
+                return false;
+            }
+            if (pin)
+            {
+                _bossModInstance = live[0].Instance;
+                _bossModAssembly = live[0].Assembly;
+                _bossModInternalName = name;
+            }
+            detail = string.Empty;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            detail = $"BossMod host qualification failed: {ex.GetBaseException().Message}";
             return false;
         }
-        detail = string.Empty;
-        return true;
     }
 
-    private sealed class BossModPresetIpc(IDalamudPluginInterface pluginInterface) : IBossModPresetIpc
+    private sealed class BossModPresetIpc(RotationPluginIPC owner, IDalamudPluginInterface pluginInterface) : IBossModPresetIpc
     {
         public bool IsRotationModuleAvailable(string moduleName)
         {
             try
             {
-                var assembly = AppDomain.CurrentDomain.GetAssemblies().SingleOrDefault(a => a.GetName().Name == "BossModReborn");
+                if (!owner.CanUseBossModPresetIpc(out _))
+                    return false;
+                var assembly = owner._bossModAssembly;
                 var registry = assembly?.GetType("BossMod.Autorotation.RotationModuleRegistry");
                 const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static;
                 if (registry?.GetMethod("FindType", flags)?.Invoke(null, [moduleName]) is not Type type
@@ -227,19 +299,40 @@ public class RotationPluginIPC : IDisposable
         }
 
         public string? GetPreset(string name)
-            => pluginInterface.GetIpcSubscriber<string, string>("BossMod.Presets.Get").InvokeFunc(name);
+        {
+            if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);
+            return pluginInterface.GetIpcSubscriber<string, string>("BossMod.Presets.Get").InvokeFunc(name);
+        }
         public bool DeletePreset(string name)
-            => pluginInterface.GetIpcSubscriber<string, bool>("BossMod.Presets.Delete").InvokeFunc(name);
+        {
+            if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);
+            return pluginInterface.GetIpcSubscriber<string, bool>("BossMod.Presets.Delete").InvokeFunc(name);
+        }
         public bool CreatePreset(string json)
-            => pluginInterface.GetIpcSubscriber<string, bool, bool>("BossMod.Presets.Create").InvokeFunc(json, true);
+        {
+            if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);
+            return pluginInterface.GetIpcSubscriber<string, bool, bool>("BossMod.Presets.Create").InvokeFunc(json, true);
+        }
         public string? GetActivePreset()
-            => pluginInterface.GetIpcSubscriber<string>("BossMod.Presets.GetActive").InvokeFunc();
+        {
+            if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);
+            return pluginInterface.GetIpcSubscriber<string>("BossMod.Presets.GetActive").InvokeFunc();
+        }
         public bool SetActivePreset(string name)
-            => pluginInterface.GetIpcSubscriber<string, bool>("BossMod.Presets.SetActive").InvokeFunc(name);
+        {
+            if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);
+            return pluginInterface.GetIpcSubscriber<string, bool>("BossMod.Presets.SetActive").InvokeFunc(name);
+        }
         public string GetAiPreset()
-            => pluginInterface.GetIpcSubscriber<string>("BossMod.AI.GetPreset").InvokeFunc() ?? string.Empty;
+        {
+            if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);
+            return pluginInterface.GetIpcSubscriber<string>("BossMod.AI.GetPreset").InvokeFunc() ?? string.Empty;
+        }
         public void SetAiPreset(string name)
-            => pluginInterface.GetIpcSubscriber<string, object>("BossMod.AI.SetPreset").InvokeAction(name);
+        {
+            if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);
+            pluginInterface.GetIpcSubscriber<string, object>("BossMod.AI.SetPreset").InvokeAction(name);
+        }
     }
 
     public void CheckAvailability(bool logStatus = true)
@@ -297,8 +390,9 @@ public class RotationPluginIPC : IDisposable
         BmrHasActiveModule = false;
         BmrActiveModuleName = string.Empty;
         VbmForbiddenZonesCount = 0;
+        GodModForbiddenZonesCount = 0;
 
-        if (IsRotationPluginAvailable("BossModReborn"))
+        if ((IsBossModRebornAvailable || IsGodModAvailable) && CanUseBossModPresetIpc(out _, pin: false))
         {
             try
             {
@@ -321,9 +415,22 @@ public class RotationPluginIPC : IDisposable
             {
                 _log.Debug($"[BossModDanger] BossMod.ActiveModuleName IPC unavailable: {ex.Message}");
             }
+
+            if (IsGodModAvailable && CanUseBossModPresetIpc(out _, pin: false))
+            {
+                try
+                {
+                    GodModForbiddenZonesCount = Math.Max(0, _pluginInterface
+                        .GetIpcSubscriber<int>("BossMod.Hints.ForbiddenZonesCount").InvokeFunc());
+                }
+                catch (Exception ex)
+                {
+                    _log.Debug($"[BossModDanger] BossMod.Hints.ForbiddenZonesCount IPC unavailable: {ex.Message}");
+                }
+            }
         }
 
-        if (IsRotationPluginAvailable("vbm"))
+        if (IsVbmAvailable && !IsBossModRebornAvailable && !IsGodModAvailable)
         {
             try
             {

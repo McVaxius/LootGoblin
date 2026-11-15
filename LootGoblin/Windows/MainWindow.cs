@@ -411,7 +411,12 @@ public class MainWindow : Window, IDisposable
 
         UiGui.Text("BossMod danger: ");
         ImGui.SameLine();
-        UiGui.TextColored(dangerColor, UiText.F($"BMR active module: {UiText.T(rotation.BmrHasActiveModule ? "yes" : "no")}{moduleName}"));
+        UiGui.TextColored(dangerColor, UiText.F($"{rotation.BossModHostName} active module: {UiText.T(rotation.BmrHasActiveModule ? "yes" : "no")}{moduleName}"));
+        if (rotation.IsGodModAvailable)
+        {
+            ImGui.SameLine();
+            UiGui.TextColored(dangerColor, UiText.F($"  |  GodMod forbidden zones: {rotation.GodModForbiddenZonesCount}"));
+        }
         ImGui.SameLine();
         UiGui.TextColored(dangerColor, UiText.F($"  |  VBM forbidden zones: {rotation.VbmForbiddenZonesCount}"));
         ImGui.SameLine();

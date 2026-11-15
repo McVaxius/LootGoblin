@@ -60,7 +60,7 @@ public class ConfigWindow : Window, IDisposable
             "All Targets When Solo in Duty All Targets When Solo Solo Deep Dungeon Smart; " +
             "ADS BMR Adjustments BossMod Reborn reduce activation range for outdoor areas MaxLoadDistance Disable Hunt Modules reflection; " +
             "Command Triggers slash commands Landing Duty Entry Finish Defaults add remove slots global profile " +
-            "Use current-character command trigger override /rotation auto manual cancel /bmrai /vbmai VBM /fr /cbt follow combat factory defaults",
+            "Use current-character command trigger override /rotation auto manual cancel /bmrai /gmai GodMod /vbmai VBM /fr /cbt follow combat factory defaults",
         ["Interface"] = "Appearance Language Color Compact mode Teal Blue Pink Custom RGB; " +
             "Show Main Window on Login visibility behavior; Movable Settings Window move lock position; " +
             "Krangle Names name obfuscation privacy player party server world display factory defaults",
@@ -979,7 +979,7 @@ public class ConfigWindow : Window, IDisposable
         supportLog.Draw(Plugin.PluginInterface, key => UiText.T(key),
             path => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = path, UseShellExecute = true }), ex => Plugin.Log.Error(ex, "Dalamud log export failed."), Plugin.CommandManager);
         DrawConfigCheckbox("Obstacle maps on", configuration.ObstacleMapsOn, value => configuration.ObstacleMapsOn = value,
-            "Controls BossMod Reborn only. Default: off. Applies on Start and after each configured command batch, regardless of combat provider.");
+            "Controls the selected BossMod Reborn host only. Default: off. Applies on Start and after each configured command batch; GodMod is unaffected.");
         ImGui.Spacing();
 
         UiGui.TextWrapped("Use these controls for diagnostics and troubleshooting. The snapshot button needs dedicated logging; Test ADS Repair Mode starts a repair using the mode selected in Run.");

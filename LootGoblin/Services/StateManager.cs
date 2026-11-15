@@ -429,7 +429,7 @@ public class StateManager : IDisposable
     private string treasureHighLowLastSnapshotSignature = string.Empty; // One log per UI transition
     private TreasureHighLowSnapshot? treasureHighLowLastDecision; // Last successful interaction, with its effective stage
     private bool treasureHighLowDecisionResolving; // Observed loss of a playable choice after that interaction
-    private bool bossModOutdoorSuppressionActive; // BMR/VBM off while outdoor BossMod danger/radar output is visible
+    private bool bossModOutdoorSuppressionActive; // BossMod off while outdoor danger/radar output is visible
     private string bossModOutdoorSuppressionReason = "off";
     private bool bossModDangerProbeLoggedOnce;
     private bool lastLoggedBmrActiveModule;
@@ -2384,8 +2384,7 @@ public class StateManager : IDisposable
 
         _ = StopMarketPurchaseImmediately();
 
-        if (_plugin.RotationPluginIPC.IsBossModRebornAvailable
-            && !_plugin.RotationPluginIPC.RefreshPackagedPresets(out var presetDetail))
+        if (!_plugin.RotationPluginIPC.RefreshPackagedPresets(out var presetDetail))
         {
             SetWarning(presetDetail);
             _plugin.AddDebugLog($"[Start] {presetDetail}");
@@ -2393,10 +2392,12 @@ public class StateManager : IDisposable
         }
 
         _plugin.RotationPluginIPC.RestoreRsrHealing();
-        Plugin.CommandManager.ProcessCommand(
-            _plugin.Configuration.ObstacleMapsOn
-                ? "/bmrai obstaclemaps on"
-                : "/bmrai obstaclemaps off");
+        if (_plugin.RotationPluginIPC.BossModAiCommand == "/bmrai"
+            && _plugin.RotationPluginIPC.CanUseBossModPresetIpc(out _))
+            Plugin.CommandManager.ProcessCommand(
+                _plugin.Configuration.ObstacleMapsOn
+                    ? "/bmrai obstaclemaps on"
+                    : "/bmrai obstaclemaps off");
 
         var startMapFlagCleared = GameHelpers.ClearMapFlag(_plugin.MapFlagService.TryReadFlag);
         _plugin.AddDebugLog($"[Start] Preflight cleared map flag before start flow: verified={startMapFlagCleared}.");
@@ -7367,6 +7368,8 @@ public class StateManager : IDisposable
     private void RunConfiguredCommands(IReadOnlyList<string>? commands, string reason)
     {
         var sent = 0;
+        var factoryBossModCommands = LandingCommandDefaults.UsesBmrRotation(commands)
+            || commands?.SequenceEqual(Configuration.FinishCommandTriggerDefaults, StringComparer.Ordinal) == true;
         foreach (var command in commands ?? Array.Empty<string>())
         {
             var trimmed = command?.Trim();
@@ -7375,7 +7378,7 @@ public class StateManager : IDisposable
 
             if (IsCombatAutomationCommand(trimmed))
             {
-                if (SendCombatAutomationCommand(trimmed, $"command trigger for {reason}"))
+                if (SendCombatAutomationCommand(trimmed, $"command trigger for {reason}", factoryBossModCommands))
                     sent++;
                 continue;
             }
@@ -7395,10 +7398,12 @@ public class StateManager : IDisposable
         if (sent > 0)
             _plugin.AddDebugLog($"[CommandTrigger] Sent {sent} command(s) for {reason}.");
 
-        Plugin.CommandManager.ProcessCommand(
-            _plugin.Configuration.ObstacleMapsOn
-                ? "/bmrai obstaclemaps on"
-                : "/bmrai obstaclemaps off");
+        if (_plugin.RotationPluginIPC.BossModAiCommand == "/bmrai"
+            && _plugin.RotationPluginIPC.CanUseBossModPresetIpc(out _))
+            Plugin.CommandManager.ProcessCommand(
+                _plugin.Configuration.ObstacleMapsOn
+                    ? "/bmrai obstaclemaps on"
+                    : "/bmrai obstaclemaps off");
     }
 
     private static bool IsRsrActivationCommand(string command, out bool manual)
@@ -7413,10 +7418,26 @@ public class StateManager : IDisposable
 
     private static bool IsCombatAutomationCommand(string command) =>
         command.StartsWith("/bmrai", StringComparison.OrdinalIgnoreCase) ||
+        command.StartsWith("/gmai", StringComparison.OrdinalIgnoreCase) ||
         command.StartsWith("/vbmai", StringComparison.OrdinalIgnoreCase);
 
-    private bool SendCombatAutomationCommand(string command, string reason)
+    private bool SendCombatAutomationCommand(string command, string reason, bool availableBossMod = false)
     {
+        var rotation = _plugin.RotationPluginIPC;
+        if (availableBossMod && command.StartsWith("/bmrai", StringComparison.OrdinalIgnoreCase)
+            && (rotation.IsBossModRebornAvailable || rotation.IsGodModAvailable || rotation.HasPinnedBossModHost))
+        {
+            if (!rotation.HasPinnedBossModHost && !string.Equals(command, "/bmrai on", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (!rotation.CanUseBossModPresetIpc(out var hostDetail))
+            {
+                SetWarning(hostDetail);
+                _plugin.AddDebugLog($"[CombatAutomation] Withheld {command} for {reason}: {hostDetail}");
+                return false;
+            }
+            command = rotation.BossModAiCommand + command["/bmrai".Length..];
+        }
+
         if (!IsCombatAutomationCommandAvailable(command, out var unavailableReason))
         {
             var logKey = $"{command}:{unavailableReason}";
@@ -7425,7 +7446,18 @@ public class StateManager : IDisposable
             return false;
         }
 
-        if (string.Equals(command, "/bmrai on", StringComparison.OrdinalIgnoreCase))
+        var preparedHostCommand = command.StartsWith("/bmrai", StringComparison.OrdinalIgnoreCase)
+            || command.StartsWith("/gmai", StringComparison.OrdinalIgnoreCase);
+        if (preparedHostCommand && (!rotation.CanUseBossModPresetIpc(out var providerDetail)
+            || !command.StartsWith(rotation.BossModAiCommand!, StringComparison.OrdinalIgnoreCase)))
+        {
+            SetWarning(string.IsNullOrEmpty(providerDetail) ? "The command does not match the selected BossMod host." : providerDetail);
+            return false;
+        }
+
+        var commandParts = command.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (preparedHostCommand && commandParts.Length > 1
+            && string.Equals(commandParts[1], "on", StringComparison.OrdinalIgnoreCase))
         {
             var landingCommands = _plugin.ActiveMapGatherConfig.GetLandingOrDutyCommandTriggers(
                 _plugin.Configuration.LandingOrDutyCommandTriggers);
@@ -7433,15 +7465,25 @@ public class StateManager : IDisposable
                     LandingCommandDefaults.UsesBmrRotation(landingCommands), out var presetDetail))
             {
                 SetWarning(presetDetail);
-                _plugin.AddDebugLog($"[CombatAutomation] BMR enable withheld for {reason}: {presetDetail}");
+                _plugin.AddDebugLog($"[CombatAutomation] {rotation.BossModHostName} enable withheld for {reason}: {presetDetail}");
                 return false;
             }
-            if (!CommandHelper.TrySendCommand("/bmrai manualtarget off"))
-                return false;
-            CommandHelper.TrySendCommand("/bmrai prefdistance 1.5");
-            CommandHelper.TrySendCommand("/bmrai forbidactions off");
+            foreach (var preparation in new[] { " manualtarget off", " prefdistance 1.5", " forbidactions off" })
+            {
+                if (!rotation.CanUseBossModPresetIpc(out var hostDetail)
+                    || !CommandHelper.TrySendCommand(rotation.BossModAiCommand + preparation))
+                {
+                    if (!string.IsNullOrEmpty(hostDetail)) SetWarning(hostDetail);
+                    return false;
+                }
+            }
         }
 
+        if (preparedHostCommand && !rotation.CanUseBossModPresetIpc(out var finalHostDetail))
+        {
+            SetWarning(finalHostDetail);
+            return false;
+        }
         return CommandHelper.TrySendCommand(command);
     }
 
@@ -7454,10 +7496,17 @@ public class StateManager : IDisposable
             return false;
         }
 
-        if (command.StartsWith("/vbmai", StringComparison.OrdinalIgnoreCase) &&
-            !_plugin.RotationPluginIPC.IsVbmAvailable)
+        if (command.StartsWith("/gmai", StringComparison.OrdinalIgnoreCase) &&
+            !_plugin.RotationPluginIPC.IsGodModAvailable)
         {
-            reason = "VBM plugin is not loaded";
+            reason = "GodMod plugin is not loaded";
+            return false;
+        }
+
+        if (command.StartsWith("/vbmai", StringComparison.OrdinalIgnoreCase) &&
+            (!_plugin.RotationPluginIPC.IsVbmAvailable || _plugin.RotationPluginIPC.HasPinnedBossModHost))
+        {
+            reason = "VBM is unavailable or a different BossMod host owns this run";
             return false;
         }
 
@@ -17537,17 +17586,17 @@ public class StateManager : IDisposable
         lastLoggedVbmForbiddenZonesCount = vbmForbiddenZones;
         var moduleText = string.IsNullOrWhiteSpace(bmrModule) ? "none" : bmrModule;
         _plugin.AddDebugLog(
-            $"[BossModDanger] Detection changed: BMR active module={(bmrActive ? "yes" : "no")} ({moduleText}), VBM forbidden zones={vbmForbiddenZones}.");
+            $"[BossModDanger] Detection changed: {_plugin.RotationPluginIPC.BossModHostName} active module={(bmrActive ? "yes" : "no")} ({moduleText}), GodMod forbidden zones={_plugin.RotationPluginIPC.GodModForbiddenZonesCount}, VBM forbidden zones={vbmForbiddenZones}.");
     }
 
     private void StartBossModOutdoorSuppression(string reason)
     {
         bossModOutdoorSuppressionActive = true;
         bossModOutdoorSuppressionReason = reason;
-        SendCombatAutomationCommand("/bmrai off", $"outdoor suppression start: {reason}");
+        SendCombatAutomationCommand("/bmrai off", $"outdoor suppression start: {reason}", availableBossMod: true);
         SendCombatAutomationCommand("/vbmai off", $"outdoor suppression start: {reason}");
         combatAutomationEnabledState = false;
-        _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression started: {reason}. Requested BMR/VBM off.");
+        _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression started: {reason}. Requested BossMod off.");
     }
 
     private void RestoreBossModOutdoorSuppressionIfActive(string reason)
@@ -17560,13 +17609,13 @@ public class StateManager : IDisposable
 
     private void RestoreBossModOutdoorSuppression(string reason, bool markCombatAutomationEnabled = false)
     {
-        SendCombatAutomationCommand("/bmrai on", $"outdoor suppression restore: {reason}");
-        SendCombatAutomationCommand("/vbmai on", $"outdoor suppression restore: {reason}");
+        var hostSent = SendCombatAutomationCommand("/bmrai on", $"outdoor suppression restore: {reason}", availableBossMod: true);
+        var vbmSent = SendCombatAutomationCommand("/vbmai on", $"outdoor suppression restore: {reason}");
         bossModOutdoorSuppressionActive = false;
         bossModOutdoorSuppressionReason = $"restored: {reason}";
         if (markCombatAutomationEnabled)
-            combatAutomationEnabledState = true;
-        _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression restored ({reason}). Requested BMR/VBM on.");
+            combatAutomationEnabledState = hostSent || vbmSent;
+        _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression restore requested ({reason}): host sent={hostSent}; VBM sent={vbmSent}.");
     }
 
     private void ClearBossModOutdoorSuppressionState(string reason)
@@ -17685,12 +17734,12 @@ public class StateManager : IDisposable
             return;
         }
 
-        SendCombatAutomationCommand("/bmrai on", $"joined FATE {fateId} combat automation: {reason}");
-        SendCombatAutomationCommand("/vbmai on", $"joined FATE {fateId} combat automation: {reason}");
-        combatAutomationEnabledState = true;
-        joinedFateCombatAutomationActive = true;
+        var hostSent = SendCombatAutomationCommand("/bmrai on", $"joined FATE {fateId} combat automation: {reason}", availableBossMod: true);
+        var vbmSent = SendCombatAutomationCommand("/vbmai on", $"joined FATE {fateId} combat automation: {reason}");
+        combatAutomationEnabledState = hostSent || vbmSent;
+        joinedFateCombatAutomationActive = hostSent || vbmSent;
         joinedFateCombatAutomationFateId = fateId;
-        _plugin.AddDebugLog($"[FATE] Joined FATE {fateId} combat automation active for {reason}. Requested BMR/VBM on.");
+        _plugin.AddDebugLog($"[FATE] Joined FATE {fateId} combat automation requested for {reason}: host sent={hostSent}; VBM sent={vbmSent}.");
     }
 
     private void SetCombatAutomationForCombatState(bool inCombat, string reason, bool force = false)
@@ -17707,7 +17756,7 @@ public class StateManager : IDisposable
 
             if (IsOutdoorBossModSuppressionFlowActive() && _plugin.RotationPluginIPC.BossModDangerDetected)
             {
-                _plugin.AddDebugLog($"[BossModDanger] Suppression active; skipped BMR/VBM combat enable for {reason}.");
+                _plugin.AddDebugLog($"[BossModDanger] Suppression active; skipped BossMod combat enable for {reason}.");
                 return;
             }
 
@@ -17718,7 +17767,7 @@ public class StateManager : IDisposable
         if (!force && combatAutomationEnabledState == inCombat)
             return;
 
-        var bmrSent = SendCombatAutomationCommand(inCombat ? "/bmrai on" : "/bmrai off", reason);
+        var bmrSent = SendCombatAutomationCommand(inCombat ? "/bmrai on" : "/bmrai off", reason, availableBossMod: true);
         var vbmSent = SendCombatAutomationCommand(inCombat ? "/vbmai on" : "/vbmai off", reason);
         combatAutomationEnabledState = inCombat && (bmrSent || vbmSent);
         if (!inCombat)
@@ -17726,7 +17775,7 @@ public class StateManager : IDisposable
             joinedFateCombatAutomationActive = false;
             joinedFateCombatAutomationFateId = 0;
         }
-        _plugin.AddDebugLog($"[CombatAutomation] {(inCombat ? "Enable" : "Disable")} for {reason}: BMR sent={bmrSent}; VBM sent={vbmSent}.");
+        _plugin.AddDebugLog($"[CombatAutomation] {(inCombat ? "Enable" : "Disable")} for {reason}: {_plugin.RotationPluginIPC.BossModHostName} sent={bmrSent}; VBM sent={vbmSent}.");
     }
 
     private static OverworldLandingMode ResolveLandingMode(uint mapItemId)
