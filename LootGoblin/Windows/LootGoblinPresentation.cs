@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using AethertekUI;
+using AethertekUI.Dalamud;
 using Dalamud.Bindings.ImGui;
 
 namespace LootGoblin.Windows;
@@ -18,7 +19,8 @@ internal static class LootGoblinPresentation
     // Compact actions/rows/gaps are 40/36/8px; body text remains 16px.
     internal const uint ReferenceAccent = 0xEAB321;
     internal static readonly float[] FontSizes = [16, 16, 32, 20, 22, 18];
-    internal static readonly string[] FontFiles = ["segoeui.ttf", "seguisb.ttf", "segoeuib.ttf", "seguisb.ttf", "seguisb.ttf", "seguisb.ttf"];
+    internal static readonly MaterialFontWeight[] FontWeights = [MaterialFontWeight.Regular, MaterialFontWeight.Semibold,
+        MaterialFontWeight.Bold, MaterialFontWeight.Semibold, MaterialFontWeight.Semibold, MaterialFontWeight.Semibold];
     internal static float AtlasHeight(UiFontRole role) => FontSizes[(int)role] * 4 / 3;
     internal static Vector4 Rgb(uint rgb) => new(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, 1);
     internal static MaterialControlMetrics Controls(float height, float icon = 20)

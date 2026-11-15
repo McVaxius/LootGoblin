@@ -1,3 +1,8 @@
+2026-11-15 - 1.1.1.14 - Bundled UI fonts
+
+- Use AethertekUI's shared OFL-licensed Selawik Regular, Semibold and Bold so UI text no longer depends on Windows-installed fonts.
+- Preserve the existing text sizes, CJK language faces and Dalamud language/game-symbol merges.
+
 2026-11-14 - 1.1.1.13 - GodMod compatibility
 
 - **Added GodMod support:** Use a single compatible GodMod or BMR provider for automatic combat; multiple BossMod providers block preset activation.

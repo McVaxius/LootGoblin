@@ -58,7 +58,7 @@ LCARS UI sounds start muted. Window appearance and the titlebar speaker share on
 
 Settings search highlights tabs matching every search word, including conditional settings. Search accepts translated labels and the original English aliases. Clear or closing Settings resets it. Plugin names, game catalogue names, commands and diagnostic logs retain their original text; UI numbers use the selected language's formatting.
 
-Loot Goblin uses managed host fonts for the selected language and the native language names. A loading or error window appears when the required fonts are unavailable; details are written to the plugin log. Game font and screenshot acceptance remain pending.
+Loot Goblin uses AethertekUI's shared managed-font support, which bundles OFL-licensed Selawik Regular, Semibold and Bold with the copyright and licence in `Fonts/Selawik/LICENSE.txt`. It retains Dalamud's CJK, language and game-symbol merges for the selected language and native language names, without requiring Windows-installed Segoe fonts. A loading or error window appears when the required fonts are unavailable; details are written to the plugin log. Game font and screenshot acceptance remain pending.
 
 Hindi is enabled only when the local font check passes. Otherwise the selector shows disabled **Hindi (unavailable)** while other languages remain usable. A saved Hindi choice that fails its required-font check shows an English status and **Use English**; that button explicitly saves English. Font failures never change the saved language automatically.
 

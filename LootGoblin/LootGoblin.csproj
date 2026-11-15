@@ -2,9 +2,9 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Version>1.1.1.13</Version>
-    <FileVersion>1.1.1.13</FileVersion>
-    <AssemblyVersion>1.1.1.13</AssemblyVersion>
+    <Version>1.1.1.14</Version>
+    <FileVersion>1.1.1.14</FileVersion>
+    <AssemblyVersion>1.1.1.14</AssemblyVersion>
     <PackageProjectUrl>https://github.com/McVaxius/LootGoblin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
@@ -61,6 +61,7 @@
       <PluginFiles Include="$(ProjectDir)images\icon.png" />
       <PluginFiles Include="$(ProjectDir)SpecialNavigation.json" />
       <PluginDataFiles Include="data\bm\**" />
+      <PluginFontFiles Include="$(TargetDir)Fonts\Selawik\*.ttf;$(TargetDir)Fonts\Selawik\LICENSE.txt" />
     </ItemGroup>
 
     <ItemGroup>
@@ -71,5 +72,7 @@
           DestinationFolder="$(PluginOutput)" />
     <Copy SourceFiles="@(PluginDataFiles)"
           DestinationFiles="@(PluginDataFiles->'$(PluginOutput)\data\bm\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(PluginFontFiles)"
+          DestinationFolder="$(PluginOutput)\Fonts\Selawik" />
   </Target>
 </Project>
