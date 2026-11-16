@@ -1,3 +1,7 @@
+2026-11-15 - 1.1.1.15 - Startup font loading fix
+
+- Fix a startup error when loading the bundled UI fonts.
+
 2026-11-15 - 1.1.1.14 - Bundled UI fonts
 
 - Use AethertekUI's shared OFL-licensed Selawik Regular, Semibold and Bold so UI text no longer depends on Windows-installed fonts.

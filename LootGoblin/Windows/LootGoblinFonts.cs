@@ -14,10 +14,10 @@ internal sealed class LootGoblinFonts : IDisposable
     private readonly IFontHandle[] handles;
     private int generation;
     internal int Generation => System.Threading.Volatile.Read(ref generation);
-    internal LootGoblinFonts(IFontAtlas atlas, ushort[] ranges,string language)
+    internal LootGoblinFonts(IFontAtlas atlas, ushort[] ranges,string language,string assetRoot)
     {
         handles=LootGoblinPresentation.FontSizes.Select((_,index)=>MaterialFontAtlas.CreateFont(atlas,
-            LootGoblinPresentation.FontWeights[index], LootGoblinPresentation.AtlasHeight((UiFontRole)index), ranges, language)).ToArray();
+            LootGoblinPresentation.FontWeights[index], LootGoblinPresentation.AtlasHeight((UiFontRole)index), ranges, language, assetRoot)).ToArray();
         foreach(var handle in handles) handle.ImFontChanged+=FontChanged;
     }
     private void FontChanged(IFontHandle handle,ILockedImFont font) => System.Threading.Interlocked.Increment(ref generation);
