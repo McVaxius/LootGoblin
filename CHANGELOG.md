@@ -1,3 +1,8 @@
+2026-11-19 - 1.1.1.16 - Combat AI command state
+
+- Let normal combat AI updates try again when neither command was accepted.
+- Remember accepted On requests when outdoor suppression ends so normal Off handling can resume.
+
 2026-11-15 - 1.1.1.15 - Startup font loading fix
 
 - Fix a startup error when loading the bundled UI fonts.

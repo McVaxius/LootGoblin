@@ -17526,7 +17526,7 @@ public class StateManager : IDisposable
             IsJoinedFateCombatAutomationFlowActive())
         {
             if (bossModOutdoorSuppressionActive)
-                RestoreBossModOutdoorSuppression($"joined FATE {fateId} combat automation", markCombatAutomationEnabled: true);
+                RestoreBossModOutdoorSuppression($"joined FATE {fateId} combat automation");
 
             bossModOutdoorSuppressionReason = $"joined FATE {fateId} combat automation active";
             return;
@@ -17550,7 +17550,7 @@ public class StateManager : IDisposable
         {
             var restoreReason = GetBossModOutdoorSuppressionRestoreReason(dangerDetected, outdoorFlow);
             if (!string.IsNullOrWhiteSpace(restoreReason))
-                RestoreBossModOutdoorSuppression(restoreReason, markCombatAutomationEnabled: Plugin.Condition[ConditionFlag.InCombat]);
+                RestoreBossModOutdoorSuppression(restoreReason);
 
             return;
         }
@@ -17593,9 +17593,9 @@ public class StateManager : IDisposable
     {
         bossModOutdoorSuppressionActive = true;
         bossModOutdoorSuppressionReason = reason;
-        SendCombatAutomationCommand("/bmrai off", $"outdoor suppression start: {reason}", availableBossMod: true);
-        SendCombatAutomationCommand("/vbmai off", $"outdoor suppression start: {reason}");
-        combatAutomationEnabledState = false;
+        var hostSent = SendCombatAutomationCommand("/bmrai off", $"outdoor suppression start: {reason}", availableBossMod: true);
+        var vbmSent = SendCombatAutomationCommand("/vbmai off", $"outdoor suppression start: {reason}");
+        combatAutomationEnabledState = hostSent || vbmSent ? false : null;
         _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression started: {reason}. Requested BossMod off.");
     }
 
@@ -17604,17 +17604,16 @@ public class StateManager : IDisposable
         if (!bossModOutdoorSuppressionActive)
             return;
 
-        RestoreBossModOutdoorSuppression(reason, markCombatAutomationEnabled: Plugin.Condition[ConditionFlag.InCombat]);
+        RestoreBossModOutdoorSuppression(reason);
     }
 
-    private void RestoreBossModOutdoorSuppression(string reason, bool markCombatAutomationEnabled = false)
+    private void RestoreBossModOutdoorSuppression(string reason)
     {
         var hostSent = SendCombatAutomationCommand("/bmrai on", $"outdoor suppression restore: {reason}", availableBossMod: true);
         var vbmSent = SendCombatAutomationCommand("/vbmai on", $"outdoor suppression restore: {reason}");
         bossModOutdoorSuppressionActive = false;
         bossModOutdoorSuppressionReason = $"restored: {reason}";
-        if (markCombatAutomationEnabled)
-            combatAutomationEnabledState = hostSent || vbmSent;
+        combatAutomationEnabledState = hostSent || vbmSent ? true : null;
         _plugin.AddDebugLog($"[BossModDanger] Outdoor suppression restore requested ({reason}): host sent={hostSent}; VBM sent={vbmSent}.");
     }
 
@@ -17725,7 +17724,7 @@ public class StateManager : IDisposable
             return;
 
         if (bossModOutdoorSuppressionActive)
-            RestoreBossModOutdoorSuppression($"joined FATE {fateId} combat automation for {reason}", markCombatAutomationEnabled: true);
+            RestoreBossModOutdoorSuppression($"joined FATE {fateId} combat automation for {reason}");
 
         if (joinedFateCombatAutomationActive &&
             joinedFateCombatAutomationFateId == fateId &&
@@ -17736,7 +17735,7 @@ public class StateManager : IDisposable
 
         var hostSent = SendCombatAutomationCommand("/bmrai on", $"joined FATE {fateId} combat automation: {reason}", availableBossMod: true);
         var vbmSent = SendCombatAutomationCommand("/vbmai on", $"joined FATE {fateId} combat automation: {reason}");
-        combatAutomationEnabledState = hostSent || vbmSent;
+        combatAutomationEnabledState = hostSent || vbmSent ? true : null;
         joinedFateCombatAutomationActive = hostSent || vbmSent;
         joinedFateCombatAutomationFateId = fateId;
         _plugin.AddDebugLog($"[FATE] Joined FATE {fateId} combat automation requested for {reason}: host sent={hostSent}; VBM sent={vbmSent}.");
@@ -17760,7 +17759,7 @@ public class StateManager : IDisposable
                 return;
             }
 
-            RestoreBossModOutdoorSuppression($"combat enable for {reason}", markCombatAutomationEnabled: true);
+            RestoreBossModOutdoorSuppression($"combat enable for {reason}");
             return;
         }
 
@@ -17769,7 +17768,7 @@ public class StateManager : IDisposable
 
         var bmrSent = SendCombatAutomationCommand(inCombat ? "/bmrai on" : "/bmrai off", reason, availableBossMod: true);
         var vbmSent = SendCombatAutomationCommand(inCombat ? "/vbmai on" : "/vbmai off", reason);
-        combatAutomationEnabledState = inCombat && (bmrSent || vbmSent);
+        combatAutomationEnabledState = bmrSent || vbmSent ? inCombat : null;
         if (!inCombat)
         {
             joinedFateCombatAutomationActive = false;
@@ -18805,7 +18804,7 @@ public class StateManager : IDisposable
             if (newState == BotState.Error)
                 ClearBossModOutdoorSuppressionState($"terminal state {newState}");
             else if (newState == BotState.Idle || IsDungeonState(newState))
-                RestoreBossModOutdoorSuppression($"state entered {newState}", markCombatAutomationEnabled: Plugin.Condition[ConditionFlag.InCombat]);
+                RestoreBossModOutdoorSuppression($"state entered {newState}");
         }
 
         // Unpause YesAlready when bot reaches terminal states
