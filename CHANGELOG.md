@@ -1,3 +1,7 @@
+2026-11-22 - 1.1.1.17 - Linux compatibility pilot
+
+- **Fixed bundled navigation data lookup** by using the plugin path supplied by Dalamud. This build is available for Linux testing through the normal plugin updater.
+
 2026-11-19 - 1.1.1.16 - Combat AI command state
 
 - Let normal combat AI updates try again when neither command was accepted.

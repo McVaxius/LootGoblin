@@ -94,7 +94,7 @@ public class SpecialNavigationDatabase : IDisposable
         _log = log;
         var pluginDir = Plugin.PluginInterface.GetPluginConfigDirectory();
         _filePath = Path.Combine(pluginDir, "SpecialNavigation.json");
-        var assemblyDir = Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? AppContext.BaseDirectory;
+        var assemblyDir = Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? AppContext.BaseDirectory;
         _bundledFilePath = Path.Combine(assemblyDir, "SpecialNavigation.json");
         Load();
     }
