@@ -303,11 +303,6 @@ public class RotationPluginIPC : IDisposable
             if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);
             return pluginInterface.GetIpcSubscriber<string, string>("BossMod.Presets.Get").InvokeFunc(name);
         }
-        public bool DeletePreset(string name)
-        {
-            if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);
-            return pluginInterface.GetIpcSubscriber<string, bool>("BossMod.Presets.Delete").InvokeFunc(name);
-        }
         public bool CreatePreset(string json)
         {
             if (!owner.CanUseBossModPresetIpc(out var detail)) throw new InvalidOperationException(detail);

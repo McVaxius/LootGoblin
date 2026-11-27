@@ -1,3 +1,7 @@
+2026-11-27 - 1.1.1.18 - BossMod preset refresh
+
+- **Fixed BossMod preset refresh.** Loot Goblin retains the existing `FRENRIDER - RANGED` preset and its selection if a refresh fails.
+
 2026-11-22 - 1.1.1.17 - Linux compatibility pilot
 
 - **Fixed bundled navigation data lookup** by using the plugin path supplied by Dalamud. This build is available for Linux testing through the normal plugin updater.

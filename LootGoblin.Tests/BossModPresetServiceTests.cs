@@ -143,7 +143,6 @@ public sealed class BossModPresetServiceTests
         var service = new BossModPresetService(PresetDirectory, ipc);
 
         Assert.True(service.Refresh(out var detail), detail);
-        Assert.Equal(6, ipc.Deleted.Count);
         Assert.Equal(6, ipc.Created.Count);
         Assert.Equal("passive - tank", ipc.Active);
         Assert.Equal("passive - tank", ipc.Ai);
@@ -198,12 +197,16 @@ public sealed class BossModPresetServiceTests
     [Fact]
     public void RejectedInstallationCannotReportPrepared()
     {
-        var ipc = new FakeIpc { RejectCreate = "passive - melee" };
+        const string preset = "FRENRIDER - RANGED";
+        const string saved = """{"Name":"FRENRIDER - RANGED","Modules":{}}""";
+        var ipc = new FakeIpc { RejectCreate = preset, Active = preset, Ai = preset };
+        ipc.Presets[preset] = saved;
         var service = new BossModPresetService(PresetDirectory, ipc);
-        Assert.False(service.PreparePassive(20, out var detail));
+        Assert.False(service.Prepare(24, true, out var detail));
         Assert.Contains("incomplete", detail);
-        Assert.Null(ipc.Active);
-        Assert.Equal(string.Empty, ipc.Ai);
+        Assert.Equal(preset, ipc.Active);
+        Assert.Equal(preset, ipc.Ai);
+        Assert.Equal(saved, ipc.Presets[preset]);
     }
 
     [Fact]
@@ -230,7 +233,6 @@ public sealed class BossModPresetServiceTests
     {
         internal readonly Dictionary<string, string> Presets = [];
         internal readonly List<string> Created = [];
-        internal readonly List<string> Deleted = [];
         internal readonly List<string> Calls = [];
         internal string? Active;
         internal string Ai = string.Empty;
@@ -244,13 +246,6 @@ public sealed class BossModPresetServiceTests
         public bool IsRotationModuleAvailable(string moduleName) => moduleName != MissingRotation;
 
         public string? GetPreset(string name) => Presets.GetValueOrDefault(name);
-        public bool DeletePreset(string name)
-        {
-            Calls.Add("Delete " + name);
-            Deleted.Add(name);
-            if (Active == name) Active = null;
-            return Presets.Remove(name);
-        }
         public bool CreatePreset(string json)
         {
             using var definition = JsonDocument.Parse(json);

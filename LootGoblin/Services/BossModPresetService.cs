@@ -9,7 +9,6 @@ internal interface IBossModPresetIpc
 {
     bool IsRotationModuleAvailable(string moduleName);
     string? GetPreset(string name);
-    bool DeletePreset(string name);
     bool CreatePreset(string json);
     string? GetActivePreset();
     bool SetActivePreset(string name);
@@ -77,9 +76,8 @@ internal sealed class BossModPresetService(string directory, IBossModPresetIpc i
             var failures = new List<string>();
             foreach (var preset in presets)
             {
-                // Match FrenRider: remove an existing named definition, then create with overwrite enabled.
-                if (ipc.GetPreset(preset.Name) is not null)
-                    _ = ipc.DeletePreset(preset.Name);
+
+                // Native overwrite updates the existing preset without clearing it before the write can succeed.
                 if (!ipc.CreatePreset(preset.Json))
                     failures.Add(preset.Name);
                 else if (previousActive == preset.Name && !ipc.SetActivePreset(preset.Name))
