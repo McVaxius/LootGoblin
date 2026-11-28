@@ -512,7 +512,7 @@ public sealed class Plugin : IDalamudPlugin
         using var shaping = shapedText.Push();
         if (!uiFonts.Ready)
         {
-            backgroundGlass?.EndFrame(false);
+            DisposeBackgroundGlass();
             if (!fontIssueLogged && uiFonts.LoadException is { } error)
             {
                 Log.Error(error, "[LootGoblin] Required UI fonts failed to load.");
@@ -543,7 +543,7 @@ public sealed class Plugin : IDalamudPlugin
             }
             catch (Exception ex)
             {
-                backgroundGlass?.EndFrame(false);
+                DisposeBackgroundGlass();
                 if (!fontIssueLogged) { Log.Error(ex, "[LootGoblin] Required UI glyph coverage failed."); fontIssueLogged = true; }
                 DrawFontStatus(false);
                 return;
