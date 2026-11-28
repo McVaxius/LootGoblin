@@ -1,3 +1,4 @@
+using Dalamud.Interface.ManagedFontAtlas;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -68,6 +69,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly MaterialWindowDecorations fontStatusDecorations = new();
     private MaterialOptions<string> languageOptions = null!;
     private string appliedLanguage = "";
+    private bool loadedMain;
     private uint appliedAccent;
     private Vector3 accentDraft;
     private MaterialColorSettings colorDraft = new();
@@ -77,11 +79,12 @@ public sealed class Plugin : IDalamudPlugin
     private int checkedHindiGeneration = -1;
     private bool fontIssueLogged;
     private MaterialGlassRenderer? backgroundGlass;
+    private bool backgroundWasBlurred;
     private readonly FileDialogManager glassImagePicker = new();
+    private bool backgroundImagePickerOpen;
     internal bool BackgroundBlurEnabled => Configuration.UiStylingEnabled &&
         Configuration.UiColors.HasBackgroundBlur(Configuration.UiColors.Mode);
     private MaterialUiSoundPlayer? uiSoundPlayer;
-    private bool appliedSoundsMuted = true;
     private readonly Dictionary<Window, TitleBarButton> soundTitleButtons = new();
     internal MapGatherCharacterConfig ActiveMapGatherConfig { get; private set; } = new();
     internal ulong ActiveMapGatherContentId { get; private set; }
@@ -168,7 +171,6 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin()
     {
         instance = this;
-        shapedText = new(TextureProvider);
         var loadedConfiguration = PluginInterface.GetPluginConfig() as Configuration;
         var isNewConfiguration = loadedConfiguration == null;
         Configuration = loadedConfiguration ?? new Configuration();
@@ -278,7 +280,6 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Open the Loot Goblin main window. Args: config, start, stop, on, off, status, style [on|off], lock, unlock"
         });
 
-        ApplyAppearance();
         PluginInterface.UiBuilder.Draw += DrawUi;
         PluginInterface.UiBuilder.ResizeBuffers += ReleaseBackgroundGlassResources;
         PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUi;
@@ -416,14 +417,18 @@ public sealed class Plugin : IDalamudPlugin
 
 
     private void BrowseBackgroundImage()
-        => glassImagePicker.OpenFileDialog(UiText.T("Choose background image") + "###LootGoblinBackgroundImagePicker",
-            UiText.T("Images") + "{.png,.jpg,.jpeg,.bmp,.gif,.webp,.tif,.tiff,.dds,.tga},.*",
-            (accepted, path) =>
-            {
-                if (!accepted || path == Configuration.UiColors.GlassImagePath) return;
-                Configuration.UiColors = colorDraft = Configuration.UiColors with { GlassImagePath = path };
-                Configuration.Save();
-            });
+    {
+        glassImagePicker.OpenFileDialog(UiText.T("Choose background image") + "###LootGoblinBackgroundImagePicker",
+    UiText.T("Images") + "{.png,.jpg,.jpeg,.bmp,.gif,.webp,.tif,.tiff,.dds,.tga},.*",
+    (accepted, path) =>
+    {
+        backgroundImagePickerOpen = false;
+        if (!accepted || path == Configuration.UiColors.GlassImagePath) return;
+        Configuration.UiColors = colorDraft = Configuration.UiColors with { GlassImagePath = path };
+        Configuration.Save();
+    });
+        backgroundImagePickerOpen = true;
+    }
 
     private void DrawScreenshotPause(string id)
     {
@@ -437,6 +442,33 @@ public sealed class Plugin : IDalamudPlugin
                 backgroundGlass?.TrySetScreenshotsPaused(paused);
         }
         finally { ImGui.EndDisabled(); }
+    }
+
+    private void DisposeBackgroundGlass()
+    {
+        backgroundGlass?.Dispose();
+        backgroundGlass = null;
+        backgroundWasBlurred = false;
+    }
+
+    private void ReleaseUiSounds()
+    {
+        uiSoundPlayer?.Dispose();
+        uiSoundPlayer = null;
+    }
+
+    private void ReleaseWindowResources()
+    {
+        DisposeBackgroundGlass();
+        ReleaseUiSounds();
+        uiFonts?.Dispose();
+        uiFonts = null!;
+        shapedText?.Dispose();
+        shapedText = null!;
+        uiTheme = null!;
+        languageOptions = null!;
+        uiText?.Dispose();
+        uiText = null!;
     }
 
     private void ReleaseBackgroundGlassResources() => backgroundGlass?.ReleaseResources();
@@ -468,10 +500,14 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawUiFrame()
     {
+        if (backgroundImagePickerOpen) glassImagePicker.Draw();
+        if (!WindowSystem.Windows.Any(window => window.IsOpen))
+        {
+            if (uiFonts is not null) ReleaseWindowResources();
+            return;
+        }
+
         ApplyAppearance();
-        glassImagePicker.Draw();
-        if (!MainWindow.IsOpen && !ConfigWindow.IsOpen && !AlexandriteMapWindow.IsOpen)
-        { backgroundGlass?.EndFrame(false); return; }
         using var text = uiText.Enter();
         using var shaping = shapedText.Push();
         if (!uiFonts.Ready)
@@ -489,7 +525,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             var generation = uiFonts.Generation;
             var hindiAvailable = true;
-            foreach (var role in Enum.GetValues<UiFontRole>())
+            foreach (var role in uiFonts.Roles)
                 hindiAvailable &= shapedText.Renderer.TryCheckGlyphs(["हिन्दी"], LootGoblinPresentation.AtlasHeight(role) * ImGuiHelpers.GlobalScale, out _);
             languageOptions.Replace(UiText.Languages.Select(l => new MaterialOption<string>(l.Code, l.Code,
                 l.Code == "hi" && !hindiAvailable ? "Hindi (unavailable)" : l.Name, l.Code == "hi" && !hindiAvailable)).ToArray());
@@ -500,7 +536,7 @@ public sealed class Plugin : IDalamudPlugin
             try
             {
                 var generation = uiFonts.Generation;
-                foreach (var role in Enum.GetValues<UiFontRole>())
+                foreach (var role in uiFonts.Roles)
                     shapedText.Renderer.CheckGlyphs(uiText.RequiredText, LootGoblinPresentation.AtlasHeight(role) * ImGuiHelpers.GlobalScale);
                 uiFonts.CheckGlyphs(uiText.RequiredText.Select(MaterialText.NativeGlyphText));
                 checkedFontGeneration = generation;
@@ -516,9 +552,18 @@ public sealed class Plugin : IDalamudPlugin
         var useGlass = BackgroundBlurEnabled;
         var useImage = Configuration.UiStylingEnabled && colorDraft.Mode == MaterialColorMode.Glassmorphism &&
             colorDraft.GlassBackground == MaterialGlassBackground.Image;
-        if (useGlass || useImage) backgroundGlass ??= new(PluginInterface, Log);
-        backgroundGlass?.ConfigureImage(TextureProvider, useImage, colorDraft.GlassImagePath);
-        backgroundGlass?.BeginFrame();
+        if (useGlass || useImage)
+        {
+            backgroundGlass ??= new(PluginInterface, Log);
+            if (backgroundWasBlurred && !useGlass) backgroundGlass.ReleaseResources();
+            backgroundGlass.BeginFrame(useGlass, useImage);
+            backgroundGlass.ConfigureImage(TextureProvider, useImage, colorDraft.GlassImagePath);
+            backgroundWasBlurred = useGlass;
+        }
+        else
+        {
+            DisposeBackgroundGlass();
+        }
         var completed = false;
         try
         {
@@ -625,15 +670,31 @@ public sealed class Plugin : IDalamudPlugin
     private void ApplyAppearance()
     {
         var language = UiText.Languages.Any(l => l.Code == Configuration.UiLanguage) ? Configuration.UiLanguage : "en";
-        if (language != appliedLanguage)
+        if (uiText?.Language != language)
+        {
+            uiText?.Dispose();
+            uiText = new(language, role => uiFonts.Push(role));
+        }
+        var main = MainWindow.IsOpen;
+        if (uiFonts is null || language != appliedLanguage || loadedMain != main)
         {
             uiFonts?.Dispose();
-            uiText?.Dispose();
-            uiText = new(language, role => uiFonts!.Push(role));
-            uiFonts = new(PluginInterface.UiBuilder.FontAtlas, uiText.GlyphRanges(), language,
-                PluginInterface.AssemblyLocation.DirectoryName!);
+            uiFonts = null!;
+            if (language != appliedLanguage)
+            {
+                shapedText?.Dispose();
+                shapedText = null!;
+            }
+            shapedText ??= new(TextureProvider);
+            var ranges = uiText.GlyphRanges();
+            var atlas = PluginInterface.UiBuilder.CreateFontAtlas(FontAtlasAutoRebuildMode.OnNewFrame, true, "LootGoblin UI");
+            UiFontRole[] roles = main
+                ? [UiFontRole.Body, UiFontRole.BodyStrong, UiFontRole.PluginName, UiFontRole.Title, UiFontRole.Counter, UiFontRole.Action]
+                : [UiFontRole.Body, UiFontRole.BodyStrong, UiFontRole.PluginName];
+            uiFonts = new(atlas, ranges, language, PluginInterface.AssemblyLocation.DirectoryName!, roles);
             languageOptions = new(UiText.Languages.Select(l => new MaterialOption<string>(l.Code, l.Code, l.Name)).ToArray());
             appliedLanguage = language;
+            loadedMain = main;
             checkedFontGeneration = -1;
             checkedHindiGeneration = -1;
             fontIssueLogged = false;
@@ -650,17 +711,12 @@ public sealed class Plugin : IDalamudPlugin
             appliedColors = colorDraft;
             uiTheme = LootGoblinPresentation.Theme(appliedAccent, colorDraft);
             uiTheme.Feedback = PlayLcarsSound;
-            if (!uiTheme.IsLcars) uiSoundPlayer?.Stop();
             var rgb = LootGoblinPresentation.Rgb(appliedAccent);
             accentDraft = new(rgb.X, rgb.Y, rgb.Z);
         }
         uiTheme.HighlightContrastPercent = Configuration.UiHighlightContrastPercent;
         uiTheme.Density = Configuration.UiCompact ? MaterialDensity.Compact : MaterialDensity.Standard;
-        if (appliedSoundsMuted != Configuration.UiLcarsSoundsMuted)
-        {
-            appliedSoundsMuted = Configuration.UiLcarsSoundsMuted;
-            if (appliedSoundsMuted) uiSoundPlayer?.Stop();
-        }
+        if (!LcarsActive || Configuration.UiLcarsSoundsMuted) ReleaseUiSounds();
     }
 
     internal void DrawAppearanceSelector()
@@ -682,7 +738,6 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
-        uiSoundPlayer?.Dispose();
         pendingInitialDiagnosticSnapshot = false;
         SaveActiveMapGatherConfig("plugin unload");
         StateManager?.WriteDiagnosticSnapshot("plugin-unload");
@@ -690,10 +745,8 @@ public sealed class Plugin : IDalamudPlugin
 
         PluginInterface.UiBuilder.Draw -= DrawUi;
         PluginInterface.UiBuilder.ResizeBuffers -= ReleaseBackgroundGlassResources;
-        backgroundGlass?.Dispose();
-        uiFonts?.Dispose();
-        uiText?.Dispose();
-        shapedText?.Dispose();
+        glassImagePicker.Reset();
+        ReleaseWindowResources();
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
         Framework.Update -= OnFrameworkUpdate;
@@ -1789,7 +1842,7 @@ public sealed class Plugin : IDalamudPlugin
     private void SetLcarsSounds(bool enabled)
     {
         Configuration.UiLcarsSoundsMuted = !enabled;
-        if (!enabled) uiSoundPlayer?.Stop();
+        if (!enabled) ReleaseUiSounds();
         Configuration.Save();
     }
 

@@ -1,3 +1,8 @@
+2026-11-28 - 1.1.1.19 - On-demand interface resources
+
+- Load window fonts and text shaping when the interface opens, then release them when it closes.
+- Allocate background rendering and audio resources only while their appearance features are in use.
+
 2026-11-27 - 1.1.1.18 - BossMod preset refresh
 
 - **Fixed BossMod preset refresh.** Loot Goblin retains the existing `FRENRIDER - RANGED` preset and its selection if a refresh fails.
